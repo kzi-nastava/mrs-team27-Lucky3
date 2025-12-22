@@ -28,7 +28,7 @@ export class Sidebar implements OnInit {
     { icon: 'earnings', label: 'Overview', route: '/driver/overview', active: false },
     { icon: 'profile', label: 'Profile', route: '/driver/profile', active: false },
     { icon: 'support', label: 'Support', route: '/driver/support', active: false },
-    { icon: 'logout', label: 'Logout', route: '/logout', variant: 'danger' }
+    { icon: 'logout', label: 'Logout', route: '/login', variant: 'danger' }
   ];
 
   constructor(private router: Router) {}
