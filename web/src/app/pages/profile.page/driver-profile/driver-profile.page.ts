@@ -7,5 +7,22 @@ import { Component } from '@angular/core';
   styleUrl: './driver-profile.page.css',
 })
 export class DriverProfilePage {
+  showPersonalForm = false;
+  showVehicleForm = false;
 
+  openPersonalForm() {
+    this.showPersonalForm = true;
+  }
+
+  closePersonalForm() {
+    this.showPersonalForm = false;
+  }
+
+  openVehicleForm() {
+    this.showVehicleForm = true;
+  }
+
+  closeVehicleForm() {
+    this.showVehicleForm = false;
+  }
 }
