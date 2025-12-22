@@ -4,7 +4,35 @@ module.exports = {
     "./src/**/*.{html,ts}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        gray: {
+          100: '#F2F2F2',
+          200: '#F2F2F2', //unused shade
+          300: '#B3B3B3', //unused shade
+          400: '#B3B3B3',
+          500: '#B3B3B3', //unused shade
+          600: '#333333', //unused shade
+          700: '#333333',
+          800: '#262626',
+          900: '#1A1A1A',
+          950: '#0D0D0D',
+        },
+        yellow: {
+          400: '#FFD045', // Slightly lighter for hover
+          500: '#F9C31F', // Primary
+          600: '#FE9A00', // Secondary (Orange)
+        },
+        red: {
+          500: '#EF4343',
+        },
+        green: {
+          500: '#00C950',
+        },
+        black: '#000000',
+        white: '#FFFFFF',
+      },
+    },
   },
   plugins: [],
 }
