@@ -24,7 +24,7 @@ export class Sidebar {
 
   items: SidebarItem[] = [
     { icon: 'dashboard', label: 'Dashboard', route: '/driver/dashboard', active: false },
-    { icon: 'earnings', label: 'Earnings', route: '/driver/earnings', active: true },
+    { icon: 'earnings', label: 'Overview', route: '/driver/overview', active: true },
     { icon: 'profile', label: 'Profile', route: '/driver/profile', active: false },
     { icon: 'support', label: 'Support', route: '/driver/support', active: false },
     { icon: 'logout', label: 'Logout', route: '/logout', variant: 'danger' }

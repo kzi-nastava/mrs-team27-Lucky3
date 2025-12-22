@@ -2,3 +2,53 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  /* Card Component */
+  .card {
+    @apply bg-gray-900 rounded-xl p-6 border border-gray-800;
+  }
+  
+  .card-header {
+    @apply flex items-center justify-between mb-6;
+  }
+
+  /* Typography */
+  .text-label {
+    @apply text-xs text-gray-400;
+  }
+  
+  .text-value {
+    @apply text-white text-sm font-medium;
+  }
+  
+  .section-title {
+    @apply font-semibold text-white;
+  }
+  
+  /* Badges */
+  .badge {
+    @apply px-2 py-0.5 rounded text-[10px] font-bold uppercase;
+  }
+  
+  .badge-completed {
+    @apply bg-gray-800 text-gray-300 border border-gray-700;
+  }
+  
+  .badge-cancelled {
+    @apply bg-red-500/10 text-red-500 border border-red-500/20;
+  }
+  
+  .badge-panic {
+    @apply bg-red-500 text-white;
+  }
+
+  /* Icon Containers */
+  .icon-box {
+    @apply w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 border border-yellow-500/20;
+  }
+
+  .icon-circle {
+    @apply w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500;
+  }
+}
