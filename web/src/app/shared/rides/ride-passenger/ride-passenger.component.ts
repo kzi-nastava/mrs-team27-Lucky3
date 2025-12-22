@@ -1,0 +1,14 @@
+import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Ride } from '../../data/mock-data';
+
+@Component({
+  selector: 'app-ride-passenger',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './ride-passenger.component.html',
+  styleUrl: './ride-passenger.component.css'
+})
+export class RidePassengerComponent {
+  @Input() ride!: Ride;
+}
