@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { DriverOverviewPage } from './pages/driver/driver-overview/driver-overview.page';
 import { RideDetails } from './pages/driver/ride-details/ride-details';
-import { DriverProfilePage } from './pages/driver/driver-profile/driver-profile.page';
+import { DriverProfilePage } from './pages/profile.page/driver-profile/driver-profile.page';
 import { DashboardPage } from './pages/driver/dashboard/dashboard.page';
 import { LoginComponent } from './account-control/login/login.component';
 import { RegisterComponent } from './account-control/register/register.component';
