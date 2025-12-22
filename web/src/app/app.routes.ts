@@ -1,8 +1,13 @@
 import { Routes } from '@angular/router';
 import { DriverOverviewPage } from './pages/driver/driver-overview/driver-overview.page';
 import { RideDetails } from './pages/driver/ride-details/ride-details';
+import { DashboardPage } from './pages/driver/dashboard/dashboard.page';
 
 export const routes: Routes = [
+  {
+    path: 'driver/dashboard',
+    component: DashboardPage
+  },
   {
     path: 'driver/overview',
     component: DriverOverviewPage
@@ -13,7 +18,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    redirectTo: 'driver/overview',
+    redirectTo: 'driver/dashboard',
     pathMatch: 'full'
   }
 ];

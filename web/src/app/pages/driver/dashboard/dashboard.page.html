@@ -1,0 +1,91 @@
+<div class="min-h-screen bg-black text-white p-4 lg:p-6">
+  <div class="max-w-6xl mx-auto space-y-6">
+    
+    <!-- Header Card -->
+    <div class="bg-[#1C1C1E] p-6 rounded-xl border border-gray-800">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold mb-2">Welcome back, {{ driverName }}!</h1>
+          <p class="text-gray-400">
+            {{ isOnline ? 'You are online and available for rides' : 'You are currently offline' }}
+          </p>
+        </div>
+        <div class="flex items-center gap-4">
+          <app-toggle-switch 
+            [checked]="isOnline" 
+            [label]="isOnline ? 'Online' : 'Offline'"
+            (checkedChange)="onStatusChange($event)">
+          </app-toggle-switch>
+          <div class="w-3 h-3 rounded-full transition-colors duration-300"
+               [class.bg-green-500]="isOnline"
+               [class.animate-pulse]="isOnline"
+               [class.bg-gray-500]="!isOnline">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <app-stat-card 
+        title="Today's Earnings" 
+        [value]="'$' + stats.earnings"
+        iconBgColor="bg-yellow-500/20"
+        iconColor="text-yellow-500">
+        <svg icon xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EAB308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Rides Completed" 
+        [value]="stats.ridesCompleted"
+        iconBgColor="bg-gray-700/50"
+        iconColor="text-white">
+        <svg icon xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Rating" 
+        [value]="stats.rating"
+        iconBgColor="bg-yellow-500/20"
+        iconColor="text-yellow-500">
+        <svg icon xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EAB308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </app-stat-card>
+
+      <app-stat-card 
+        title="Online Hours" 
+        [value]="stats.onlineHours + 'h'"
+        iconBgColor="bg-gray-700/50"
+        iconColor="text-white">
+        <svg icon xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </app-stat-card>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Left Column: Active Ride / Map -->
+      <div class="space-y-6">
+        <app-active-ride-card [hasActiveRide]="false" class="block"></app-active-ride-card>
+        <app-map-placeholder class="block"></app-map-placeholder>
+      </div>
+
+      <!-- Right Column: Available Rides -->
+      <div class="space-y-4">
+        <div class="bg-[#1C1C1E] p-4 rounded-xl border border-gray-800">
+          <h2 class="text-lg font-bold mb-4">Available Rides ({{ availableRides.length }})</h2>
+          <div class="space-y-4">
+            <app-ride-request-card 
+              *ngFor="let ride of availableRides"
+              [type]="ride.type"
+              [price]="ride.price"
+              [distance]="ride.distance"
+              [time]="ride.time"
+              [pickup]="ride.pickup"
+              [dropoff]="ride.dropoff">
+            </app-ride-request-card>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

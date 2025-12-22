@@ -1,0 +1,14 @@
+<div class="bg-[#1C1C1E] rounded-xl border border-gray-800 h-full min-h-[200px] flex flex-col items-center justify-center p-6 text-center">
+  <ng-container *ngIf="!hasActiveRide">
+    <div class="w-16 h-16 rounded-full border-4 border-gray-700 flex items-center justify-center mb-4">
+      <span class="text-3xl font-bold text-gray-500">!</span>
+    </div>
+    <h3 class="text-lg font-bold text-white mb-1">No Active Ride</h3>
+    <p class="text-gray-400 text-sm">Waiting for ride requests...</p>
+  </ng-container>
+  
+  <ng-container *ngIf="hasActiveRide">
+    <!-- Active ride content would go here -->
+    <h3 class="text-lg font-bold text-white mb-1">Ride in Progress</h3>
+  </ng-container>
+</div>
