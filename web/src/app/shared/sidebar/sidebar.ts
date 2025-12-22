@@ -36,7 +36,11 @@ export class Sidebar {
     this.closeSidebar.emit();
   }
 
-  onItemClick() {
+  onItemClick(clickedItem: SidebarItem) {
+    // Set all items to inactive, then activate the clicked one
+    this.items.forEach(item => item.active = false);
+    clickedItem.active = true;
+
     // On mobile, close sidebar when item is clicked
     if (window.innerWidth < 1024) {
       this.close();
