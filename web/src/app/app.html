@@ -1,13 +1,14 @@
 <div class="flex min-h-screen bg-black">
   <!-- Sidebar -->
   <app-sidebar 
+    *ngIf="showLayout"
     [isOpen]="isSidebarOpen" 
     (closeSidebar)="closeSidebar()"
   ></app-sidebar>
 
   <!-- Main Content -->
   <div class="flex-1 flex flex-col min-w-0">
-    <app-navbar (toggleSidebar)="toggleSidebar()"></app-navbar>
+    <app-navbar *ngIf="showLayout" (toggleSidebar)="toggleSidebar()"></app-navbar>
     
     <main class="flex-1 overflow-y-auto">
       <router-outlet></router-outlet>
