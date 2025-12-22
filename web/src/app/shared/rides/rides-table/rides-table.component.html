@@ -1,0 +1,107 @@
+<div class="card p-0 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left">
+      <thead>
+        <tr class="border-b border-gray-800 bg-gray-900/50">
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('startDate')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Start Time
+              <span *ngIf="sortField !== 'startDate'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'startDate'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('endDate')" class="flex items-center gap-2 hover:text-white transition-colors">
+              End Time
+              <span *ngIf="sortField !== 'endDate'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'endDate'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('route')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Route
+              <span *ngIf="sortField !== 'route'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'route'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('passengers')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Passengers
+              <span *ngIf="sortField !== 'passengers'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'passengers'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('distance')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Distance
+              <span *ngIf="sortField !== 'distance'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'distance'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="rides.length === 0">
+          <td colspan="5" class="p-8 text-center text-gray-500">
+            No rides found
+          </td>
+        </tr>
+        <tr 
+          *ngFor="let ride of rides"
+          (click)="onViewDetails(ride.id)"
+          class="border-b border-gray-800 hover:bg-gray-800/50 cursor-pointer transition-colors relative"
+          [ngClass]="{'outline outline-2 outline-red-500 z-10': ride.hasPanic}"
+        >
+          <!-- Start Time -->
+          <td class="p-4">
+            <div class="flex flex-col">
+              <span class="font-medium text-white">{{ formatDate(ride.startedAt || ride.requestedAt) }}</span>
+              <span class="text-gray-400">{{ formatTime(ride.startedAt || ride.requestedAt) }}</span>
+            </div>
+          </td>
+          
+          <!-- End Time -->
+          <td class="p-4">
+            <div class="flex flex-col">
+              <span class="font-medium text-white">{{ formatDate(ride.completedAt) }}</span>
+              <span class="text-gray-400">{{ formatTime(ride.completedAt) }}</span>
+            </div>
+          </td>
+
+          <!-- Route -->
+          <td class="p-4">
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+                <span class="text-gray-300 truncate max-w-[200px]">{{ ride.pickup.address }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                <span class="text-gray-300 truncate max-w-[200px]">{{ ride.destination.address }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Passengers -->
+          <td class="p-4">
+            <div class="flex items-center gap-2 text-gray-300">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span>1</span>
+            </div>
+          </td>
+
+          <!-- Distance -->
+          <td class="p-4">
+            <div class="flex flex-col">
+              <span class="font-medium text-white">{{ ride.distance }} km</span>
+              <span class="text-gray-400 flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {{ getDuration(ride.startedAt, ride.completedAt) }}
+              </span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
