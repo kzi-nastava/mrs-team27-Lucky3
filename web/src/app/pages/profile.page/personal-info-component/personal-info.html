@@ -10,6 +10,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-pen-icon lucide-user-pen ml-2"><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/><circle cx="10" cy="7" r="4"/></svg>
                 <input type="text" [(ngModel)]="name" placeholder="Enter your first name" class="bg-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50" />
             </div>
+          <p *ngIf="showErrors && !name" class="text-red-500 text-sm mt-1">First name is required.</p>
         </div>
 
         <!-- Last Name -->
@@ -19,6 +20,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-pen-icon lucide-user-pen ml-2"><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/><circle cx="10" cy="7" r="4"/></svg>
                 <input type="text" [(ngModel)]="surname" placeholder="Enter your last name" class="bg-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50" />
             </div>
+          <p *ngIf="showErrors && !surname" class="text-red-500 text-sm mt-1">Last name is required.</p>
         </div>
 
         <!-- Email -->
@@ -28,6 +30,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail-icon lucide-mail ml-2"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                 <input type="text" [(ngModel)]="email" placeholder="Enter your email" class="bg-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50" />
             </div>
+          <p *ngIf="showErrors && !email" class="text-red-500 text-sm mt-1">Email is required.</p>
         </div>
 
         <!-- Phone Number -->
@@ -37,6 +40,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone-icon lucide-phone ml-2"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>
                 <input type="text" [(ngModel)]="phone" placeholder="Enter your phone number" class="bg-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50" />
             </div>
+          <p *ngIf="showErrors && !phone" class="text-red-500 text-sm mt-1">Phone number is required.</p>
         </div>
         
         <!-- Address -->
@@ -46,6 +50,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin-house-icon lucide-map-pin-house  ml-2"><path d="M15 22a1 1 0 0 1-1-1v-4a1 1 0 0 1 .445-.832l3-2a1 1 0 0 1 1.11 0l3 2A1 1 0 0 1 22 17v4a1 1 0 0 1-1 1z"/><path d="M18 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 .601.2"/><path d="M18 22v-3"/><circle cx="10" cy="10" r="3"/></svg> 
                 <input type="text" [(ngModel)]="address" placeholder="Enter your address" class="bg-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/50" />
             </div>
+          <p *ngIf="showErrors && !address" class="text-red-500 text-sm mt-1">Address is required.</p>
         </div>
 
         <h4 class="text-lg text-gray-200">Security</h4>
@@ -72,8 +77,41 @@
 
       <!-- Save Button -->
       <div class="flex justify-center mt-2">
-        <button class="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-3 rounded-lg transition-colors">
+        <button type="button" (click)="onSave()" class="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-3 rounded-lg transition-colors">
           Save Changes
         </button>
+      </div>
+    </div>
+
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      [class.hidden]="!showSuccess"
+    >
+      <div class="relative w-full max-w-md mx-4 rounded-2xl bg-gray-900 p-6 space-y-4 text-center">
+        <button
+          class="absolute top-3 right-3 text-gray-400 hover:text-white"
+          (click)="closeSuccess()"
+          aria-label="Close success message"
+        >
+          ✕
+        </button>
+        <div class="flex justify-center">
+          <div class="bg-green-500/20 text-green-400 rounded-full p-3 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+        </div>
+        <h4 class="text-lg font-semibold text-white">Request sent</h4>
+        <p class="text-sm text-gray-400">
+          Your profile information has been successfully updated.
+        </p>
+        <div class="flex justify-center pt-2">
+          <button
+            type="button"
+            class="bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg hover:bg-yellow-500"
+            (click)="closeSuccess()"
+          >
+            OK
+          </button>
+        </div>
       </div>
     </div>

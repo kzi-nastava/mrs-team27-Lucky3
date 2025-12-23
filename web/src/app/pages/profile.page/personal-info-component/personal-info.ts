@@ -16,4 +16,17 @@ export class PersonalInfoComponent {
     surname = 'Perisic';
     address = 'Strazilovska 4';
     phone = '06534542221';
+    showErrors = false;
+    showSuccess = false;
+
+    onSave() {
+      this.showErrors = !this.name || !this.surname || !this.email || !this.phone || !this.address;
+      if (!this.showErrors) {
+        this.showSuccess = true;
+      }
+    }
+
+    closeSuccess() {
+      this.showSuccess = false;
+    }
 }
