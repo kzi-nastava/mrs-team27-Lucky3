@@ -25,15 +25,15 @@
 
       <!-- Dropdown Menu -->
       <div *ngIf="isDropdownOpen" class="absolute right-0 mt-2 w-48 rounded-md bg-gray-900 border border-gray-800 shadow-lg py-1 z-50">
-        <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+        <a routerLink="/passenger/home" (click)="isDropdownOpen = false" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
           Passenger
-        </button>
-        <a routerLink="/driver/overview" (click)="isDropdownOpen = false" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+        </a>
+        <a routerLink="/driver/dashboard" (click)="isDropdownOpen = false" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
           Driver
         </a>
-        <button class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+        <a routerLink="/admin/dashboard" (click)="isDropdownOpen = false" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
           Admin
-        </button>
+        </a>
       </div>
     </div>
   </div>

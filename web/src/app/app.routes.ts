@@ -9,6 +9,8 @@ import { ResetPasswordSentComponent } from './account-control/reset-password-sen
 import { RegisterVerificationSentComponent } from './account-control/register-verification-sent/register-verification-sent.component';
 import { ResetPasswordComponent } from './account-control/reset-password/reset-password.component';
 import { ResetPasswordSuccessComponent } from './account-control/reset-password-success/reset-password-success.component';
+import { PassengerHomePage } from './pages/passenger/home/passenger-home.page';
+import { AdminDashboardPage } from './pages/admin/dashboard/admin-dashboard.page';
 
 export const routes: Routes = [
   {
@@ -38,6 +40,14 @@ export const routes: Routes = [
   {
     path: 'register-verification-sent',
     component: RegisterVerificationSentComponent
+  },
+  {
+    path: 'passenger/home',
+    component: PassengerHomePage
+  },
+  {
+    path: 'admin/dashboard',
+    component: AdminDashboardPage
   },
   {
     path: 'driver/dashboard',
