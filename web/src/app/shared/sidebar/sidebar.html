@@ -25,7 +25,7 @@
   <nav class="flex-1 p-4 space-y-1 min-w-[16rem]">
     <a *ngFor="let item of items"
        [routerLink]="item.route"
-       (click)="onItemClick()"
+       (click)="onItemClick(item)"
        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer"
        [ngClass]="{
          'text-red-500 hover:bg-red-500/10': item.variant === 'danger',
