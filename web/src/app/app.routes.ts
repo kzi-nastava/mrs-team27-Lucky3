@@ -8,6 +8,10 @@ import { RegisterComponent } from './account-control/register/register.component
 import { ForgotPasswordComponent } from './account-control/forgot-password/forgot-password.component';
 import { ResetPasswordSentComponent } from './account-control/reset-password-sent/reset-password-sent.component';
 import { RegisterVerificationSentComponent } from './account-control/register-verification-sent/register-verification-sent.component';
+import { ResetPasswordComponent } from './account-control/reset-password/reset-password.component';
+import { ResetPasswordSuccessComponent } from './account-control/reset-password-success/reset-password-success.component';
+import { PassengerHomePage } from './pages/passenger/home/passenger-home.page';
+import { AdminDashboardPage } from './pages/admin/dashboard/admin-dashboard.page';
 
 export const routes: Routes = [
   {
@@ -27,8 +31,24 @@ export const routes: Routes = [
     component: ResetPasswordSentComponent
   },
   {
+    path: 'reset-password',
+    component: ResetPasswordComponent
+  },
+  {
+    path: 'reset-password-success',
+    component: ResetPasswordSuccessComponent
+  },
+  {
     path: 'register-verification-sent',
     component: RegisterVerificationSentComponent
+  },
+  {
+    path: 'passenger/home',
+    component: PassengerHomePage
+  },
+  {
+    path: 'admin/dashboard',
+    component: AdminDashboardPage
   },
   {
     path: 'driver/dashboard',

@@ -11,6 +11,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 })
 export class ResetPasswordSentComponent implements OnInit {
   email = '';
+  resendCooldown = 0;
 
   constructor(private route: ActivatedRoute) {}
 
@@ -18,5 +19,20 @@ export class ResetPasswordSentComponent implements OnInit {
     this.route.queryParams.subscribe(params => {
       this.email = params['email'] || 'your email';
     });
+  }
+
+  resendEmail() {
+    if (this.resendCooldown > 0) return;
+    
+    // Simulate API call
+    console.log('Resending email to:', this.email);
+    
+    this.resendCooldown = 60;
+    const interval = setInterval(() => {
+      this.resendCooldown--;
+      if (this.resendCooldown <= 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
   }
 }

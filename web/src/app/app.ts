@@ -23,7 +23,15 @@ export class App implements OnInit {
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: NavigationEnd) => {
-      const hiddenRoutes = ['/login', '/register', '/forgot-password', '/reset-password-sent', '/register-verification-sent'];
+      const hiddenRoutes = [
+        '/login', 
+        '/register', 
+        '/forgot-password', 
+        '/reset-password-sent', 
+        '/reset-password',
+        '/reset-password-success',
+        '/register-verification-sent'
+      ];
       const url = event.urlAfterRedirects || event.url;
       this.showLayout = !hiddenRoutes.some(route => url.startsWith(route));
     });
