@@ -23,10 +23,10 @@ yarn-error.log
 *.iml
 
 # Visual Studio Code
-.vscode/
+/.vscode
 
 # Miscellaneous
-/.angular/cache
+/.angular
 .sass-cache/
 /connect.lock
 /coverage
@@ -41,5 +41,3 @@ Thumbs.db
 
 # Environment Variables
 .env
-
-/package-lock.json
