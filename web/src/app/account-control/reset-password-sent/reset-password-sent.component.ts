@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 
@@ -13,7 +13,10 @@ export class ResetPasswordSentComponent implements OnInit {
   email = '';
   resendCooldown = 0;
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
@@ -30,6 +33,8 @@ export class ResetPasswordSentComponent implements OnInit {
     this.resendCooldown = 60;
     const interval = setInterval(() => {
       this.resendCooldown--;
+      this.cdr.detectChanges();
+      
       if (this.resendCooldown <= 0) {
         clearInterval(interval);
       }
