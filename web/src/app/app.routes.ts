@@ -7,6 +7,8 @@ import { RegisterComponent } from './account-control/register/register.component
 import { ForgotPasswordComponent } from './account-control/forgot-password/forgot-password.component';
 import { ResetPasswordSentComponent } from './account-control/reset-password-sent/reset-password-sent.component';
 import { RegisterVerificationSentComponent } from './account-control/register-verification-sent/register-verification-sent.component';
+import { ResetPasswordComponent } from './account-control/reset-password/reset-password.component';
+import { ResetPasswordSuccessComponent } from './account-control/reset-password-success/reset-password-success.component';
 
 export const routes: Routes = [
   {
@@ -24,6 +26,14 @@ export const routes: Routes = [
   {
     path: 'reset-password-sent',
     component: ResetPasswordSentComponent
+  },
+  {
+    path: 'reset-password',
+    component: ResetPasswordComponent
+  },
+  {
+    path: 'reset-password-success',
+    component: ResetPasswordSuccessComponent
   },
   {
     path: 'register-verification-sent',
