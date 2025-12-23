@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { PersonalInfoComponent } from '../personal-info-component/personal-info';
 
 @Component({
   selector: 'app-user-profile.page',
-  imports: [],
+  standalone: true,
+  imports: [CommonModule, PersonalInfoComponent],
   templateUrl: './user-profile.page.html',
-  styleUrl: './user-profile.page.css',
+  styleUrls: ['./user-profile.page.css'],
 })
-export class UserProfilePage {
-
-}
+export class UserProfilePage extends PersonalInfoComponent {}

@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 import { DriverOverviewPage } from './pages/driver/driver-overview/driver-overview.page';
 import { RideDetails } from './pages/driver/ride-details/ride-details';
 import { DriverProfilePage } from './pages/profile.page/driver-profile/driver-profile.page';
+import { UserProfilePage } from './pages/profile.page/user-profile/user-profile.page';
+import { AdminProfile } from './pages/profile.page/admin-profile/admin-profile';
 import { DashboardPage } from './pages/driver/dashboard/dashboard.page';
 import { LoginComponent } from './account-control/login/login.component';
 import { RegisterComponent } from './account-control/register/register.component';
@@ -45,6 +47,14 @@ export const routes: Routes = [
   {
     path: 'passenger/home',
     component: PassengerHomePage
+  },
+  {
+    path: 'passenger/profile',
+    component: UserProfilePage
+  },
+  {
+    path: 'admin/profile',
+    component: AdminProfile
   },
   {
     path: 'admin/dashboard',

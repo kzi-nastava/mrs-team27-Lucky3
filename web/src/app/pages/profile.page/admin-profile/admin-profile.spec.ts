@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { DriverProfilePage } from './driver-profile.page';
+import { AdminProfile } from './admin-profile';
 
-describe('DriverProfilePage', () => {
-  let component: DriverProfilePage;
-  let fixture: ComponentFixture<DriverProfilePage>;
+describe('AdminProfile', () => {
+  let component: AdminProfile;
+  let fixture: ComponentFixture<AdminProfile>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DriverProfilePage]
+      imports: [AdminProfile]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(DriverProfilePage);
+    fixture = TestBed.createComponent(AdminProfile);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
