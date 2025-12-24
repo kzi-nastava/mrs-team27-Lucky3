@@ -8,40 +8,51 @@
       <p class="text-gray-400">Sign in to your account</p>
     </div>
 
-    <form (ngSubmit)="onSubmit()" class="space-y-4">
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
       <div class="auth-input-group">
         <label class="auth-label">Email</label>
         <div class="auth-input-icon-wrapper">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-input-icon"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-input-icon" [class.text-red-500]="f['email'].invalid && f['email'].touched"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
           <input 
             type="email" 
-            [(ngModel)]="email" 
-            name="email"
+            formControlName="email"
             class="auth-input auth-input-with-icon" 
+            [class.border-red-500]="f['email'].invalid && f['email'].touched"
+            [class.focus:border-red-500]="f['email'].invalid && f['email'].touched"
+            [class.focus:ring-red-500]="f['email'].invalid && f['email'].touched"
             placeholder="your@email.com"
-            required
-            [disabled]="loading"
           >
+        </div>
+        <div *ngIf="f['email'].invalid && f['email'].touched" class="text-red-500 text-xs ml-1">
+          <span *ngIf="f['email'].errors?.['required']">Email is required</span>
+          <span *ngIf="f['email'].errors?.['email']">Please enter a valid email address</span>
         </div>
       </div>
 
       <div class="auth-input-group">
         <label class="auth-label">Password</label>
         <div class="auth-input-icon-wrapper">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-input-icon"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="auth-input-icon" [class.text-red-500]="f['password'].invalid && f['password'].touched"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           <input 
             type="password" 
-            [(ngModel)]="password" 
-            name="password"
+            formControlName="password"
             class="auth-input auth-input-with-icon" 
+            [class.border-red-500]="f['password'].invalid && f['password'].touched"
+            [class.focus:border-red-500]="f['password'].invalid && f['password'].touched"
+            [class.focus:ring-red-500]="f['password'].invalid && f['password'].touched"
             placeholder="••••••••"
-            required
-            [disabled]="loading"
           >
+        </div>
+        <div *ngIf="f['password'].invalid && f['password'].touched" class="text-red-500 text-xs ml-1">
+          <span *ngIf="f['password'].errors?.['required']">Password is required</span>
+          <span *ngIf="f['password'].errors?.['minlength']">Password must be at least 6 characters</span>
         </div>
       </div>
 
-      <div *ngIf="error" class="text-red-500 text-sm">{{ error }}</div>
+      <div *ngIf="error" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        {{ error }}
+      </div>
 
       <div class="flex justify-end">
         <a routerLink="/forgot-password" class="text-sm text-yellow-500 hover:underline">
@@ -50,6 +61,12 @@
       </div>
 
       <button type="submit" class="auth-btn" [disabled]="loading">
+        <span *ngIf="loading" class="animate-spin mr-2">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </span>
         {{ loading ? 'Signing in...' : 'Sign In' }}
       </button>
     </form>
