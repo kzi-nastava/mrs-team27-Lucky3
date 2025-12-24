@@ -1,0 +1,56 @@
+<div class="card">
+  <div class="card-header">
+    <h3 class="section-title">Route Details</h3>
+    <div class="flex items-center gap-4 text-xs text-gray-400">
+      <span class="flex items-center gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        {{ calculateDuration(ride.startedAt, ride.completedAt) }}
+      </span>
+      <span class="flex items-center gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        {{ ride.distance }} km
+      </span>
+    </div>
+  </div>
+
+  <div class="space-y-8 relative pl-2">
+    <!-- Connecting Line -->
+    <div class="absolute left-[19px] top-3 bottom-10 w-0.5 bg-gray-800 border-l border-dashed border-gray-600"></div>
+
+    <!-- Pickup -->
+    <div class="relative flex gap-4">
+      <div class="mt-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div>
+        <p class="text-label mb-1">Pickup Location</p>
+        <p class="text-value mb-1">{{ ride.pickup.address }}</p>
+        <p *ngIf="ride.status !== 'cancelled'" class="text-xs text-gray-500">Picked up at {{ formatTime(ride.startedAt || ride.requestedAt) }}</p>
+      </div>
+    </div>
+
+    <!-- Dropoff -->
+    <div class="relative flex gap-4">
+      <div class="mt-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div>
+        <p class="text-label mb-1">Destination</p>
+        <p class="text-value mb-1">{{ ride.destination.address }}</p>
+        <p *ngIf="ride.status !== 'cancelled'" class="text-xs text-gray-500">Arrived at {{ formatTime(ride.completedAt) }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="ride.status === 'cancelled'" class="mt-8 pt-6 border-t border-gray-800">
+    <p class="text-red-500 font-medium">
+      Cancelled by {{ ride.cancelledBy === 'driver' ? 'Driver' : 'Passenger' }}
+    </p>
+    <p *ngIf="ride.cancelledBy === 'driver' && ride.cancellationReason" class="text-sm text-gray-400 mt-1">
+      Reason: {{ ride.cancellationReason }}
+    </p>
+    <p class="text-xs text-gray-500 mt-1">
+      {{ formatDate(ride.completedAt || ride.startedAt || ride.requestedAt) }}, {{ formatTime(ride.completedAt || ride.startedAt || ride.requestedAt) }}
+    </p>
+  </div>
+</div>

@@ -1,0 +1,57 @@
+<!-- Mobile overlay -->
+<div 
+  *ngIf="isOpen"
+  class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+  (click)="close()"
+></div>
+
+<!-- Sidebar -->
+<aside 
+  class="fixed lg:relative top-0 left-0 min-h-screen h-full bg-black border-r border-gray-800
+         z-50 flex flex-col transition-all duration-300 whitespace-nowrap overflow-hidden"
+  [class.w-64]="true"
+  [class.translate-x-0]="isOpen"
+  [class.-translate-x-full]="!isOpen"
+  [class.lg:translate-x-0]="true"
+  [class.lg:w-64]="isOpen"
+  [class.lg:w-0]="!isOpen"
+  [class.lg:border-r]="isOpen"
+  [class.lg:border-r-0]="!isOpen"
+>
+  <div class="flex h-16 items-center px-6 border-b border-gray-800 min-w-[16rem]">
+    <h2 class="text-xl font-bold text-white">Rides</h2>
+  </div>
+  
+  <nav class="flex-1 p-4 space-y-1 min-w-[16rem]">
+    <a *ngFor="let item of items"
+       [routerLink]="item.route"
+       (click)="onItemClick()"
+       class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer"
+       [ngClass]="{
+         'text-red-500 hover:bg-red-500/10': item.variant === 'danger',
+         'bg-gray-800 text-white': item.active && item.variant !== 'danger',
+         'text-gray-400 hover:bg-gray-800/50': !item.active && item.variant !== 'danger'
+       }"
+    >
+      <!-- Icons (SVG) -->
+      <ng-container [ngSwitch]="item.icon">
+        <svg *ngSwitchCase="'dashboard'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        <svg *ngSwitchCase="'earnings'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <svg *ngSwitchCase="'profile'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <svg *ngSwitchCase="'support'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        <svg *ngSwitchCase="'logout'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+        <svg *ngSwitchCase="'home'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <svg *ngSwitchCase="'history'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+        <svg *ngSwitchCase="'reports'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+        <svg *ngSwitchCase="'drivers'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <svg *ngSwitchCase="'pricing'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </ng-container>
+      
+      <span class="flex-1 text-left">{{ item.label }}</span>
+      
+      <span *ngIf="item.badge" class="px-2 py-0.5 bg-white text-black text-xs rounded-full font-bold">
+        {{ item.badge }}
+      </span>
+    </a>
+  </nav>
+</aside>

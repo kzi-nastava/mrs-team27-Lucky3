@@ -2,3 +2,98 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  /* Card Component */
+  .card {
+    @apply bg-gray-900 rounded-xl p-6 border border-gray-800;
+  }
+  
+  .card-header {
+    @apply flex items-center justify-between mb-6;
+  }
+
+  /* Typography */
+  .text-label {
+    @apply text-xs text-gray-400;
+  }
+  
+  .text-value {
+    @apply text-white text-sm font-medium;
+  }
+  
+  .section-title {
+    @apply font-semibold text-white;
+  }
+  
+  /* Badges */
+  .badge {
+    @apply px-2 py-0.5 rounded text-[10px] font-bold uppercase;
+  }
+  
+  .badge-completed {
+    @apply bg-gray-800 text-gray-300 border border-gray-700;
+  }
+  
+  .badge-cancelled {
+    @apply bg-red-500/10 text-red-500 border border-red-500/20;
+  }
+  
+  .badge-panic {
+    @apply bg-red-500 text-white;
+  }
+
+  /* Icon Containers */
+  .icon-box {
+    @apply w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 border border-yellow-500/20;
+  }
+
+  .icon-circle {
+    @apply w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500;
+  }
+
+  /* Auth Components */
+  .auth-container {
+    @apply min-h-screen bg-black flex items-center justify-center p-4;
+  }
+
+  .auth-card {
+    @apply w-full bg-gray-900 rounded-2xl p-8 border border-gray-800 shadow-2xl;
+  }
+
+  .auth-input-group {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .auth-label {
+    @apply text-sm font-medium text-gray-400 ml-1;
+  }
+
+  .auth-input {
+    @apply w-full bg-black border border-gray-800 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors outline-none;
+  }
+
+  .auth-input-icon-wrapper {
+    @apply relative;
+  }
+
+  .auth-input-with-icon {
+    @apply pl-11;
+  }
+
+  .auth-input-icon {
+    @apply absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500;
+  }
+
+  .auth-btn {
+    @apply w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3.5 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer;
+  }
+  
+  .auth-btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .auth-link {
+    @apply text-yellow-500 hover:text-yellow-400 transition-colors;
+  }
+}
