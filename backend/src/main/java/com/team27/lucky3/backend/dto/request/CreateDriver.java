@@ -29,5 +29,5 @@ public class CreateDriver {
 
     @NotNull
     @Valid
-    private CreateVehicle vehicle;
+    private VehicleInformation vehicle;
 }
