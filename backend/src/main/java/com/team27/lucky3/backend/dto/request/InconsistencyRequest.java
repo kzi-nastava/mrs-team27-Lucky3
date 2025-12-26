@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PanicRequest {
-    @NotBlank(message = "Reason is required")
-    @Size(max = 500, message = "Reason cannot exceed 500 characters")
-    private String reason;
+public class InconsistencyRequest {
+    @NotBlank(message = "Remark is required")
+    @Size(max = 500, message = "Remark cannot exceed 500 characters")
+    private String remark;
 }
