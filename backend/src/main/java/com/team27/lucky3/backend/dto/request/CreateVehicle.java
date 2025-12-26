@@ -1,4 +1,4 @@
-package org.example.backend.dto.request;
+package com.team27.lucky3.backend.dto.request;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CreateVehicleDTO{
+public class CreateVehicle {
     @NotBlank
     private String model;
 

@@ -1,8 +1,8 @@
-package org.example.backend.controller;
+package com.team27.lucky3.backend.controller;
 
 
 import jakarta.validation.Valid;
-import org.example.backend.dto.request.CreateDriverDTO;
+import com.team27.lucky3.backend.dto.request.CreateDriver;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,22 +11,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/admin/drivers")
+@RequestMapping("/api")
 //@PreAuthorize("hasRole('ADMIN')")
 public class AdminDriverController {
 
-    @PostMapping
-    public ResponseEntity<CreateDriverDTO> createDriver(
-            @Valid @RequestBody CreateDriverDTO requestDTO
+    @PostMapping("/admin/drivers")
+    public ResponseEntity<CreateDriver> createDriver(
+            @Valid @RequestBody CreateDriver requestDTO
     ) {
 
-        // calls service, service call repository to save
+        // calls service, service call repository to save with status=pending_activation
         // Driver driver = driverService.createDriver(requestDTO);
 
-        //System.out.println("Creating driver: " + requestDTO);
+        //email sending with initial password setup link
 
         // returnam response dto
         // return new ResponseEntity<>(new DriverCreatedDTO(driver), HttpStatus.CREATED);
+        // TODO: proveriti da li je ovo dobro
         return new ResponseEntity<>(requestDTO, HttpStatus.CREATED);
     }
 }

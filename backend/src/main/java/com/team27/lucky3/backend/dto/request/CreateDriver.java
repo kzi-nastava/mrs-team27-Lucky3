@@ -1,7 +1,6 @@
-package org.example.backend.dto.request;
+package com.team27.lucky3.backend.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -11,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CreateDriverDTO {
+public class CreateDriver {
     @NotBlank
     private String name;
 
@@ -28,11 +27,7 @@ public class CreateDriverDTO {
     @Email
     private String email;
 
-    @NotBlank
-    @Size(min = 8, max = 72) // bcrypt limit praktično ~72
-    private String password;
-
     @NotNull
     @Valid
-    private CreateVehicleDTO vehicle;
+    private CreateVehicle vehicle;
 }
