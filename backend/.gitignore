@@ -1,4 +1,4 @@
-HELP.md
+
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -31,3 +31,43 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment Files ###
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.test.example
+!.env.production.example
+!.env.development.example
+!.env.local.example
+!.env.test.local.example
+!.env.production.local.example
+!.env.development.local.example
+.env.test
+.env.production
+.env.development
+.env.test.local
+.env.production.local
+.env.development.local
+.env.secrets.local
+.env.test.secrets.local
+.env.production.secrets.local
+.env.development.secrets.local
+.env.backups/
+
+### Logs ###
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+.vscode-test/logs/
+*.log.*
+logs/
+debug/
+debug-*.txt
+npm-debug.log
+pnpm-debug.log
