@@ -1,4 +1,5 @@
 package com.team27.lucky3.backend.dto.request;
+
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,3 +30,4 @@ public class VehicleInformation {
     @NotNull
     private Boolean petTransportEnabled;
 }
+

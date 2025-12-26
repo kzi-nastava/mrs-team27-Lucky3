@@ -1,7 +1,8 @@
 package com.team27.lucky3.backend.dto.request;
+
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -31,3 +32,4 @@ public class CreateDriver {
     @Valid
     private VehicleInformation vehicle;
 }
+

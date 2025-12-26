@@ -14,3 +14,4 @@ public class PassengerEmail {
     @Email
     private String email;
 }
+

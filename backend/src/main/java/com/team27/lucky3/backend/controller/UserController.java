@@ -1,16 +1,22 @@
 package com.team27.lucky3.backend.controller;
 
+import com.team27.lucky3.backend.dto.request.PasswordResetRequest;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.UserProfile;
+import com.team27.lucky3.backend.exception.ResourceNotFoundException;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/users")
-public class UserProfileController {
+@RequestMapping(value = "/api/users", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequiredArgsConstructor
+@Validated
+public class UserController {
 
     // Get current user profile
     @GetMapping("/me")
@@ -39,11 +45,21 @@ public class UserProfileController {
     }
 
     // Update user profile
-    @PutMapping("/me")
-    public ResponseEntity<UserProfile> updateCurrentUser(UserProfile userProfileEditRequest) {
+    @PutMapping(value = "/me", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<UserProfile> updateCurrentUser(@Valid @RequestBody UserProfile userProfileEditRequest) {
         // ovde moram da pozivam service da iz repositorijuma izvuce usera, pa da update-ujem njegove podatke
-
         return ResponseEntity.ok(userProfileEditRequest);
     }
 
+    @PostMapping("/{id}/reset-password")
+    public ResponseEntity<Void> sendResetPasswordEmail(@PathVariable @Min(1) Long id) {
+        if (id == 404) throw new ResourceNotFoundException("User not found");
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/{id}/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> resetPassword(@PathVariable @Min(1) Long id, @RequestBody PasswordResetRequest resetRequest) {
+        if (id == 404) throw new ResourceNotFoundException("User not found");
+        return ResponseEntity.noContent().build();
+    }
 }

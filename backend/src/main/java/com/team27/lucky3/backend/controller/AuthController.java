@@ -6,40 +6,44 @@ import com.team27.lucky3.backend.dto.request.PasswordResetRequest;
 import com.team27.lucky3.backend.dto.request.SetInitialPassword;
 import com.team27.lucky3.backend.dto.response.TokenResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping(value = "/api/auth", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
+@Validated
 public class AuthController {
 
     // 2.2.1 - Login
-    @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest loginRequest) {
+    @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
 
         // Later there will be a call to the authService.login(loginRequest);
         // Mock response
 
         TokenResponse response = new TokenResponse("jwt-access-token", "jwt-refresh-token");
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/reset-password")
-    public ResponseEntity<String> sendResetPasswordEmail(@RequestBody EmailRequest emailRequest) {
+    @PostMapping(value = "/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> sendResetPasswordEmail(@Valid @RequestBody EmailRequest emailRequest) {
         // Mock: Send email logic
-        return new ResponseEntity<>("Email with reset code sent.", HttpStatus.NO_CONTENT);
+        return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@RequestBody PasswordResetRequest resetRequest) {
+    @PutMapping(value = "/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody PasswordResetRequest resetRequest) {
         // Mock: Change password logic
-        return new ResponseEntity<>("Password successfully changed.", HttpStatus.NO_CONTENT);
+        return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/driver-activation/password")
-    public ResponseEntity<String> setInitialPassword(@RequestBody SetInitialPassword initialPassword) {
+    @PostMapping(value = "/driver-activation/password", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody SetInitialPassword initialPassword) {
         // Mock: Set initial password logic
         /*
             nađe token (po hash-u) nisam siguran da li cemo koristiti hash, ali otprilike
@@ -50,7 +54,7 @@ public class AuthController {
          */
 
         System.out.println("Initial Password: " + initialPassword);
-        return new ResponseEntity<>("Initial password successfully set.", HttpStatus.NO_CONTENT);
+        return ResponseEntity.noContent().build();
     }
-
 }
+

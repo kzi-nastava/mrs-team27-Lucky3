@@ -14,21 +14,18 @@ import java.util.List;
 @AllArgsConstructor
 public class CreateRide {
     @NotNull
-    @Valid
     private String start;
 
-    @NotNull @Valid
+    @NotNull
     private String destination;
 
-    // ako imate međustanice
-    @Valid
     private List<String> stops;
 
-    @NotNull @Valid
+    @NotNull
+    @Valid
     private RideRequirements requirements;
 
-    // opciono: da frontend pošalje kilometražu koju je izračunao
-    // ali bolje da backend računa (ili barem verifikuje)
     @Positive
     private Double kilometers;
 }
+

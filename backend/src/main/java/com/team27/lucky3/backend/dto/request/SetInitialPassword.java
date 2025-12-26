@@ -3,9 +3,14 @@ package com.team27.lucky3.backend.dto.request;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class SetInitialPassword {
-    // token uzima iz url patha, npr https://frontend.app/driver/activate?token=ABC123...
     @NotBlank
     private String token;
 
@@ -21,3 +26,4 @@ public class SetInitialPassword {
         return password != null && password.equals(confirmPassword);
     }
 }
+

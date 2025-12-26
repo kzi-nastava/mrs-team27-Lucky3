@@ -17,3 +17,4 @@ public class UserProfile {
     private String imageUrl;
     private VehicleInformation vehicleInformation;
 }
+
