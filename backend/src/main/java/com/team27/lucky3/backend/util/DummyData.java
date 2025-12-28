@@ -4,6 +4,7 @@ import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
+import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.entity.enums.VehicleType;
 
 import java.time.LocalDateTime;
@@ -17,8 +18,8 @@ public class DummyData {
         RoutePointResponse p1 = new RoutePointResponse(new LocationDto("Bulevar oslobodjenja 10", 45.2464, 19.8517), 1);
         RoutePointResponse p2 = new RoutePointResponse(new LocationDto("Bulevar oslobodjenja 12", 45.2464, 19.8520), 2);
 
-        UserResponse driver = new UserResponse(driverId, "DriverName", "DriverSurname", "driver" + driverId + "@example.com", "url", "DRIVER", "+381601234567");
-        UserResponse passenger = new UserResponse(passengerId, "PassengerName", "PassengerSurname", "passenger" + passengerId + "@example.com", "url", "PASSENGER", "+381601234567");
+        UserResponse driver = new UserResponse(driverId, "DriverName", "DriverSurname", "driver" + driverId + "@example.com", "url", UserRole.DRIVER, "+381601234567");
+        UserResponse passenger = new UserResponse(passengerId, "PassengerName", "PassengerSurname", "passenger" + passengerId + "@example.com", "url", UserRole.PASSENGER, "+381601234567");
 
         RideResponse response = new RideResponse();
         response.setId(id);

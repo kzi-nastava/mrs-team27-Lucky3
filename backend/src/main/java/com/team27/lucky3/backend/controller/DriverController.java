@@ -3,6 +3,7 @@ package com.team27.lucky3.backend.controller;
 import com.team27.lucky3.backend.dto.request.CreateDriver;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.UserResponse;
+import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.entity.enums.VehicleType;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import jakarta.validation.Valid;
@@ -23,7 +24,7 @@ public class DriverController {
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<UserResponse> createDriver(@Valid @RequestBody CreateDriver request) {
-        UserResponse response = new UserResponse(10L, request.getName(), request.getSurname(), request.getEmail(), "url", "DRIVER", request.getPhone());
+        UserResponse response = new UserResponse(10L, request.getName(), request.getSurname(), request.getEmail(), "url", UserRole.DRIVER, request.getPhone());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

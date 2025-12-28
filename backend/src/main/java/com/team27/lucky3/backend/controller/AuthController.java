@@ -3,6 +3,7 @@ package com.team27.lucky3.backend.controller;
 import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.TokenResponse;
 import com.team27.lucky3.backend.dto.response.UserResponse;
+import com.team27.lucky3.backend.entity.enums.UserRole;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -32,7 +33,7 @@ public class AuthController {
     // 2.2.2 User registration + email activation (unregistered -> registered user)
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<UserResponse> register(@Valid @RequestBody PassengerRegistrationRequest request) {
-        UserResponse response = new UserResponse(1L, request.getName(), request.getSurname(), request.getEmail(), "default.png", "PASSENGER", request.getPhoneNumber());
+        UserResponse response = new UserResponse(1L, request.getName(), request.getSurname(), request.getEmail(), "default.png", UserRole.PASSENGER, request.getPhoneNumber());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

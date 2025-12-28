@@ -1,5 +1,6 @@
 package com.team27.lucky3.backend.dto.response;
 
+import com.team27.lucky3.backend.entity.enums.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,6 +14,6 @@ public class UserResponse {
     private String surname;
     private String email;
     private String profilePictureUrl;
-    private String role;
+    private UserRole role;
     private String phoneNumber;
 }
