@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card"
+    android:padding="16dp"
+    android:layout_marginBottom="8dp">
+
+    <TextView
+        android:id="@+id/ride_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Today, 10:30 AM"
+        android:textColor="@color/gray_400"
+        android:textSize="12sp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <TextView
+        android:id="@+id/ride_price"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="$15.00"
+        android:textColor="@color/yellow_500"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/ride_from"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="123 Start St"
+        android:textColor="@color/white"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/ride_date"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/arrow"/>
+
+    <TextView
+        android:id="@+id/arrow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="→"
+        android:textColor="@color/gray_400"
+        android:layout_marginHorizontal="8dp"
+        app:layout_constraintTop_toTopOf="@id/ride_from"
+        app:layout_constraintBottom_toBottomOf="@id/ride_from"
+        app:layout_constraintStart_toEndOf="@id/ride_from"
+        app:layout_constraintEnd_toStartOf="@id/ride_to"/>
+
+    <TextView
+        android:id="@+id/ride_to"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="456 End Ave"
+        android:textColor="@color/white"
+        app:layout_constraintTop_toTopOf="@id/ride_from"
+        app:layout_constraintStart_toEndOf="@id/arrow"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/ride_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="COMPLETED"
+        android:background="@drawable/bg_badge_completed"
+        android:textColor="@color/gray_300"
+        android:textSize="10sp"
+        android:paddingHorizontal="6dp"
+        android:paddingVertical="2dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/ride_from"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
