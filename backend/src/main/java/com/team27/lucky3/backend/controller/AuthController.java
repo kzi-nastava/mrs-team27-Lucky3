@@ -1,17 +1,20 @@
 package com.team27.lucky3.backend.controller;
 
-import com.team27.lucky3.backend.dto.request.EmailRequest;
-import com.team27.lucky3.backend.dto.request.LoginRequest;
-import com.team27.lucky3.backend.dto.request.PasswordResetRequest;
-import com.team27.lucky3.backend.dto.request.SetInitialPassword;
+import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.TokenResponse;
+import com.team27.lucky3.backend.dto.response.UserResponse;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+
+import java.net.URI;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping(value = "/api/auth", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -19,41 +22,56 @@ import jakarta.validation.Valid;
 @Validated
 public class AuthController {
 
-    // 2.2.1 - Login
+    // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
-
-        // Later there will be a call to the authService.login(loginRequest);
-        // Mock response
-
         TokenResponse response = new TokenResponse("jwt-access-token", "jwt-refresh-token");
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping(value = "/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Void> sendResetPasswordEmail(@Valid @RequestBody EmailRequest emailRequest) {
-        // Mock: Send email logic
+    // 2.2.2 User registration + email activation (unregistered -> registered user)
+    @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody PassengerRegistrationRequest request) {
+        UserResponse response = new UserResponse(1L, request.getName(), request.getSurname(), request.getEmail(), "default.png", "PASSENGER", request.getPhoneNumber());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // 2.2.2 User registration + email activation
+    @GetMapping("/activate/{token}")
+    public ResponseEntity<Void> activateAccount(@PathVariable @NotBlank String token) {
+        // Activation logic using token + redirect to frontend
+        String frontendUrl = "http://localhost:4200/account-control/activated";
+
+        return ResponseEntity.status(HttpStatus.FOUND) // HTTP 302
+                .location(URI.create(frontendUrl))
+                .build();
+    }
+
+    // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
+    @PostMapping(value = "/forgot-password", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody EmailRequest emailRequest) {
+        // Send email logic
         return ResponseEntity.noContent().build();
     }
 
+    // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
     @PutMapping(value = "/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody PasswordResetRequest resetRequest) {
-        // Mock: Change password logic
+        // Change password logic
         return ResponseEntity.noContent().build();
     }
 
+    // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
+    @PostMapping("/logout/{id}")
+    public ResponseEntity<Void> logout(@PathVariable @Min(1) Long id) {
+        // Logout logic: check for active rides
+        return ResponseEntity.noContent().build();
+    }
+
+    // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
     @PostMapping(value = "/driver-activation/password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody SetInitialPassword initialPassword) {
-        // Mock: Set initial password logic
-        /*
-            nađe token (po hash-u) nisam siguran da li cemo koristiti hash, ali otprilike
-            proveri expiresAt i usedAt  - kod tokena koji dobije
-            upiše passwordHash (bcrypt) u Driver - updatuje drivera, nadje ga po id-u iz tokena
-            setuje driver ACTIVE - updatuje drivera, nadje ga po id-u iz tokena
-            markira token usedAt=now (link postaje nevažeći)
-         */
-
-        System.out.println("Initial Password: " + initialPassword);
+        // Set initial password logic
         return ResponseEntity.noContent().build();
     }
 }

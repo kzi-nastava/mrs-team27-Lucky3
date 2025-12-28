@@ -1,5 +1,6 @@
 package com.team27.lucky3.backend.dto.request;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -23,9 +24,17 @@ public class PassengerRegistrationRequest {
     @NotBlank(message = "Password is required")
     private String password;
 
+    @NotBlank(message = "Confirm password is required")
+    private String confirmPassword;
+
     @NotBlank(message = "Phone number is required")
     private String phoneNumber;
 
     @NotBlank(message = "Address is required")
     private String address;
+
+    @AssertTrue(message = "Passwords do not match")
+    public boolean isPasswordsMatch() {
+        return password != null && password.equals(confirmPassword);
+    }
 }

@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class RideEstimationResponse {
     private int estimatedTimeInMinutes;
     private double estimatedCost;
+    private java.util.List<RoutePointResponse> routePoints; // For displaying route on map
 }

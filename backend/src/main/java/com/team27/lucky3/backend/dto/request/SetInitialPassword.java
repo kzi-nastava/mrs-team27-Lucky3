@@ -11,14 +11,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SetInitialPassword {
-    @NotBlank
+    @NotBlank(message = "Token is required")
     private String token;
 
-    @NotBlank
-    @Size(min = 8, max = 72)
+    @NotBlank(message = "Password is required")
+    @Size(min = 8, max = 72, message = "Password must be between 8 and 72 characters")
     private String password;
 
-    @NotBlank
+    @NotBlank(message = "Confirm password is required")
     private String confirmPassword;
 
     @AssertTrue(message = "Passwords do not match")

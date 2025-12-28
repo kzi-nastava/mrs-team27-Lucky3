@@ -12,23 +12,23 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateDriver {
-    @NotBlank
+    @NotBlank(message = "Name is required")
     private String name;
 
-    @NotBlank
+    @NotBlank(message = "Surname is required")
     private String surname;
 
-    @NotBlank
-    private String address;
-
-    @NotBlank
-    private String phoneNumber;
-
-    @NotBlank
-    @Email
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
     private String email;
 
-    @NotNull
+    @NotBlank(message = "Address is required")
+    private String address;
+
+    @NotBlank(message = "Phone number is required")
+    private String phone;
+
+    @NotNull(message = "Vehicle information is required")
     @Valid
     private VehicleInformation vehicle;
 }

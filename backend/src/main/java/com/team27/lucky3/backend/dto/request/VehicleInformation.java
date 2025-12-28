@@ -1,5 +1,6 @@
 package com.team27.lucky3.backend.dto.request;
 
+import com.team27.lucky3.backend.entity.enums.VehicleType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,23 +12,22 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class VehicleInformation {
-    @NotBlank
+    @NotBlank(message = "Model is required")
     private String model;
 
-    @NotBlank
-    private String type; // SEDAN, HATCHBACK, SUV, VAN...
+    @NotNull(message = "Type is required")
+    private VehicleType vehicleType; // Renamed from 'type' to be explicit
 
-    @NotBlank
-    private String licensePlateNumber;
+    @NotBlank(message = "License plate number is required")
+    private String licenseNumber; // Standardized
 
-    @NotNull
-    @Min(1)
-    private Integer seatsCount;
-
-    @NotNull
-    private Boolean babyTransportEnabled;
+    @NotNull(message = "Seats count is required")
+    @Min(value = 1)
+    private Integer passengerSeats; // Standardized
 
     @NotNull
-    private Boolean petTransportEnabled;
+    private Boolean babyTransport;
+
+    @NotNull
+    private Boolean petTransport;
 }
-
