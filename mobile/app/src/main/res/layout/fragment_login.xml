@@ -129,7 +129,7 @@
             android:id="@+id/register_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sign Up"
+            android:text="Create account"
             android:textColor="@color/yellow_500"
             android:textStyle="bold"
             android:layout_marginStart="4dp"
