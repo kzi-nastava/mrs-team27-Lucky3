@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Base Styles -->
+    <style name="Style.App" parent="" />
+
     <!-- Typography -->
     <style name="TextAppearance.App.Label" parent="TextAppearance.Material3.BodySmall">
         <item name="android:textSize">12sp</item>
@@ -24,7 +27,7 @@
     </style>
 
     <!-- Components -->
-    <style name="Widget.App.Card" parent="Widget.Material3.CardView">
+    <style name="Widget.App.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/gray_900</item>
         <item name="cardCornerRadius">12dp</item>
         <item name="strokeColor">@color/gray_800</item>

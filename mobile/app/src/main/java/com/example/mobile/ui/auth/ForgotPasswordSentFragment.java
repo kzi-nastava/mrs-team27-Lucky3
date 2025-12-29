@@ -24,6 +24,14 @@ public class ForgotPasswordSentFragment extends Fragment {
             Navigation.findNavController(v).popBackStack(R.id.nav_login, false);
         });
 
+        binding.btnClose.setOnClickListener(v -> {
+            Navigation.findNavController(v).popBackStack(R.id.nav_login, false);
+        });
+
+        binding.btnResend.setOnClickListener(v -> {
+            android.widget.Toast.makeText(getContext(), "Email resent!", android.widget.Toast.LENGTH_SHORT).show();
+        });
+
         binding.btnSimulateLink.setOnClickListener(v -> {
             Navigation.findNavController(v).navigate(R.id.action_nav_forgot_password_sent_to_nav_reset_password);
         });
