@@ -10,7 +10,7 @@
             android:icon="@drawable/ic_menu_history"
             android:title="Ride History" />
         <item
-            android:id="@+id/nav_passenger_profile"
+            android:id="@+id/nav_user_profile"
             android:icon="@drawable/ic_menu_profile"
             android:title="Profile" />
         <item
