@@ -25,6 +25,7 @@ public class DriverController {
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<DriverResponse> createDriver(@Valid @RequestBody CreateDriver request) {
+        request.getVehicle().setDriverId(10L);
         DriverResponse response = new DriverResponse(10L, request.getName(), request.getSurname(), request.getEmail(), "url", UserRole.DRIVER, request.getPhone(), request.getVehicle(), false, "0h 0m");
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -40,6 +41,7 @@ public class DriverController {
         vehicle.setPassengerSeats(4);
         vehicle.setBabyTransport(true);
         vehicle.setPetTransport(true);
+        vehicle.setDriverId(id);
 
         DriverResponse response = new DriverResponse(id, "Pera", "Peric", "pera@gmail.com", "url", UserRole.DRIVER, "0601234567", vehicle, true, "5h 30m");
         return ResponseEntity.ok(response);
@@ -49,6 +51,7 @@ public class DriverController {
     public ResponseEntity<DriverResponse> updateDriver(@PathVariable Long id, @Valid @RequestBody CreateDriver request) {
         if (id == 404) throw new ResourceNotFoundException("Driver not found");
 
+        request.getVehicle().setDriverId(id);
         DriverResponse response = new DriverResponse(id, request.getName(), request.getSurname(), request.getEmail(), "url", UserRole.DRIVER, request.getPhone(), request.getVehicle(), true, "5h 30m");
         return ResponseEntity.ok(response);
     }
@@ -65,6 +68,7 @@ public class DriverController {
         vehicle.setPassengerSeats(4);
         vehicle.setBabyTransport(true);
         vehicle.setPetTransport(true);
+        vehicle.setDriverId(id);
         return ResponseEntity.ok(vehicle);
     }
 }

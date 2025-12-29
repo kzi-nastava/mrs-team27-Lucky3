@@ -18,7 +18,8 @@ public class DummyData {
         RoutePointResponse p1 = new RoutePointResponse(new LocationDto("Bulevar oslobodjenja 10", 45.2464, 19.8517), 1);
         RoutePointResponse p2 = new RoutePointResponse(new LocationDto("Bulevar oslobodjenja 12", 45.2464, 19.8520), 2);
 
-        UserResponse driver = new UserResponse(driverId, "DriverName", "DriverSurname", "driver" + driverId + "@example.com", "url", UserRole.DRIVER, "+381601234567");
+        VehicleInformation vehicle = createDummyVehicle(driverId);
+        DriverResponse driver = new DriverResponse(driverId, "DriverName", "DriverSurname", "driver" + driverId + "@example.com", "url", UserRole.DRIVER, "+381601234567", vehicle, true, "5h 30m");
         UserResponse passenger = new UserResponse(passengerId, "PassengerName", "PassengerSurname", "passenger" + passengerId + "@example.com", "url", UserRole.PASSENGER, "+381601234567");
 
         RideResponse response = new RideResponse();
@@ -56,7 +57,7 @@ public class DummyData {
     }
 
     public static VehicleInformation createDummyVehicle(Long driverId) {
-        return new VehicleInformation("Toyota Prius", VehicleType.STANDARD, "NS-123-AB", 4, true, true);
+        return new VehicleInformation("Toyota Prius", VehicleType.STANDARD, "NS-123-AB", 4, true, true, driverId);
     }
 
     public static FavoriteRouteResponse createDummyFavoriteRoute(Long id) {
@@ -65,4 +66,3 @@ public class DummyData {
         return new FavoriteRouteResponse(id, "Home to Work", start, end, new ArrayList<>(), 5.0, 15.0);
     }
 }
-
