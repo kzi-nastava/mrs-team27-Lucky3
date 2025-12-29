@@ -78,10 +78,27 @@ public class MainActivity extends AppCompatActivity {
             navigationView.getMenu().clear();
             if ("DRIVER".equals(role)) {
                 navigationView.inflateMenu(R.menu.menu_drawer_driver);
+                // Set Overview as checked by default for driver
+                navigationView.setCheckedItem(R.id.nav_driver_overview);
             } else if ("PASSENGER".equals(role)) {
                 navigationView.inflateMenu(R.menu.menu_drawer_passenger);
             } else if ("ADMIN".equals(role)) {
                 navigationView.inflateMenu(R.menu.menu_drawer_admin);
+            }
+
+            // Handle logout color
+            MenuItem logoutItem = navigationView.getMenu().findItem(R.id.nav_logout);
+            if (logoutItem != null) {
+                android.text.SpannableString s = new android.text.SpannableString(logoutItem.getTitle());
+                s.setSpan(new android.text.style.ForegroundColorSpan(android.graphics.Color.RED), 0, s.length(), 0);
+                logoutItem.setTitle(s);
+
+                // Tint icon red
+                if (logoutItem.getIcon() != null) {
+                    android.graphics.drawable.Drawable icon = logoutItem.getIcon();
+                    icon.setTint(android.graphics.Color.RED);
+                    logoutItem.setIcon(icon);
+                }
             }
 
             // Handle logout

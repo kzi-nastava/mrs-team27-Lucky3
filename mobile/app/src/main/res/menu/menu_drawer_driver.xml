@@ -8,7 +8,8 @@
         <item
             android:id="@+id/nav_driver_overview"
             android:icon="@android:drawable/ic_menu_sort_by_size"
-            android:title="Overview" />
+            android:title="Overview"
+            android:checked="true"/>
         <item
             android:id="@+id/nav_driver_profile"
             android:icon="@android:drawable/ic_menu_myplaces"
@@ -18,7 +19,7 @@
             android:icon="@android:drawable/ic_menu_help"
             android:title="Support" />
     </group>
-    <item android:title="Account">
+    <item android:title="">
         <menu>
             <item
                 android:id="@+id/nav_logout"
