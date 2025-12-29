@@ -65,3 +65,4 @@ public class DummyData {
         return new FavoriteRouteResponse(id, "Home to Work", start, end, new ArrayList<>(), 5.0, 15.0);
     }
 }
+

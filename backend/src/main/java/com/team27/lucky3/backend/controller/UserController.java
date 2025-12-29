@@ -29,11 +29,7 @@ import java.util.List;
 @Validated
 public class UserController {
 
-    @PostMapping("/drivers")
-    public ResponseEntity<UserResponse> createDriver(@Valid @RequestBody CreateDriver request) {
-        UserResponse response = new UserResponse(1L, request.getName(), request.getSurname(), request.getEmail(), "default.png", UserRole.DRIVER, request.getPhone());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<UserProfile> getUserProfile(@PathVariable @Min(1) Long id) {
