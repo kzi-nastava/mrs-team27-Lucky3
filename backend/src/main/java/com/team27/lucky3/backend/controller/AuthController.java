@@ -60,8 +60,8 @@ public class AuthController {
 
     // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        // Logout logic: check for active rides
+    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String token) {
+        // Logout logic: invalidate token
         return ResponseEntity.noContent().build();
     }
 
