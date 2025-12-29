@@ -20,6 +20,65 @@
             android:textStyle="bold"
             android:layout_marginBottom="24dp"/>
 
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/profileHeaderRoot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_card"
+            android:layout_marginBottom="16dp"
+            >
+
+            <!-- Left: avatar -->
+            <ImageView
+                android:id="@+id/ivHeaderAvatar"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:src="@drawable/avatar"
+                android:scaleType="centerCrop"
+                android:background="@drawable/bg_badge"
+                android:outlineProvider="background"
+                android:clipToOutline="true" />
+
+            <!-- Right: texts -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvHeaderFullName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="John Doe"
+                    android:textColor="@android:color/white"
+                    android:textStyle="bold"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:id="@+id/tvHeaderEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="john.doe@example.com"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/tvHeaderRating"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Rating: 4.3"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+
         <!-- Personal Info Card -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
