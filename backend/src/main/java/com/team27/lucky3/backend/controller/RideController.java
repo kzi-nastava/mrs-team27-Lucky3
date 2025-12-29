@@ -6,7 +6,7 @@ import com.team27.lucky3.backend.dto.request.EndRideRequest;
 import com.team27.lucky3.backend.dto.request.InconsistencyRequest;
 import com.team27.lucky3.backend.dto.request.RideCancellationRequest;
 import com.team27.lucky3.backend.dto.request.RidePanicRequest;
-import com.team27.lucky3.backend.dto.request.RideWithdrawRequest;
+import com.team27.lucky3.backend.dto.request.RideStopRequest;
 import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.dto.response.RoutePointResponse;
@@ -123,10 +123,10 @@ public class RideController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{id}/withdraw")
-    public ResponseEntity<RideResponse> withdrawRide(
+    @PutMapping("/{id}/stop")
+    public ResponseEntity<RideResponse> stopRide(
             @PathVariable @Min(1) Long id,
-            @Valid @RequestBody RideWithdrawRequest request) {
+            @Valid @RequestBody RideStopRequest request) {
         if (id == 404) throw new ResourceNotFoundException("Ride not found");
         RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.FINISHED);
         response.setDestination(request.getStopLocation());

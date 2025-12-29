@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RideWithdrawRequest {
+public class RideStopRequest {
     @NotNull(message = "Stop location is required")
     @Valid
     private LocationDto stopLocation;
