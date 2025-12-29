@@ -4,8 +4,10 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentDriverProfileBinding;
 
 public class DriverProfileFragment extends Fragment {

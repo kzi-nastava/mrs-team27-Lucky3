@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentUserProfileBinding;
 
 public class UserProfileFragment extends Fragment {
@@ -16,7 +17,7 @@ public class UserProfileFragment extends Fragment {
                              ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentUserProfileBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-        
+
         // Setup listeners if needed
         
         return root;
@@ -28,3 +29,9 @@ public class UserProfileFragment extends Fragment {
         binding = null;
     }
 }
+
+
+
+
+
+
