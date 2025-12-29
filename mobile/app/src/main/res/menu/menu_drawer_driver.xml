@@ -2,11 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:checkableBehavior="single">
         <item
-            android:id="@+id/nav_driver_dashboard"
+            android:id="@+id/nav_driver_dashboard_dummy"
             android:icon="@drawable/ic_menu_dashboard"
             android:title="Dashboard" />
         <item
-            android:id="@+id/nav_driver_overview"
+            android:id="@+id/nav_driver_dashboard"
             android:icon="@drawable/ic_menu_overview"
             android:title="Overview"
             android:checked="true"/>

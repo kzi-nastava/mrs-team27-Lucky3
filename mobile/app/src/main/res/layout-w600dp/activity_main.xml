@@ -32,6 +32,7 @@ across the layout configurations
             app:menu="@menu/menu_drawer_driver"
             android:background="@color/black"
             app:itemTextColor="@color/white"
-            app:itemIconTint="@color/white" />
+            app:itemIconTint="@color/white"
+            app:itemBackground="@drawable/nav_item_background" />
     </androidx.drawerlayout.widget.DrawerLayout>
 </FrameLayout>

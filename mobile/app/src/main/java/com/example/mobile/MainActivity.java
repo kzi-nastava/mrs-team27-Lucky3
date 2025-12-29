@@ -75,11 +75,12 @@ public class MainActivity extends AppCompatActivity {
     public void setupNavigationForRole(String role) {
         NavigationView navigationView = findViewById(R.id.nav_view);
         if (navigationView != null) {
+            navigationView.setItemIconTintList(null); // Allow custom icon colors
             navigationView.getMenu().clear();
             if ("DRIVER".equals(role)) {
                 navigationView.inflateMenu(R.menu.menu_drawer_driver);
                 // Set Overview as checked by default for driver
-                navigationView.setCheckedItem(R.id.nav_driver_overview);
+                navigationView.setCheckedItem(R.id.nav_driver_dashboard);
             } else if ("PASSENGER".equals(role)) {
                 navigationView.inflateMenu(R.menu.menu_drawer_passenger);
             } else if ("ADMIN".equals(role)) {
@@ -96,7 +97,8 @@ public class MainActivity extends AppCompatActivity {
                 // Tint icon red
                 if (logoutItem.getIcon() != null) {
                     android.graphics.drawable.Drawable icon = logoutItem.getIcon();
-                    icon.setTint(android.graphics.Color.RED);
+                    icon = androidx.core.graphics.drawable.DrawableCompat.wrap(icon);
+                    androidx.core.graphics.drawable.DrawableCompat.setTint(icon.mutate(), android.graphics.Color.RED);
                     logoutItem.setIcon(icon);
                 }
             }
