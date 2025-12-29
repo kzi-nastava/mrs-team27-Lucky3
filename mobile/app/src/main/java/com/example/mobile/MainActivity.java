@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.Menu;
 
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
 
@@ -29,11 +28,6 @@ public class MainActivity extends AppCompatActivity {
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        setSupportActionBar(binding.appBarMain.toolbar);
-        if (binding.appBarMain.fab != null) {
-            binding.appBarMain.fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).setAnchorView(R.id.fab).show());
-        }
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_main);
         assert navHostFragment != null;
         NavController navController = navHostFragment.getNavController();
@@ -41,20 +35,13 @@ public class MainActivity extends AppCompatActivity {
         NavigationView navigationView = binding.navView;
         if (navigationView != null) {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow, R.id.nav_settings)
+                    R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow, R.id.nav_settings,
+                    R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support,
+                    R.id.nav_passenger_home, R.id.nav_passenger_history, R.id.nav_passenger_profile, R.id.nav_passenger_support,
+                    R.id.nav_driver_dashboard, R.id.nav_driver_profile, R.id.nav_driver_support)
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
-            NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
             NavigationUI.setupWithNavController(navigationView, navController);
-        }
-
-        BottomNavigationView bottomNavigationView = binding.appBarMain.contentMain.bottomNavView;
-        if (bottomNavigationView != null) {
-            mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow)
-                    .build();
-            NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
-            NavigationUI.setupWithNavController(bottomNavigationView, navController);
         }
     }
 
@@ -86,5 +73,67 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
+    }
+
+    public void setupNavigationForRole(String role) {
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        if (navigationView != null) {
+            navigationView.setItemIconTintList(null); // Allow custom icon colors
+            navigationView.getMenu().clear();
+            if ("DRIVER".equals(role)) {
+                navigationView.inflateMenu(R.menu.menu_drawer_driver);
+                // Set Overview as checked by default for driver
+                navigationView.setCheckedItem(R.id.nav_driver_dashboard);
+            } else if ("PASSENGER".equals(role)) {
+                navigationView.inflateMenu(R.menu.menu_drawer_passenger);
+            } else if ("ADMIN".equals(role)) {
+                navigationView.inflateMenu(R.menu.menu_drawer_admin);
+            }
+
+            // Handle logout color
+            MenuItem logoutItem = navigationView.getMenu().findItem(R.id.nav_logout);
+            if (logoutItem != null) {
+                android.text.SpannableString s = new android.text.SpannableString(logoutItem.getTitle());
+                s.setSpan(new android.text.style.ForegroundColorSpan(android.graphics.Color.RED), 0, s.length(), 0);
+                logoutItem.setTitle(s);
+
+                // Tint icon red
+                if (logoutItem.getIcon() != null) {
+                    android.graphics.drawable.Drawable icon = logoutItem.getIcon();
+                    icon = androidx.core.graphics.drawable.DrawableCompat.wrap(icon);
+                    androidx.core.graphics.drawable.DrawableCompat.setTint(icon.mutate(), android.graphics.Color.RED);
+                    logoutItem.setIcon(icon);
+                }
+            }
+
+            // Handle logout
+            navigationView.setNavigationItemSelectedListener(item -> {
+                if (item.getItemId() == R.id.nav_logout) {
+                    NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+                    navController.navigate(R.id.nav_login);
+                    androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
+                    if (drawer != null) {
+                        drawer.close();
+                    }
+                    return true;
+                }
+                // Let NavigationUI handle other items if ids match destinations
+                boolean handled = NavigationUI.onNavDestinationSelected(item, Navigation.findNavController(this, R.id.nav_host_fragment_content_main));
+                if (handled) {
+                    androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
+                    if (drawer != null) {
+                        drawer.close();
+                    }
+                }
+                return handled;
+            });
+        }
+    }
+
+    public void openDrawer() {
+        androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
+        if (drawer != null) {
+            drawer.open();
+        }
     }
 }

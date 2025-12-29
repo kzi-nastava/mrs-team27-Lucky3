@@ -7,6 +7,8 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import com.example.mobile.databinding.FragmentPassengerHomeBinding;
+import com.example.mobile.R;
+import android.widget.TextView;
 
 public class PassengerHomeFragment extends Fragment {
 
@@ -16,6 +18,16 @@ public class PassengerHomeFragment extends Fragment {
                              ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentPassengerHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
+
+        // Navbar setup
+        View navbar = root.findViewById(R.id.navbar);
+        if (navbar != null) {
+            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
+                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
+            });
+            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Home");
+        }
+
         return root;
     }
 

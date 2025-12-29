@@ -6,13 +6,20 @@
     android:layout_height="match_parent"
     android:background="@color/gray_900">
 
+    <include
+        android:id="@+id/navbar"
+        layout="@layout/view_custom_navbar"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
     <!-- Map Placeholder -->
     <FrameLayout
         android:id="@+id/map_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:background="#2C2C2E"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/navbar"
         app:layout_constraintBottom_toTopOf="@+id/bottom_sheet"
         app:layout_constraintVertical_weight="1">
         
