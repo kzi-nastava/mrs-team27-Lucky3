@@ -19,8 +19,8 @@ public class DummyData {
         RoutePointResponse p2 = new RoutePointResponse(new LocationDto("Bulevar oslobodjenja 12", 45.2464, 19.8520), 2);
 
         VehicleInformation vehicle = createDummyVehicle(driverId);
-        DriverResponse driver = new DriverResponse(driverId, "DriverName", "DriverSurname", "driver" + driverId + "@example.com", "url", UserRole.DRIVER, "+381601234567", vehicle, true, "5h 30m");
-        UserResponse passenger = new UserResponse(passengerId, "PassengerName", "PassengerSurname", "passenger" + passengerId + "@example.com", "url", UserRole.PASSENGER, "+381601234567");
+        DriverResponse driver = new DriverResponse(driverId, "DriverName", "DriverSurname", "driver" + driverId + "@example.com", "url", UserRole.DRIVER, "+381601234567", "Driver Address", vehicle, true, "5h 30m");
+        UserResponse passenger = new UserResponse(passengerId, "PassengerName", "PassengerSurname", "passenger" + passengerId + "@example.com", "url", UserRole.PASSENGER, "+381601234567", "Passenger Address");
 
         RideResponse response = new RideResponse();
         response.setId(id);

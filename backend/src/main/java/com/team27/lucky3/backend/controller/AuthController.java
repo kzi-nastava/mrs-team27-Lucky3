@@ -33,7 +33,7 @@ public class AuthController {
     // 2.2.2 User registration + email activation (unregistered -> registered user)
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<UserResponse> register(@Valid @RequestBody PassengerRegistrationRequest request) {
-        UserResponse response = new UserResponse(1L, request.getName(), request.getSurname(), request.getEmail(), "default.png", UserRole.PASSENGER, request.getPhoneNumber());
+        UserResponse response = new UserResponse(1L, request.getName(), request.getSurname(), request.getEmail(), "default.png", UserRole.PASSENGER, request.getPhoneNumber(), request.getAddress());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

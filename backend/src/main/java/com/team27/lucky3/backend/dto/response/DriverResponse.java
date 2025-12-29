@@ -14,8 +14,8 @@ public class DriverResponse extends UserResponse {
     private boolean isActive;
     private String active24h;
 
-    public DriverResponse(Long id, String name, String surname, String email, String profilePictureUrl, UserRole role, String phoneNumber, VehicleInformation vehicle, boolean isActive, String active24h) {
-        super(id, name, surname, email, profilePictureUrl, role, phoneNumber);
+    public DriverResponse(Long id, String name, String surname, String email, String profilePictureUrl, UserRole role, String phoneNumber, String address, VehicleInformation vehicle, boolean isActive, String active24h) {
+        super(id, name, surname, email, profilePictureUrl, role, phoneNumber, address);
         this.vehicle = vehicle;
         this.isActive = isActive;
         this.active24h = active24h;

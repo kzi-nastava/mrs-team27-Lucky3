@@ -1,6 +1,7 @@
 package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.request.CreateDriver;
+import com.team27.lucky3.backend.dto.request.UpdateDriver;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
 import com.team27.lucky3.backend.dto.response.UserResponse;
@@ -26,7 +27,7 @@ public class DriverController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<DriverResponse> createDriver(@Valid @RequestBody CreateDriver request) {
         request.getVehicle().setDriverId(10L);
-        DriverResponse response = new DriverResponse(10L, request.getName(), request.getSurname(), request.getEmail(), "url", UserRole.DRIVER, request.getPhone(), request.getVehicle(), false, "0h 0m");
+        DriverResponse response = new DriverResponse(10L, request.getName(), request.getSurname(), request.getEmail(), "url", UserRole.DRIVER, request.getPhone(), request.getAddress(), request.getVehicle(), false, "0h 0m");
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -43,16 +44,16 @@ public class DriverController {
         vehicle.setPetTransport(true);
         vehicle.setDriverId(id);
 
-        DriverResponse response = new DriverResponse(id, "Pera", "Peric", "pera@gmail.com", "url", UserRole.DRIVER, "0601234567", vehicle, true, "5h 30m");
+        DriverResponse response = new DriverResponse(id, "Pera", "Peric", "pera@gmail.com", "url", UserRole.DRIVER, "0601234567", "Bulevar oslobodjenja 123", vehicle, true, "5h 30m");
         return ResponseEntity.ok(response);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<DriverResponse> updateDriver(@PathVariable Long id, @Valid @RequestBody CreateDriver request) {
+    public ResponseEntity<DriverResponse> updateDriver(@PathVariable Long id, @Valid @RequestBody UpdateDriver request) {
         if (id == 404) throw new ResourceNotFoundException("Driver not found");
 
         request.getVehicle().setDriverId(id);
-        DriverResponse response = new DriverResponse(id, request.getName(), request.getSurname(), request.getEmail(), "url", UserRole.DRIVER, request.getPhone(), request.getVehicle(), true, "5h 30m");
+        DriverResponse response = new DriverResponse(id, request.getName(), request.getSurname(), request.getEmail(), "url", UserRole.DRIVER, request.getPhone(), request.getAddress(), request.getVehicle(), request.isActive(), request.getActive24h());
         return ResponseEntity.ok(response);
     }
 
