@@ -29,6 +29,9 @@ public class AdminDashboardFragment extends Fragment {
             });
             ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Admin Dashboard");
         }
+        return root;
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
