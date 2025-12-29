@@ -27,6 +27,24 @@ public class LoginFragment extends Fragment {
             Navigation.findNavController(v).navigate(R.id.action_nav_login_to_nav_forgot_password);
         });
 
+        binding.loginButton.setOnClickListener(v -> {
+            String email = binding.emailEditText.getText().toString();
+            String password = binding.passwordEditText.getText().toString();
+
+            if (email.equals("admin@mail.com") && password.equals("admin123")) {
+                ((com.example.mobile.MainActivity) requireActivity()).setupNavigationForRole("ADMIN");
+                Navigation.findNavController(v).navigate(R.id.nav_admin_dashboard);
+            } else if (email.equals("mile@mail.com") && password.equals("sifra123")) {
+                ((com.example.mobile.MainActivity) requireActivity()).setupNavigationForRole("DRIVER");
+                Navigation.findNavController(v).navigate(R.id.nav_driver_dashboard);
+            } else if (email.equals("boban@mail.com") && password.equals("sifra123")) {
+                ((com.example.mobile.MainActivity) requireActivity()).setupNavigationForRole("PASSENGER");
+                Navigation.findNavController(v).navigate(R.id.nav_passenger_home);
+            } else {
+                android.widget.Toast.makeText(getContext(), "Invalid credentials", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+
         return root;
     }
 

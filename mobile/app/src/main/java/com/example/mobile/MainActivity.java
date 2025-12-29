@@ -71,4 +71,47 @@ public class MainActivity extends AppCompatActivity {
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
     }
+
+    public void setupNavigationForRole(String role) {
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        if (navigationView != null) {
+            navigationView.getMenu().clear();
+            if ("DRIVER".equals(role)) {
+                navigationView.inflateMenu(R.menu.menu_drawer_driver);
+            } else if ("PASSENGER".equals(role)) {
+                navigationView.inflateMenu(R.menu.menu_drawer_passenger);
+            } else if ("ADMIN".equals(role)) {
+                navigationView.inflateMenu(R.menu.menu_drawer_admin);
+            }
+
+            // Handle logout
+            navigationView.setNavigationItemSelectedListener(item -> {
+                if (item.getItemId() == R.id.nav_logout) {
+                    NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+                    navController.navigate(R.id.nav_login);
+                    androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
+                    if (drawer != null) {
+                        drawer.close();
+                    }
+                    return true;
+                }
+                // Let NavigationUI handle other items if ids match destinations
+                boolean handled = NavigationUI.onNavDestinationSelected(item, Navigation.findNavController(this, R.id.nav_host_fragment_content_main));
+                if (handled) {
+                    androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
+                    if (drawer != null) {
+                        drawer.close();
+                    }
+                }
+                return handled;
+            });
+        }
+    }
+
+    public void openDrawer() {
+        androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
+        if (drawer != null) {
+            drawer.open();
+        }
+    }
 }
