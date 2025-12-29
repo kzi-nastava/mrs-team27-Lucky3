@@ -20,8 +20,7 @@ public class AdminProfileFragment extends Fragment {
                              ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentAdminProfileBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-        
-        // Setup listeners if needed
+
         // Navbar setup
         View navbar = root.findViewById(R.id.navbar);
         if (navbar != null) {
@@ -30,6 +29,12 @@ public class AdminProfileFragment extends Fragment {
             });
             ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Profile");
         }
+
+        // Setup listeners if needed
+        binding.btnEditPersonal.setOnClickListener(v -> {
+            new ChangePersonalInfoDialog().show(getParentFragmentManager(), "ChangePersonalInfoDialog");
+        });
+
         return root;
     }
 
