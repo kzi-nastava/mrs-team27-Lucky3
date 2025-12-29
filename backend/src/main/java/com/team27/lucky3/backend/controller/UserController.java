@@ -1,8 +1,14 @@
 package com.team27.lucky3.backend.controller;
 
+import com.team27.lucky3.backend.dto.request.ChangePasswordRequest;
+import com.team27.lucky3.backend.dto.request.CreateDriver;
 import com.team27.lucky3.backend.dto.request.CreateRideRequest;
 import com.team27.lucky3.backend.dto.request.PasswordResetRequest;
+import com.team27.lucky3.backend.dto.request.VehicleInformation;
+import com.team27.lucky3.backend.dto.response.FavoriteRouteResponse;
 import com.team27.lucky3.backend.dto.response.UserProfile;
+import com.team27.lucky3.backend.dto.response.UserResponse;
+import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.util.DummyData;
 import jakarta.validation.Valid;
@@ -23,14 +29,18 @@ import java.util.List;
 @Validated
 public class UserController {
 
-    // 2.3 Profile page (registered user, driver, admin)
+    @PostMapping("/drivers")
+    public ResponseEntity<UserResponse> createDriver(@Valid @RequestBody CreateDriver request) {
+        UserResponse response = new UserResponse(1L, request.getName(), request.getSurname(), request.getEmail(), "default.png", UserRole.DRIVER, request.getPhone());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<UserProfile> getUserProfile(@PathVariable @Min(1) Long id) {
         if (id == 404) throw new ResourceNotFoundException("User not found");
         return ResponseEntity.ok(DummyData.createDummyUserProfile(id));
     }
 
-    // 2.3 Profile page (registered user, driver, admin)
     @PutMapping("/{id}")
     public ResponseEntity<UserProfile> updateUserProfile(
             @PathVariable @Min(1) Long id,
@@ -39,38 +49,33 @@ public class UserController {
         return ResponseEntity.ok(request);
     }
     
-    // 2.3 Profile page (registered user, driver, admin)
     @PutMapping("/{id}/password")
     public ResponseEntity<Void> changePassword(
             @PathVariable @Min(1) Long id,
-            @Valid @RequestBody PasswordResetRequest request) { // Using PasswordResetRequest as placeholder or create ChangePasswordRequest
+            @Valid @RequestBody ChangePasswordRequest request) {
         if (id == 404) throw new ResourceNotFoundException("User not found");
         return ResponseEntity.noContent().build();
     }
 
-    // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
-    @PutMapping("/{id}/availability")
-    public ResponseEntity<Void> toggleAvailability(@PathVariable @Min(1) Long id) {
+    @GetMapping("/{id}/vehicle")
+    public ResponseEntity<VehicleInformation> getVehicle(@PathVariable @Min(1) Long id) {
         if (id == 404) throw new ResourceNotFoundException("User not found");
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(DummyData.createDummyVehicle(id));
     }
 
-    // 2.4.3 Order from favorite routes (logged-in user)
-    @GetMapping("/{id}/favorite-routes")
-    public ResponseEntity<List<CreateRideRequest>> getFavoriteRoutes(@PathVariable @Min(1) Long id) {
+    @GetMapping("/{id}/favorites")
+    public ResponseEntity<List<FavoriteRouteResponse>> getFavoriteRoutes(@PathVariable @Min(1) Long id) {
         if (id == 404) throw new ResourceNotFoundException("User not found");
-        return ResponseEntity.ok(new ArrayList<>());
+        return ResponseEntity.ok(List.of(DummyData.createDummyFavoriteRoute(1L)));
     }
 
-    // 2.4.3 Order from favorite routes (logged-in user)
-    @PostMapping("/{id}/favorite-routes")
-    public ResponseEntity<Void> addFavoriteRoute(@PathVariable @Min(1) Long id, @Valid @RequestBody CreateRideRequest route) {
+    @PostMapping("/{id}/favorites")
+    public ResponseEntity<FavoriteRouteResponse> addFavoriteRoute(@PathVariable @Min(1) Long id, @Valid @RequestBody FavoriteRouteResponse route) {
         if (id == 404) throw new ResourceNotFoundException("User not found");
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(DummyData.createDummyFavoriteRoute(1L));
     }
 
-    // 2.4.3 Order from favorite routes (logged-in user)
-    @DeleteMapping("/{id}/favorite-routes/{routeId}")
+    @DeleteMapping("/{id}/favorites/{routeId}")
     public ResponseEntity<Void> removeFavoriteRoute(@PathVariable @Min(1) Long id, @PathVariable @Min(1) Long routeId) {
         if (id == 404) throw new ResourceNotFoundException("User not found");
         return ResponseEntity.noContent().build();

@@ -52,26 +52,16 @@ public class DummyData {
     }
 
     public static UserProfile createDummyUserProfile(Long id) {
-        UserProfile profile = new UserProfile();
-        profile.setName("User" + id);
-        profile.setSurname("Surname" + id);
-        profile.setEmail("user" + id + "@example.com");
-        profile.setPhoneNumber("+38160123456" + id);
-        profile.setAddress("Street " + id);
-        profile.setImageUrl("default.png");
-        
-        // Dummy vehicle info for drivers
-        VehicleInformation vehicle = new VehicleInformation();
-        vehicle.setModel("Toyota Prius");
-        vehicle.setVehicleType(VehicleType.STANDARD);
-        vehicle.setLicenseNumber("NS-123-AB");
-        vehicle.setPassengerSeats(4);
-        vehicle.setBabyTransport(true);
-        vehicle.setPetTransport(true);
-        
-        profile.setVehicleInformation(vehicle);
-        profile.setActiveHours(5.5);
-        
-        return profile;
+        return new UserProfile("Name" + id, "Surname" + id, "user" + id + "@example.com", "+381601234567", "Address " + id, "profile.jpg", null, null);
+    }
+
+    public static VehicleInformation createDummyVehicle(Long driverId) {
+        return new VehicleInformation("Toyota Prius", VehicleType.STANDARD, "NS-123-AB", 4, true, true);
+    }
+
+    public static FavoriteRouteResponse createDummyFavoriteRoute(Long id) {
+        LocationDto start = new LocationDto("Start Address", 45.2464, 19.8517);
+        LocationDto end = new LocationDto("End Address", 45.2564, 19.8617);
+        return new FavoriteRouteResponse(id, "Home to Work", start, end, new ArrayList<>(), 5.0, 15.0);
     }
 }

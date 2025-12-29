@@ -2,8 +2,11 @@ package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.CreateRideRequest;
+import com.team27.lucky3.backend.dto.request.EndRideRequest;
 import com.team27.lucky3.backend.dto.request.InconsistencyRequest;
-import com.team27.lucky3.backend.dto.request.RideUpdateRequest;
+import com.team27.lucky3.backend.dto.request.RideCancellationRequest;
+import com.team27.lucky3.backend.dto.request.RidePanicRequest;
+import com.team27.lucky3.backend.dto.request.RideWithdrawRequest;
 import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.dto.response.RoutePointResponse;
@@ -16,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -54,9 +58,7 @@ public class RideController {
     // 2.9.3 Admin ride history + detailed ride view (admin)
     @GetMapping
     public ResponseEntity<Page<RideResponse>> getRidesHistory(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "10") @Min(1) int size,
-            @RequestParam(required = false) String sort,
+            Pageable pageable,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
             @RequestParam(required = false) @Min(1) Long driverId,
@@ -67,7 +69,7 @@ public class RideController {
                 DummyData.createDummyRideResponse(1L, 10L, 123L, RideStatus.FINISHED),
                 DummyData.createDummyRideResponse(2L, 10L, 123L, RideStatus.CANCELLED)
         );
-        return ResponseEntity.ok(new PageImpl<>(rides, PageRequest.of(page, size), rides.size()));
+        return ResponseEntity.ok(new PageImpl<>(rides, pageable, rides.size()));
     }
 
     // 2.9.2 & 2.9.3 Admin ride history + detailed ride view (admin)
@@ -77,33 +79,57 @@ public class RideController {
         return ResponseEntity.ok(DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.IN_PROGRESS));
     }
 
-    // 2.5 Ride cancellation (driver, ordering user)
-    // 2.6.1 Start ride (driver, passengers)
-    // 2.6.5 Stop the ride mid-ride (driver)
-    // 2.7 End ride (driver, passengers)
-    @PutMapping("/{id}")
-    public ResponseEntity<RideResponse> updateRideStatus(
+    @PutMapping("/{id}/accept")
+    public ResponseEntity<RideResponse> acceptRide(@PathVariable @Min(1) Long id) {
+        if (id == 404) throw new ResourceNotFoundException("Ride not found");
+        return ResponseEntity.ok(DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.ACCEPTED));
+    }
+
+    @PutMapping("/{id}/start")
+    public ResponseEntity<RideResponse> startRide(@PathVariable @Min(1) Long id) {
+        if (id == 404) throw new ResourceNotFoundException("Ride not found");
+        return ResponseEntity.ok(DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.IN_PROGRESS));
+    }
+
+    @PutMapping("/{id}/end")
+    public ResponseEntity<RideResponse> endRide(
             @PathVariable @Min(1) Long id,
-            @Valid @RequestBody RideUpdateRequest request) {
+            @Valid @RequestBody EndRideRequest request) {
+        if (id == 404) throw new ResourceNotFoundException("Ride not found");
+        RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.FINISHED);
+        response.setPassengersExited(request.getPassengersExited());
+        response.setPaid(request.getPaid());
+        return ResponseEntity.ok(response);
+    }
 
-        RideStatus statusEnum;
-        try {
-            statusEnum = RideStatus.valueOf(request.getStatus().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid status: " + request.getStatus());
-        }
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<RideResponse> cancelRide(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody RideCancellationRequest request) {
+        if (id == 404) throw new ResourceNotFoundException("Ride not found");
+        RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.CANCELLED);
+        response.setRejectionReason(request.getReason());
+        return ResponseEntity.ok(response);
+    }
 
-        RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, statusEnum);
-        if (statusEnum == RideStatus.PANIC || statusEnum == RideStatus.REJECTED) {
-            response.setRejectionReason(request.getReason());
-        }
-        if (statusEnum == RideStatus.PANIC) {
-            response.setPanicPressed(true);
-        }
-        if (request.getEndLocation() != null) {
-            response.setDestination(new LocationDto(request.getEndLocation().getAddress(), request.getEndLocation().getLatitude(), request.getEndLocation().getLongitude()));
-        }
+    @PutMapping("/{id}/panic")
+    public ResponseEntity<RideResponse> panicRide(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody RidePanicRequest request) {
+        if (id == 404) throw new ResourceNotFoundException("Ride not found");
+        RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.PANIC);
+        response.setRejectionReason(request.getReason());
+        response.setPanicPressed(true);
+        return ResponseEntity.ok(response);
+    }
 
+    @PutMapping("/{id}/withdraw")
+    public ResponseEntity<RideResponse> withdrawRide(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody RideWithdrawRequest request) {
+        if (id == 404) throw new ResourceNotFoundException("Ride not found");
+        RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.FINISHED);
+        response.setDestination(request.getStopLocation());
         return ResponseEntity.ok(response);
     }
 
@@ -122,4 +148,3 @@ public class RideController {
         return ResponseEntity.ok(DummyData.createDummyRideResponse(99L, 10L, userId != null ? userId : 123L, RideStatus.IN_PROGRESS));
     }
 }
-

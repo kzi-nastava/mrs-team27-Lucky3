@@ -40,12 +40,8 @@ public class AuthController {
     // 2.2.2 User registration + email activation
     @GetMapping("/activate/{token}")
     public ResponseEntity<Void> activateAccount(@PathVariable @NotBlank String token) {
-        // Activation logic using token + redirect to frontend
-        String frontendUrl = "http://localhost:4200/account-control/activated";
-
-        return ResponseEntity.status(HttpStatus.FOUND) // HTTP 302
-                .location(URI.create(frontendUrl))
-                .build();
+        // Activation logic using token
+        return ResponseEntity.ok().build();
     }
 
     // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
@@ -63,8 +59,8 @@ public class AuthController {
     }
 
     // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
-    @PostMapping("/logout/{id}")
-    public ResponseEntity<Void> logout(@PathVariable @Min(1) Long id) {
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
         // Logout logic: check for active rides
         return ResponseEntity.noContent().build();
     }
