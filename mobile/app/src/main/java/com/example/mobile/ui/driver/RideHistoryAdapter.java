@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.mobile.R;
 import java.util.List;
@@ -37,6 +38,10 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
         holder.passengerCount.setText(String.valueOf(item.passengerCount));
         holder.distance.setText(item.distance);
         holder.duration.setText(item.duration);
+
+        holder.itemView.setOnClickListener(v -> {
+            Navigation.findNavController(v).navigate(R.id.action_nav_driver_dashboard_to_nav_ride_details);
+        });
     }
 
     @Override

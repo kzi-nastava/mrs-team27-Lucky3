@@ -7,6 +7,7 @@
     android:orientation="vertical"
     android:background="@color/black">
 
+
     <include
         android:id="@+id/navbar"
         layout="@layout/view_custom_navbar" />

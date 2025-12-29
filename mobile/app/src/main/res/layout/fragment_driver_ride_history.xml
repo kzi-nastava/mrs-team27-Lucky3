@@ -7,6 +7,13 @@
     android:background="@color/black"
     android:padding="16dp">
 
+    <include
+        android:id="@+id/navbar"
+        layout="@layout/view_custom_navbar"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
     <TextView
         android:id="@+id/title"
         android:layout_width="wrap_content"
@@ -15,8 +22,9 @@
         android:textColor="@color/white"
         android:textSize="24sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"/>
+        app:layout_constraintTop_toBottomOf="@id/navbar"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="16dp"/>
 
     <!-- Time Filter Buttons (Simplified) -->
     <LinearLayout

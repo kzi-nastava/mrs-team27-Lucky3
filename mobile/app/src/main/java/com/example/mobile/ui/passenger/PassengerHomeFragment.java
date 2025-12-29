@@ -21,6 +21,7 @@ public class PassengerHomeFragment extends Fragment {
         binding = FragmentPassengerHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
+        // Navbar setup
         View navbar = root.findViewById(R.id.navbar);
         if (navbar != null) {
             navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {

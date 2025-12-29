@@ -74,7 +74,11 @@
         android:id="@+id/nav_driver_dashboard"
         android:name="com.example.mobile.ui.driver.DriverDashboardFragment"
         android:label="Driver Dashboard"
-        tools:layout="@layout/fragment_driver_dashboard" />
+        tools:layout="@layout/fragment_driver_dashboard">
+        <action
+            android:id="@+id/action_nav_driver_dashboard_to_nav_ride_details"
+            app:destination="@id/nav_ride_details" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_driver_history"
@@ -151,4 +155,52 @@
         android:name="com.example.mobile.ui.settings.SettingsFragment"
         android:label="@string/menu_settings"
         tools:layout="@layout/fragment_settings" />
+
+    <fragment
+        android:id="@+id/nav_admin_reports"
+        android:name="com.example.mobile.ui.admin.AdminReportsFragment"
+        android:label="Reports"
+        tools:layout="@layout/fragment_admin_reports" />
+
+    <fragment
+        android:id="@+id/nav_admin_drivers"
+        android:name="com.example.mobile.ui.admin.AdminDriversFragment"
+        android:label="Drivers"
+        tools:layout="@layout/fragment_admin_drivers" />
+
+    <fragment
+        android:id="@+id/nav_admin_pricing"
+        android:name="com.example.mobile.ui.admin.AdminPricingFragment"
+        android:label="Pricing"
+        tools:layout="@layout/fragment_admin_pricing" />
+
+    <fragment
+        android:id="@+id/nav_admin_support"
+        android:name="com.example.mobile.ui.support.SupportFragment"
+        android:label="Support"
+        tools:layout="@layout/fragment_support" />
+
+    <fragment
+        android:id="@+id/nav_passenger_history"
+        android:name="com.example.mobile.ui.passenger.PassengerHistoryFragment"
+        android:label="Ride History"
+        tools:layout="@layout/fragment_passenger_history" />
+
+    <fragment
+        android:id="@+id/nav_passenger_profile"
+        android:name="com.example.mobile.ui.profile.UserProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_user_profile" />
+
+    <fragment
+        android:id="@+id/nav_passenger_support"
+        android:name="com.example.mobile.ui.support.SupportFragment"
+        android:label="Support"
+        tools:layout="@layout/fragment_support" />
+
+    <fragment
+        android:id="@+id/nav_driver_support"
+        android:name="com.example.mobile.ui.support.SupportFragment"
+        android:label="Support"
+        tools:layout="@layout/fragment_support" />
 </navigation>
