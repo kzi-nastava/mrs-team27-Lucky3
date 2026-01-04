@@ -346,18 +346,19 @@
                     >
 
                     <TextView
+                        android:id="@+id/filter_all"
                         android:layout_margin="4dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="All"
-                        android:background="@drawable/bg_rounded_yellow"
-                        android:textColor="@color/black"
-                        app:backgroundTint="@color/yellow_500"
+                        android:textColor="@color/gray_400"
+                        android:background="@drawable/bg_card"
                         android:paddingHorizontal="12dp"
                         android:paddingVertical="4dp"
                         android:textStyle="bold"/>
 
                     <TextView
+                        android:id="@+id/filter_active"
                         android:layout_margin="4dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -368,6 +369,7 @@
                         android:paddingVertical="4dp"/>
 
                     <TextView
+                        android:id="@+id/filter_inactive"
                         android:layout_margin="4dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -378,6 +380,7 @@
                         android:paddingVertical="4dp"/>
 
                     <TextView
+                        android:id="@+id/filter_suspended"
                         android:layout_margin="4dp"
                         android:background="@drawable/bg_card"
                         android:layout_width="wrap_content"
@@ -400,19 +403,24 @@
                     android:layout_margin="6dp">
 
                     <ImageView
+                        android:id="@+id/ivSearch"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/ic_menu_search"
-                        app:tint="@color/black" />
+                        app:tint="@color/black"
+                        android:clickable="true"/>
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <EditText
+                        android:id="@+id/etSearch"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="Search by name or email..."
-                        android:textColor="@color/black"
-                        android:textSize="14sp"
                         android:layout_marginStart="12dp"
-                        android:textStyle="bold" />
+                        android:layout_weight="1"
+                        android:hint="Search by name or email..."
+                        android:textColor="@color/black"
+                        android:textColorHint="@color/gray_400"
+                        android:textSize="14sp"
+                        android:background="@android:color/transparent" />
 
                 </LinearLayout>
 
@@ -438,7 +446,7 @@
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="2"
+                        android:layout_weight="1"
                         android:text="Driver"
                         android:textStyle="bold"
                         android:textColor="@color/white"
@@ -490,7 +498,7 @@
                     android:id="@+id/listDrivers"
                     android:layout_width="match_parent"
                     android:layout_height="300dp"
-                    tools:listitem="@layout/driver_card_info"></ListView>
+                    tools:listitem="@layout/driver_card_info"/>
 
             </LinearLayout>
 

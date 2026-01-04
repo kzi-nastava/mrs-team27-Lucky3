@@ -19,9 +19,9 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="3"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:layout_weight="2"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
 
             <!-- Circle image (use CircleImageView library or CardView-circle) -->
             <!-- Left: avatar -->
@@ -34,13 +34,6 @@
                 android:background="@drawable/bg_badge"
                 android:outlineProvider="background"
                 android:clipToOutline="true" />
-
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginStart="8dp">
 
                 <TextView
                     android:id="@+id/tvDriverName"
@@ -57,7 +50,7 @@
                     android:text="john.doe@example.com"
                     android:textSize="12sp"
                     android:textColor="@color/gray_400" />
-            </LinearLayout>
+           
         </LinearLayout>
 
         <!-- Column 2: vehicle model + plate -->

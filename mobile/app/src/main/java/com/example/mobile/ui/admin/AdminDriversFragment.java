@@ -6,6 +6,10 @@ import com.example.mobile.model.DriverInfoCard;
 import androidx.fragment.app.Fragment;
 import androidx.annotation.NonNull;
 
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.view.ViewGroup;
@@ -18,7 +22,11 @@ import java.util.ArrayList;
 public class AdminDriversFragment extends Fragment {
     private ListView lvDrivers;
     private AdminDriverAdapter adapter;
-    private ArrayList<DriverInfoCard> driverList;
+    private TextView tvFilterAll, tvFilterActive, tvFilterInactive, tvFilterSuspended;
+    private ArrayList<DriverInfoCard> allDrivers;
+    private ArrayList<DriverInfoCard> displayedDrivers;
+    private String currentFilter = "All";
+    private String searchQuery = "";
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -36,19 +44,140 @@ public class AdminDriversFragment extends Fragment {
 
 
         lvDrivers = root.findViewById(R.id.listDrivers);
+        EditText etSearch = root.findViewById(R.id.etSearch);
+        ImageView ivSearch = root.findViewById(R.id.ivSearch);
 
         // 1) Prepare data (mock for now)
-        driverList = createMockDrivers();
+        allDrivers = createMockDrivers();
+        displayedDrivers = new ArrayList<>(allDrivers);   // copy all initially
 
         // 2) Create adapter, pass context + list
-        adapter = new AdminDriverAdapter(requireContext(), driverList);
+        adapter = new AdminDriverAdapter(requireContext(), displayedDrivers);
 
         // 3) Attach adapter to ListView
         lvDrivers.setAdapter(adapter);
 
+
+        // Find filter views
+        tvFilterAll = root.findViewById(R.id.filter_all);
+        tvFilterActive = root.findViewById(R.id.filter_active);
+        tvFilterInactive = root.findViewById(R.id.filter_inactive);
+        tvFilterSuspended = root.findViewById(R.id.filter_suspended);
+
+        applyFilter();
+
+        setupFilterClicks();
+
+
+        // setup searching
+        ivSearch.setOnClickListener(v -> {
+            String query = etSearch.getText().toString();
+            applySearch(query);
+        });
         return root;
     }
 
+    private void setupFilterClicks() {
+        View.OnClickListener listener = v -> {
+            if (v.getId() == R.id.filter_all) {
+                currentFilter = "All";
+            } else if (v.getId() == R.id.filter_active) {
+                currentFilter = "Active";
+            } else if (v.getId() == R.id.filter_inactive) {
+                currentFilter = "Inactive";
+            } else if (v.getId() == R.id.filter_suspended) {
+                currentFilter = "Suspended";
+            }
+
+            updateFilterStyles();
+            applyFilter();
+        };
+
+        tvFilterAll.setOnClickListener(listener);
+        tvFilterActive.setOnClickListener(listener);
+        tvFilterInactive.setOnClickListener(listener);
+        tvFilterSuspended.setOnClickListener(listener);
+    }
+
+    private void updateFilterStyles() {
+        // Reset all to gray
+        resetFilterStyle(tvFilterAll);
+        resetFilterStyle(tvFilterActive);
+        resetFilterStyle(tvFilterInactive);
+        resetFilterStyle(tvFilterSuspended);
+
+        // Highlight selected
+        switch (currentFilter) {
+            case "All":
+                setSelectedFilterStyle(tvFilterAll);
+                break;
+            case "Active":
+                setSelectedFilterStyle(tvFilterActive);
+                break;
+            case "Inactive":
+                setSelectedFilterStyle(tvFilterInactive);
+                break;
+            case "Suspended":
+                setSelectedFilterStyle(tvFilterSuspended);
+                break;
+        }
+    }
+
+    private void resetFilterStyle(TextView tv) {
+        tv.setBackgroundResource(R.drawable.bg_card);
+        tv.setTextColor(getResources().getColor(R.color.gray_400));
+    }
+
+    private void setSelectedFilterStyle(TextView tv) {
+        tv.setBackgroundResource(R.drawable.bg_rounded_yellow);
+        tv.setTextColor(getResources().getColor(R.color.black));
+    }
+
+    private void applyFilter() {
+        displayedDrivers.clear();
+
+        if ("All".equals(currentFilter)) {
+            displayedDrivers.addAll(allDrivers);
+        } else {
+            for (DriverInfoCard d : allDrivers) {
+                String status = d.getStatus();
+                if (status != null && status.toLowerCase().contains(currentFilter.toLowerCase())) {
+                    displayedDrivers.add(d);
+                }
+            }
+        }
+
+        adapter.notifyDataSetChanged();
+    }
+
+    private void applySearch(String query) {
+        searchQuery = query.toLowerCase().trim();
+        displayedDrivers.clear();
+
+        for (DriverInfoCard d : allDrivers) {
+            // 1) status filter
+            if (!"All".equals(currentFilter)) {
+                String status = d.getStatus();
+                if (status == null ||
+                        !status.toLowerCase().contains(currentFilter.toLowerCase())) {
+                    continue; // skip drivers not in current status filter
+                }
+            }
+
+            // 2) search by name OR email
+            if (!searchQuery.isEmpty()) {
+                String fullName = (d.getName() + " " + d.getSurname()).toLowerCase();
+                String email = d.getEmail() != null ? d.getEmail().toLowerCase() : "";
+                if (!fullName.contains(searchQuery) && !email.contains(searchQuery)) {
+                    continue;
+                }
+            }
+
+            displayedDrivers.add(d);
+        }
+
+        adapter.notifyDataSetChanged(); // update ListView
+    }
     private ArrayList<DriverInfoCard> createMockDrivers() {
         ArrayList<DriverInfoCard> list = new ArrayList<>();
 
