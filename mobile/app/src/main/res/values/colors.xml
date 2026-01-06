@@ -30,6 +30,11 @@
     <!-- Alpha colors -->
     <color name="yellow_500_10">#1AF9C31F</color>
     <color name="yellow_500_20">#33F9C31F</color>
+
     <color name="red_500_10">#1AEF4343</color>
     <color name="red_500_20">#33EF4343</color>
+
+    <color name="green_500_10">#1A4CAF50</color>
+    <color name="green_500_20">#334CAF50</color>
+
 </resources>

@@ -1,31 +1,508 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.admin.AdminDriversFragment">
+    android:orientation="vertical"
+    android:background="@color/black">
 
     <include
         android:id="@+id/navbar"
-        layout="@layout/view_custom_navbar"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        layout="@layout/view_custom_navbar" />
 
-    <TextView
-        android:id="@+id/text_admin_drivers"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:textAlignment="center"
-        android:textSize="20sp"
-        android:text="Admin Drivers"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/navbar" />
-</androidx.constraintlayout.widget.ConstraintLayout>
+        android:layout_height="match_parent"
+        android:background="@color/black">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingHorizontal="16dp">
+
+            <!-- Driver managment -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:layout_marginBottom="10dp">
+
+                <!-- Left: title -->
+                <TextView
+                    android:id="@+id/tvDriverManagementTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="Driver Management"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/btnAddNewDriver"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <!-- Left: subtitle -->
+                <TextView
+                    android:id="@+id/tvActiveDrivers"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="3 active drivers"
+                    android:textSize="14sp"
+                    android:alpha="0.75"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/btnAddNewDriver"
+                    app:layout_constraintTop_toBottomOf="@id/tvDriverManagementTitle"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddNewDriver"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Add New Driver"
+                    android:textColor="@color/black"
+                    app:backgroundTint="@color/yellow_500"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Stats active, online, avg rating, suspended 2x2-->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="220dp">
+
+
+                <!-- 50% vertical split -->
+                <androidx.constraintlayout.widget.Guideline
+                    android:id="@+id/gVHalf"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    app:layout_constraintGuide_percent="0.5" />
+
+                <!-- 50% horizontal split -->
+                <androidx.constraintlayout.widget.Guideline
+                    android:id="@+id/gHHalf"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    app:layout_constraintGuide_percent="0.5" />
+
+
+                <!-- TOP-LEFT -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/cellTopLeft"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="12dp"
+                    android:background="@drawable/bg_card"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/gVHalf"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toTopOf="@id/gHHalf"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginBottom="8dp">
+
+                    <!-- Left icon -->
+                    <ImageView
+                        android:id="@+id/driver_activity_icon"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_driver_activity"
+                        app:layout_constraintStart_toStartOf="parent"
+                        android:background="@drawable/bg_icon_box"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        android:padding="10dp"/>
+
+                    <!-- Title (white) -->
+                    <TextView
+                        android:id="@+id/activity_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="Online Now"
+                        android:textSize="14sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textColor="?android:attr/textColorSecondary"
+                        app:layout_constraintStart_toEndOf="@id/driver_activity_icon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <!-- Subtitle (default / theme secondary) -->
+                    <TextView
+                        android:id="@+id/activity_subtitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="3"
+                        android:textColor="@android:color/white"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toEndOf="@id/driver_activity_icon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/activity_title"
+                        app:layout_constraintBottom_toBottomOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <!-- TOP-RIGHT -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/cellTopRight"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="12dp"
+                    android:background="@drawable/bg_card"
+                    app:layout_constraintStart_toEndOf="@id/gVHalf"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toTopOf="@id/gHHalf"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginBottom="8dp">
+
+                    <!-- Left icon -->
+                    <ImageView
+                        android:id="@+id/avg_rating_icon"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_star"
+                        app:layout_constraintStart_toStartOf="parent"
+                        android:background="@drawable/bg_icon_box"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        android:padding="10dp"/>
+
+                    <!-- Title (white) -->
+                    <TextView
+                        android:id="@+id/avg_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="Avg Rating"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        app:layout_constraintStart_toEndOf="@id/avg_rating_icon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <!-- Subtitle (default / theme secondary) -->
+                    <TextView
+                        android:id="@+id/avg_subtitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="4.85"
+                        android:textColor="@android:color/white"
+                        android:textSize="22sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        app:layout_constraintStart_toEndOf="@id/avg_rating_icon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/avg_title"
+                        app:layout_constraintBottom_toBottomOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <!-- BOTTOM-LEFT -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/cellBottomLeft"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="12dp"
+                    android:background="@drawable/bg_card"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/gVHalf"
+                    app:layout_constraintTop_toBottomOf="@id/gHHalf"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginTop="8dp">
+                    <!-- Left icon -->
+                    <ImageView
+                        android:id="@+id/suspended_drivers_icon"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_suspended_drivers"
+                        app:layout_constraintStart_toStartOf="parent"
+                        android:background="@drawable/bg_icon_box_red"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        android:padding="10dp"/>
+
+                    <!-- Title (white) -->
+                    <TextView
+                        android:id="@+id/suspended_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="Suspended"
+                        android:textSize="14sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textColor="?android:attr/textColorSecondary"
+                        app:layout_constraintStart_toEndOf="@id/suspended_drivers_icon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <!-- Subtitle (default / theme secondary) -->
+                    <TextView
+                        android:id="@+id/suspended_subtitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="0"
+                        android:textColor="@android:color/white"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toEndOf="@id/suspended_drivers_icon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/suspended_title"
+                        app:layout_constraintBottom_toBottomOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <!-- BOTTOM-RIGHT -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/cellBottomRight"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="12dp"
+                    android:background="@drawable/bg_card"
+                    app:layout_constraintStart_toEndOf="@id/gVHalf"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/gHHalf"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="8dp">
+                    <!-- Left icon -->
+                    <ImageView
+                        android:id="@+id/user_round_check_icon"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_user_round_check"
+                        app:layout_constraintStart_toStartOf="parent"
+                        android:background="@drawable/bg_icon_box_green"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        android:padding="10dp"/>
+
+                    <!-- Title (white) -->
+                    <TextView
+                        android:id="@+id/user_round_check_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="Active"
+                        android:textSize="14sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textColor="?android:attr/textColorSecondary"
+                        app:layout_constraintStart_toEndOf="@id/user_round_check_icon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <!-- Subtitle (default / theme secondary) -->
+                    <TextView
+                        android:id="@+id/user_round_check_subtitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="3"
+                        android:textColor="@android:color/white"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toEndOf="@id/user_round_check_icon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/user_round_check_title"
+                        app:layout_constraintBottom_toBottomOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- filter + search -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:layout_marginTop="16dp">
+
+                <!-- Status Filter Buttons (Simplified) -->
+                <LinearLayout
+                    android:id="@+id/filter_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="4dp"
+                    app:layout_constraintTop_toBottomOf="@id/title"
+                    app:layout_constraintStart_toStartOf="parent"
+                    >
+
+                    <TextView
+                        android:id="@+id/filter_all"
+                        android:layout_margin="4dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="All"
+                        android:textColor="@color/gray_400"
+                        android:background="@drawable/bg_card"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:id="@+id/filter_active"
+                        android:layout_margin="4dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Active"
+                        android:textColor="@color/gray_400"
+                        android:background="@drawable/bg_card"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"/>
+
+                    <TextView
+                        android:id="@+id/filter_inactive"
+                        android:layout_margin="4dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Inactive"
+                        android:background="@drawable/bg_card"
+                        android:textColor="@color/gray_400"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"/>
+
+                    <TextView
+                        android:id="@+id/filter_suspended"
+                        android:layout_margin="4dp"
+                        android:background="@drawable/bg_card"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Suspended"
+                        android:textColor="@color/gray_400"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"/>
+
+                </LinearLayout>
+
+                <!-- search filter -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="12dp"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_card2"
+                    android:layout_margin="6dp">
+
+                    <ImageView
+                        android:id="@+id/ivSearch"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_menu_search"
+                        app:tint="@color/black"
+                        android:clickable="true"/>
+
+                    <EditText
+                        android:id="@+id/etSearch"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:hint="Search by name or email..."
+                        android:textColor="@color/black"
+                        android:textColorHint="@color/gray_400"
+                        android:textSize="14sp"
+                        android:background="@android:color/transparent" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- list of drivers -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_card">
+
+                <!-- Header row -->
+                <LinearLayout
+                    android:id="@+id/headerRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Driver"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:gravity="center_horizontal"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Vehicle"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Status"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Rating"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Rides"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Earnings"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"/>
+                </LinearLayout>
+
+                <!-- list of driver -->
+                <ListView
+                    android:id="@+id/listDrivers"
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"
+                    tools:listitem="@layout/driver_card_info"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
 
