@@ -2,6 +2,7 @@ package com.example.mobile.ui.admin;
 
 import com.example.mobile.R;
 import com.example.mobile.model.DriverInfoCard;
+import com.google.android.material.button.MaterialButton;
 
 import androidx.fragment.app.Fragment;
 import androidx.annotation.NonNull;
@@ -46,6 +47,7 @@ public class AdminDriversFragment extends Fragment {
         lvDrivers = root.findViewById(R.id.listDrivers);
         EditText etSearch = root.findViewById(R.id.etSearch);
         ImageView ivSearch = root.findViewById(R.id.ivSearch);
+        MaterialButton btnAddNew = root.findViewById(R.id.btnAddNewDriver);
 
         // 1) Prepare data (mock for now)
         allDrivers = createMockDrivers();
@@ -68,6 +70,7 @@ public class AdminDriversFragment extends Fragment {
 
         setupFilterClicks();
 
+        btnAddNew.setOnClickListener(v -> openAddDriverDialog());
 
         // setup searching
         ivSearch.setOnClickListener(v -> {
@@ -75,6 +78,22 @@ public class AdminDriversFragment extends Fragment {
             applySearch(query);
         });
         return root;
+    }
+
+
+    private void openAddDriverDialog() {
+        AdminAddsDriverDialog dialog = new AdminAddsDriverDialog(newDriver -> {
+            allDrivers.add(newDriver);
+            displayedDrivers.add(newDriver); // or re-run applySearchAndFilter(...)
+            adapter.notifyDataSetChanged();
+
+            // Optional extra toast in host fragment (in addition to dialog toast)
+            // Toast.makeText(requireContext(),
+            //        "Email to driver sent. Driver account is pending.",
+            //        Toast.LENGTH_LONG).show();
+        });
+
+        dialog.show(getParentFragmentManager(), "AddDriverDialog");
     }
 
     private void setupFilterClicks() {
