@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Repository
 public interface RideRepository extends JpaRepository<Ride, Long> {
@@ -26,5 +27,8 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
 //             @Param("fromDate") LocalDateTime fromDate,
 //             @Param("toDate") LocalDateTime toDate,
 //             Pageable pageable);
+
+    // Check for active rides for a driver
+    boolean existsByDriverIdAndStatusIn(Long driverId, List<RideStatus> statuses);
 }
 

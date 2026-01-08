@@ -32,5 +32,6 @@ public class User {
 
     private boolean isBlocked;
     private boolean isActive;
+    private boolean isInactiveRequested;
 }
 
