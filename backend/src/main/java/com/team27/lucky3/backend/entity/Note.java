@@ -11,22 +11,19 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Review {
+public class Note {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private int driverRating;
-    private int vehicleRating;
-
-    private String comment;
+    private String message;
     private LocalDateTime timestamp;
 
     @ManyToOne
-    @JoinColumn(name = "ride_id")
-    private Ride ride;
+    @JoinColumn(name = "user_id")
+    private User user; // The user this note is about
 
     @ManyToOne
-    @JoinColumn(name = "passenger_id")
-    private User passenger;
+    @JoinColumn(name = "admin_id")
+    private User admin; // The admin who created the note
 }

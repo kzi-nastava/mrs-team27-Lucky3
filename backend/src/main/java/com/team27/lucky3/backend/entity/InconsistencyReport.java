@@ -19,6 +19,14 @@ public class InconsistencyReport {
     private String description;
     private LocalDateTime timestamp;
 
+    @ManyToOne
+    @JoinColumn(name = "ride_id")
+    private Ride ride;
+
+    @ManyToOne
+    @JoinColumn(name = "reporter_id")
+    private User reporter;
+
     // Relationship will be mapped in Ride or here.
     // If One-to-Many in Ride, usually Many-to-One here.
 }

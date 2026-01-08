@@ -11,22 +11,22 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Review {
+public class Message {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private int driverRating;
-    private int vehicleRating;
-
-    private String comment;
+    private String content;
     private LocalDateTime timestamp;
 
-    @ManyToOne
-    @JoinColumn(name = "ride_id")
-    private Ride ride;
+    // Type of message (e.g., "SUPPORT", "RIDE")
+    private String type;
 
     @ManyToOne
-    @JoinColumn(name = "passenger_id")
-    private User passenger;
+    @JoinColumn(name = "sender_id")
+    private User sender;
+
+    @ManyToOne
+    @JoinColumn(name = "receiver_id")
+    private User receiver; // Nullable if it's a general support channel
 }

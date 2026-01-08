@@ -11,22 +11,19 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Review {
+public class Panic {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private int driverRating;
-    private int vehicleRating;
-
-    private String comment;
     private LocalDateTime timestamp;
+    private String reason;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user; // Who pressed the panic button
 
     @ManyToOne
     @JoinColumn(name = "ride_id")
     private Ride ride;
-
-    @ManyToOne
-    @JoinColumn(name = "passenger_id")
-    private User passenger;
 }

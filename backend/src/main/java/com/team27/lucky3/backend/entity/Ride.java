@@ -58,6 +58,16 @@ public class Ride {
     })
     private Location endLocation;
 
+    // Added intermediate stops (Spec 2.4.1)
+    @ElementCollection
+    @CollectionTable(name = "ride_stops", joinColumns = @JoinColumn(name = "ride_id"))
+    @AttributeOverrides({
+            @AttributeOverride(name = "address", column = @Column(name = "stop_address")),
+            @AttributeOverride(name = "latitude", column = @Column(name = "stop_latitude")),
+            @AttributeOverride(name = "longitude", column = @Column(name = "stop_longitude"))
+    })
+    private List<Location> stops;
+
     @ManyToOne
     @JoinColumn(name = "driver_id")
     private User driver;
