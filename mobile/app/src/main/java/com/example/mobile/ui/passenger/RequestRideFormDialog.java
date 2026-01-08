@@ -23,7 +23,8 @@ public class RequestRideFormDialog extends DialogFragment {
     public static final String REQUEST_KEY = "request_stops_result";
     public static final String KEY_LOCATIONS = "locations";
     public static final String KEY_VEHICLE_TYPE = "vehicle_type";
-    public static final String KEY_TRANSPORT_TYPE = "transport_type";
+    public static final String KEY_BABY_TRANSPORT = "baby_transport";
+    public static final String KEY_PET_TRANSPORT = "pet_transport";
 
     private final ArrayList<String> locations = new ArrayList<>();
 
@@ -92,27 +93,17 @@ public class RequestRideFormDialog extends DialogFragment {
         }
 
         String vehicleType = getSelectedVehicleType(rbStandard, rbVan, rbLuxury);
-        String transportType = getSelectedTransportType(cbBabyTransport, cbPetTransport);
+        boolean babyTransport = cbBabyTransport.isChecked();
+        boolean petTransport = cbPetTransport.isChecked();
 
         Bundle result = new Bundle();
-        result.putString(KEY_TRANSPORT_TYPE, transportType);
         result.putStringArrayList(KEY_LOCATIONS, locations);
         result.putString(KEY_VEHICLE_TYPE, vehicleType);
-        result.putString(KEY_TRANSPORT_TYPE, transportType);
+        result.putBoolean(KEY_BABY_TRANSPORT, babyTransport);
+        result.putBoolean(KEY_PET_TRANSPORT, petTransport);
 
         getParentFragmentManager().setFragmentResult(REQUEST_KEY, result);
         dismiss();
-    }
-
-    private String getSelectedTransportType(CheckBox cbBaby,
-                                            CheckBox cbPet) {
-        boolean baby = cbBaby.isChecked();
-        boolean pet = cbPet.isChecked();
-
-        if (baby && pet) return "BABY_AND_PET";
-        if (baby) return "BABY";
-        if (pet) return "PET";
-        return "NONE"; // no checkbox selected
     }
 
     public static RequestRideFormDialog newInstance() {

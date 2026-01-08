@@ -1,6 +1,7 @@
 package com.example.mobile.ui.passenger;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
@@ -35,8 +36,13 @@ import org.osmdroid.views.overlay.ScaleBarOverlay;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import org.osmdroid.bonuspack.routing.Road;
+import org.osmdroid.bonuspack.routing.RoadManager;
+import org.osmdroid.bonuspack.routing.OSRMRoadManager;
+
 
 public class PassengerHomeFragment extends Fragment {
 
@@ -47,6 +53,13 @@ public class PassengerHomeFragment extends Fragment {
     private MaterialButton btnRequestRide;
     private MaterialButton btnLinkPassengers;
     //private MaterialButton btnAdditionalRideInfo;
+
+    private ArrayList<String> rideLocations = new ArrayList<>();    // collected from rideRequest form, only string locations
+    private ArrayList<String> passengerEmails = new ArrayList<>();
+    private List<GeoPoint> routePoints = new ArrayList<>(); // this is used for drawing on map
+    private String vehicleType;
+    private boolean babyTransport;
+    private boolean petTransport;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
@@ -82,15 +95,36 @@ public class PassengerHomeFragment extends Fragment {
         //btnAdditionalRideInfo.setOnClickListener(v -> openAdditionalRideInfoDialog());
 
 
-        // receive list of locations from dialog [web:64][web:91]
         getParentFragmentManager().setFragmentResultListener(
                 RequestRideFormDialog.REQUEST_KEY,
                 this,
                 (requestKey, bundle) -> {
                     ArrayList<String> locations =
                             bundle.getStringArrayList(RequestRideFormDialog.KEY_LOCATIONS);
+                    String vehicle = bundle.getString(RequestRideFormDialog.KEY_VEHICLE_TYPE);
+                    boolean baby = bundle.getBoolean(RequestRideFormDialog.KEY_BABY_TRANSPORT, false);
+                    boolean pet = bundle.getBoolean(RequestRideFormDialog.KEY_PET_TRANSPORT, false);
+
                     if (locations != null && !locations.isEmpty()) {
-                        handleLocations(locations);
+                        rideLocations = locations;
+                        vehicleType = vehicle;
+                        babyTransport = baby;
+                        petTransport = pet;
+
+                        handleLocations(rideLocations); // your existing map markers
+                        tryBuildRideRequest();          // new method
+                    }
+                });
+
+        getParentFragmentManager().setFragmentResultListener(
+                LinkPassengersDialog.REQUEST_KEY,
+                this,
+                (requestKey, bundle) -> {
+                    ArrayList<String> emails =
+                            bundle.getStringArrayList(LinkPassengersDialog.KEY_EMAILS);
+                    if (emails != null) {
+                        passengerEmails = emails;
+                        //tryBuildRideRequest(); ne treba da se salje request kada popunjavam emailove
                     }
                 });
 
@@ -121,11 +155,25 @@ public class PassengerHomeFragment extends Fragment {
         map.getOverlays().add(scaleBarOverlay);
 
 
-
-        // Draw route between markers
-        // drawRoute();
-
         return root;
+    }
+
+    private void tryBuildRideRequest() {
+
+        //TODO: send dto object to backend
+        Toast.makeText(requireContext(), "Request sent", Toast.LENGTH_LONG).show(); // debug [web:199]
+    }
+
+    private void drawRoutePolyline(List<GeoPoint> points) {
+        if (points == null || points.size() < 2) return;
+
+        Polyline polyline = new Polyline();
+        polyline.setPoints(points);
+        polyline.setColor(Color.RED);     // choose color
+        polyline.setWidth(8f);               // line thickness
+
+        map.getOverlays().add(polyline);
+        map.invalidate();
     }
 
     private void openRequestRideDialog() {
@@ -134,32 +182,99 @@ public class PassengerHomeFragment extends Fragment {
     }
 
     private void openLinkPassengersDialog() {
-        Toast.makeText(getContext(), "LinkPassengers Not implemented yet", Toast.LENGTH_SHORT).show();
+        LinkPassengersDialog dialog = LinkPassengersDialog.newInstance();
+        dialog.show(getParentFragmentManager(), "LinkPassengersDialog");
     }
 
     /*
     private void openAdditionalRideInfoDialog() {
         Toast.makeText(getContext(), "AdditionalInfo Not implemented yet", Toast.LENGTH_SHORT).show();
     }*/
+
+
     private void handleLocations(List<String> locations) {
+// this is used only for debug
+        locations = new ArrayList<>(
+                Arrays.asList(
+                        "Cirpanova 5, Novi Sad",
+                        "Heroja Pinkija 10, Novi Sad",
+                        "Rade Končara 3, Petrovaradin"
+                ));
+
+        routePoints.clear();
+        rideLocations.clear();
+        rideLocations.addAll(locations);
+
         for (String loc : locations) {
             try {
                 List<Address> list = geocoder.getFromLocationName(loc, 1); // forward geocode [web:31][web:41]
                 if (list != null && !list.isEmpty()) {
                     Address a = list.get(0);
-                    addMarker(a.getLatitude(), a.getLongitude(), loc);
+                    double lat = a.getLatitude();
+                    double lon = a.getLongitude();
+
+                    GeoPoint gp = new GeoPoint(lat, lon);
+                    routePoints.add(gp);
+
+                    addMarker(lat, lon, loc);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+
+        // draw polyline through all locations
+        // drawRoutePolyline(routePoints);
+
+        // draw real route along roads
+        drawRoadAlongRoute(routePoints);
+
         map.invalidate();
     }
+    private void drawRoadAlongRoute(List<GeoPoint> points) {
+        if (points == null || points.size() < 2) return;
+
+        new Thread(() -> {
+            try {
+                RoadManager roadManager =
+                        new OSRMRoadManager(requireContext(), "your-app-user-agent"); // set UA [web:283]
+                ArrayList<GeoPoint> waypoints = new ArrayList<>(points);
+
+                Road road = roadManager.getRoad(waypoints); // network call [web:278]
+
+                if (road.mStatus != Road.STATUS_OK) {
+                    requireActivity().runOnUiThread(() ->
+                            Toast.makeText(requireContext(),
+                                    "Route error: " + road.mStatus,
+                                    Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                Polyline roadOverlay = RoadManager.buildRoadOverlay(road);
+                roadOverlay.setColor(Color.RED);
+                roadOverlay.setWidth(10f);
+
+                requireActivity().runOnUiThread(() -> {
+                    map.getOverlays().add(roadOverlay);
+                    map.invalidate();
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(requireContext(),
+                                "Routing failed: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
 
     /**
      * Add a marker to the map
      */
     private void addMarker(double latitude, double longitude, String title) {
+        Toast.makeText(requireContext(), latitude + " " + longitude, Toast.LENGTH_LONG).show(); // debug [web:199]
         Marker marker = new Marker(map);
         marker.setPosition(new GeoPoint(latitude, longitude));
         marker.setTitle(title);
