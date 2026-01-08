@@ -14,6 +14,8 @@ import java.util.List;
 
 @Repository
 public interface RideRepository extends JpaRepository<Ride, Long> {
+    boolean existsByDriverIdAndStatusIn(Long driverId, List<RideStatus> statuses);
+
 //     @Query("SELECT r FROM Ride r WHERE " +
 //            "(:driverId IS NULL OR r.driver.id = :driverId) AND " +
 //            "(:status IS NULL OR r.status = :status) AND " +
@@ -29,6 +31,4 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
 //             Pageable pageable);
 
     // Check for active rides for a driver
-    boolean existsByDriverIdAndStatusIn(Long driverId, List<RideStatus> statuses);
 }
-

@@ -4,6 +4,8 @@ import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.TokenResponse;
 import com.team27.lucky3.backend.dto.response.UserResponse;
 import com.team27.lucky3.backend.entity.enums.UserRole;
+import com.team27.lucky3.backend.security.JwtUtil;
+import com.team27.lucky3.backend.service.AuthService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -23,10 +25,13 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 public class AuthController {
 
+    private final AuthService authService;
+    private final JwtUtil jwtUtil;
+
     // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
-        TokenResponse response = new TokenResponse("jwt-access-token", "jwt-refresh-token");
+        TokenResponse response = authService.login(loginRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -47,21 +52,27 @@ public class AuthController {
     // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
     @PostMapping(value = "/forgot-password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> forgotPassword(@Valid @RequestBody EmailRequest emailRequest) {
-        // Send email logic
+        authService.forgotPassword(emailRequest.getEmail());
         return ResponseEntity.noContent().build();
     }
 
     // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
     @PutMapping(value = "/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody PasswordResetRequest resetRequest) {
-        // Change password logic
+        authService.resetPassword(resetRequest.getToken(), resetRequest.getNewPassword());
         return ResponseEntity.noContent().build();
     }
 
     // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@RequestHeader("Authorization") String token) {
-        // Logout logic: invalidate token
+        if (token != null && token.startsWith("Bearer ")) {
+             token = token.substring(7);
+             Long userId = jwtUtil.extractClaim(token, claims -> claims.get("id", Long.class));
+             if(userId != null) {
+                 authService.logout(userId);
+             }
+        }
         return ResponseEntity.noContent().build();
     }
 

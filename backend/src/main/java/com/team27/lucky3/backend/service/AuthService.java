@@ -2,109 +2,83 @@ package com.team27.lucky3.backend.service;
 
 import com.team27.lucky3.backend.dto.request.LoginRequest;
 import com.team27.lucky3.backend.dto.response.TokenResponse;
-import com.team27.lucky3.backend.entity.PasswordResetToken;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
-import com.team27.lucky3.backend.repository.PasswordResetTokenRepository;
 import com.team27.lucky3.backend.repository.RideRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
-import com.team27.lucky3.backend.security.JwtUtil;
+import com.team27.lucky3.backend.util.TokenUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
+    private final AuthenticationManager authenticationManager;
+    private final TokenUtils tokenUtils;
     private final UserRepository userRepository;
     private final RideRepository rideRepository;
-    private final PasswordResetTokenRepository tokenRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
-    private final AuthenticationManager authenticationManager;
-    private final EmailService emailService;
 
     // 2.2.1 Login
     @Transactional
     public TokenResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
+        // 1. Authenticate via Spring Security
+        Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        // 2. Set Context
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        if (user.isBlocked()) throw new IllegalArgumentException("User is blocked");
+        // 3. Get User
+        User user = (User) authentication.getPrincipal();
 
-        // Spec 2.2.1: Drivers automatically become available upon login
+        // 4. Spec 2.2.1: Drivers automatically become available upon login
         if (user.getRole() == UserRole.DRIVER) {
             user.setActive(true);
-            user.setInactiveRequested(false); // Reset pending flag
+            user.setInactiveRequested(false);
             userRepository.save(user);
         }
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getId());
-        return new TokenResponse(token, token);
+        // 5. Generate Token
+        String jwt = tokenUtils.generateToken(user);
+        return new TokenResponse(jwt, jwt); // Using accessToken for refresh too in this basic example
     }
 
     // 2.2.1 Logout
     @Transactional
-    public void logout(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        if (user.getRole() == UserRole.DRIVER) {
-            // Spec 2.2.1: Cannot logout if currently active ride
-            boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
-                    userId, List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS));
-
-            if (hasActiveRide) {
-                throw new IllegalStateException("Cannot logout while having an active ride.");
-            }
-
-            // Spec 2.2.1: Logout makes driver unavailable
-            user.setActive(false);
-            userRepository.save(user);
-        }
-    }
-
-    // 2.2.1 Forgot Password
-    @Transactional
-    public void forgotPassword(String email) {
+    public void logout(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        String token = UUID.randomUUID().toString();
-        PasswordResetToken resetToken = new PasswordResetToken(token, user);
-        tokenRepository.save(resetToken);
+        // Spec 2.2.1: Driver specific logout logic
+        if (user.getRole() == UserRole.DRIVER) {
+            // Check for active rides
+            boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
+                    user.getId(),
+                    List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS)
+            );
 
-        String link = "http://localhost:4200/reset-password?token=" + token;
-        emailService.sendSimpleMessage(email, "Reset Password", "Click here to reset: " + link);
-    }
+            if (hasActiveRide) {
+                // Spec 2.2.1: Drivers cannot log out if they are currently driving
+                throw new IllegalStateException("Cannot logout while having an active ride.");
+            }
 
-    // 2.2.1 Reset Password
-    @Transactional
-    public void resetPassword(String token, String newPassword) {
-        PasswordResetToken resetToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
-
-        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Token expired");
+            // Spec 2.2.1: Log out, unavailability
+            user.setActive(false);
+            userRepository.save(user);
         }
 
-        User user = resetToken.getUser();
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-        tokenRepository.delete(resetToken);
+        // Clear context
+        SecurityContextHolder.clearContext();
     }
 }
