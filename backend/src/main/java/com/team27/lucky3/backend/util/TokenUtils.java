@@ -5,11 +5,14 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.util.Date;
 
 @Component
@@ -40,7 +43,7 @@ public class TokenUtils {
                 .claim("role", user.getRole().name())
                 .claim("id", user.getId())
                 .setExpiration(new Date(new Date().getTime() + EXPIRES_IN))
-                .signWith(SIGNATURE_ALGORITHM, SECRET).compact();
+                .signWith(getKey(), SIGNATURE_ALGORITHM).compact();
     }
 
     // --- Get Token from Request ---
@@ -53,7 +56,6 @@ public class TokenUtils {
     }
 
     // --- Get Email from Token ---
-    // RENAMED: was getUsernameFromToken
     public String getEmailFromToken(String token) {
         String email;
         try {
@@ -80,8 +82,9 @@ public class TokenUtils {
     private Claims getAllClaimsFromToken(String token) {
         Claims claims;
         try {
-            claims = Jwts.parser()
-                    .setSigningKey(SECRET)
+            claims = Jwts.parserBuilder()
+                    .setSigningKey(getKey())
+                    .build()
                     .parseClaimsJws(token)
                     .getBody();
         } catch (ExpiredJwtException ex) {
@@ -121,5 +124,9 @@ public class TokenUtils {
 
     public int getExpiredIn() {
         return EXPIRES_IN;
+    }
+
+    private Key getKey() {
+        return Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
     }
 }
