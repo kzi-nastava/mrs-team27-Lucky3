@@ -17,8 +17,7 @@ import androidx.appcompat.widget.AppCompatButton;
 import androidx.fragment.app.DialogFragment;
 
 import com.example.mobile.R;
-import com.example.mobile.model.DriverInfoCard;
-import com.google.android.material.button.MaterialButton;
+import com.example.mobile.Domain.DriverInfoCard;
 
 public class AdminAddsDriverDialog extends DialogFragment {
     public interface OnDriverCreatedListener {

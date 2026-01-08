@@ -13,7 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.mobile.R;
-import com.example.mobile.model.DriverInfoCard;
+import com.example.mobile.Domain.DriverInfoCard;
 
 import java.util.ArrayList;
 

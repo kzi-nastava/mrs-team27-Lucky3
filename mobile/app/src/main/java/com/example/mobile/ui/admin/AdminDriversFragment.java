@@ -1,14 +1,12 @@
 package com.example.mobile.ui.admin;
 
 import com.example.mobile.R;
-import com.example.mobile.model.DriverInfoCard;
+import com.example.mobile.Domain.DriverInfoCard;
 import com.google.android.material.button.MaterialButton;
 
 import androidx.fragment.app.Fragment;
 import androidx.annotation.NonNull;
 
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;

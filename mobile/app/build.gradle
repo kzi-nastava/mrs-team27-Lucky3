@@ -42,6 +42,15 @@ dependencies {
     implementation libs.lifecycle.viewmodel.ktx
     implementation libs.navigation.fragment
     implementation libs.navigation.ui
+
+    implementation 'org.osmdroid:osmdroid-android:6.1.20'          // or your current osmdroid [web:296]
+    implementation 'com.github.MKergall:osmbonuspack:6.9.0'        // via JitPack [web:292][web:295]
+
+
+    // Optional: For Material Design support
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
