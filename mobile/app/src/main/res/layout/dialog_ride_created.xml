@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="24dp"
+    android:orientation="vertical"
+    android:background="@color/gray_900"
+    android:gravity="center">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ride created"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:textColor="@color/white"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/tvMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Your ride was successfully created!"
+        android:textColor="@color/gray_200"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/tvPrice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Price is 123$."
+        android:layout_marginBottom="8dp"
+        android:textColor="@color/gray_200" />
+
+    <TextView
+        android:id="@+id/tvEmails"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Linked passengers:"
+        android:layout_margin="8dp"
+        android:textColor="@color/gray_200" />
+
+    <Button
+        android:id="@+id/btnOk"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ok"
+        style="@style/Style.App.AuthButton"
+
+        android:padding="2dp"/>
+
+</LinearLayout>

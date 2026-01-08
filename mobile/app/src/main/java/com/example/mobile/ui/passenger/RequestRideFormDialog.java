@@ -2,6 +2,7 @@ package com.example.mobile.ui.passenger;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,10 +10,13 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 
 import com.example.mobile.R;
@@ -29,11 +33,13 @@ public class RequestRideFormDialog extends DialogFragment {
     private final ArrayList<String> locations = new ArrayList<>();
 
     private EditText etLocation;
+    private TextView tvVehicleTypeError;
     private RadioButton rbStandard;
     private RadioButton rbVan;
     private RadioButton rbLuxury;
     private CheckBox cbBabyTransport;
     private CheckBox cbPetTransport;
+    private RadioGroup rgVehicleType;
 
     @NonNull
     @Override
@@ -49,6 +55,8 @@ public class RequestRideFormDialog extends DialogFragment {
         Button btnCancel = root.findViewById(R.id.btnCancel);
         Button btnSubmit = root.findViewById(R.id.btnSubmit);
 
+        rgVehicleType = root.findViewById(R.id.rgVehicleType);
+
         // vehicle type radios
         rbStandard = root.findViewById(R.id.rbStandard);
         rbVan = root.findViewById(R.id.rbVan);
@@ -57,6 +65,39 @@ public class RequestRideFormDialog extends DialogFragment {
         // transport type checkboxes (updated)
         cbBabyTransport = root.findViewById(R.id.cbBabyTransport);
         cbPetTransport = root.findViewById(R.id.cbPetTransport);
+
+        //error message if no vehicle type is selected
+        tvVehicleTypeError = root.findViewById(R.id.tvVehicleTypeError);
+        // When dialog opens, hide error
+        tvVehicleTypeError.setVisibility(View.GONE);
+
+        // Hide error whenever any radio becomes checked
+        rgVehicleType.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId != -1) { // some option selected
+                tvVehicleTypeError.setVisibility(View.GONE);
+            }
+        });
+
+        ColorStateList rbTint = ContextCompat.getColorStateList(
+                requireContext(),
+                R.color.radio_vehicle_tint
+        );
+
+        ColorStateList cbTint = ContextCompat.getColorStateList(
+                requireContext(),
+                R.color.checkbox_yellow_tint
+        );
+
+        if (rbTint != null) {
+            rbStandard.setButtonTintList(rbTint);
+            rbVan.setButtonTintList(rbTint);
+            rbLuxury.setButtonTintList(rbTint);
+        }
+
+        if (cbTint != null) {
+            cbBabyTransport.setButtonTintList(cbTint);
+            cbPetTransport.setButtonTintList(cbTint);
+        }
 
         tvHint.setText("Enter first location");
 
@@ -86,7 +127,7 @@ public class RequestRideFormDialog extends DialogFragment {
         return null; // or default
     }
 
-    private void submitForm(){
+    private void submitForm() {
         String text = etLocation.getText().toString().trim();
         if (!text.isEmpty()) {
             locations.add(text);
@@ -95,6 +136,15 @@ public class RequestRideFormDialog extends DialogFragment {
         String vehicleType = getSelectedVehicleType(rbStandard, rbVan, rbLuxury);
         boolean babyTransport = cbBabyTransport.isChecked();
         boolean petTransport = cbPetTransport.isChecked();
+
+        //validation message if no vehicle type is selected
+        if (vehicleType == null || vehicleType.isEmpty()) {
+            tvVehicleTypeError.setVisibility(View.VISIBLE);
+            tvVehicleTypeError.setText("You must select vehicle type");
+            return;
+        } else {
+            tvVehicleTypeError.setVisibility(View.GONE);
+        }
 
         Bundle result = new Bundle();
         result.putStringArrayList(KEY_LOCATIONS, locations);

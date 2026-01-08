@@ -90,171 +90,198 @@
     <!-- vehicle type (single choice) -->
 
 
-    <RadioGroup
-        android:id="@+id/rgVehicleType"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="horizontal">
 
-        <!-- Standard row -->
-        <LinearLayout
-            android:id="@+id/rowStandard"
+        <RadioGroup
+            android:id="@+id/rgVehicleType"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingVertical="8dp"
-            android:paddingHorizontal="4dp"
-            android:gravity="center_vertical">
+            android:orientation="vertical">
 
             <RadioButton
                 android:id="@+id/rbStandard"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:buttonTint="@color/yellow_500"
+                android:buttonTint="@color/radio_vehicle_tint"
                 android:text=""
                 android:layout_marginEnd="8dp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvStandardTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Standard"
-                    android:textColor="@color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvStandardSubtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Affordable rides for every day use"
-                    android:textColor="@color/gray_300"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvStandardPrice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="€3.00"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                android:textSize="14sp" />
-        </LinearLayout>
-
-        <!-- Van row -->
-        <LinearLayout
-            android:id="@+id/rowVan"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingVertical="8dp"
-            android:paddingHorizontal="4dp"
-            android:gravity="center_vertical">
 
             <RadioButton
                 android:id="@+id/rbVan"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:buttonTint="@color/yellow_500"
+                android:buttonTint="@color/radio_vehicle_tint"
                 android:text=""
+                android:layout_marginTop="5dp"
                 android:layout_marginEnd="8dp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvVanTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Van"
-                    android:textColor="@color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvVanSubtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Extra space for groups or luggage"
-                    android:textColor="@color/gray_300"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvVanPrice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="€8.00"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                android:textSize="14sp" />
-        </LinearLayout>
-
-        <!-- Luxury row -->
-        <LinearLayout
-            android:id="@+id/rowLuxury"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingVertical="8dp"
-            android:paddingHorizontal="4dp"
-            android:gravity="center_vertical">
 
             <RadioButton
                 android:id="@+id/rbLuxury"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:buttonTint="@color/yellow_500"
+                android:layout_marginTop="5dp"
+
+                android:buttonTint="@color/radio_vehicle_tint"
                 android:text=""
                 android:layout_marginEnd="8dp" />
+        </RadioGroup>
 
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- standard row -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:id="@+id/rowStandard"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:paddingVertical="8dp"
+                android:paddingHorizontal="4dp"
+                android:gravity="center_vertical">
+
+
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvStandardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Standard"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvStandardSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Affordable rides for every day use"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/tvLuxuryTitle"
+                    android:id="@+id/tvStandardPrice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Luxury"
+                    android:text="€3.00"
                     android:textColor="@color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvLuxurySubtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Premium vehicles with extra comfort"
-                    android:textColor="@color/gray_300"
-                    android:textSize="12sp" />
+                    android:textStyle="bold"
+                    android:textSize="14sp" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tvLuxuryPrice"
-                android:layout_width="wrap_content"
+            <!-- Van row -->
+            <LinearLayout
+                android:id="@+id/rowVan"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="€12.00"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                android:textSize="14sp" />
+                android:orientation="horizontal"
+                android:paddingVertical="8dp"
+                android:paddingHorizontal="4dp"
+                android:gravity="center_vertical">
+
+
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvVanTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Van"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvVanSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Extra space for groups or luggage"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvVanPrice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="€8.00"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Luxury row -->
+            <LinearLayout
+                android:id="@+id/rowLuxury"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingVertical="8dp"
+                android:paddingHorizontal="4dp"
+                android:gravity="center_vertical">
+
+
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvLuxuryTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Luxury"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvLuxurySubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Premium vehicles with extra comfort"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvLuxuryPrice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="€12.00"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp" />
+            </LinearLayout>
         </LinearLayout>
 
-    </RadioGroup>
-
-
+    </LinearLayout>
+    <TextView
+        android:id="@+id/tvVehicleTypeError"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/red_500"
+        android:textSize="12sp"
+        android:visibility="gone"
+        android:text="You must select vehicle type" />
 
     <TextView
         android:id="@+id/tvTransportTypeLabel"
