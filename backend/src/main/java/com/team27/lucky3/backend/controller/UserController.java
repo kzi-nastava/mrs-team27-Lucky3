@@ -76,4 +76,33 @@ public class UserController {
         if (id == 404) throw new ResourceNotFoundException("User not found");
         return ResponseEntity.noContent().build();
     }
+
+    // 2.12 Block user (driver or passenger) - Admin only
+    @PutMapping("/{id}/block")
+    public ResponseEntity<Void> blockUser(@PathVariable @Min(1) Long id) {
+        if (id == 404) throw new ResourceNotFoundException("User not found");
+        return ResponseEntity.noContent().build();
+    }
+
+    // 2.12 Unblock user - Admin only
+    @PutMapping("/{id}/unblock")
+    public ResponseEntity<Void> unblockUser(@PathVariable @Min(1) Long id) {
+        if (id == 404) throw new ResourceNotFoundException("User not found");
+        return ResponseEntity.noContent().build();
+    }
+
+    // 2.12 Add note to user - Admin only
+    // Note: Request body needs a DTO
+    @PostMapping("/{id}/note")
+    public ResponseEntity<Void> addNote(@PathVariable @Min(1) Long id, @Valid @RequestBody com.team27.lucky3.backend.dto.request.NoteRequest request) {
+        if (id == 404) throw new ResourceNotFoundException("User not found");
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    // 2.12 Get notes (optional, useful for admin to see why they blocked someone)
+    @GetMapping("/{id}/note")
+    public ResponseEntity<List<String>> getNotes(@PathVariable @Min(1) Long id) {
+        if (id == 404) throw new ResourceNotFoundException("User not found");
+        return ResponseEntity.ok(List.of("User was rude.", "Cancelled too many rides."));
+    }
 }
