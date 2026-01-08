@@ -11,9 +11,11 @@ import com.team27.lucky3.backend.repository.PasswordResetTokenRepository;
 import com.team27.lucky3.backend.repository.RideRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
 import com.team27.lucky3.backend.service.AuthService;
+import com.team27.lucky3.backend.service.DriverService;
 import com.team27.lucky3.backend.service.EmailService;
 import com.team27.lucky3.backend.util.TokenUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -37,6 +39,10 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final DriverService driverService;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Override
     @Transactional
@@ -54,7 +60,9 @@ public class AuthServiceImpl implements AuthService {
 
         // 4. Spec 2.2.1: Drivers automatically become available upon login
         if (user.getRole() == UserRole.DRIVER) {
-            user.setActive(true);
+            // START CHANGE
+            user.setActive(!driverService.hasExceededWorkingHours(user.getId())); // Force inactive if over limit
+            // END CHANGE
             user.setInactiveRequested(false);
             userRepository.save(user);
         }
@@ -98,8 +106,8 @@ public class AuthServiceImpl implements AuthService {
         PasswordResetToken resetToken = new PasswordResetToken(token, user);
         tokenRepository.save(resetToken);
 
-        // In production, use a real URL from properties
-        String link = "http://localhost:4200/reset-password?token=" + token;
+
+        String link = frontendUrl + "/reset-password?token=" + token;
         emailService.sendSimpleMessage(email, "Reset Password", "Click here to reset: " + link);
     }
 
