@@ -1,4 +1,4 @@
-package com.example.mobile.model;
+package com.example.mobile.Domain;
 
 public class DriverInfoCard {
 

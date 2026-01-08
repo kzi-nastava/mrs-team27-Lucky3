@@ -28,6 +28,9 @@ public class LoginFragment extends Fragment {
         });
 
         binding.loginButton.setOnClickListener(v -> {
+            ((com.example.mobile.MainActivity) requireActivity()).setupNavigationForRole("PASSENGER");
+            Navigation.findNavController(v).navigate(R.id.nav_passenger_home);
+            /*
             String email = binding.emailEditText.getText().toString();
             String password = binding.passwordEditText.getText().toString();
 
@@ -42,7 +45,7 @@ public class LoginFragment extends Fragment {
                 Navigation.findNavController(v).navigate(R.id.nav_passenger_home);
             } else {
                 android.widget.Toast.makeText(getContext(), "Invalid credentials", android.widget.Toast.LENGTH_SHORT).show();
-            }
+            }*/
         });
 
         return root;
