@@ -14,6 +14,12 @@ import java.util.List;
 
 @Repository
 public interface RideRepository extends JpaRepository<Ride, Long> {
+    boolean existsByDriverIdAndStatusIn(Long driverId, List<RideStatus> statuses);
+
+    // Fetch rides finished in the last 24h (or start of day) to calculate working hours
+    @Query("SELECT r FROM Ride r WHERE r.driver.id = :driverId AND r.endTime >= :since AND r.status = 'FINISHED'")
+    List<Ride> findFinishedRidesSince(@Param("driverId") Long driverId, @Param("since") LocalDateTime since);
+
 //     @Query("SELECT r FROM Ride r WHERE " +
 //            "(:driverId IS NULL OR r.driver.id = :driverId) AND " +
 //            "(:status IS NULL OR r.status = :status) AND " +
@@ -29,6 +35,5 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
 //             Pageable pageable);
 
     // Check for active rides for a driver
-    boolean existsByDriverIdAndStatusIn(Long driverId, List<RideStatus> statuses);
-}
 
+}
