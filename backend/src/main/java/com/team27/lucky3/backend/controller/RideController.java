@@ -12,6 +12,7 @@ import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.dto.response.RoutePointResponse;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
+import com.team27.lucky3.backend.service.RideService;
 import com.team27.lucky3.backend.util.DummyData;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -35,6 +36,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Validated
 public class RideController {
+
+    private final RideService rideService;
 
     // 2.1.2 Ride estimation on the map page (unregistered user)
     @PostMapping("/estimate")
@@ -107,8 +110,7 @@ public class RideController {
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody RideCancellationRequest request) {
         if (id == 404) throw new ResourceNotFoundException("Ride not found");
-        RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.CANCELLED);
-        response.setRejectionReason(request.getReason());
+        RideResponse response = rideService.cancelRide(id, request.getReason());
         return ResponseEntity.ok(response);
     }
 
