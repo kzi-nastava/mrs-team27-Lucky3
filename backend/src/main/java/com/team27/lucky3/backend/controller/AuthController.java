@@ -3,6 +3,7 @@ package com.team27.lucky3.backend.controller;
 import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.TokenResponse;
 import com.team27.lucky3.backend.dto.response.UserResponse;
+import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.util.TokenUtils;
 import com.team27.lucky3.backend.service.AuthService;
@@ -36,7 +37,13 @@ public class AuthController {
     // 2.2.2 User registration + email activation (unregistered -> registered user)
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<UserResponse> register(@Valid @RequestBody PassengerRegistrationRequest request) {
-        UserResponse response = new UserResponse(1L, request.getName(), request.getSurname(), request.getEmail(), "default.png", UserRole.PASSENGER, request.getPhoneNumber(), request.getAddress());
+        User user = authService.registerPassenger(request);
+        // Map Entity to Response DTO
+        UserResponse response = new UserResponse(
+                user.getId(), user.getName(), user.getSurname(),
+                user.getEmail(), user.getProfilePictureUrl(),
+                user.getRole(), user.getPhoneNumber(), user.getAddress()
+        );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -44,6 +51,7 @@ public class AuthController {
     @GetMapping("/activate/{token}")
     public ResponseEntity<Void> activateAccount(@PathVariable @NotBlank String token) {
         // Activation logic using token
+        authService.activateAccount(token);
         return ResponseEntity.ok().build();
     }
 
