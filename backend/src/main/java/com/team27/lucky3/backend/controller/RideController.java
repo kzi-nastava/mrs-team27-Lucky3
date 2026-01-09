@@ -130,8 +130,7 @@ public class RideController {
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody RideStopRequest request) {
         if (id == 404) throw new ResourceNotFoundException("Ride not found");
-        RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.FINISHED);
-        response.setDestination(request.getStopLocation());
+        RideResponse response = rideService.stopRide(id, request);
         return ResponseEntity.ok(response);
     }
 

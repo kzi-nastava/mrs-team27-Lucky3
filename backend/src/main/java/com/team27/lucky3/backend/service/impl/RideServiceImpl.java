@@ -1,10 +1,7 @@
 package com.team27.lucky3.backend.service.impl;
 
 import com.team27.lucky3.backend.dto.LocationDto;
-import com.team27.lucky3.backend.dto.request.CreateRideRequest;
-import com.team27.lucky3.backend.dto.request.EndRideRequest;
-import com.team27.lucky3.backend.dto.request.RidePanicRequest;
-import com.team27.lucky3.backend.dto.request.VehicleInformation;
+import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.dto.response.UserResponse;
@@ -14,6 +11,7 @@ import com.team27.lucky3.backend.entity.Ride;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.Vehicle;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
+import com.team27.lucky3.backend.entity.enums.VehicleType;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.PanicRepository;
 import com.team27.lucky3.backend.repository.RideRepository;
@@ -29,6 +27,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static com.team27.lucky3.backend.entity.enums.VehicleType.VAN;
 
 @Service
 @RequiredArgsConstructor
@@ -282,5 +282,72 @@ public class RideServiceImpl implements RideService {
         }
 
         return res;
+    }
+
+    @Override
+    @Transactional
+    public RideResponse stopRide(Long id, RideStopRequest request) {
+        Ride ride = findById(id);
+        User currentUser = getCurrentUser();
+
+        // Validate User (Must be driver)
+        if (currentUser == null) {
+            throw new IllegalStateException("User must be authenticated.");
+        }
+        if (ride.getDriver() == null || !ride.getDriver().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException("Only the assigned driver can stop the ride.");
+        }
+
+        // Validate Status
+        if (ride.getStatus() != RideStatus.IN_PROGRESS && ride.getStatus() != RideStatus.ACTIVE) {
+            throw new IllegalStateException("Ride cannot be stopped if it is not in progress.");
+        }
+
+        // Update Ride Data
+        Location newEndLocation = mapLocation(request.getStopLocation());
+        ride.setEndLocation(newEndLocation);
+        ride.setEndTime(LocalDateTime.now());
+        ride.setStatus(RideStatus.FINISHED);
+        ride.setPassengersExited(true);
+        ride.setPaid(true);
+
+
+        double distanceKm = calculateHaversineDistance(
+                ride.getStartLocation(),
+                newEndLocation
+        );
+        ride.setDistance(distanceKm);
+
+        double basePrice = getBasePriceForVehicle(ride.getRequestedVehicleType());
+        double newPrice = basePrice + (distanceKm * 120.0);
+        ride.setTotalCost(Math.round(newPrice * 100.0) / 100.0); // Round to 2 decimals
+
+        Ride savedRide = rideRepository.save(ride);
+
+        // Handle Driver Inactivity
+        checkAndHandleInactiveRequest(savedRide.getDriver());
+
+        return mapToResponse(savedRide);
+    }
+
+    private double calculateHaversineDistance(Location start, Location end) {
+        if (start == null || end == null) return 0.0;
+        final int R = 6371; // Earth radius in km
+        double latDistance = Math.toRadians(end.getLatitude() - start.getLatitude());
+        double lonDistance = Math.toRadians(end.getLongitude() - start.getLongitude());
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(start.getLatitude())) * Math.cos(Math.toRadians(end.getLatitude()))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    private double getBasePriceForVehicle(VehicleType type) {
+        if (type == null) return 120.0;
+        return switch (type) {
+            case LUXURY -> 200.0;
+            case VAN -> 180.0;
+            default -> 120.0;
+        };
     }
 }
