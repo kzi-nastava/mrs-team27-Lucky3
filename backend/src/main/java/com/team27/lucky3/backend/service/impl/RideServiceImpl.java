@@ -130,10 +130,40 @@ public class RideServiceImpl implements RideService {
     @Transactional
     public RideResponse cancelRide(Long id, String reason) {
         Ride ride = findById(id);
+        User currentUser = getCurrentUser();
+
+        if (currentUser == null) {
+            throw new IllegalStateException("User must be authenticated to cancel a ride.");
+        }
 
         // Only cancellable in certain states
         if (ride.getStatus() == RideStatus.FINISHED || ride.getStatus() == RideStatus.CANCELLED || ride.getStatus() == RideStatus.PANIC) {
             throw new IllegalStateException("Ride already finished/cancelled");
+        }
+
+        boolean isDriver = ride.getDriver() != null && ride.getDriver().getId().equals(currentUser.getId());
+        boolean isPassenger = ride.getPassengers().contains(currentUser);
+
+        if (isDriver) {
+            if (ride.getStatus() == RideStatus.IN_PROGRESS || ride.getStatus() == RideStatus.ACTIVE) {
+                throw new IllegalStateException("Driver cannot cancel ride after it has started (passengers entered).");
+            }
+            if (reason == null || reason.trim().isEmpty()) {
+                throw new IllegalStateException("Driver must provide a reason for cancellation.");
+            }
+        } else if (isPassenger) {
+            if (ride.getScheduledTime() != null) {
+                LocalDateTime limit = ride.getScheduledTime().minusMinutes(10);
+                if (LocalDateTime.now().isAfter(limit)) {
+                    throw new IllegalStateException("You cannot cancel a scheduled ride within 10 minutes of its start time.");
+                }
+            }
+
+            if (ride.getStatus() == RideStatus.IN_PROGRESS) {
+                throw new IllegalStateException("Cannot cancel an active ride. Request a stop instead.");
+            }
+        } else {
+            throw new IllegalStateException("User is not authorized to cancel this ride.");
         }
 
         ride.setStatus(RideStatus.CANCELLED);

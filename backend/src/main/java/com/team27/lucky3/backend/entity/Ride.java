@@ -31,6 +31,8 @@ public class Ride {
     private RideStatus status;
 
     private Boolean panicPressed;
+
+    @Column(name = "rejection_reason")
     private String rejectionReason;
 
     private boolean petTransport;
