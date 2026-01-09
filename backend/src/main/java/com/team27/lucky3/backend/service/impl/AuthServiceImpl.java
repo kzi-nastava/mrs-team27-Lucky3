@@ -1,7 +1,9 @@
 package com.team27.lucky3.backend.service.impl;
 
 import com.team27.lucky3.backend.dto.request.LoginRequest;
+import com.team27.lucky3.backend.dto.request.PassengerRegistrationRequest;
 import com.team27.lucky3.backend.dto.response.TokenResponse;
+import com.team27.lucky3.backend.entity.ActivationToken;
 import com.team27.lucky3.backend.entity.PasswordResetToken;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
@@ -10,6 +12,7 @@ import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.PasswordResetTokenRepository;
 import com.team27.lucky3.backend.repository.RideRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
+import com.team27.lucky3.backend.repository.ActivationTokenRepository;
 import com.team27.lucky3.backend.service.AuthService;
 import com.team27.lucky3.backend.service.DriverService;
 import com.team27.lucky3.backend.service.EmailService;
@@ -40,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final DriverService driverService;
+    private final ActivationTokenRepository activationTokenRepository;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -126,5 +130,65 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         tokenRepository.delete(resetToken);
+    }
+
+    @Override
+    @Transactional
+    public User registerPassenger(PassengerRegistrationRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("User with this email already exists.");
+        }
+
+        User user = new User();
+        user.setName(request.getName());
+        user.setSurname(request.getSurname());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setAddress(request.getAddress());
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setRole(UserRole.PASSENGER);
+        user.setBlocked(false);
+        user.setEnabled(false); // Cannot login until activated
+
+        // Default image if empty
+        if (request.getProfilePictureUrl() == null || request.getProfilePictureUrl().isBlank()) {
+            user.setProfilePictureUrl("assets/default.png");
+        } else {
+            user.setProfilePictureUrl(request.getProfilePictureUrl()); // Assuming you add this field to DTO
+        }
+
+        User savedUser = userRepository.save(user);
+
+        // Generate Activation Token
+        String token = UUID.randomUUID().toString();
+        ActivationToken activationToken = new ActivationToken(token, savedUser);
+        activationTokenRepository.save(activationToken);
+
+        // Send Email
+        String link = frontendUrl + "/activate?token=" + token;
+        emailService.sendSimpleMessage(
+                savedUser.getEmail(),
+                "Activate your Account",
+                "Welcome! Please click here to activate your account: " + link
+        );
+
+        return savedUser;
+    }
+
+    @Override
+    @Transactional
+    public void activateAccount(String token) {
+        ActivationToken activationToken = activationTokenRepository.findByToken(token)
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid activation token"));
+
+        if (activationToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Activation token expired");
+        }
+
+        User user = activationToken.getUser();
+        user.setEnabled(true); // Enable login
+        userRepository.save(user);
+
+        activationTokenRepository.delete(activationToken);
     }
 }

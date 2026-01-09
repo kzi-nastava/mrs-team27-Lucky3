@@ -12,7 +12,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.sql.Timestamp;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -41,7 +40,8 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
-    private boolean isBlocked;
+    private boolean isBlocked; // Admin blocked user
+    private boolean isEnabled; // Email activated (Spec 2.2.2)
 
     // 2.2.1 Driver Availability
     private boolean isActive;
@@ -50,19 +50,18 @@ public class User implements UserDetails {
     @Column(name = "last_password_reset_date")
     private Timestamp lastPasswordResetDate;
 
-    // --- UserDetails Implementation ---
-
+    // UserDetails Implementation
     @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Map Enum to Spring Security Authority
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
+    // This method MUST be named "getUsername()" because of the UserDetails interface
     @JsonIgnore
     @Override
     public String getUsername() {
-        return this.email; // Spec 2.2.1: Login with Email
+        return this.email;
     }
 
     @JsonIgnore
@@ -78,5 +77,7 @@ public class User implements UserDetails {
     public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() { return !this.isBlocked; } // Or add a specific enabled field if needed
+    public boolean isEnabled() {
+        return this.isEnabled && !this.isBlocked;
+    }
 }
