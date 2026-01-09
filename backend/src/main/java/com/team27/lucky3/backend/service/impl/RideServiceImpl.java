@@ -178,6 +178,7 @@ public class RideServiceImpl implements RideService {
         return mapToResponse(savedRide);
     }
 
+    /* TODO: Check what is better between this and down same function
     @Override
     @Transactional
     public RideResponse panicRide(Long id, RidePanicRequest request) {
@@ -201,7 +202,7 @@ public class RideServiceImpl implements RideService {
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
         return mapToResponse(savedRide);
-    }
+    }*/
 
     @Override
     public Ride findById(Long id) {
@@ -325,6 +326,53 @@ public class RideServiceImpl implements RideService {
         Ride savedRide = rideRepository.save(ride);
 
         // Handle Driver Inactivity
+        checkAndHandleInactiveRequest(savedRide.getDriver());
+
+        return mapToResponse(savedRide);
+    }
+
+    @Override
+    @Transactional
+    public RideResponse panicRide(Long id, RidePanicRequest request) {
+        Ride ride = findById(id);
+        User currentUser = getCurrentUser(); // The user pressing the button
+
+        if (currentUser == null) {
+            throw new IllegalStateException("User must be authenticated.");
+        }
+
+        // Validate that the ride is actually active/in-progress
+        if (ride.getStatus() == RideStatus.FINISHED ||
+                ride.getStatus() == RideStatus.CANCELLED ||
+                ride.getStatus() == RideStatus.PANIC) {
+            throw new IllegalStateException("Ride is already finished or cancelled.");
+        }
+
+        // Validate that the user is actually part of this ride
+        boolean isPassenger = ride.getPassengers().contains(currentUser);
+        boolean isDriver = ride.getDriver() != null && ride.getDriver().getId().equals(currentUser.getId());
+
+        if (!isPassenger && !isDriver) {
+            throw new IllegalStateException("Only a participant of the ride can activate panic.");
+        }
+
+        // Update Ride Status
+        ride.setStatus(RideStatus.PANIC);
+        ride.setPanicPressed(true);
+        ride.setEndTime(LocalDateTime.now());
+
+        // Create Panic Record
+        Panic panic = new Panic();
+        panic.setRide(ride);
+        panic.setUser(currentUser);
+        panic.setReason(request.getReason());
+        panic.setTimestamp(LocalDateTime.now());
+        panicRepository.save(panic);
+
+        // Save Ride
+        Ride savedRide = rideRepository.save(ride);
+
+        // Handle Driver Inactivity (If driver pressed it or is affected)
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
         return mapToResponse(savedRide);
