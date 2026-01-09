@@ -154,7 +154,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getProfilePictureUrl() == null || request.getProfilePictureUrl().isBlank()) {
             user.setProfilePictureUrl("assets/default.png");
         } else {
-            user.setProfilePictureUrl(request.getProfilePictureUrl()); // Assuming you add this field to DTO
+            user.setProfilePictureUrl(request.getProfilePictureUrl());
         }
 
         User savedUser = userRepository.save(user);
