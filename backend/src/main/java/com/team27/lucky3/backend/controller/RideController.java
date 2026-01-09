@@ -119,9 +119,7 @@ public class RideController {
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody RidePanicRequest request) {
         if (id == 404) throw new ResourceNotFoundException("Ride not found");
-        RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.PANIC);
-        response.setRejectionReason(request.getReason());
-        response.setPanicPressed(true);
+        RideResponse response = rideService.panicRide(id, request);
         return ResponseEntity.ok(response);
     }
 
