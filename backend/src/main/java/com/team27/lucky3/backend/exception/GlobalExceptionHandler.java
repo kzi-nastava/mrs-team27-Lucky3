@@ -54,4 +54,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", "An unexpected error occurred", request.getRequestURI());
     }
+
+    @ExceptionHandler(EmailAlreadyUsedException.class)
+    public ResponseEntity<ErrorResponse> handleEmailAlreadyUsed(
+            EmailAlreadyUsedException ex,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+
+        ErrorResponse body = new ErrorResponse(
+                LocalDateTime.now(),            // timestamp
+                status.value(),                 // 400
+                status.getReasonPhrase(),       // "Bad Request"
+                ex.getMessage(),                // "Email is already in use"
+                request.getRequestURI()         // e.g. "/api/admin/drivers"
+        );
+
+        return ResponseEntity.status(status).body(body);
+    }
 }

@@ -21,10 +21,12 @@ public class ActivationToken {
     private User user;
 
     private LocalDateTime expiryDate;
+    private boolean used;
 
     public ActivationToken(String token, User user) {
         this.token = token;
         this.user = user;
         this.expiryDate = LocalDateTime.now().plusHours(24);
+        this.used = false;
     }
 }

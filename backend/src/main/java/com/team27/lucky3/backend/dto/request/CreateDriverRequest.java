@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CreateDriver {
+public class CreateDriverRequest {
     @NotBlank(message = "Name is required")
     private String name;
 

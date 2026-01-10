@@ -72,8 +72,11 @@ public class WebSecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/api/vehicles/active").permitAll() // 2.1.1 Public map
                 .requestMatchers("/api/rides/estimate").permitAll()  // 2.1.2 Public estimate
+                .requestMatchers(HttpMethod.POST, "/api/drivers").permitAll()   /// THIS IS FOR TESTING, should be removed 2.2.3 Admin creates driver accounts
                 .anyRequest().authenticated()
         );
+
+
 
         // Add the Token Filter
         http.addFilterBefore(
@@ -89,7 +92,13 @@ public class WebSecurityConfig {
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
         return (web) -> web.ignoring()
-                .requestMatchers(HttpMethod.GET, "/", "/webjars/**", "/*.html", "favicon.ico", "/**/*.html", "/**/*.css", "/**/*.js");
+                .requestMatchers(HttpMethod.GET,
+                        "/",
+                        "/webjars/**",
+                        "/*.html",
+                        "/favicon.ico",
+                        "/**"      // ignore all static for now, or narrow it later
+                );
     }
 
     @Bean

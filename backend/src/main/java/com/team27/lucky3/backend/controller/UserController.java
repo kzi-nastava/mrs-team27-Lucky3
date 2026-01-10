@@ -1,14 +1,9 @@
 package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.request.ChangePasswordRequest;
-import com.team27.lucky3.backend.dto.request.CreateDriver;
-import com.team27.lucky3.backend.dto.request.CreateRideRequest;
-import com.team27.lucky3.backend.dto.request.PasswordResetRequest;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.FavoriteRouteResponse;
 import com.team27.lucky3.backend.dto.response.UserProfile;
-import com.team27.lucky3.backend.dto.response.UserResponse;
-import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.util.DummyData;
 import jakarta.validation.Valid;
@@ -20,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
