@@ -44,7 +44,7 @@ public class PanicServiceImpl implements PanicService {
                     panic.getUser().getName(),
                     panic.getUser().getSurname(),
                     panic.getUser().getEmail(),
-                    panic.getUser().getProfilePictureUrl(),
+                    "/api/users/" + panic.getUser().getId() + "/profile-image",
                     panic.getUser().getRole(),
                     panic.getUser().getPhoneNumber(),
                     panic.getUser().getAddress()
@@ -88,13 +88,13 @@ public class PanicServiceImpl implements PanicService {
             if(vehicle != null) {
                 vInfo = new VehicleInformation(vehicle.getModel(), vehicle.getVehicleType(), vehicle.getLicensePlates(), vehicle.getSeatCount(), vehicle.isBabyTransport(), vehicle.isPetTransport(), ride.getDriver().getId());
             }
-            DriverResponse dr = new DriverResponse(ride.getDriver().getId(), ride.getDriver().getName(), ride.getDriver().getSurname(), ride.getDriver().getEmail(), ride.getDriver().getProfilePictureUrl(), ride.getDriver().getRole(), ride.getDriver().getPhoneNumber(), ride.getDriver().getAddress(), vInfo, ride.getDriver().isActive(), "0h 0m");
+            DriverResponse dr = new DriverResponse(ride.getDriver().getId(), ride.getDriver().getName(), ride.getDriver().getSurname(), ride.getDriver().getEmail(), "/api/users/" + ride.getDriver().getId() + "/profile-image", ride.getDriver().getRole(), ride.getDriver().getPhoneNumber(), ride.getDriver().getAddress(), vInfo, ride.getDriver().isActive(), "0h 0m");
             res.setDriver(dr);
         }
 
         if (ride.getPassengers() != null) {
             List<UserResponse> passengers = ride.getPassengers().stream()
-                    .map(p -> new UserResponse(p.getId(), p.getName(), p.getSurname(), p.getEmail(), p.getProfilePictureUrl(), p.getRole(), p.getPhoneNumber(), p.getAddress()))
+                    .map(p -> new UserResponse(p.getId(), p.getName(), p.getSurname(), p.getEmail(), "/api/users/" + p.getId() + "/profile-image", p.getRole(), p.getPhoneNumber(), p.getAddress()))
                     .collect(Collectors.toList());
             res.setPassengers(passengers);
         }

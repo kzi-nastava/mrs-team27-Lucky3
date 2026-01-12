@@ -35,7 +35,10 @@ public class User implements UserDetails {
 
     private String phoneNumber;
     private String address;
-    private String profilePictureUrl;
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "profile_image_id")
+    private Image profileImage;
 
     @Enumerated(EnumType.STRING)
     private UserRole role;

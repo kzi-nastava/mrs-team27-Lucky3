@@ -1,5 +1,6 @@
 package com.team27.lucky3.backend.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team27.lucky3.backend.dto.request.CreateDriverRequest;
 import com.team27.lucky3.backend.dto.request.UpdateDriverRequest;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
@@ -17,18 +18,27 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
-@RequestMapping(value = "/api/drivers", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api/drivers")
 @RequiredArgsConstructor
 @Validated
+
 public class DriverController {
     private final DriverService driverService;
 
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<DriverResponse> createDriver(@Valid @RequestBody CreateDriverRequest request) {
-        DriverResponse created = driverService.createDriver(request);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DriverResponse> createDriver(@RequestPart("request") String requestJson,
+                                                       @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) throws IOException {
+
+        ObjectMapper mapper = new ObjectMapper();
+        CreateDriverRequest request = mapper.readValue(requestJson, CreateDriverRequest.class);
+
+        DriverResponse created = driverService.createDriver(request, profileImage);
         return ResponseEntity.ok(created);
     }
 

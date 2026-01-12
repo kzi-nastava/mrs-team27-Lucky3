@@ -3,10 +3,7 @@ package com.team27.lucky3.backend.service.impl;
 import com.team27.lucky3.backend.dto.request.CreateDriverRequest;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
-import com.team27.lucky3.backend.entity.ActivationToken;
-import com.team27.lucky3.backend.entity.Ride;
-import com.team27.lucky3.backend.entity.User;
-import com.team27.lucky3.backend.entity.Vehicle;
+import com.team27.lucky3.backend.entity.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.entity.enums.VehicleType;
@@ -18,12 +15,16 @@ import com.team27.lucky3.backend.repository.UserRepository;
 import com.team27.lucky3.backend.repository.VehicleRepository;
 import com.team27.lucky3.backend.service.DriverService;
 import com.team27.lucky3.backend.service.EmailService;
+import com.team27.lucky3.backend.service.ImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -35,6 +36,8 @@ public class DriverServiceImpl implements DriverService {
     private final VehicleRepository vehicleRepository;
     private final ActivationTokenRepository activationTokenRepository;
     private final EmailService emailService;
+    private final ImageService imageService;
+
     //TODO: fix this
     private final String activationBaseUrl = "https://localhost/8080/driver-activation/password?token=";
 
@@ -87,7 +90,7 @@ public class DriverServiceImpl implements DriverService {
     }
 
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
-    public DriverResponse createDriver(CreateDriverRequest request) {
+    public DriverResponse createDriver(CreateDriverRequest request, MultipartFile file) throws IOException{
         userRepository.findByEmail(request.getEmail())
                 .ifPresent(u -> {
                     throw new EmailAlreadyUsedException("Email is already in use");
@@ -106,12 +109,18 @@ public class DriverServiceImpl implements DriverService {
         driver.setInactiveRequested(false);
         driver.setPassword(null);                 // set after activation
         driver.setLastPasswordResetDate(null);
+        driver.setProfileImage(null);
+
+        if (file != null && !file.isEmpty()) {
+
+            Image newImage = imageService.store(file);
+            driver.setProfileImage(newImage);
+        }
 
         User savedDriver = userRepository.save(driver);
 
         // 2) Create vehicle
-        var vReq = request.getVehicle();
-
+        VehicleInformation vReq = request.getVehicle();
         Vehicle vehicle = new Vehicle();
         vehicle.setModel(vReq.getModel());
         vehicle.setVehicleType(vReq.getVehicleType()); // or enum/string
@@ -161,7 +170,7 @@ public class DriverServiceImpl implements DriverService {
                 savedDriver.getName(),
                 savedDriver.getSurname(),
                 savedDriver.getEmail(),
-                savedDriver.getProfilePictureUrl(),
+                "/api/users/"+savedDriver.getId()+"/profile-image",
                 savedDriver.getRole(),
                 savedDriver.getPhoneNumber(),
                 savedDriver.getAddress(),
@@ -196,7 +205,7 @@ public class DriverServiceImpl implements DriverService {
                 driver.getName(),
                 driver.getSurname(),
                 driver.getEmail(),
-                driver.getProfilePictureUrl(),
+                "/api/users/"+driver.getId()+"/profile-image",
                 driver.getRole(),
                 driver.getPhoneNumber(),
                 driver.getAddress(),
