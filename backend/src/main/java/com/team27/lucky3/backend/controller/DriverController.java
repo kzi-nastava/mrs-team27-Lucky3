@@ -4,11 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team27.lucky3.backend.dto.request.CreateDriverRequest;
 import com.team27.lucky3.backend.dto.request.UpdateDriverRequest;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
+import com.team27.lucky3.backend.dto.response.DriverChangeRequestCreated;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
+import com.team27.lucky3.backend.entity.DriverChangeRequest;
 import com.team27.lucky3.backend.entity.User;
+import com.team27.lucky3.backend.entity.enums.DriverChangeStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.entity.enums.VehicleType;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
+import com.team27.lucky3.backend.service.DriverChangeRequestService;
 import com.team27.lucky3.backend.service.DriverService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -29,6 +33,7 @@ import java.io.IOException;
 
 public class DriverController {
     private final DriverService driverService;
+    private final DriverChangeRequestService driverChangeRequestService;
 
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -48,16 +53,28 @@ public class DriverController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<DriverResponse> updateDriver(@PathVariable Long id, @Valid @RequestBody UpdateDriverRequest request) {
-        if (id == 404) throw new ResourceNotFoundException("Driver not found");
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DriverChangeRequestCreated> createDriver(
+            @PathVariable Long id,
+            @RequestPart("request") String requestJson,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
+    ) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        CreateDriverRequest request = mapper.readValue(requestJson, CreateDriverRequest.class);
 
-        request.getVehicle().setDriverId(id);
-        DriverResponse response = new DriverResponse(id, request.getName(), request.getSurname(), request.getEmail(), "url", UserRole.DRIVER, request.getPhone(), request.getAddress(), request.getVehicle(), request.isActive(), request.getActive24h());
-        return ResponseEntity.ok(response);
+        DriverChangeRequest changeRequest = driverChangeRequestService.createChangeRequest(id, request, profileImage);
+
+        DriverChangeRequestCreated body = new DriverChangeRequestCreated(
+                id,
+                changeRequest.getId(),
+                DriverChangeStatus.PENDING
+        );
+
+        return ResponseEntity
+                .accepted() //202
+                .body(body);
     }
-
-
+    
     // 2.3 Profile page (registered user, driver, admin)
     @GetMapping("/{id}/vehicle")
     public ResponseEntity<VehicleInformation> getDriverVehicle(@PathVariable @Min(1) Long id) {
