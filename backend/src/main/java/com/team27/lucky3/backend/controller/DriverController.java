@@ -74,7 +74,7 @@ public class DriverController {
                 .accepted() //202
                 .body(body);
     }
-    
+
     // 2.3 Profile page (registered user, driver, admin)
     @GetMapping("/{id}/vehicle")
     public ResponseEntity<VehicleInformation> getDriverVehicle(@PathVariable @Min(1) Long id) {

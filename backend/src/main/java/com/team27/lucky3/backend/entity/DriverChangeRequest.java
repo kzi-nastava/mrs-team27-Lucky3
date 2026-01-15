@@ -28,7 +28,7 @@ public class DriverChangeRequest {
     private String email;
     private String address;
     private String phone;
-    private Long driverRequestId;
+    private Long requestedDriverId;
     private LocalDateTime createdAt;
 
     private Long imageId; // or just store imageId if preferred

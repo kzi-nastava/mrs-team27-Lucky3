@@ -74,6 +74,7 @@ public class WebSecurityConfig {
                 .requestMatchers("/api/rides/estimate").permitAll()  // 2.1.2 Public estimate
                 .requestMatchers(HttpMethod.POST, "/api/drivers").permitAll()   /// THIS IS FOR TESTING, should be removed 2.2.3 Admin creates driver accounts
                 .requestMatchers(HttpMethod.PUT, "/api/drivers/**").permitAll()   /// THIS IS FOR TESTING, should be removed 2.2.3 Admin creates driver accounts
+                .requestMatchers(HttpMethod.PUT, "/api/driver-change-requests/**").permitAll()   /// THIS IS FOR TESTING, should be removed 2.2.3 Admin creates driver accounts
                 .anyRequest().authenticated()
         );
 
