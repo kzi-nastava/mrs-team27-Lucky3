@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,7 +30,6 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
 
-    // TODO: read data from database instead of dummy data
     @GetMapping("/{id}")
     public ResponseEntity<UserProfile> getUserProfile(@PathVariable @Min(1) Long id) {
         User user = userService.findById(id)
@@ -45,12 +45,12 @@ public class UserController {
         if (user.getProfileImage() != null) {
             response.setImageUrl("/api/users/" + user.getId() + "/profile-image");
         }
-        //TODO: fetch vehicle info and active hours if user is driver
 
         return ResponseEntity.ok(response);
     }
-
+    
     //2.3 Update user profile
+    @PreAuthorize("hasRole('PASSENGER') or hasRole('ADMIN')")
     @PutMapping(value = "/{id}",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UserProfile> updateUserProfile(
             @PathVariable @Min(1) Long id,
@@ -59,13 +59,11 @@ public class UserController {
     ) throws IOException {
         User updated = userService.updateUser(id, request, profileImage);
 
-        //TODO: If user is driver, make different returns, so it knows driver pending is there
-        //cak je pitanje gde ovo ide, posto imam api za drivere...
-
         // map User -> UserProfile DTO
         UserProfile response = new UserProfile();
         response.setName(updated.getName());
         response.setSurname(updated.getSurname());
+        response.setEmail(updated.getEmail());
         response.setPhoneNumber(updated.getPhoneNumber());
         response.setAddress(updated.getAddress());
 
@@ -86,6 +84,7 @@ public class UserController {
                 .body(image.getData());
     }
 
+    //@PreAuthorize("hasRole('USER') or hasRole('ADMIN') or hasRole('DRIVER')")
     @PutMapping("/{id}/password")
     public ResponseEntity<Void> changePassword(
             @PathVariable @Min(1) Long id,

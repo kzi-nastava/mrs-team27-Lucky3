@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,13 +37,10 @@ public class DriverController {
     private final DriverChangeRequestService driverChangeRequestService;
 
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<DriverResponse> createDriver(@RequestPart("request") String requestJson,
+    public ResponseEntity<DriverResponse> createDriver(@Valid @RequestPart("request") CreateDriverRequest request,
                                                        @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) throws IOException {
-
-        ObjectMapper mapper = new ObjectMapper();
-        CreateDriverRequest request = mapper.readValue(requestJson, CreateDriverRequest.class);
-
         DriverResponse created = driverService.createDriver(request, profileImage);
         return ResponseEntity.ok(created);
     }
@@ -56,12 +54,9 @@ public class DriverController {
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DriverChangeRequestCreated> createDriver(
             @PathVariable Long id,
-            @RequestPart("request") String requestJson,
+            @Valid @RequestPart("request") CreateDriverRequest request,
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
     ) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        CreateDriverRequest request = mapper.readValue(requestJson, CreateDriverRequest.class);
-
         DriverChangeRequest changeRequest = driverChangeRequestService.createChangeRequest(id, request, profileImage);
 
         DriverChangeRequestCreated body = new DriverChangeRequestCreated(

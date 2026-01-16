@@ -28,7 +28,5 @@ public class UserProfile {
     private String address;
 
     private String imageUrl;    // URL to fetch profile image from endpoint
-    private VehicleInformation vehicleInformation;
-    private Double activeHours; // For drivers
 }
 

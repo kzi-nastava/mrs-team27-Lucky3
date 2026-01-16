@@ -59,9 +59,7 @@ public class DummyData {
                 "user" + id + "@example.com", // email
                 "+381601234567",       // phoneNumber
                 "Address " + id,       // address
-                "profile.jpg",         // imageUrl
-                null,                  // vehicleInformation
-                null                   // activeHours
+                "profile.jpg"         // imageUrl
         );
     }
 

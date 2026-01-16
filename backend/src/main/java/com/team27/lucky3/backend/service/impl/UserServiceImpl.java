@@ -48,21 +48,28 @@ public class UserServiceImpl implements UserService {
         user.setSurname(request.getSurname());
         user.setPhoneNumber(request.getPhoneNumber());
         user.setAddress(request.getAddress());
-
-        //TODO: If user is driver, call service to update vehicle info, and update vehicle for driver, + send notification
+        user.setEmail(request.getEmail());
 
         if (file != null && !file.isEmpty()) {
             Image newImage = imageService.store(file);
-            user.setProfileImage(newImage);
-        }
+            System.out.println("Image stored with ID = " + newImage.getId());
 
-        return userRepository.save(user);
+            user.setProfileImage(newImage);
+            System.out.println("User " + id + " profileImage set to image ID = " + newImage.getId());
+        }
+        else{
+            System.out.println("No profile image uploaded for user " + id);
+        }
+        userRepository.save(user);
+
+        return user;
     }
 
     @Transactional(readOnly = true)
     public Image getProfileImage(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
         if (user.getProfileImage() == null) {
             return imageService.getDefaultAvatar();
         }

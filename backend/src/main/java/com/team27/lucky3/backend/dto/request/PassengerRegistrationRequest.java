@@ -33,8 +33,6 @@ public class PassengerRegistrationRequest {
     @NotBlank(message = "Address is required")
     private String address;
 
-    private String profilePictureUrl;
-
     @AssertTrue(message = "Passwords do not match")
     public boolean isPasswordsMatch() {
         return password != null && password.equals(confirmPassword);
