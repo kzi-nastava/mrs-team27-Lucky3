@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class UpdateDriver extends CreateDriver {
+public class UpdateDriverRequest extends CreateDriverRequest {
     private boolean isActive;
     private String active24h;
 }

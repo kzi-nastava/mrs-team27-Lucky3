@@ -27,8 +27,6 @@ public class UserProfile {
     @NotBlank(message = "Address is required")
     private String address;
 
-    private String imageUrl;
-    private VehicleInformation vehicleInformation;
-    private Double activeHours; // For drivers
+    private String imageUrl;    // URL to fetch profile image from endpoint
 }
 

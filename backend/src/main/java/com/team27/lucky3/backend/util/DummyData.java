@@ -53,7 +53,14 @@ public class DummyData {
     }
 
     public static UserProfile createDummyUserProfile(Long id) {
-        return new UserProfile("Name" + id, "Surname" + id, "user" + id + "@example.com", "+381601234567", "Address " + id, "profile.jpg", null, null);
+        return new UserProfile(
+                "Name" + id,           // name
+                "Surname" + id,        // surname
+                "user" + id + "@example.com", // email
+                "+381601234567",       // phoneNumber
+                "Address " + id,       // address
+                "profile.jpg"         // imageUrl
+        );
     }
 
     public static VehicleInformation createDummyVehicle(Long driverId) {

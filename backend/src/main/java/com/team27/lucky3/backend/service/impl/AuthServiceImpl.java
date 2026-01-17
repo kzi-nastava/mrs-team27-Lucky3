@@ -4,6 +4,7 @@ import com.team27.lucky3.backend.dto.request.LoginRequest;
 import com.team27.lucky3.backend.dto.request.PassengerRegistrationRequest;
 import com.team27.lucky3.backend.dto.response.TokenResponse;
 import com.team27.lucky3.backend.entity.ActivationToken;
+import com.team27.lucky3.backend.entity.Image;
 import com.team27.lucky3.backend.entity.PasswordResetToken;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
@@ -16,6 +17,7 @@ import com.team27.lucky3.backend.repository.ActivationTokenRepository;
 import com.team27.lucky3.backend.service.AuthService;
 import com.team27.lucky3.backend.service.DriverService;
 import com.team27.lucky3.backend.service.EmailService;
+import com.team27.lucky3.backend.service.ImageService;
 import com.team27.lucky3.backend.util.TokenUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +28,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -43,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final DriverService driverService;
+    private final ImageService imageService;
     private final ActivationTokenRepository activationTokenRepository;
 
     @Value("${frontend.url}")
@@ -134,7 +139,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public User registerPassenger(PassengerRegistrationRequest request) {
+    public User registerPassenger(PassengerRegistrationRequest request, MultipartFile profileImage) throws IOException {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("User with this email already exists.");
         }
@@ -148,14 +153,16 @@ public class AuthServiceImpl implements AuthService {
         user.setPhoneNumber(request.getPhoneNumber());
         user.setRole(UserRole.PASSENGER);
         user.setBlocked(false);
-        user.setEnabled(false); // Cannot login until activated
+        //user.setEnabled(false); // Cannot login until activated
+        user.setEnabled(true);  // for testnng, set this to true
 
-        // Default image if empty
-        if (request.getProfilePictureUrl() == null || request.getProfilePictureUrl().isBlank()) {
-            user.setProfilePictureUrl("assets/default.png");
+        Image image;
+        if (profileImage != null && !profileImage.isEmpty()) {
+            image = imageService.store(profileImage);  // snima upload
         } else {
-            user.setProfilePictureUrl(request.getProfilePictureUrl());
+            image = imageService.getDefaultAvatar();   // default
         }
+        user.setProfileImage(image);
 
         User savedUser = userRepository.save(user);
 

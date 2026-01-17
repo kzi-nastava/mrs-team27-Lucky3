@@ -17,6 +17,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping(value = "/api/auth", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -35,17 +38,27 @@ public class AuthController {
     }
 
     // 2.2.2 User registration + email activation (unregistered -> registered user)
-    @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody PassengerRegistrationRequest request) {
-        User user = authService.registerPassenger(request);
-        // Map Entity to Response DTO
+    @PostMapping(
+            value = "/register",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<UserResponse> register(
+            @Valid @RequestPart("data") PassengerRegistrationRequest request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
+    ) throws IOException {
+
+        User user = authService.registerPassenger(request, profileImage);
+
+        String imageUrl = "/api/users/" + user.getId() + "/profile-image";      //slika se uzima sa endpointa. To je url
+
         UserResponse response = new UserResponse(
                 user.getId(), user.getName(), user.getSurname(),
-                user.getEmail(), user.getProfilePictureUrl(),
+                user.getEmail(), imageUrl,
                 user.getRole(), user.getPhoneNumber(), user.getAddress()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
 
     // 2.2.2 User registration + email activation
     @GetMapping("/activate/{token}")

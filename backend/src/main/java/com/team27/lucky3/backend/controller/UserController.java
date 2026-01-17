@@ -1,15 +1,13 @@
 package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.request.ChangePasswordRequest;
-import com.team27.lucky3.backend.dto.request.CreateDriver;
-import com.team27.lucky3.backend.dto.request.CreateRideRequest;
-import com.team27.lucky3.backend.dto.request.PasswordResetRequest;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.FavoriteRouteResponse;
 import com.team27.lucky3.backend.dto.response.UserProfile;
-import com.team27.lucky3.backend.dto.response.UserResponse;
-import com.team27.lucky3.backend.entity.enums.UserRole;
+import com.team27.lucky3.backend.entity.Image;
+import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
+import com.team27.lucky3.backend.service.UserService;
 import com.team27.lucky3.backend.util.DummyData;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -17,10 +15,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -28,23 +28,63 @@ import java.util.List;
 @RequiredArgsConstructor
 @Validated
 public class UserController {
-
-
+    private final UserService userService;
 
     @GetMapping("/{id}")
     public ResponseEntity<UserProfile> getUserProfile(@PathVariable @Min(1) Long id) {
-        if (id == 404) throw new ResourceNotFoundException("User not found");
-        return ResponseEntity.ok(DummyData.createDummyUserProfile(id));
-    }
+        User user = userService.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        UserProfile response = new UserProfile();
 
-    @PutMapping("/{id}")
-    public ResponseEntity<UserProfile> updateUserProfile(
-            @PathVariable @Min(1) Long id,
-            @Valid @RequestBody UserProfile request) {
-        if (id == 404) throw new ResourceNotFoundException("User not found");
-        return ResponseEntity.ok(request);
+        response.setName(user.getName());
+        response.setSurname(user.getSurname());
+        response.setPhoneNumber(user.getPhoneNumber());
+        response.setAddress(user.getAddress());
+        response.setEmail(user.getEmail());
+
+        if (user.getProfileImage() != null) {
+            response.setImageUrl("/api/users/" + user.getId() + "/profile-image");
+        }
+
+        return ResponseEntity.ok(response);
     }
     
+    //2.3 Update user profile
+    @PreAuthorize("hasRole('PASSENGER') or hasRole('ADMIN')")
+    @PutMapping(value = "/{id}",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UserProfile> updateUserProfile(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestPart("user") UserProfile request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
+    ) throws IOException {
+        User updated = userService.updateUser(id, request, profileImage);
+
+        // map User -> UserProfile DTO
+        UserProfile response = new UserProfile();
+        response.setName(updated.getName());
+        response.setSurname(updated.getSurname());
+        response.setEmail(updated.getEmail());
+        response.setPhoneNumber(updated.getPhoneNumber());
+        response.setAddress(updated.getAddress());
+
+        if (updated.getProfileImage() != null) {
+            response.setImageUrl("/api/users/" + updated.getId() + "/profile-image");
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/profile-image")
+    public ResponseEntity<byte[]> getProfileImage(@PathVariable Long id) {
+        Image image = userService.getProfileImage(id); // loads from DB
+
+        return ResponseEntity
+                .ok()
+                .contentType(MediaType.parseMediaType(image.getContentType()))
+                .body(image.getData());
+    }
+
+    //@PreAuthorize("hasRole('USER') or hasRole('ADMIN') or hasRole('DRIVER')")
     @PutMapping("/{id}/password")
     public ResponseEntity<Void> changePassword(
             @PathVariable @Min(1) Long id,

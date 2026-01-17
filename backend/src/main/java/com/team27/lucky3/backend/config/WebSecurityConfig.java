@@ -75,6 +75,8 @@ public class WebSecurityConfig {
                 .anyRequest().authenticated()
         );
 
+
+
         // Add the Token Filter
         http.addFilterBefore(
                 new TokenAuthenticationFilter(tokenUtils, customUserDetailsService),
@@ -89,7 +91,13 @@ public class WebSecurityConfig {
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
         return (web) -> web.ignoring()
-                .requestMatchers(HttpMethod.GET, "/", "/webjars/**", "/*.html", "favicon.ico", "/**/*.html", "/**/*.css", "/**/*.js");
+                .requestMatchers(HttpMethod.GET,
+                        "/",
+                        "/webjars/**",
+                        "/*.html",
+                        "/favicon.ico",
+                        "/**"      // ignore all static for now, or narrow it later
+                );
     }
 
     @Bean

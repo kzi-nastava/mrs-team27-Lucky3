@@ -1,18 +1,30 @@
 package com.team27.lucky3.backend.service.impl;
 
-import com.team27.lucky3.backend.entity.Ride;
-import com.team27.lucky3.backend.entity.User;
+import com.team27.lucky3.backend.dto.request.CreateDriverRequest;
+import com.team27.lucky3.backend.dto.request.VehicleInformation;
+import com.team27.lucky3.backend.dto.response.DriverResponse;
+import com.team27.lucky3.backend.entity.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
+import com.team27.lucky3.backend.entity.enums.UserRole;
+import com.team27.lucky3.backend.entity.enums.VehicleType;
+import com.team27.lucky3.backend.exception.EmailAlreadyUsedException;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
+import com.team27.lucky3.backend.repository.ActivationTokenRepository;
 import com.team27.lucky3.backend.repository.RideRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
+import com.team27.lucky3.backend.repository.VehicleRepository;
 import com.team27.lucky3.backend.service.DriverService;
+import com.team27.lucky3.backend.service.EmailService;
+import com.team27.lucky3.backend.service.ImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -21,6 +33,13 @@ public class DriverServiceImpl implements DriverService {
 
     private final UserRepository userRepository;
     private final RideRepository rideRepository;
+    private final VehicleRepository vehicleRepository;
+    private final ActivationTokenRepository activationTokenRepository;
+    private final EmailService emailService;
+    private final ImageService imageService;
+
+    //TODO: fix this
+    private final String activationBaseUrl = "https://localhost/8080/driver-activation/password?token=";
 
     @Override
     @Transactional
@@ -69,4 +88,131 @@ public class DriverServiceImpl implements DriverService {
         // 8 hours = 8 * 60 * 60 = 28800 seconds
         return totalSeconds > 28800;
     }
+
+    // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
+    public DriverResponse createDriver(CreateDriverRequest request, MultipartFile file) throws IOException{
+        userRepository.findByEmail(request.getEmail())
+                .ifPresent(u -> {
+                    throw new EmailAlreadyUsedException("Email is already in use");
+                });
+        // 1) Create driver (User)
+        User driver = new User();
+        driver.setName(request.getName());
+        driver.setSurname(request.getSurname());
+        driver.setEmail(request.getEmail());
+        driver.setAddress(request.getAddress());
+        driver.setPhoneNumber(request.getPhone());
+        driver.setRole(UserRole.DRIVER);          // or string "DRIVER"
+        driver.setEnabled(false);                 // cannot login yet
+        driver.setActive(false);
+        driver.setBlocked(false);
+        driver.setInactiveRequested(false);
+        driver.setPassword(null);                 // set after activation
+        driver.setLastPasswordResetDate(null);
+        driver.setProfileImage(null);
+
+        if (file != null && !file.isEmpty()) {
+
+            Image newImage = imageService.store(file);
+            driver.setProfileImage(newImage);
+        }
+
+        User savedDriver = userRepository.save(driver);
+
+        // 2) Create vehicle
+        VehicleInformation vReq = request.getVehicle();
+        Vehicle vehicle = new Vehicle();
+        vehicle.setModel(vReq.getModel());
+        vehicle.setVehicleType(vReq.getVehicleType()); // or enum/string
+        vehicle.setLicensePlates(vReq.getLicenseNumber());
+        vehicle.setSeatCount(vReq.getPassengerSeats());
+        vehicle.setBabyTransport(vReq.getBabyTransport());
+        vehicle.setPetTransport(vReq.getPetTransport());
+        vehicle.setDriver(savedDriver);
+
+        Vehicle savedVehicle = vehicleRepository.save(vehicle);
+
+        // 3) Create activation token valid 24h
+        ActivationToken token = new ActivationToken();
+        token.setUser(savedDriver);
+        token.setToken(java.util.UUID.randomUUID().toString());
+        token.setExpiryDate(LocalDateTime.now().plusHours(24));
+        //token.setUsed(false); not needed, default false
+        activationTokenRepository.save(token);    // separate table[web:6][web:63][web:15]
+
+        // 4) Send email with one-time link (no password in mail)
+        String activationLink = activationBaseUrl + token.getToken();
+        String subject = "Driver account activation";
+        String body = """
+                Your driver account has been created by the administrator.
+                Click the link below to set your password (valid for 24 hours):
+                %s
+                """.formatted(activationLink);
+
+        emailService.sendSimpleMessage(savedDriver.getEmail(), subject, body); //[web:6][web:63][web:66]
+
+        // 5) Map to DriverResponse
+        VehicleInformation vehicleInfo = new VehicleInformation(
+                savedVehicle.getModel(),
+                savedVehicle.getVehicleType(),
+                savedVehicle.getLicensePlates(),
+                savedVehicle.getSeatCount(),
+                savedVehicle.isBabyTransport(),
+                savedVehicle.isPetTransport(),
+                savedVehicle.getId()
+                );
+
+        // active24h: for example, "0h/8h used" on creation
+        String active24h = "0h/8h";
+
+        return new DriverResponse(
+                savedDriver.getId(),
+                savedDriver.getName(),
+                savedDriver.getSurname(),
+                savedDriver.getEmail(),
+                "/api/users/"+savedDriver.getId()+"/profile-image",
+                savedDriver.getRole(),
+                savedDriver.getPhoneNumber(),
+                savedDriver.getAddress(),
+                vehicleInfo,
+                savedDriver.isActive(),
+                active24h
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public DriverResponse getDriver(Long id) {
+        User driver = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found"));
+
+        Vehicle vehicle = vehicleRepository.findByDriverId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found for driver"));
+
+        VehicleInformation vehicleInfo = new VehicleInformation();
+        vehicleInfo.setDriverId(vehicle.getDriver().getId());
+        vehicleInfo.setModel(vehicle.getModel());
+        vehicleInfo.setVehicleType(vehicle.getVehicleType()); // ensure enum value matches DB
+        vehicleInfo.setLicenseNumber(vehicle.getLicensePlates());
+        vehicleInfo.setPassengerSeats(vehicle.getSeatCount());
+        vehicleInfo.setBabyTransport(vehicle.isBabyTransport());
+        vehicleInfo.setPetTransport(vehicle.isPetTransport());
+        vehicleInfo.setDriverId(driver.getId());
+
+        String active24h = "0h/8h";
+
+        return new DriverResponse(
+                driver.getId(),
+                driver.getName(),
+                driver.getSurname(),
+                driver.getEmail(),
+                "/api/users/"+driver.getId()+"/profile-image",
+                driver.getRole(),
+                driver.getPhoneNumber(),
+                driver.getAddress(),
+                vehicleInfo,
+                driver.isActive(),
+                active24h
+        );
+    }
+
 }
