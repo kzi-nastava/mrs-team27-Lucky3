@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { AuthService } from '../../infrastructure/auth/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -17,7 +18,8 @@ export class LoginComponent {
 
   constructor(
     private router: Router,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private authService: AuthService
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -34,12 +36,31 @@ export class LoginComponent {
     this.loading = true;
     this.error = '';
 
-    // Simulate API call
-    setTimeout(() => {
-      this.loading = false;
-      // For demo, just navigate to driver overview
-      this.router.navigate(['/driver/overview']);
-    }, 800);
+    const loginData = {
+      email: this.loginForm.value.email,
+      password: this.loginForm.value.password
+    };
+
+    this.authService.login(loginData).subscribe({
+      next: (response) => {
+        this.loading = false;
+        
+        // Redirect based on role
+        const role = this.authService.getRole();
+        if (role === 'DRIVER') {
+           this.router.navigate(['/driver/overview']);
+        } else if (role === 'ADMIN') {
+           this.router.navigate(['/admin/dashboard']);
+        } else {
+           this.router.navigate(['/passenger/home']);
+        }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = 'Login failed. Please check your credentials.';
+        console.error(err);
+      }
+    });
   }
 
   get f() { return this.loginForm.controls; }
