@@ -1,33 +1,31 @@
-
 import { Injectable } from '@angular/core';
-import {
-  HttpRequest,
-  HttpHandler,
-  HttpEvent,
-  HttpInterceptor,
-} from '@angular/common/http';
+import { HttpRequest, HttpHandler, HttpEvent, HttpInterceptor } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 @Injectable()
 export class Interceptor implements HttpInterceptor {
-  intercept(
-    req: HttpRequest<any>,
-    next: HttpHandler
-  ): Observable<HttpEvent<any>> {
-    
-    const accessToken: any = localStorage.getItem('user');
+  
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    const accessToken = localStorage.getItem('user');
 
-    // Skip interception if the header is set (used for login/public endpoints)
-    if (req.headers.get('skip')) return next.handle(req);
+    // 1. Check for the special 'skip' header (e.g. for Login)
+    if (req.headers.get('skip')) {
+      const newHeaders = req.headers.delete('skip');
+      const newReq = req.clone({ headers: newHeaders });
+      return next.handle(newReq);
+    }
 
+    // 2. If token exists, attach it using Bearer standard
     if (accessToken) {
       const cloned = req.clone({
-        headers: req.headers.set('Authorization', 'Bearer ' + accessToken)
+        setHeaders: {
+          Authorization: `Bearer ${accessToken}`
+        }
       });
       return next.handle(cloned);
-
-    } else {
-      return next.handle(req);
     }
+
+    // 3. Fallback: Request without token
+    return next.handle(req);
   }
 }

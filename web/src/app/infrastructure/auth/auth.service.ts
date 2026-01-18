@@ -1,62 +1,57 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { environment } from '../../../env/environment';
-import { AuthResponse } from './model/auth-response.model';
 import { Login } from './model/login.model';
+import { AuthResponse } from './model/auth-response.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  private readonly userKey = 'user'; // Key for LocalStorage
+  private jwtHelper = new JwtHelperService();
+  
+  // Holds the current role (or null). Components subscribe to this
+  user$ = new BehaviorSubject<string | null>(this.getRole());
 
-  private headers = new HttpHeaders({
-    'Content-Type': 'application/json',
-    skip: 'true',
-  });
-
-  user$ = new BehaviorSubject<string>("");
-  userState = this.user$.asObservable();
-
-  constructor(private http: HttpClient) {
-    this.user$.next(this.getRole());
-  }
+  constructor(private http: HttpClient) {}
 
   login(auth: Login): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(environment.apiHost + '/auth/login', auth, {
-      headers: this.headers,
-    }).pipe(
+    // "skip" header tells interceptor NOT to add the token for this request
+    const headers = new HttpHeaders({ 'skip': 'true' });
+
+    return this.http.post<AuthResponse>(`${environment.apiHost}/auth/login`, auth, { headers }).pipe(
       tap((response: AuthResponse) => {
-        
-        localStorage.setItem('user', response.accessToken);
-        this.setUser();
+        // Save token to Local Storage (persistent across tabs)
+        localStorage.setItem(this.userKey, response.accessToken);
+        // Update the state so the rest of the app knows we are logged in
+        this.user$.next(this.getRole());
       })
     );
   }
 
-  getRole(): any {
-    if (this.isLoggedIn()) {
-      const accessToken: any = localStorage.getItem('user');
-      const helper = new JwtHelperService();
-      const decodedToken = helper.decodeToken(accessToken);
+  logout(): void {
+    localStorage.removeItem(this.userKey);
+    this.user$.next(null);
+  }
 
-      return decodedToken.role;
+  getRole(): string | null {
+    const token = localStorage.getItem(this.userKey);
+    if (!token) return null;
+
+    if (this.jwtHelper.isTokenExpired(token)) {
+      this.logout();
+      return null;
     }
-    return null;
+
+    const decodedToken = this.jwtHelper.decodeToken(token);
+    return decodedToken.role || decodedToken.roles?.[0] || null; 
   }
 
   isLoggedIn(): boolean {
-    return localStorage.getItem('user') != null;
-  }
-
-  setUser(): void {
-    this.user$.next(this.getRole());
-  }
-
-  logout(): void {
-    localStorage.removeItem('user');
-    this.user$.next("");
+    const token = localStorage.getItem(this.userKey);
+    return token != null && !this.jwtHelper.isTokenExpired(token);
   }
 }

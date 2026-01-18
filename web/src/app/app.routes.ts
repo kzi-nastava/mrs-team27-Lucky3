@@ -14,8 +14,11 @@ import { ResetPasswordComponent } from './account-control/reset-password/reset-p
 import { ResetPasswordSuccessComponent } from './account-control/reset-password-success/reset-password-success.component';
 import { PassengerHomePage } from './pages/passenger/home/passenger-home.page';
 import { AdminDashboardPage } from './pages/admin/dashboard/admin-dashboard.page';
+import { authGuard } from './infrastructure/auth/auth.guard';
+import { roleGuard } from './infrastructure/auth/role.guard';
 
 export const routes: Routes = [
+  // --- PUBLIC ROUTES (No Guards) ---
   {
     path: 'login',
     component: LoginComponent
@@ -44,41 +47,65 @@ export const routes: Routes = [
     path: 'register-verification-sent',
     component: RegisterVerificationSentComponent
   },
+
+  // --- PASSENGER ROUTES ---
   {
     path: 'passenger/home',
-    component: PassengerHomePage
+    component: PassengerHomePage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['PASSENGER'] }
   },
   {
     path: 'passenger/profile',
-    component: UserProfilePage
+    component: UserProfilePage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['PASSENGER'] }
   },
+
+  // --- ADMIN ROUTES ---
   {
     path: 'admin/profile',
-    component: AdminProfile
+    component: AdminProfile,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
   },
   {
     path: 'admin/dashboard',
-    component: AdminDashboardPage
+    component: AdminDashboardPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
   },
+
+  // --- DRIVER ROUTES ---
   {
     path: 'driver/dashboard',
-    component: DashboardPage
+    component: DashboardPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['DRIVER'] }
   },
   {
     path: 'driver/overview',
-    component: DriverOverviewPage
+    component: DriverOverviewPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['DRIVER'] }
   },
   {
     path: 'driver/overview/ride/:id',
-    component: RideDetails
+    component: RideDetails,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['DRIVER'] }
   },
   {
     path: 'driver/profile',
-    component: DriverProfilePage
+    component: DriverProfilePage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['DRIVER'] }
   },
+
+  // --- DEFAULT ROUTE ---
   {
     path: '',
-    redirectTo: 'driver/dashboard',
+    redirectTo: 'login',
     pathMatch: 'full'
   }
 ];
