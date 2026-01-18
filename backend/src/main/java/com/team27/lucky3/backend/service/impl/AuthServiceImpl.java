@@ -153,8 +153,7 @@ public class AuthServiceImpl implements AuthService {
         user.setPhoneNumber(request.getPhoneNumber());
         user.setRole(UserRole.PASSENGER);
         user.setBlocked(false);
-        //user.setEnabled(false); // Cannot login until activated
-        user.setEnabled(true);  // for testnng, set this to true
+        user.setEnabled(false); // Cannot login until activated
 
         Image image;
         if (profileImage != null && !profileImage.isEmpty()) {
