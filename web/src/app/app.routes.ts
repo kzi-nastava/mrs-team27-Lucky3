@@ -14,11 +14,21 @@ import { ResetPasswordComponent } from './account-control/reset-password/reset-p
 import { ResetPasswordSuccessComponent } from './account-control/reset-password-success/reset-password-success.component';
 import { PassengerHomePage } from './pages/passenger/home/passenger-home.page';
 import { AdminDashboardPage } from './pages/admin/dashboard/admin-dashboard.page';
+import { HomePage } from './pages/home.page/home.page';
 import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
 
 export const routes: Routes = [
   // --- PUBLIC ROUTES (No Guards) ---
+  {
+    path: '',
+    component: HomePage,
+    pathMatch: 'full'
+  },
+  {
+    path: 'home',
+    component: HomePage
+  },
   {
     path: 'login',
     component: LoginComponent
@@ -102,10 +112,10 @@ export const routes: Routes = [
     data: { roles: ['DRIVER'] }
   },
 
-  // --- DEFAULT ROUTE ---
+  // --- WILDCARD ROUTE ---
   {
-    path: '',
-    redirectTo: 'login',
+    path: '**',
+    redirectTo: '',
     pathMatch: 'full'
   }
 ];
