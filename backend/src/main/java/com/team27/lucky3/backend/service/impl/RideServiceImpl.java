@@ -2,9 +2,7 @@ package com.team27.lucky3.backend.service.impl;
 
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.*;
-import com.team27.lucky3.backend.dto.response.DriverResponse;
-import com.team27.lucky3.backend.dto.response.RideResponse;
-import com.team27.lucky3.backend.dto.response.UserResponse;
+import com.team27.lucky3.backend.dto.response.*;
 import com.team27.lucky3.backend.entity.Location;
 import com.team27.lucky3.backend.entity.Panic;
 import com.team27.lucky3.backend.entity.Ride;
@@ -24,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -38,6 +37,55 @@ public class RideServiceImpl implements RideService {
     private final UserRepository userRepository;
     private final PanicRepository panicRepository;
     private final VehicleRepository vehicleRepository;
+
+    private static final double PRICE_PER_KM = 120.0;
+    private static final double AVG_SPEED_KMH = 50.0; // Average speed in city
+    private static final double AVG_SPEED_KMM = AVG_SPEED_KMH / 60.0; // km per minute (~0.83)
+
+    @Override
+    public RideEstimationResponse estimateRide(CreateRideRequest request) {
+        Location start = mapLocation(request.getStart());
+        Location end = mapLocation(request.getDestination());
+        VehicleType type = request.getRequirements() != null ? request.getRequirements().getVehicleType() : VehicleType.STANDARD;
+
+        // Calculate Ride Details (A -> B)
+        double distanceKm = calculateHaversineDistance(start, end);
+        double basePrice = getBasePriceForVehicle(type);
+
+        double estimatedCost = Math.round((basePrice + (distanceKm * PRICE_PER_KM)) * 100.0) / 100.0;
+        int estimatedRideTime = (int) Math.ceil(distanceKm / AVG_SPEED_KMM);
+
+        // Find Closest Active Driver
+        List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
+
+        List<Vehicle> candidateVehicles = activeVehicles.stream()
+                .filter(v -> v.getVehicleType() == type || type == null)
+                .toList();
+
+        int timeToPickup = -1; // -1 indicates no drivers available
+
+        if (!candidateVehicles.isEmpty()) {
+            double minDistanceToUser = Double.MAX_VALUE;
+
+            for (Vehicle v : candidateVehicles) {
+                if (v.getCurrentLocation() != null) {
+                    double dist = calculateHaversineDistance(start, v.getCurrentLocation());
+                    if (dist < minDistanceToUser) {
+                        minDistanceToUser = dist;
+                    }
+                }
+            }
+            if (minDistanceToUser != Double.MAX_VALUE) {
+                timeToPickup = (int) Math.ceil(minDistanceToUser / AVG_SPEED_KMM);
+            }
+        }
+
+        List<RoutePointResponse> routePoints = new ArrayList<>();
+        routePoints.add(new RoutePointResponse(request.getStart(), 1));
+        routePoints.add(new RoutePointResponse(request.getDestination(), 2));
+
+        return new RideEstimationResponse(estimatedRideTime, estimatedCost, timeToPickup, routePoints);
+    }
 
     @Override
     @Transactional
