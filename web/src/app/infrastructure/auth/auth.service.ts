@@ -57,6 +57,11 @@ export class AuthService {
     return this.http.get<void>(`${environment.apiHost}/auth/activate/${token}`, { headers });
   }
 
+  resendActivation(email: string): Observable<void> {
+    const headers = new HttpHeaders({ 'skip': 'true' });
+    return this.http.post<void>(`${environment.apiHost}/auth/resend-activation`, { email }, { headers });
+  }
+
   logout(): void {
     localStorage.removeItem(this.userKey);
     this.user$.next(null);

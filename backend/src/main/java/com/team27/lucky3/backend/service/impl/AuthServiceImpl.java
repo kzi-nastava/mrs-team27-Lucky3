@@ -197,4 +197,31 @@ public class AuthServiceImpl implements AuthService {
 
         activationTokenRepository.delete(activationToken);
     }
+
+    @Override
+    @Transactional
+    public void resendActivationEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+
+        if (user.isEnabled()) {
+            throw new IllegalArgumentException("Account is already activated");
+        }
+
+        // Delete existing activation token if present
+        activationTokenRepository.findByUser(user).ifPresent(activationTokenRepository::delete);
+
+        // Generate new Activation Token
+        String token = UUID.randomUUID().toString();
+        ActivationToken activationToken = new ActivationToken(token, user);
+        activationTokenRepository.save(activationToken);
+
+        // Send Email
+        String link = frontendUrl + "/activate?token=" + token;
+        emailService.sendSimpleMessage(
+                user.getEmail(),
+                "Activate your Account",
+                "Welcome! Please click here to activate your account: " + link
+        );
+    }
 }
