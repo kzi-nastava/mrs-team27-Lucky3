@@ -15,4 +15,5 @@ public interface AuthService {
     void resetPassword(String token, String newPassword);
     User registerPassenger(PassengerRegistrationRequest request, MultipartFile profileImage) throws IOException;
     void activateAccount(String token);
+    void resendActivationEmail(String email);
 }

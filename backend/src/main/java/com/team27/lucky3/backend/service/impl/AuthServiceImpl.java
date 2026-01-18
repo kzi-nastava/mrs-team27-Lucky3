@@ -153,8 +153,7 @@ public class AuthServiceImpl implements AuthService {
         user.setPhoneNumber(request.getPhoneNumber());
         user.setRole(UserRole.PASSENGER);
         user.setBlocked(false);
-        //user.setEnabled(false); // Cannot login until activated
-        user.setEnabled(true);  // for testnng, set this to true
+        user.setEnabled(false); // Cannot login until activated
 
         Image image;
         if (profileImage != null && !profileImage.isEmpty()) {
@@ -197,5 +196,32 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         activationTokenRepository.delete(activationToken);
+    }
+
+    @Override
+    @Transactional
+    public void resendActivationEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+
+        if (user.isEnabled()) {
+            throw new IllegalArgumentException("Account is already activated");
+        }
+
+        // Delete existing activation token if present
+        activationTokenRepository.findByUser(user).ifPresent(activationTokenRepository::delete);
+
+        // Generate new Activation Token
+        String token = UUID.randomUUID().toString();
+        ActivationToken activationToken = new ActivationToken(token, user);
+        activationTokenRepository.save(activationToken);
+
+        // Send Email
+        String link = frontendUrl + "/activate?token=" + token;
+        emailService.sendSimpleMessage(
+                user.getEmail(),
+                "Activate your Account",
+                "Welcome! Please click here to activate your account: " + link
+        );
     }
 }

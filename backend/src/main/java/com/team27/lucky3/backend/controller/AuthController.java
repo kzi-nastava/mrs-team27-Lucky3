@@ -61,10 +61,17 @@ public class AuthController {
 
 
     // 2.2.2 User registration + email activation
-    @GetMapping("/activate/{token}")
-    public ResponseEntity<Void> activateAccount(@PathVariable @NotBlank String token) {
+    @GetMapping("/activate")
+    public ResponseEntity<Void> activateAccount(@RequestParam @NotBlank String token) {
         // Activation logic using token
         authService.activateAccount(token);
+        return ResponseEntity.ok().build();
+    }
+
+    // 2.2.2 Resend activation email
+    @PostMapping(value = "/resend-activation", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> resendActivation(@Valid @RequestBody EmailRequest emailRequest) {
+        authService.resendActivationEmail(emailRequest.getEmail());
         return ResponseEntity.ok().build();
     }
 
