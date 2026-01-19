@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -14,7 +14,7 @@ import { HttpClient } from '@angular/common/http';
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './home.page.html',
-  styleUrl: './home.page.css',
+  styleUrl: "./home.page.css",
 })
 export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   private map!: L.Map;
@@ -36,7 +36,8 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   estimationResult: RideEstimationResponse | null = null;
   estimationError = '';
 
-  // Icons
+  // --- ICONS ---
+  
   private availableVehicleIcon = L.divIcon({
     className: '',
     html: `<div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:rgba(34,197,94,0.2);border:2px solid #22c55e;color:#22c55e;box-shadow:0 0 10px rgba(34,197,94,0.5);">
@@ -55,7 +56,6 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     iconAnchor: [20, 20],
   });
 
-  // Pickup marker icon (green circle target)
   private pickupIcon = L.divIcon({
     className: '',
     html: `<div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:rgba(34,197,94,0.15);border:3px solid #22c55e;box-shadow:0 0 12px rgba(34,197,94,0.4);">
@@ -65,7 +65,6 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     iconAnchor: [18, 18],
   });
 
-  // Destination marker icon (red location pin)
   private destinationIcon = L.divIcon({
     className: '',
     html: `<div style="display:flex;align-items:center;justify-content:center;width:32px;height:42px;position:relative;">
@@ -81,7 +80,8 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private rideService: RideService,
     private vehicleService: VehicleService,
-    private http: HttpClient
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {}
@@ -90,7 +90,6 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     this.initMap();
     this.fetchVehicles();
     
-    // Refresh vehicles every 10 seconds
     this.refreshInterval = setInterval(() => {
         this.fetchVehicles();
     }, 10000);
@@ -114,6 +113,7 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
       zoomControl: false,
     });
 
+    // Dark Map Style
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: 'OpenStreetMap contributors',
       subdomains: 'abcd',
@@ -128,17 +128,16 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
       next: (vehicles) => {
         this.updateVehicleMarkers(vehicles);
         this.updateCounts(vehicles);
+        this.cdr.detectChanges();
       },
       error: (err) => console.error('Failed to fetch vehicles', err)
     });
   }
 
   private updateVehicleMarkers(vehicles: VehicleLocationResponse[]): void {
-    // Clear existing markers
     this.vehicleMarkers.forEach(marker => marker.remove());
     this.vehicleMarkers = [];
 
-    // Add new markers
     vehicles.forEach(v => {
       const icon = v.available ? this.availableVehicleIcon : this.occupiedVehicleIcon;
       const marker = L.marker([v.latitude, v.longitude], { icon })
@@ -163,6 +162,7 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     if (!this.showEstimationForm) {
       this.resetEstimation();
     }
+    this.cdr.detectChanges();
   }
 
   async estimateRide(): Promise<void> {
@@ -174,19 +174,21 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     this.isEstimating = true;
     this.estimationError = '';
     this.estimationResult = null;
+    this.cdr.detectChanges();
 
     try {
-      // 1. Geocode
+      // Geocode
       const startCoords = await this.geocodeAddress(this.pickupAddress);
       const destCoords = await this.geocodeAddress(this.destinationAddress);
 
       if (!startCoords || !destCoords) {
         this.estimationError = 'Could not find one of the locations.';
         this.isEstimating = false;
+        this.cdr.detectChanges();
         return;
       }
 
-      // 2. Build Request
+      // Build Request
       const request: CreateRideRequest = {
         start: { 
           address: this.pickupAddress, 
@@ -208,23 +210,26 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
         }
       };
 
-      // 3. Call Backend
+      // Call Backend
       this.rideService.estimateRide(request).subscribe({
         next: (response) => {
           this.estimationResult = response;
           this.displayRoute(startCoords, destCoords, response);
           this.isEstimating = false;
+          this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('Estimation failed', err);
           this.estimationError = 'Could not calculate ride. Server might be unreachable.';
           this.isEstimating = false;
+          this.cdr.detectChanges();
         }
       });
 
     } catch (error) {
       this.estimationError = 'An error occurred. Please try again.';
       this.isEstimating = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -232,25 +237,24 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     this.clearRoute();
 
     // Add Markers with custom icons
-    this.pickupMarker = L.marker(start, { icon: this.pickupIcon }).addTo(this.map).bindPopup('Pickup');
-    this.destinationMarker = L.marker(end, { icon: this.destinationIcon }).addTo(this.map).bindPopup('Final destination');
+    this.pickupMarker = L.marker(start, { icon: this.pickupIcon, zIndexOffset: 1000 }).addTo(this.map).bindPopup('Pickup');
+    this.destinationMarker = L.marker(end, { icon: this.destinationIcon, zIndexOffset: 1000 }).addTo(this.map).bindPopup('Final destination');
 
-    // Draw Route with dashed yellow line
+    // Draw Route (Yellow + Dashed)
     if (estimation.routePoints && estimation.routePoints.length > 0) {
         const latLngs = estimation.routePoints.map(p => L.latLng(p.location.latitude, p.location.longitude));
         
         this.routeLayer = L.polyline(latLngs, {
-          color: '#eab308',
+          color: '#eab308', // Yellow
           weight: 4,
           opacity: 0.9,
-          dashArray: '12, 8',
+          dashArray: '12, 8', // Dashed
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(this.map);
 
         this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
     } else {
-        // Fallback if no points returned (just fit start/end)
         this.map.fitBounds(L.latLngBounds([start, end]), { padding: [50, 50] });
     }
   }
@@ -269,6 +273,7 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     this.clearRoute();
     const { defaultLat, defaultLng, defaultZoom } = environment.map;
     this.map.setView([defaultLat, defaultLng], defaultZoom);
+    this.cdr.detectChanges();
   }
 
   private async geocodeAddress(address: string): Promise<L.LatLng | null> {
