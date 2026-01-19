@@ -1,10 +1,10 @@
 package com.team27.lucky3.backend.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.*;
-import com.team27.lucky3.backend.dto.response.DriverResponse;
-import com.team27.lucky3.backend.dto.response.RideResponse;
-import com.team27.lucky3.backend.dto.response.UserResponse;
+import com.team27.lucky3.backend.dto.response.*;
 import com.team27.lucky3.backend.entity.Location;
 import com.team27.lucky3.backend.entity.Panic;
 import com.team27.lucky3.backend.entity.Ride;
@@ -19,11 +19,14 @@ import com.team27.lucky3.backend.repository.UserRepository;
 import com.team27.lucky3.backend.repository.VehicleRepository;
 import com.team27.lucky3.backend.service.RideService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -38,6 +41,96 @@ public class RideServiceImpl implements RideService {
     private final UserRepository userRepository;
     private final PanicRepository panicRepository;
     private final VehicleRepository vehicleRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final double PRICE_PER_KM = 120.0;
+
+    private static final String OSRM_API_URL = "http://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson";
+
+    @Override
+    public RideEstimationResponse estimateRide(CreateRideRequest request) {
+        LocationDto start = request.getStart();
+        LocationDto end = request.getDestination();
+        VehicleType type = request.getRequirements() != null ? request.getRequirements().getVehicleType() : VehicleType.STANDARD;
+
+        // Fetch Route from OSRM
+        String url = String.format(OSRM_API_URL,
+                start.getLongitude(), start.getLatitude(),
+                end.getLongitude(), end.getLatitude());
+
+        double distanceKm = 0.0;
+        int durationMinutes = 0;
+        List<RoutePointResponse> routePoints = new ArrayList<>();
+
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode route = root.path("routes").get(0);
+
+                // OSRM returns distance in meters and duration in seconds
+                double distanceMeters = route.path("distance").asDouble();
+                double durationSeconds = route.path("duration").asDouble();
+
+                distanceKm = Math.round((distanceMeters / 1000.0) * 100.0) / 100.0;
+                durationMinutes = (int) Math.round(durationSeconds / 60.0);
+
+                // Extract Geometry (Coordinates)
+                JsonNode coordinates = route.path("geometry").path("coordinates");
+                if (coordinates.isArray()) {
+                    int order = 0;
+                    for (JsonNode coord : coordinates) {
+                        // OSRM GeoJSON is [lon, lat]
+                        double lon = coord.get(0).asDouble();
+                        double lat = coord.get(1).asDouble();
+                        // We don't need address for every single point on the line
+                        routePoints.add(new RoutePointResponse(new LocationDto("", lat, lon), order++));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Fallback to Haversine if OSRM fails (or handle error appropriately)
+            System.err.println("OSRM Routing failed: " + e.getMessage());
+            distanceKm = calculateHaversineDistance(mapLocation(start), mapLocation(end));
+            durationMinutes = (int) Math.ceil(distanceKm * 1.2); // Rough estimate
+            // Add at least start and end points
+            routePoints.add(new RoutePointResponse(start, 0));
+            routePoints.add(new RoutePointResponse(end, 1));
+        }
+
+        // Calculate Price
+        double basePrice = getBasePriceForVehicle(type);
+        double estimatedCost = Math.round((basePrice + (distanceKm * PRICE_PER_KM)) * 100.0) / 100.0;
+
+        // Find Closest Driver Time (Simple logic retained)
+        int timeToPickup = calculateDriverArrival(start, type);
+
+        return new RideEstimationResponse(durationMinutes, estimatedCost, timeToPickup, distanceKm, routePoints);
+    }
+
+    private int calculateDriverArrival(LocationDto start, VehicleType type) {
+        List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
+        List<Vehicle> candidateVehicles = activeVehicles.stream()
+                .filter(v -> v.getVehicleType() == type || type == null)
+                .toList();
+
+        if (candidateVehicles.isEmpty()) return -1;
+
+        double minDistance = Double.MAX_VALUE;
+        Location startLoc = mapLocation(start);
+
+        for (Vehicle v : candidateVehicles) {
+            if (v.getCurrentLocation() != null) {
+                double dist = calculateHaversineDistance(startLoc, v.getCurrentLocation());
+                if (dist < minDistance) {
+                    minDistance = dist;
+                }
+            }
+        }
+
+        return (int) Math.ceil(minDistance / 0.83);
+    }
 
     @Override
     @Transactional

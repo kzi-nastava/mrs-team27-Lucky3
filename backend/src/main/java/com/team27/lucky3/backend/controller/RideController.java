@@ -42,11 +42,7 @@ public class RideController {
     // 2.1.2 Ride estimation on the map page (unregistered user)
     @PostMapping("/estimate")
     public ResponseEntity<RideEstimationResponse> estimateRide(@Valid @RequestBody CreateRideRequest request) {
-        List<RoutePointResponse> route = List.of(
-                new RoutePointResponse(new LocationDto("Bulevar oslobodjenja 10", 45.2464, 19.8517), 1),
-                new RoutePointResponse(new LocationDto("Bulevar oslobodjenja 12", 45.2464, 19.8520), 2)
-        );
-        RideEstimationResponse response = new RideEstimationResponse(15, 650.00, route);
+        RideEstimationResponse response = rideService.estimateRide(request);
         return ResponseEntity.ok(response);
     }
 
