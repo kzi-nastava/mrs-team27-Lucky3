@@ -13,5 +13,6 @@ public class RideEstimationResponse {
     private int estimatedTimeInMinutes; // Duration of the ride (A -> B)
     private double estimatedCost;
     private int estimatedDriverArrivalInMinutes; // Time for the closest driver to reach A
+    private double estimatedDistance;
     private java.util.List<RoutePointResponse> routePoints; // For displaying route on map
 }

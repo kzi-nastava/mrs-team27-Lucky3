@@ -112,7 +112,7 @@ export const routes: Routes = [
     data: { roles: ['DRIVER'] }
   },
 
-  // --- WILDCARD ROUTE ---
+  // --- DEFAULT ROUTE ---
   {
     path: '**',
     redirectTo: '',

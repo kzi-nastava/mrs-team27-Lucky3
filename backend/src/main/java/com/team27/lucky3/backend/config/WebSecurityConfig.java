@@ -95,15 +95,14 @@ public class WebSecurityConfig {
                         "/",
                         "/webjars/**",
                         "/*.html",
-                        "/favicon.ico",
-                        "/**"      // ignore all static for now, or narrow it later
+                        "/favicon.ico"
                 );
     }
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://127.0.0.1:4200"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Skip-Interceptor"));
         configuration.setAllowCredentials(true);

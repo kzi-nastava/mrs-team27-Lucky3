@@ -4,25 +4,10 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
 import { environment } from '../../../env/environment';
-
-// Vehicle interface for active vehicles on map
-interface Vehicle {
-  id: string;
-  lat: number;
-  lng: number;
-  isAvailable: boolean;
-  driverName: string;
-  vehicleType: string;
-  licensePlate: string;
-}
-
-// Route estimation response
-interface RouteEstimation {
-  distance: number; // km
-  duration: number; // minutes
-  price: number;
-  route: L.LatLng[];
-}
+import { RideService, CreateRideRequest, RideEstimationResponse } from '../../infrastructure/rest/ride.service';
+import { VehicleService } from '../../infrastructure/rest/vehicle.service';
+import { VehicleLocationResponse } from '../../infrastructure/rest/model/vehicle-location.model';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-home-page',
@@ -37,33 +22,25 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   private routeLayer: L.Polyline | null = null;
   private pickupMarker: L.Marker | null = null;
   private destinationMarker: L.Marker | null = null;
+  private refreshInterval: any;
+
+  // Counts for the UI
+  availableCount = 0;
+  occupiedCount = 0;
 
   // Form state
   showEstimationForm = false;
   pickupAddress = '';
   destinationAddress = '';
   isEstimating = false;
-  estimationResult: RouteEstimation | null = null;
+  estimationResult: RideEstimationResponse | null = null;
   estimationError = '';
 
-  // Mock vehicles data (simulating real-time vehicles)
-  vehicles: Vehicle[] = [
-    { id: 'v1', lat: 45.2551, lng: 19.8428, isAvailable: true, driverName: 'Marko P.', vehicleType: 'Standard', licensePlate: 'NS-001-AA' },
-    { id: 'v2', lat: 45.2501, lng: 19.8478, isAvailable: false, driverName: 'Jovan S.', vehicleType: 'Comfort', licensePlate: 'NS-002-BB' },
-    { id: 'v3', lat: 45.2621, lng: 19.8378, isAvailable: true, driverName: 'Ana M.', vehicleType: 'Standard', licensePlate: 'NS-003-CC' },
-    { id: 'v4', lat: 45.2471, lng: 19.8528, isAvailable: false, driverName: 'Stefan D.', vehicleType: 'Luxury', licensePlate: 'NS-004-DD' },
-    { id: 'v5', lat: 45.2591, lng: 19.8258, isAvailable: true, driverName: 'Milan K.', vehicleType: 'Standard', licensePlate: 'NS-005-EE' },
-    { id: 'v6', lat: 45.2441, lng: 19.8608, isAvailable: true, driverName: 'Nikola R.', vehicleType: 'Comfort', licensePlate: 'NS-006-FF' },
-    { id: 'v7', lat: 45.2681, lng: 19.8458, isAvailable: false, driverName: 'Petar B.', vehicleType: 'Standard', licensePlate: 'NS-007-GG' },
-  ];
-
-  // Custom marker icons
+  // Icons
   private availableVehicleIcon = L.divIcon({
     className: '',
-    html: `<div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,rgba(34,197,94,0.2),rgba(34,197,94,0.1));border:2px solid rgba(34,197,94,0.5);color:#22c55e;box-shadow:0 0 20px rgba(34,197,94,0.3);">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
-      </svg>
+    html: `<div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:rgba(34,197,94,0.2);border:2px solid #22c55e;color:#22c55e;box-shadow:0 0 10px rgba(34,197,94,0.5);">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
     </div>`,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
@@ -71,48 +48,60 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
 
   private occupiedVehicleIcon = L.divIcon({
     className: '',
-    html: `<div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,rgba(239,68,68,0.2),rgba(239,68,68,0.1));border:2px solid rgba(239,68,68,0.5);color:#ef4444;box-shadow:0 0 20px rgba(239,68,68,0.3);">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
-      </svg>
+    html: `<div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:rgba(239,68,68,0.2);border:2px solid #ef4444;color:#ef4444;box-shadow:0 0 10px rgba(239,68,68,0.5);">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
     </div>`,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
   });
 
+  // Pickup marker icon (green circle target)
   private pickupIcon = L.divIcon({
     className: '',
-    html: `<div style="display:flex;align-items:center;justify-content:center;color:#22c55e;filter:drop-shadow(0 0 8px rgba(34,197,94,0.5));">
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <circle cx="12" cy="12" r="3" fill="currentColor"/>
-      </svg>
+    html: `<div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:rgba(34,197,94,0.15);border:3px solid #22c55e;box-shadow:0 0 12px rgba(34,197,94,0.4);">
+      <div style="width:12px;height:12px;border-radius:50%;background:#22c55e;"></div>
     </div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
   });
 
+  // Destination marker icon (red location pin)
   private destinationIcon = L.divIcon({
     className: '',
-    html: `<div style="display:flex;align-items:center;justify-content:center;color:#ef4444;filter:drop-shadow(0 0 8px rgba(239,68,68,0.5));">
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    html: `<div style="display:flex;align-items:center;justify-content:center;width:32px;height:42px;position:relative;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 24 32" fill="none">
+        <path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20c0-6.627-5.373-12-12-12z" fill="#ef4444"/>
+        <circle cx="12" cy="12" r="5" fill="#1a1a2e"/>
       </svg>
     </div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
+    iconSize: [32, 42],
+    iconAnchor: [16, 42],
   });
+
+  constructor(
+    private rideService: RideService,
+    private vehicleService: VehicleService,
+    private http: HttpClient
+  ) {}
 
   ngOnInit(): void {}
 
   ngAfterViewInit(): void {
     this.initMap();
-    this.addVehicleMarkers();
+    this.fetchVehicles();
+    
+    // Refresh vehicles every 10 seconds
+    this.refreshInterval = setInterval(() => {
+        this.fetchVehicles();
+    }, 10000);
   }
 
   ngOnDestroy(): void {
     if (this.map) {
       this.map.remove();
+    }
+    if (this.refreshInterval) {
+        clearInterval(this.refreshInterval);
     }
   }
 
@@ -125,37 +114,48 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
       zoomControl: false,
     });
 
-    // Dark theme tile layer (CartoDB Dark Matter)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      attribution: 'OpenStreetMap contributors',
       subdomains: 'abcd',
       maxZoom: 20
     }).addTo(this.map);
 
-    // Add zoom control to bottom-left
-    L.control.zoom({
-      position: 'bottomleft'
-    }).addTo(this.map);
+    L.control.zoom({ position: 'bottomleft' }).addTo(this.map);
   }
 
-  private addVehicleMarkers(): void {
-    this.vehicles.forEach(vehicle => {
-      const icon = vehicle.isAvailable ? this.availableVehicleIcon : this.occupiedVehicleIcon;
-      const statusText = vehicle.isAvailable ? 'Available' : 'Occupied';
-      const statusClass = vehicle.isAvailable ? 'text-green-400' : 'text-red-400';
-      
-      const marker = L.marker([vehicle.lat, vehicle.lng], { icon })
+  private fetchVehicles(): void {
+    this.vehicleService.getActiveVehicles().subscribe({
+      next: (vehicles) => {
+        this.updateVehicleMarkers(vehicles);
+        this.updateCounts(vehicles);
+      },
+      error: (err) => console.error('Failed to fetch vehicles', err)
+    });
+  }
+
+  private updateVehicleMarkers(vehicles: VehicleLocationResponse[]): void {
+    // Clear existing markers
+    this.vehicleMarkers.forEach(marker => marker.remove());
+    this.vehicleMarkers = [];
+
+    // Add new markers
+    vehicles.forEach(v => {
+      const icon = v.available ? this.availableVehicleIcon : this.occupiedVehicleIcon;
+      const marker = L.marker([v.latitude, v.longitude], { icon })
         .addTo(this.map)
         .bindPopup(`
-          <div style="min-width:140px;">
-            <div style="font-weight:600;color:white;">${vehicle.driverName}</div>
-            <div style="color:#9ca3af;font-size:0.875rem;">${vehicle.vehicleType} • ${vehicle.licensePlate}</div>
-            <div style="color:${vehicle.isAvailable ? '#4ade80' : '#f87171'};font-size:0.875rem;font-weight:500;">${statusText}</div>
+          <div style="min-width:100px;">
+             <b>${v.vehicleType}</b><br>
+             Status: ${v.available ? 'Available' : 'Occupied'}
           </div>
         `);
-      
       this.vehicleMarkers.push(marker);
     });
+  }
+
+  private updateCounts(vehicles: VehicleLocationResponse[]): void {
+      this.availableCount = vehicles.filter(v => v.available).length;
+      this.occupiedCount = vehicles.filter(v => !v.available).length;
   }
 
   toggleEstimationForm(): void {
@@ -176,133 +176,89 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     this.estimationResult = null;
 
     try {
-      // Geocode pickup address
-      const pickupCoords = await this.geocodeAddress(this.pickupAddress);
-      if (!pickupCoords) {
-        this.estimationError = 'Could not find pickup location. Please try a different address.';
-        this.isEstimating = false;
-        return;
-      }
-
-      // Geocode destination address
+      // 1. Geocode
+      const startCoords = await this.geocodeAddress(this.pickupAddress);
       const destCoords = await this.geocodeAddress(this.destinationAddress);
-      if (!destCoords) {
-        this.estimationError = 'Could not find destination location. Please try a different address.';
+
+      if (!startCoords || !destCoords) {
+        this.estimationError = 'Could not find one of the locations.';
         this.isEstimating = false;
         return;
       }
 
-      // Get route from OSRM
-      const route = await this.getRoute(pickupCoords, destCoords);
-      
-      if (route) {
-        this.displayRoute(pickupCoords, destCoords, route);
-        this.estimationResult = route;
-      } else {
-        this.estimationError = 'Could not calculate route. Please try different addresses.';
-      }
-    } catch (error) {
-      this.estimationError = 'An error occurred while estimating. Please try again.';
-      console.error('Estimation error:', error);
-    }
+      // 2. Build Request
+      const request: CreateRideRequest = {
+        start: { 
+          address: this.pickupAddress, 
+          latitude: startCoords.lat, 
+          longitude: startCoords.lng 
+        },
+        destination: { 
+          address: this.destinationAddress, 
+          latitude: destCoords.lat, 
+          longitude: destCoords.lng 
+        },
+        stops: [],
+        passengerEmails: [],
+        scheduledTime: null,
+        requirements: {
+          vehicleType: 'STANDARD', 
+          babyTransport: false,
+          petTransport: false
+        }
+      };
 
-    this.isEstimating = false;
-  }
+      // 3. Call Backend
+      this.rideService.estimateRide(request).subscribe({
+        next: (response) => {
+          this.estimationResult = response;
+          this.displayRoute(startCoords, destCoords, response);
+          this.isEstimating = false;
+        },
+        error: (err) => {
+          console.error('Estimation failed', err);
+          this.estimationError = 'Could not calculate ride. Server might be unreachable.';
+          this.isEstimating = false;
+        }
+      });
 
-  private async geocodeAddress(address: string): Promise<L.LatLng | null> {
-    try {
-      const encodedAddress = encodeURIComponent(address + ', Novi Sad, Serbia');
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`
-      );
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        return L.latLng(parseFloat(data[0].lat), parseFloat(data[0].lon));
-      }
-      return null;
     } catch (error) {
-      console.error('Geocoding error:', error);
-      return null;
-    }
-  }
-
-  private async getRoute(start: L.LatLng, end: L.LatLng): Promise<RouteEstimation | null> {
-    try {
-      const response = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`
-      );
-      const data = await response.json();
-      
-      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-        const route = data.routes[0];
-        const distance = route.distance / 1000; // Convert to km
-        const duration = route.duration / 60; // Convert to minutes
-        
-        // Calculate price (base fare + per km rate)
-        const baseFare = 150; // RSD
-        const perKmRate = 65; // RSD per km
-        const price = baseFare + (distance * perKmRate);
-        
-        // Convert GeoJSON coordinates to Leaflet LatLng array
-        const routeCoords = route.geometry.coordinates.map((coord: number[]) => 
-          L.latLng(coord[1], coord[0])
-        );
-        
-        return {
-          distance: Math.round(distance * 10) / 10,
-          duration: Math.round(duration),
-          price: Math.round(price),
-          route: routeCoords
-        };
-      }
-      return null;
-    } catch (error) {
-      console.error('Routing error:', error);
-      return null;
+      this.estimationError = 'An error occurred. Please try again.';
+      this.isEstimating = false;
     }
   }
 
-  private displayRoute(pickup: L.LatLng, destination: L.LatLng, estimation: RouteEstimation): void {
-    // Clear previous route
+  private displayRoute(start: L.LatLng, end: L.LatLng, estimation: RideEstimationResponse): void {
     this.clearRoute();
-    
-    // Add pickup marker
-    this.pickupMarker = L.marker(pickup, { icon: this.pickupIcon })
-      .addTo(this.map)
-      .bindPopup('<div style="color:white;font-weight:500;">Pickup Location</div>');
-    
-    // Add destination marker
-    this.destinationMarker = L.marker(destination, { icon: this.destinationIcon })
-      .addTo(this.map)
-      .bindPopup('<div style="color:white;font-weight:500;">Destination</div>');
-    
-    // Draw route
-    this.routeLayer = L.polyline(estimation.route, {
-      color: '#eab308',
-      weight: 4,
-      opacity: 0.8,
-      dashArray: '10, 10'
-    }).addTo(this.map);
-    
-    // Fit map to show entire route
-    const bounds = L.latLngBounds([pickup, destination]);
-    this.map.fitBounds(bounds, { padding: [80, 80] });
+
+    // Add Markers with custom icons
+    this.pickupMarker = L.marker(start, { icon: this.pickupIcon }).addTo(this.map).bindPopup('Pickup');
+    this.destinationMarker = L.marker(end, { icon: this.destinationIcon }).addTo(this.map).bindPopup('Final destination');
+
+    // Draw Route with dashed yellow line
+    if (estimation.routePoints && estimation.routePoints.length > 0) {
+        const latLngs = estimation.routePoints.map(p => L.latLng(p.location.latitude, p.location.longitude));
+        
+        this.routeLayer = L.polyline(latLngs, {
+          color: '#eab308',
+          weight: 4,
+          opacity: 0.9,
+          dashArray: '12, 8',
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(this.map);
+
+        this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
+    } else {
+        // Fallback if no points returned (just fit start/end)
+        this.map.fitBounds(L.latLngBounds([start, end]), { padding: [50, 50] });
+    }
   }
 
   private clearRoute(): void {
-    if (this.routeLayer) {
-      this.map.removeLayer(this.routeLayer);
-      this.routeLayer = null;
-    }
-    if (this.pickupMarker) {
-      this.map.removeLayer(this.pickupMarker);
-      this.pickupMarker = null;
-    }
-    if (this.destinationMarker) {
-      this.map.removeLayer(this.destinationMarker);
-      this.destinationMarker = null;
-    }
+    if (this.routeLayer) { this.map.removeLayer(this.routeLayer); this.routeLayer = null; }
+    if (this.pickupMarker) { this.map.removeLayer(this.pickupMarker); this.pickupMarker = null; }
+    if (this.destinationMarker) { this.map.removeLayer(this.destinationMarker); this.destinationMarker = null; }
   }
 
   resetEstimation(): void {
@@ -311,18 +267,22 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     this.estimationResult = null;
     this.estimationError = '';
     this.clearRoute();
-    
-    // Reset map view
     const { defaultLat, defaultLng, defaultZoom } = environment.map;
     this.map.setView([defaultLat, defaultLng], defaultZoom);
   }
 
-  // Count available and occupied vehicles
-  get availableCount(): number {
-    return this.vehicles.filter(v => v.isAvailable).length;
-  }
-
-  get occupiedCount(): number {
-    return this.vehicles.filter(v => !v.isAvailable).length;
+  private async geocodeAddress(address: string): Promise<L.LatLng | null> {
+    try {
+      const encoded = encodeURIComponent(address);
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encoded}&limit=1`;
+      const data: any = await this.http.get(url).toPromise();
+      
+      if (data && data.length > 0) {
+        return L.latLng(parseFloat(data[0].lat), parseFloat(data[0].lon));
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 }
