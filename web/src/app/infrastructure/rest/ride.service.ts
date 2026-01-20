@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../env/environment';
 import { LocationDto } from './model/location.model';
+import { EndRideRequest, RideCancellationRequest, RideResponse } from './model/ride-response.model';
 
 export interface RoutePoint {
   location: LocationDto;
@@ -42,5 +43,26 @@ export class RideService {
 
   estimateRide(request: CreateRideRequest): Observable<RideEstimationResponse> {
     return this.http.post<RideEstimationResponse>(`${this.apiUrl}/estimate`, request);
+  }
+
+  getRide(id: number): Observable<RideResponse> {
+    return this.http.get<RideResponse>(`${this.apiUrl}/${id}`);
+  }
+
+  getActiveRide(userId?: number): Observable<RideResponse> {
+    const query = userId ? `?userId=${encodeURIComponent(String(userId))}` : '';
+    return this.http.get<RideResponse>(`${this.apiUrl}/active${query}`);
+  }
+
+  startRide(id: number): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/start`, {});
+  }
+
+  endRide(id: number, request: EndRideRequest): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/end`, request);
+  }
+
+  cancelRide(id: number, request: RideCancellationRequest): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/cancel`, request);
   }
 }

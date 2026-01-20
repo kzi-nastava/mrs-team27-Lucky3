@@ -67,6 +67,28 @@ export class AuthService {
     this.user$.next(null);
   }
 
+  getUserId(): number | null {
+    const token = localStorage.getItem(this.userKey);
+    if (!token) return null;
+
+    if (this.jwtHelper.isTokenExpired(token)) {
+      this.logout();
+      return null;
+    }
+
+    const decodedToken: any = this.jwtHelper.decodeToken(token);
+    const candidate =
+      decodedToken?.userId ??
+      decodedToken?.id ??
+      decodedToken?.driverId ??
+      decodedToken?.sub;
+
+    if (candidate == null) return null;
+
+    const asNumber = typeof candidate === 'number' ? candidate : Number(candidate);
+    return Number.isFinite(asNumber) ? asNumber : null;
+  }
+
   getRole(): string | null {
     const token = localStorage.getItem(this.userKey);
     if (!token) return null;
