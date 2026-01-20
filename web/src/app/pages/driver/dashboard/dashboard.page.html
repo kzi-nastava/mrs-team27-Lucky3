@@ -64,24 +64,100 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Left Column: Active Ride / Map -->
       <div class="space-y-6">
-        <app-active-ride-card [hasActiveRide]="false" class="block"></app-active-ride-card>
-        <app-map-placeholder class="block"></app-map-placeholder>
+        <!-- Next Ride -->
+        <div class="bg-[#1C1C1E] p-4 rounded-xl border border-gray-800">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold">Next Ride</h2>
+            <span *ngIf="nextRide" class="text-xs text-gray-400">Tap to view details</span>
+          </div>
+
+          <ng-container *ngIf="nextRide; else noNextRide">
+            <app-ride-request-card
+              class="block"
+              [link]="['/driver/ride', nextRide.id, 'active']"
+              [showAction]="false"
+              [type]="nextRide.type"
+              [price]="nextRide.price"
+              [distance]="nextRide.distance"
+              [time]="nextRide.time"
+              [pickup]="nextRide.pickup"
+              [dropoff]="nextRide.dropoff"
+            ></app-ride-request-card>
+          </ng-container>
+
+          <ng-template #noNextRide>
+            <div class="bg-gray-900/40 rounded-xl border border-gray-800 p-8 text-center">
+              <div class="mx-auto w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center mb-3">
+                <span class="text-gray-300 text-xl">!</span>
+              </div>
+              <div class="text-white font-semibold">No accepted rides yet</div>
+              <div class="text-gray-400 text-sm mt-1">You’ll see your next scheduled ride here.</div>
+            </div>
+          </ng-template>
+        </div>
+
+        <!-- Live Map (driver location) -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold">Map</h2>
+            <span class="text-xs text-gray-400" *ngIf="!driverLocation">Location unavailable</span>
+          </div>
+          <app-live-map [driverLocation]="driverLocation" heightClass="h-[360px]"></app-live-map>
+        </div>
       </div>
 
       <!-- Right Column: Available Rides -->
       <div class="space-y-4">
         <div class="bg-[#1C1C1E] p-4 rounded-xl border border-gray-800">
-          <h2 class="text-lg font-bold mb-4">Available Rides ({{ availableRides.length }})</h2>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold">Available Rides ({{ futureRides.length }})</h2>
+            <button
+              *ngIf="futureRides.length > 0"
+              type="button"
+              (click)="toggleAllFutureRides()"
+              class="text-sm font-semibold text-yellow-500 hover:text-yellow-400 transition-colors"
+            >
+              {{ showAllFutureRides ? 'Hide all' : 'Show all future rides' }}
+            </button>
+          </div>
+
           <div class="space-y-4">
-            <app-ride-request-card 
-              *ngFor="let ride of availableRides"
-              [type]="ride.type"
-              [price]="ride.price"
-              [distance]="ride.distance"
-              [time]="ride.time"
-              [pickup]="ride.pickup"
-              [dropoff]="ride.dropoff">
-            </app-ride-request-card>
+            <ng-container *ngIf="dashboardRides.length > 0; else noMoreRides">
+              <app-ride-request-card
+                *ngFor="let ride of dashboardRides"
+                [type]="ride.type"
+                [price]="ride.price"
+                [distance]="ride.distance"
+                [time]="ride.time"
+                [pickup]="ride.pickup"
+                [dropoff]="ride.dropoff"
+                actionLabel="Cancel Ride"
+                actionVariant="danger"
+                (action)="cancelRide(ride.id)"
+              ></app-ride-request-card>
+            </ng-container>
+
+            <ng-template #noMoreRides>
+              <div class="text-sm text-gray-400">No additional upcoming rides.</div>
+            </ng-template>
+          </div>
+
+          <div *ngIf="showAllFutureRides" class="mt-4 pt-4 border-t border-gray-800">
+            <h3 class="text-sm font-semibold text-gray-200 mb-3">All future rides</h3>
+            <div class="space-y-4">
+              <app-ride-request-card
+                *ngFor="let ride of futureRides"
+                [type]="ride.type"
+                [price]="ride.price"
+                [distance]="ride.distance"
+                [time]="ride.time"
+                [pickup]="ride.pickup"
+                [dropoff]="ride.dropoff"
+                actionLabel="Cancel Ride"
+                actionVariant="danger"
+                (action)="cancelRide(ride.id)"
+              ></app-ride-request-card>
+            </div>
           </div>
         </div>
       </div>
