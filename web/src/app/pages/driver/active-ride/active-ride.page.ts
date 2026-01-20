@@ -221,7 +221,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private async applyRideResponse(r: RideResponse): Promise<void> {
     this.backendRide = r;
 
-    const start = r.start ?? r.startLocation;
+    const start = r.departure ?? r.start ?? r.startLocation;
     const end = r.destination ?? r.endLocation;
     const stops = r.stops ?? [];
 

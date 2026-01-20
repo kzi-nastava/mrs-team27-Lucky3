@@ -91,13 +91,13 @@ export const routes: Routes = [
   {
     path: 'driver/dashboard',
     component: DashboardPage,
-    // canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
     path: 'driver/ride/:id/active',
     component: ActiveRidePage,
-    // canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {

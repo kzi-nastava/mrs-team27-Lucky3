@@ -6,8 +6,20 @@ import { RideRequestCardComponent } from '../../../shared/rides/ride-request-car
 import { LiveMapComponent, MapPoint } from '../../../shared/ui/live-map/live-map.component';
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
-import { FutureRide, mockFutureRides } from '../../../shared/data/future-rides';
 import { RideService } from '../../../infrastructure/rest/ride.service';
+import { Subject, takeUntil, timer } from 'rxjs';
+import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
+
+type DashboardRide = {
+  id: number;
+  type: string;
+  price: number;
+  distance: string;
+  time: string;
+  pickup: string;
+  dropoff: string;
+  scheduledTime?: string;
+};
 
 @Component({
   selector: 'app-driver-dashboard',
@@ -29,7 +41,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   driverLocation: MapPoint | null = null;
   showAllFutureRides = false;
 
-  private refreshInterval: any;
+  private readonly destroy$ = new Subject<void>();
   private driverId: number | null = null;
   
   stats = {
@@ -39,13 +51,13 @@ export class DashboardPage implements OnInit, OnDestroy {
     onlineHours: 6.5
   };
 
-  futureRides: FutureRide[] = [...mockFutureRides];
+  futureRides: DashboardRide[] = [];
 
-  get nextRide(): FutureRide | null {
+  get nextRide(): DashboardRide | null {
     return this.futureRides.length > 0 ? this.futureRides[0] : null;
   }
 
-  get dashboardRides(): FutureRide[] {
+  get dashboardRides(): DashboardRide[] {
     // Next ride is shown in its own card, so dashboard list shows the next two.
     return this.futureRides.slice(1, 3);
   }
@@ -58,14 +70,19 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.driverId = this.authService.getUserId();
-    this.fetchDriverLocation();
-    this.refreshInterval = setInterval(() => this.fetchDriverLocation(), 10000);
+
+    // Driver live location polling
+    timer(0, 10000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.fetchDriverLocation());
+
+    // Upcoming rides (backend)
+    this.loadFutureRides();
   }
 
   ngOnDestroy(): void {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   onStatusChange(status: boolean) {
@@ -76,14 +93,11 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.showAllFutureRides = !this.showAllFutureRides;
   }
 
-  cancelRide(id: string): void {
+  cancelRide(id: number): void {
     const previous = [...this.futureRides];
     this.futureRides = this.futureRides.filter(r => r.id !== id);
 
-    const numericId = Number(id);
-    if (!Number.isFinite(numericId)) return;
-
-    this.rideService.cancelRide(numericId, { reason: 'Driver cancelled ride' }).subscribe({
+    this.rideService.cancelRide(id, { reason: 'Driver cancelled ride' }).subscribe({
       error: () => {
         // revert on failure
         this.futureRides = previous;
@@ -91,10 +105,59 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
+  private loadFutureRides(): void {
+    if (!this.driverId) {
+      this.futureRides = [];
+      return;
+    }
+
+    this.rideService
+      .getRidesHistory({ driverId: this.driverId, status: 'ACCEPTED', page: 0, size: 20 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (page) => {
+          const mapped = (page.content ?? []).map(r => this.toDashboardRide(r));
+          mapped.sort((a, b) => (a.scheduledTime ?? '').localeCompare(b.scheduledTime ?? ''));
+          this.futureRides = mapped;
+        },
+        error: () => {
+          // keep previous list on failure
+        }
+      });
+  }
+
+  private toDashboardRide(r: RideResponse): DashboardRide {
+    const pickup = r.departure?.address ?? r.start?.address ?? r.startLocation?.address ?? '—';
+    const dropoff = r.destination?.address ?? r.endLocation?.address ?? '—';
+
+    const distanceKm = r.distanceKm ?? r.estimatedDistance;
+    const distance = distanceKm != null ? `${Number(distanceKm).toFixed(1)} km` : '—';
+
+    const mins = r.estimatedTimeInMinutes;
+    const time = mins != null ? `${Math.round(Number(mins))} min` : '—';
+
+    const price = Number(r.totalCost ?? r.estimatedCost ?? 0);
+    const type = String(r.vehicleType ?? '—');
+
+    return {
+      id: Number(r.id),
+      type,
+      price,
+      distance,
+      time,
+      pickup,
+      dropoff,
+      scheduledTime: r.scheduledTime
+    };
+  }
+
   private fetchDriverLocation(): void {
     if (!this.driverId) return;
 
-    this.vehicleService.getActiveVehicles().subscribe({
+    this.vehicleService
+      .getActiveVehicles()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
       next: (vehicles) => {
         const mine = vehicles.find(v => v.driverId === this.driverId);
         this.driverLocation = mine

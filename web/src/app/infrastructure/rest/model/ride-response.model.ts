@@ -19,14 +19,18 @@ export interface RideResponse {
   id: number;
   status?: RideStatus;
 
+  // reference_backend shape
+  driver?: { id?: number } | null;
+  passengers?: Array<{ id?: number }> | null;
+  departure?: LocationDto;
+  destination?: LocationDto;
+  scheduledTime?: string;
+
+  // Legacy / alternate shapes used by earlier mocks
   driverId?: number;
   passengerId?: number;
-
   start?: LocationDto;
-  destination?: LocationDto;
   stops?: LocationDto[];
-
-  // Some backends expose these fields with different names.
   startLocation?: LocationDto;
   endLocation?: LocationDto;
 
