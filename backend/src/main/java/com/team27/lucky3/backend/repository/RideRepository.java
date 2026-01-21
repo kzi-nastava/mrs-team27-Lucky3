@@ -5,6 +5,7 @@ import com.team27.lucky3.backend.entity.enums.RideStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,12 +14,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface RideRepository extends JpaRepository<Ride, Long> {
+public interface RideRepository extends JpaRepository<Ride, Long>, JpaSpecificationExecutor<Ride> {
     boolean existsByDriverIdAndStatusIn(Long driverId, List<RideStatus> statuses);
 
     // Fetch rides finished in the last 24h (or start of day) to calculate working hours
     @Query("SELECT r FROM Ride r WHERE r.driver.id = :driverId AND r.endTime >= :since AND r.status = 'FINISHED'")
-    List<Ride> findFinishedRidesSince(@Param("driverId") Long driverId, @Param("since") LocalDateTime since);
+    List<Ride> findFinishedRidesByDriverSince(@Param("driverId") Long driverId, @Param("since") LocalDateTime since);
+
+    // Find next scheduled ride for driver
+    List<Ride> findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(Long driverId, RideStatus status, LocalDateTime startTime);
 
 //     @Query("SELECT r FROM Ride r WHERE " +
 //            "(:driverId IS NULL OR r.driver.id = :driverId) AND " +
