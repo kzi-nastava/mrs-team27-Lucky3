@@ -18,6 +18,7 @@ import { HomePage } from './pages/home.page/home.page';
 import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
 import { ActiveRidePage } from './pages/driver/active-ride/active-ride.page';
+import { AdminDriversPage } from './pages/admin/drivers/admin-drivers.page';
 
 export const routes: Routes = [
   // --- PUBLIC ROUTES (No Guards) ---
@@ -83,6 +84,12 @@ export const routes: Routes = [
   {
     path: 'admin/dashboard',
     component: AdminDashboardPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/drivers',
+    component: AdminDriversPage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },

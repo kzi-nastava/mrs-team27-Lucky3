@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping(value = "/api/drivers")
@@ -43,6 +44,14 @@ public class DriverController {
                                                        @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) throws IOException {
         DriverResponse created = driverService.createDriver(request, profileImage);
         return ResponseEntity.ok(created);
+    }
+
+    // Get all drivers (admin only)
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    public ResponseEntity<List<DriverResponse>> getAllDrivers() {
+        List<DriverResponse> drivers = driverService.getAllDrivers();
+        return ResponseEntity.ok(drivers);
     }
 
     @GetMapping("/{id}")

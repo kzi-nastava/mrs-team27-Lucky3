@@ -1,0 +1,187 @@
+<div class="p-6 max-w-7xl mx-auto">  
+
+  <div *ngIf="isLoading" class="text-center py-20">
+    <p class="text-xl text-gray-600">Loading drivers...</p>
+  </div>
+
+  <div *ngIf="errorMessage" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+    <p>{{ errorMessage }}</p>
+    <button (click)="refreshDrivers()" class="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+      Retry
+    </button>
+  </div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+    <!--Heading-->
+    <div class="flex justify-between items-center mb-6">
+      <!-- Left side: Heading and count -->
+      <div>
+        <h1 class="text-3xl font-bold text-white">Driver Management</h1>
+        <p class="text-gray-400 mt-1">Active driver {{ totalDrivers }}</p>
+      </div>
+      
+      <!-- Right side: Button -->
+      <button class="bg-yellow-400 text-black px-6 py-2 rounded font-semibold hover:bg-yellow-500">
+        Add New Driver
+      </button>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <!-- Active Drivers -->
+      <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center gap-4">
+        <div class="bg-green-500/20 rounded-lg p-3 inline-flex">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-check-icon lucide-user-check">
+            <path d="m16 11 2 2 4-4"/>
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+          </svg>
+        </div>
+
+        <div>
+          <p class="text-gray-400 text-sm">Active Drivers</p>
+          <p class="text-white text-3xl font-bold">{{ activeDrivers }}</p>
+        </div>
+      </div>
+
+      <!-- Inactive Drivers -->
+      <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center gap-4">
+        <div class="bg-yellow-400/20 rounded-lg p-3 inline-flex">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-off-icon lucide-shield-off">
+            <path d="m2 2 20 20"/>
+            <path d="M5 5a1 1 0 0 0-1 1v7c0 5 3.5 7.5 7.67 8.94a1 1 0 0 0 .67.01c2.35-.82 4.48-1.97 5.9-3.71"/>
+            <path d="M9.309 3.652A12.252 12.252 0 0 0 11.24 2.28a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1v7a9.784 9.784 0 0 1-.08 1.264"/>
+          </svg>
+        </div>
+
+        <div>
+          <p class="text-gray-400 text-sm">Inactive Drivers</p>
+          <p class="text-white text-3xl font-bold">{{ inactiveDrivers }}</p>
+        </div>
+      </div>
+
+      <!-- Suspended Drivers -->
+      <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center gap-4">
+        <div class="bg-red-500/20 rounded-lg p-3 inline-flex">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ban-icon lucide-ban">
+            <path d="M4.929 4.929 19.07 19.071"/>
+            <circle cx="12" cy="12" r="10"/>
+          </svg>
+        </div>
+
+        <div>
+          <p class="text-gray-400 text-sm">Suspended Drivers</p>
+          <p class="text-white text-3xl font-bold">{{ suspendedDrivers }}</p>
+        </div>
+      </div>
+
+      <!-- Average Rating -->
+      <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center gap-4">
+        <div class="bg-yellow-400/20 rounded-lg p-3 inline-flex">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-star-icon lucide-star">
+        <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>
+      </svg>
+    </div>
+
+    <div>
+      <p class="text-gray-400 text-sm">Avg Rating</p>
+      <p class="text-white text-3xl font-bold">{{ avgRating }}</p>
+    </div>
+  </div>
+    </div>
+    
+    <!-- Filter and search Buttons -->
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+      <div class="flex items-center gap-4">
+        <!-- Search Bar -->
+        <div class="flex-1 relative">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search-icon lucide-search absolute left-3 top-1/2 transform -translate-y-1/2">
+            <path d="m21 21-4.34-4.34"/>
+            <circle cx="11" cy="11" r="8"/>
+          </svg>
+          <input 
+            type="search" 
+            placeholder="Search drivers..." 
+            class="w-full bg-gray-900 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-yellow-400"
+          />
+        </div>
+        
+        <!-- Filter Buttons -->
+        <div class="flex gap-2">
+          <button class="bg-black text-white px-4 py-2 rounded border border-gray-600 hover:bg-gray-900">
+            All
+          </button>
+          <button class="bg-black text-white px-4 py-2 rounded border border-gray-600 hover:bg-gray-900">
+            Active
+          </button>
+          <button class="bg-black text-white px-4 py-2 rounded border border-gray-600 hover:bg-gray-900">
+            Inactive
+          </button>
+          <button class="bg-black text-white px-4 py-2 rounded border border-gray-600 hover:bg-gray-900">
+            Suspended
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="mb-4 flex gap-2">
+      <button (click)="filterByStatus('ALL')" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+        All
+      </button>
+      <button (click)="filterByStatus('ACTIVE')" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+        Active
+      </button>
+      <button (click)="filterByStatus('INACTIVE')" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+        Inactive
+      </button>
+      <button (click)="refreshDrivers()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-auto">
+        Refresh
+      </button>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white border border-gray-300">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="px-4 py-2 border-b text-left">ID</th>
+            <th class="px-4 py-2 border-b text-left">Name</th>
+            <th class="px-4 py-2 border-b text-left">Email</th>
+            <th class="px-4 py-2 border-b text-left">Phone</th>
+            <th class="px-4 py-2 border-b text-left">Address</th>
+            <th class="px-4 py-2 border-b text-left">Vehicle</th>
+            <th class="px-4 py-2 border-b text-left">License</th>
+            <th class="px-4 py-2 border-b text-left">Seats</th>
+            <th class="px-4 py-2 border-b text-left">Status</th>
+            <th class="px-4 py-2 border-b text-left">Active 24h</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let driver of filteredDrivers" class="hover:bg-gray-50">
+            <td class="px-4 py-2 border-b">{{ driver.id }}</td>
+            <td class="px-4 py-2 border-b">{{ driver.name }} {{ driver.surname }}</td>
+            <td class="px-4 py-2 border-b">{{ driver.email }}</td>
+            <td class="px-4 py-2 border-b">{{ driver.phoneNumber }}</td>
+            <td class="px-4 py-2 border-b">{{ driver.address }}</td>
+            <td class="px-4 py-2 border-b">{{ driver.vehicle.model }}</td>
+            <td class="px-4 py-2 border-b">{{ driver.vehicle.licenseNumber }}</td>
+            <td class="px-4 py-2 border-b">{{ driver.vehicle.passengerSeats }}</td>
+            <td class="px-4 py-2 border-b">
+              <span *ngIf="driver.isActive" class="bg-green-500 text-white px-2 py-1 rounded text-sm">
+                Active
+              </span>
+              <span *ngIf="!driver.isActive" class="bg-red-500 text-white px-2 py-1 rounded text-sm">
+                Inactive
+              </span>
+            </td>
+            <td class="px-4 py-2 border-b">{{ driver.active24h }}</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <p *ngIf="filteredDrivers.length === 0" class="text-center py-8 text-gray-500">
+        No drivers found
+      </p>
+    </div>
+  </div>
+</div>
