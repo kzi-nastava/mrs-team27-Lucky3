@@ -24,6 +24,7 @@ public interface RideRepository extends JpaRepository<Ride, Long>, JpaSpecificat
     // Find next scheduled ride for driver
     List<Ride> findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(Long driverId, RideStatus status, LocalDateTime startTime);
 
+
 //     @Query("SELECT r FROM Ride r WHERE " +
 //            "(:driverId IS NULL OR r.driver.id = :driverId) AND " +
 //            "(:status IS NULL OR r.status = :status) AND " +

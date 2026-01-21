@@ -76,7 +76,7 @@ public class DriverServiceImpl implements DriverService {
         // We calculate this by summing the duration of rides finished in the last 24h
         LocalDateTime startOfDay = LocalDateTime.now().minusHours(24);
 
-        List<Ride> recentRides = rideRepository.findFinishedRidesSince(driverId, startOfDay);
+        List<Ride> recentRides = rideRepository.findFinishedRidesByDriverSince(driverId, startOfDay);
 
         long totalSeconds = 0;
         for (Ride ride : recentRides) {
