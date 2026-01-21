@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';  // Add this import
 
 interface VehicleInformation {
   model: string;
@@ -22,8 +23,8 @@ interface DriverResponse {
   phoneNumber: string;
   address: string;
   vehicle: VehicleInformation;
-  isActive: boolean;
-  isBlocked: boolean;
+  active: boolean;
+  blocked: boolean;
   active24h: string;
 }
 
@@ -31,7 +32,7 @@ interface DriverResponse {
   selector: 'app-admin-drivers',
   templateUrl: './admin-drivers.page.html',
   standalone: true,
-  imports: [CommonModule, HttpClientModule]
+  imports: [CommonModule, HttpClientModule, FormsModule]
 })
 export class AdminDriversPage implements OnInit {
   drivers: DriverResponse[] = [];
@@ -45,6 +46,7 @@ export class AdminDriversPage implements OnInit {
   
   isLoading: boolean = true;
   errorMessage: string = '';
+  searchTerm: string = '';
 
   constructor(private http: HttpClient) {}
 
@@ -55,7 +57,7 @@ export class AdminDriversPage implements OnInit {
   loadDrivers() {
     this.isLoading = true;
     this.errorMessage = '';
-    
+
     this.http.get<DriverResponse[]>('http://localhost:8081/api/drivers')
       .subscribe({
         next: (data) => {
@@ -72,23 +74,53 @@ export class AdminDriversPage implements OnInit {
       });
   }
 
+  filterDrivers() {
+    if (!this.searchTerm.trim()) {
+      this.filteredDrivers = this.drivers;
+      return;
+    }
+
+    const search = this.searchTerm.toLowerCase();
+    this.filteredDrivers = this.drivers.filter(driver => 
+      driver.name.toLowerCase().includes(search) ||
+      driver.surname.toLowerCase().includes(search) ||
+      `${driver.name} ${driver.surname}`.toLowerCase().includes(search) ||
+      driver.email.toLowerCase().includes(search)
+    );
+  }
+
   calculateStats() {
     this.totalDrivers = this.drivers.length;
-    this.activeDrivers = this.drivers.filter(d => d.isActive).length;
-    this.inactiveDrivers = this.drivers.filter(d => !d.isActive).length;
+    this.activeDrivers = this.drivers.filter(d => d.active).length;
+    this.inactiveDrivers = this.drivers.filter(d => !d.active).length;
   }
 
   filterByStatus(status: string) {
     if (status === 'ALL') {
       this.filteredDrivers = this.drivers;
     } else if (status === 'ACTIVE') {
-      this.filteredDrivers = this.drivers.filter(d => d.isActive);
+      this.filteredDrivers = this.drivers.filter(d => d.active);
     } else if (status === 'INACTIVE') {
-      this.filteredDrivers = this.drivers.filter(d => !d.isActive);
+      this.filteredDrivers = this.drivers.filter(d => !d.active);
+    } else if (status === 'SUSPENDED') {
+      this.filteredDrivers = this.drivers.filter(d => d.blocked);
     }
   }
 
   refreshDrivers() {
     this.loadDrivers();
   }
+
+  getRandomRating(): number {
+    return Math.floor(Math.random() * 5) + 1; // Random number between 1-5
+  }
+
+  getRandomRides(): number {
+    return Math.floor(Math.random() * 500) + 50; // Random number between 50-550
+  }
+
+  getRandomEarnings(): number {
+    return Math.floor(Math.random() * 5000) + 500; // Random number between 500-5500
+  }
+
 }

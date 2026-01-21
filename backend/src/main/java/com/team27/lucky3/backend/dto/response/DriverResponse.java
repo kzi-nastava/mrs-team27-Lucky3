@@ -14,6 +14,7 @@ public class DriverResponse extends UserResponse {
     private boolean isActive;
     private boolean isBlocked;
     private String active24h;
+    //TODO: maybe add rating, total rides, total earnings, etc.
 
     public DriverResponse(Long id, String name, String surname, String email, String profilePictureUrl, UserRole role, String phoneNumber, String address, VehicleInformation vehicle, boolean isActive, boolean isBlocked, String active24h) {
         super(id, name, surname, email, profilePictureUrl, role, phoneNumber, address);
