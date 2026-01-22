@@ -144,13 +144,15 @@
                 type="password" 
                 formControlName="confirmPassword" 
                 class="auth-input auth-input-with-icon" 
-                [class.border-red-500]="f['confirmPassword'].invalid && f['confirmPassword'].touched"
+                [class.border-red-500]="(f['confirmPassword'].invalid && f['confirmPassword'].touched) || (registerForm.hasError('passwordMismatch') && f['confirmPassword'].touched)"
                 placeholder="••••••••"
               >
             </div>
             <div *ngIf="f['confirmPassword'].invalid && f['confirmPassword'].touched" class="text-red-500 text-xs ml-1">
               <span *ngIf="f['confirmPassword'].errors?.['required']">Confirmation is required</span>
-              <span *ngIf="f['confirmPassword'].errors?.['passwordMismatch']">Passwords do not match</span>
+            </div>
+            <div *ngIf="registerForm.hasError('passwordMismatch') && f['confirmPassword'].touched" class="text-red-500 text-xs ml-1">
+              <span>Passwords do not match</span>
             </div>
           </div>
         </div>
@@ -162,7 +164,7 @@
           Profile Photo <span class="text-gray-500 text-sm font-normal">(Optional)</span>
         </h3>
         
-        <div class="border-2 border-dashed border-gray-800 rounded-xl p-8 text-center hover:border-gray-700 transition-colors cursor-pointer bg-gray-950 relative">
+        <div class="border-2 border-dashed border-gray-800 rounded-xl p-8 text-center hover:border-yellow-500 focus-within:border-yellow-500 transition-colors cursor-pointer bg-gray-950 relative">
           
           <input 
             type="file" 

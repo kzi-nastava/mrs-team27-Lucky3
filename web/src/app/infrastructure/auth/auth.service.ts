@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
+import { BehaviorSubject, Observable, catchError, tap, throwError } from 'rxjs';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { environment } from '../../../env/environment';
 import { Login } from './model/login.model';
@@ -13,7 +13,7 @@ import { PassengerRegistrationRequest } from './model/registration.model';
 export class AuthService {
   private readonly userKey = 'user'; // Key for LocalStorage
   private jwtHelper = new JwtHelperService();
-  
+
   // Holds the current role (or null). Components subscribe to this
   user$ = new BehaviorSubject<string | null>(this.getRole());
 
@@ -35,10 +35,10 @@ export class AuthService {
 
   register(data: PassengerRegistrationRequest, profileImage?: File): Observable<any> {
     const headers = new HttpHeaders({ 'skip': 'true' });
-    
+
     // We must use FormData to send both JSON and the File
     const formData = new FormData();
-    
+
     // Spring Boot @RequestPart("data") expects a JSON Blob
     formData.append('data', new Blob([JSON.stringify(data)], {
         type: 'application/json'
@@ -49,12 +49,52 @@ export class AuthService {
         formData.append('profileImage', profileImage);
     }
 
-    return this.http.post(`${environment.apiHost}auth/register`, formData, { headers });
+    return this.http.post(`${environment.apiHost}auth/register`, formData, { headers }).pipe(
+      catchError((err: unknown) => {
+        if (err instanceof HttpErrorResponse) {
+          const message = this.extractHttpErrorMessage(err);
+          const isDuplicateEmail =
+            (err.status === 400 || err.status === 409) &&
+            /email|e-mail/i.test(message) &&
+            /exist|already|duplicate|taken/i.test(message);
+
+          if (isDuplicateEmail) {
+            return throwError(() => new Error('User with this email already exists.'));
+          }
+        }
+
+        return throwError(() => err);
+      })
+    );
+  }
+
+  private extractHttpErrorMessage(err: HttpErrorResponse): string {
+    const payload = err.error;
+
+    if (!payload) return err.message || '';
+    if (typeof payload === 'string') return payload;
+
+    // Common Spring Boot error shapes: { message }, { error }, { errors: [...] }
+    if (typeof payload === 'object') {
+      const anyPayload = payload as any;
+      if (typeof anyPayload.message === 'string') return anyPayload.message;
+      if (typeof anyPayload.error === 'string') return anyPayload.error;
+
+      // Fallback: stringify safely
+      try {
+        return JSON.stringify(payload);
+      } catch {
+        return err.message || '';
+      }
+    }
+
+    return err.message || '';
   }
 
   activateAccount(token: string): Observable<void> {
     const headers = new HttpHeaders({ 'skip': 'true' });
-    return this.http.get<void>(`${environment.apiHost}auth/activate/${token}`, { headers });
+    const params = new HttpParams().set('token', token);
+    return this.http.get<void>(`${environment.apiHost}auth/activate`, { headers, params });
   }
 
   resendActivation(email: string): Observable<void> {
@@ -99,7 +139,7 @@ export class AuthService {
     }
 
     const decodedToken = this.jwtHelper.decodeToken(token);
-    return decodedToken.role || decodedToken.roles?.[0] || null; 
+    return decodedToken.role || decodedToken.roles?.[0] || null;
   }
 
   isLoggedIn(): boolean {

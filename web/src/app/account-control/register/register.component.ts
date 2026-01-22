@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { finalize, take } from 'rxjs';
 import { AuthService } from '../../infrastructure/auth/auth.service';
 import { PassengerRegistrationRequest } from '../../infrastructure/auth/model/registration.model';
 
@@ -21,7 +22,8 @@ export class RegisterComponent {
   constructor(
     private router: Router,
     private fb: FormBuilder,
-    private authService: AuthService
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
   ) {
     this.registerForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
@@ -35,21 +37,11 @@ export class RegisterComponent {
   }
 
   passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
-    const password = control.get('password');
-    const confirmPassword = control.get('confirmPassword');
+    const password = control.get('password')?.value;
+    const confirmPassword = control.get('confirmPassword')?.value;
 
-    if (password && confirmPassword && password.value !== confirmPassword.value) {
-      confirmPassword.setErrors({ passwordMismatch: true });
-      return { passwordMismatch: true };
-    } else {
-      if (confirmPassword?.hasError('passwordMismatch')) {
-        delete confirmPassword.errors?.['passwordMismatch'];
-        if (!Object.keys(confirmPassword.errors || {}).length) {
-          confirmPassword.setErrors(null);
-        }
-      }
-      return null;
-    }
+    if (!password || !confirmPassword) return null;
+    return password !== confirmPassword ? { passwordMismatch: true } : null;
   }
 
   onFileSelected(event: any) {
@@ -60,6 +52,8 @@ export class RegisterComponent {
   }
 
   onSubmit() {
+    if (this.loading) return;
+
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();
       return;
@@ -80,24 +74,41 @@ export class RegisterComponent {
 
     // Call Backend
     this.authService.register(registrationData, this.selectedFile || undefined)
+      .pipe(
+        take(1),
+        finalize(() => {
+          this.loading = false;
+          this.cdr.markForCheck();
+        })
+      )
       .subscribe({
         next: () => {
-          this.loading = false;
+          try {
+            localStorage.setItem('pendingActivationEmail', (registrationData.email || '').trim());
+          } catch {
+            // ignore storage failures
+          }
           // Navigate to success page
           this.router.navigate(['/register-verification-sent'], { 
             queryParams: { email: registrationData.email } 
           });
         },
         error: (err) => {
-          this.loading = false;
           console.error(err);
-          if (err.error && typeof err.error === 'string') {
-              this.error = err.error;
-          } else if (err.error && err.error.message) {
-              this.error = err.error.message;
-          } else {
-              this.error = 'Registration failed. Please try again.';
+          if (err instanceof Error && err.message) {
+            this.error = err.message;
+            return;
           }
+
+          if (err?.error && typeof err.error === 'string') {
+            this.error = err.error;
+          } else if (err?.error?.message) {
+            this.error = err.error.message;
+          } else {
+            this.error = 'Registration failed. Please try again.';
+          }
+
+          this.cdr.markForCheck();
         }
       });
   }

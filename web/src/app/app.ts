@@ -31,6 +31,7 @@ export class App implements OnInit {
         '/reset-password',
         '/reset-password-success',
         '/register-verification-sent',
+        '/activate',
         '/home'
       ];
       const url = event.urlAfterRedirects || event.url;
