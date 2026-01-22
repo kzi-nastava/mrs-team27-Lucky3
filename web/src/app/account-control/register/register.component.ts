@@ -18,6 +18,8 @@ export class RegisterComponent {
   loading = false;
   error = '';
   selectedFile: File | null = null; // store the uploaded image
+  showPassword = false;
+  showConfirmPassword = false;
 
   constructor(
     private router: Router,
@@ -49,6 +51,14 @@ export class RegisterComponent {
     if (file) {
       this.selectedFile = file;
     }
+  }
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleConfirmPasswordVisibility() {
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
   onSubmit() {
