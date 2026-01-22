@@ -3,9 +3,9 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { environment } from '../../../env/environment';
-import { Login } from './model/login.model';
-import { AuthResponse } from './model/auth-response.model';
-import { PassengerRegistrationRequest } from './model/registration.model';
+import { Login } from '../../model/login.model';
+import { AuthResponse } from '../../model/auth-response.model';
+import { PassengerRegistrationRequest } from '../../model/registration.model';
 
 @Injectable({
   providedIn: 'root'
