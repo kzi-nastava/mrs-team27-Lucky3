@@ -11,3 +11,4 @@ public interface ImageService {
     public Optional<Image> findById(Long id);
     Image getDefaultAvatar();
 }
+

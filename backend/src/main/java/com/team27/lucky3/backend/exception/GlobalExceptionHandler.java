@@ -3,6 +3,7 @@ package com.team27.lucky3.backend.exception;
 import com.team27.lucky3.backend.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -60,16 +61,25 @@ public class GlobalExceptionHandler {
             EmailAlreadyUsedException ex,
             HttpServletRequest request
     ) {
-        HttpStatus status = HttpStatus.BAD_REQUEST;
-
-        ErrorResponse body = new ErrorResponse(
-                LocalDateTime.now(),            // timestamp
-                status.value(),                 // 400
-                status.getReasonPhrase(),       // "Bad Request"
-                ex.getMessage(),                // "Email is already in use"
-                request.getRequestURI()         // e.g. "/api/admin/drivers"
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI()
         );
+    }
 
-        return ResponseEntity.status(status).body(body);
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex,
+            HttpServletRequest request
+    ) {
+        // Common case here is unique-constraint violations.
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                "Database constraint violation.",
+                request.getRequestURI()
+        );
     }
 }

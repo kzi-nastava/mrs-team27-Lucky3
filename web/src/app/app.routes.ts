@@ -18,6 +18,7 @@ import { HomePage } from './pages/home.page/home.page';
 import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
 import { ActiveRidePage } from './pages/driver/active-ride/active-ride.page';
+import { ActivationSuccessComponent } from './account-control/activation-success/activation-success.component';
 
 export const routes: Routes = [
   // --- PUBLIC ROUTES (No Guards) ---
@@ -51,12 +52,24 @@ export const routes: Routes = [
     component: ResetPasswordComponent
   },
   {
+    path: 'reset-password/:token',
+    component: ResetPasswordComponent
+  },
+  {
     path: 'reset-password-success',
     component: ResetPasswordSuccessComponent
   },
   {
     path: 'register-verification-sent',
     component: RegisterVerificationSentComponent
+  },
+  {
+    path: 'activate/:token',
+    component: ActivationSuccessComponent
+  },
+  {
+    path: 'activate',
+    component: ActivationSuccessComponent
   },
 
   // --- PASSENGER ROUTES ---
