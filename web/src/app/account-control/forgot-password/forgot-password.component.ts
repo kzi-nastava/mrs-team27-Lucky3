@@ -60,7 +60,7 @@ export class ForgotPasswordComponent {
             // ignore storage failures
           }
 
-          this.router.navigate(['/reset-password-sent'], { queryParams: { email } });
+          this.router.navigate(['/reset-password-sent']);
         },
         error: (err) => {
           console.error(err);

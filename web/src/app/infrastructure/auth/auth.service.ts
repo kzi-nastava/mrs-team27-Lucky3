@@ -156,13 +156,13 @@ export class AuthService {
 
   resetPassword(token: string, newPassword: string, confirmPassword?: string): Observable<void> {
     const headers = new HttpHeaders({ 'skip': 'true' });
-    const params = new HttpParams().set('token', token);
+    
+    const body = { 
+        token: token, 
+        newPassword: newPassword 
+    };
 
-    // Keep body minimal but include confirmPassword when provided
-    const body: any = { newPassword };
-    if (confirmPassword != null) body.confirmPassword = confirmPassword;
-
-    return this.http.post<void>(`${environment.apiHost}auth/reset-password`, body, { headers, params });
+    return this.http.post<void>(`${environment.apiHost}auth/reset-password`, body, { headers });
   }
 
   logout(): void {

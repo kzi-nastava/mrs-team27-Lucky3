@@ -70,9 +70,7 @@ public class AuthServiceImpl implements AuthService {
 
         // 4. Spec 2.2.1: Drivers automatically become available upon login
         if (user.getRole() == UserRole.DRIVER) {
-            // START CHANGE
             user.setActive(!driverService.hasExceededWorkingHours(user.getId())); // Force inactive if over limit
-            // END CHANGE
             user.setInactiveRequested(false);
             userRepository.save(user);
         }
@@ -123,7 +121,7 @@ public class AuthServiceImpl implements AuthService {
         PasswordResetToken resetToken = new PasswordResetToken(token, user);
         tokenRepository.save(resetToken);
 
-        String link = frontendUrl + "/reset-password-sent";
+        String link = frontendUrl + "/reset-password?token=" + token;
         emailService.sendSimpleMessage(email, "Reset Password", "If an account exists for this email, you’ll receive instructions shortly. " +
                 "You can also open: " + link);
     }
