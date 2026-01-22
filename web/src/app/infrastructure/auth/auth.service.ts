@@ -23,7 +23,7 @@ export class AuthService {
     // "skip" header tells interceptor NOT to add the token for this request
     const headers = new HttpHeaders({ 'skip': 'true' });
 
-    return this.http.post<AuthResponse>(`${environment.apiHost}/auth/login`, auth, { headers }).pipe(
+    return this.http.post<AuthResponse>(`${environment.apiHost}auth/login`, auth, { headers }).pipe(
       tap((response: AuthResponse) => {
         // Save token to Local Storage (persistent across tabs)
         localStorage.setItem(this.userKey, response.accessToken);
@@ -49,17 +49,17 @@ export class AuthService {
         formData.append('profileImage', profileImage);
     }
 
-    return this.http.post(`${environment.apiHost}/auth/register`, formData, { headers });
+    return this.http.post(`${environment.apiHost}auth/register`, formData, { headers });
   }
 
   activateAccount(token: string): Observable<void> {
     const headers = new HttpHeaders({ 'skip': 'true' });
-    return this.http.get<void>(`${environment.apiHost}/auth/activate/${token}`, { headers });
+    return this.http.get<void>(`${environment.apiHost}auth/activate/${token}`, { headers });
   }
 
   resendActivation(email: string): Observable<void> {
     const headers = new HttpHeaders({ 'skip': 'true' });
-    return this.http.post<void>(`${environment.apiHost}/auth/resend-activation`, { email }, { headers });
+    return this.http.post<void>(`${environment.apiHost}auth/resend-activation`, { email }, { headers });
   }
 
   logout(): void {
