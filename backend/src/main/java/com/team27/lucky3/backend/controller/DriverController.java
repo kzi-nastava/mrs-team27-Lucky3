@@ -51,6 +51,7 @@ public class DriverController {
     @GetMapping
     public ResponseEntity<List<DriverResponse>> getAllDrivers() {
         List<DriverResponse> drivers = driverService.getAllDrivers();
+
         return ResponseEntity.ok(drivers);
     }
 

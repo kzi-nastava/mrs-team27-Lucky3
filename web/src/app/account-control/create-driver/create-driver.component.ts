@@ -2,6 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http';  // Add this
+import { Router } from '@angular/router';             // Add this
+import { RegularExpressionLiteralExpr } from '@angular/compiler';
+
 export enum VehicleType {
   LUXURY = 'LUXURY',
   VAN = 'VAN',
@@ -21,7 +25,12 @@ export class CreateDriverComponent implements OnInit {
   selectedFile: File | null = null;
   vehicleTypes = Object.values(VehicleType);
 
-  constructor(private fb: FormBuilder) {}
+  constructor(
+    private fb: FormBuilder,
+    private http: HttpClient,  // Add
+    private router: Router     // Add if missing
+  ) {}
+
 
   ngOnInit(): void {
     this.driverForm = this.fb.group({
@@ -30,8 +39,7 @@ export class CreateDriverComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       phone: ['', [Validators.required, Validators.pattern(/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/)]],
       address: ['', [Validators.required, Validators.minLength(5)]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
-      confirmPassword: ['', Validators.required],
+
       vehicle: this.fb.group({
         model: ['', Validators.required],
         licensePlate: ['', Validators.required],
@@ -70,17 +78,47 @@ export class CreateDriverComponent implements OnInit {
       });
       return;
     }
+    else{
+        console.log('onSubmit called!');
+    }
 
     this.loading = true;
     this.error = '';
 
+    const payload = {
+        name: this.driverForm.value.firstName,
+        surname: this.driverForm.value.lastName,
+        email: this.driverForm.value.email,
+        address: this.driverForm.value.address,
+        phone: this.driverForm.value.phone,
+        vehicle: {
+        model: this.driverForm.value.vehicle.model,
+        vehicleType: this.driverForm.value.vehicle.vehicleType,
+        licenseNumber: this.driverForm.value.vehicle.licensePlate,
+        passengerSeats: this.driverForm.value.vehicle.numberOfSeats,
+        babyTransport: this.driverForm.value.vehicle.babyTransport,
+        petTransport: this.driverForm.value.vehicle.petTransport
+        }
+    };
+
     const formData = new FormData();
-    formData.append('driver', JSON.stringify(this.driverForm.value));
+    formData.append('request', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
     if (this.selectedFile) {
-      formData.append('photo', this.selectedFile);
+        formData.append('profileImage', this.selectedFile);
     }
 
-    // Call your service here
-    console.log('Form submitted:', this.driverForm.value);
+    this.http.post('http://localhost:8081/api/drivers', formData).subscribe({
+        next: (response) => {
+            console.log('Success:', response);
+            this.loading = false;
+            alert('Driver created successfully!');
+            this.router.navigate(['/admin/drivers']);
+        },
+        error: (error) => {
+            console.error('Error:', error);
+            this.error = error.error?.message || 'Failed to create driver';
+            this.loading = false;
+        }
+    });
   }
 }

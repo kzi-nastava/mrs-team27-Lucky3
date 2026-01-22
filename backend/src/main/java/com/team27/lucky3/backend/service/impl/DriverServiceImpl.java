@@ -220,9 +220,9 @@ public class DriverServiceImpl implements DriverService {
 
     @Transactional(readOnly = true)
     public List<DriverResponse> getAllDrivers() {
-        return DummyData.createSampleDrivers();
+        //return DummyData.createSampleDrivers();
         //TODO: fix this, read real data from db using repositories
-        /*
+
         List<User> drivers = userRepository.findAllByRole(UserRole.DRIVER);
 
         return drivers.stream().map(driver -> {
@@ -240,20 +240,22 @@ public class DriverServiceImpl implements DriverService {
             vehicleInfo.setDriverId(driver.getId());
 
             String active24h = "0h/8h";
-
+/*Long id, String name, String surname, String email, String profilePictureUrl,
+ UserRole role, String phoneNumber, String address, VehicleInformation vehicle, boolean isActive, boolean isBlocked, String active24h*/
             return new DriverResponse(
                     driver.getId(),
                     driver.getName(),
                     driver.getSurname(),
                     driver.getEmail(),
                     "/api/users/"+driver.getId()+"/profile-image",
-                    driver.getRole(),
+                    UserRole.DRIVER,
                     driver.getPhoneNumber(),
                     driver.getAddress(),
                     vehicleInfo,
                     driver.isActive(),
+                    driver.isBlocked(),
                     active24h
             );
-        }).toList();*/
+        }).toList();
     }
 }

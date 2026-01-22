@@ -34,30 +34,30 @@ export class AdminDriversPage implements OnInit {
   }
 
   loadDrivers() {
-  this.isLoading = true;
-  this.errorMessage = '';
-  this.cdr.markForCheck();
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.cdr.markForCheck();
 
-  this.http.get<any>('http://localhost:8081/api/drivers')
-    .pipe(finalize(() => {
-      this.isLoading = false;
-      this.cdr.markForCheck();
-    }))
-    .subscribe({
-      next: (res) => {
-        const data = Array.isArray(res) ? res : (res?.content ?? res?.results ?? []);
-        this.drivers = data;
-        this.filteredDrivers = data;
-
-        this.cdr.markForCheck(); // this is the key to update the UI
-        this.calculateStats();
-      },
-      error: (err) => {
-        this.errorMessage = `Failed to load drivers (${err.status})`;
+    this.http.get<any>('http://localhost:8081/api/drivers')
+      .pipe(finalize(() => {
+        this.isLoading = false;
         this.cdr.markForCheck();
-      }
-    });
-}
+      }))
+      .subscribe({
+        next: (res) => {
+          const data = Array.isArray(res) ? res : (res?.content ?? res?.results ?? []);
+          this.drivers = data;
+          this.filteredDrivers = data;
+
+          this.cdr.markForCheck(); // this is the key to update the UI
+          this.calculateStats();
+        },
+        error: (err) => {
+          this.errorMessage = `Failed to load drivers (${err.status})`;
+          this.cdr.markForCheck();
+        }
+      });
+  }
 
 
   filterDrivers() {
@@ -79,6 +79,7 @@ export class AdminDriversPage implements OnInit {
     this.totalDrivers = this.drivers.length;
     this.activeDrivers = this.drivers.filter(d => d.active).length;
     this.inactiveDrivers = this.drivers.filter(d => !d.active).length;
+    this.suspendedDrivers = this.drivers.filter(d => d.blocked).length;
   }
 
   filterByStatus(status: string) {
