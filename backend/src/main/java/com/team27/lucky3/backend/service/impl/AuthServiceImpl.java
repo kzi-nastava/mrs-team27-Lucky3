@@ -21,7 +21,9 @@ import com.team27.lucky3.backend.service.EmailService;
 import com.team27.lucky3.backend.service.ImageService;
 import com.team27.lucky3.backend.util.TokenUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -47,9 +49,13 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final DriverService driverService;
     private final ImageService imageService;
     private final ActivationTokenRepository activationTokenRepository;
+
+    @Autowired
+    @Lazy
+    private final DriverService driverService;
+
 
     @Value("${frontend.url}")
     private String frontendUrl;

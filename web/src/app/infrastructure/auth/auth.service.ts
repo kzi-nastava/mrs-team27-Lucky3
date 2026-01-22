@@ -29,6 +29,22 @@ export class AuthService {
         localStorage.setItem(this.userKey, response.accessToken);
         // Update the state so the rest of the app knows we are logged in
         this.user$.next(this.getRole());
+      }),
+      catchError((err: unknown) => {
+        if (err instanceof HttpErrorResponse) {
+          if (err.status === 401 || err.status === 403) {
+            return throwError(() => new Error('Invalid email or password.'));
+          }
+
+          // status 0 is typically network/CORS/proxy issues
+          if (err.status === 0) {
+            return throwError(() => new Error('Unable to reach the server. Please try again.'));
+          }
+
+          return throwError(() => new Error('Login failed. Please try again.'));
+        }
+
+        return throwError(() => err);
       })
     );
   }
