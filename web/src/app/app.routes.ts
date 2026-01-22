@@ -52,6 +52,10 @@ export const routes: Routes = [
     component: ResetPasswordComponent
   },
   {
+    path: 'reset-password/:token',
+    component: ResetPasswordComponent
+  },
+  {
     path: 'reset-password-success',
     component: ResetPasswordSuccessComponent
   },

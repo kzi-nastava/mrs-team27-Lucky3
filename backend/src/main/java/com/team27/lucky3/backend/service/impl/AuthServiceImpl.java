@@ -109,16 +109,23 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null) {
+            return;
+        }
+
+        // forces delete before insert, helps avoid constraint issues
+        tokenRepository.deleteByUser(user);
+        tokenRepository.flush();
 
         String token = UUID.randomUUID().toString();
         PasswordResetToken resetToken = new PasswordResetToken(token, user);
         tokenRepository.save(resetToken);
 
-
-        String link = frontendUrl + "/reset-password?token=" + token;
-        emailService.sendSimpleMessage(email, "Reset Password", "Click here to reset: " + link);
+        String link = frontendUrl + "/reset-password-sent";
+        emailService.sendSimpleMessage(email, "Reset Password", "If an account exists for this email, you’ll receive instructions shortly. " +
+                "You can also open: " + link);
     }
 
     @Override

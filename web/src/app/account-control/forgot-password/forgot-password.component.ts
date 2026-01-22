@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { finalize, take } from 'rxjs';
+import { AuthService } from '../../infrastructure/auth/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -13,10 +15,15 @@ import { Router, RouterModule } from '@angular/router';
 export class ForgotPasswordComponent {
   forgotPasswordForm: FormGroup;
   loading = false;
+  error = '';
+
+  private readonly pendingResetEmailKey = 'pendingResetEmail';
 
   constructor(
     private router: Router,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
   ) {
     this.forgotPasswordForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]]
@@ -24,16 +31,45 @@ export class ForgotPasswordComponent {
   }
 
   onSubmit() {
+    if (this.loading) return;
+
     if (this.forgotPasswordForm.invalid) {
       this.forgotPasswordForm.markAllAsTouched();
       return;
     }
 
     this.loading = true;
-    setTimeout(() => {
-      this.loading = false;
-      this.router.navigate(['/reset-password-sent'], { queryParams: { email: this.forgotPasswordForm.get('email')?.value } });
-    }, 1500);
+    this.error = '';
+
+    const email = (this.forgotPasswordForm.get('email')?.value || '').trim();
+
+    this.authService
+      .requestPasswordReset(email)
+      .pipe(
+        take(1),
+        finalize(() => {
+          this.loading = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: () => {
+          try {
+            localStorage.setItem(this.pendingResetEmailKey, email);
+          } catch {
+            // ignore storage failures
+          }
+
+          this.router.navigate(['/reset-password-sent'], { queryParams: { email } });
+        },
+        error: (err) => {
+          console.error(err);
+          this.error = (err instanceof Error && err.message)
+            ? err.message
+            : 'Failed to send reset link. Please try again.';
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   get f() { return this.forgotPasswordForm.controls; }

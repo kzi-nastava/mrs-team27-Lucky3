@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, map, of, tap, throwError } from 'rxjs';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { environment } from '../../../env/environment';
 import { Login } from './model/login.model';
@@ -100,6 +100,69 @@ export class AuthService {
   resendActivation(email: string): Observable<void> {
     const headers = new HttpHeaders({ 'skip': 'true' });
     return this.http.post<void>(`${environment.apiHost}auth/resend-activation`, { email }, { headers });
+  }
+
+  requestPasswordReset(email: string): Observable<void> {
+    const headers = new HttpHeaders({ 'skip': 'true' });
+    return this.http.post<void>(`${environment.apiHost}auth/forgot-password`, { email }, { headers }).pipe(
+      catchError((err: unknown) => {
+        if (err instanceof HttpErrorResponse) {
+          if (err.status === 409 || err.status === 404) {
+            return of(void 0);
+          }
+
+          const message = this.extractHttpErrorMessage(err);
+
+          if (err.status === 400 && /email/i.test(message) && /invalid|format/i.test(message)) {
+            return throwError(() => new Error('Please enter a valid email address.'));
+          }
+
+          return throwError(() => new Error('Failed to send reset link. Please try again.'));
+        }
+
+        return throwError(() => err);
+      })
+    );
+  }
+
+
+  requestPasswordResetWithStatus(email: string): Observable<'sent' | 'alreadySent'> {
+    const headers = new HttpHeaders({ 'skip': 'true' });
+
+    return this.http.post<void>(`${environment.apiHost}auth/forgot-password`, { email }, { headers }).pipe(
+      map(() => 'sent' as const),
+      catchError((err: unknown) => {
+        if (err instanceof HttpErrorResponse) {
+          if (err.status === 409) {
+            return of('alreadySent' as const);
+          }
+
+          if (err.status === 404) {
+            return of('sent' as const);
+          }
+
+          const message = this.extractHttpErrorMessage(err);
+          if (err.status === 400 && /email/i.test(message) && /invalid|format/i.test(message)) {
+            return throwError(() => new Error('Please enter a valid email address.'));
+          }
+
+          return throwError(() => new Error('Failed to resend reset email. Please try again.'));
+        }
+
+        return throwError(() => err);
+      })
+    );
+  }
+
+  resetPassword(token: string, newPassword: string, confirmPassword?: string): Observable<void> {
+    const headers = new HttpHeaders({ 'skip': 'true' });
+    const params = new HttpParams().set('token', token);
+
+    // Keep body minimal but include confirmPassword when provided
+    const body: any = { newPassword };
+    if (confirmPassword != null) body.confirmPassword = confirmPassword;
+
+    return this.http.post<void>(`${environment.apiHost}auth/reset-password`, body, { headers, params });
   }
 
   logout(): void {
