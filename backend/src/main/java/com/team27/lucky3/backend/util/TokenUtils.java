@@ -21,10 +21,10 @@ public class TokenUtils {
     @Value("lucky3-app")
     private String APP_NAME;
 
-    @Value("404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970")
+    @Value("${JWT_SECRET}")
     public String SECRET;
 
-    @Value("1800000") // 30 min
+    @Value("${JWT_EXPIRATION}")
     private int EXPIRES_IN;
 
     @Value("Authorization")
