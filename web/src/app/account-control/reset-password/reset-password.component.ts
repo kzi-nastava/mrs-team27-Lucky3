@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -14,6 +14,7 @@ import { AuthService } from '../../infrastructure/auth/auth.service';
 })
 export class ResetPasswordComponent {
   resetPasswordForm: FormGroup;
+  validatingToken = true;
   loading = false;
   error = '';
   token = '';
@@ -38,6 +39,34 @@ export class ResetPasswordComponent {
     this.token = (tokenFromParam || tokenFromQuery || '').trim();
   }
 
+  ngOnInit(): void {
+    if (!this.token) {
+      this.validatingToken = false;
+      this.router.navigate(['/forgot-password'], {
+        queryParams: { reason: 'missing-token' }
+      });
+      return;
+    }
+
+    this.authService
+      .validatePasswordResetToken(this.token)
+      .pipe(
+        take(1),
+        finalize(() => {
+          this.validatingToken = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe(({ valid, reason }) => {
+        if (valid) return;
+
+        const mappedReason = reason === 'expired' ? 'expired-token' : 'invalid-token';
+        this.router.navigate(['/forgot-password'], {
+          queryParams: { reason: mappedReason }
+        });
+      });
+  }
+
   passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
     const password = control.get('newPassword')?.value;
     const confirmPassword = control.get('confirmPassword')?.value;
@@ -48,6 +77,8 @@ export class ResetPasswordComponent {
 
   onSubmit() {
     if (this.loading) return;
+
+    if (this.validatingToken) return;
 
     if (this.resetPasswordForm.invalid) {
       this.resetPasswordForm.markAllAsTouched();

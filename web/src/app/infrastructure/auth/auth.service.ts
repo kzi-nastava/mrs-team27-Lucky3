@@ -233,17 +233,17 @@ export class AuthService {
             return of({ valid: false as const, reason: 'expired' as const });
           }
 
-          // If the endpoint is missing (404) or the server is unreachable (0),
-          // don't block the UX with a false "invalid token". The token will still
-          // be validated again when the user submits the new password.
-          if (err.status === 404 || err.status === 0 || err.status >= 500) {
-            return of({ valid: true as const });
+          // Backend contract: 204 = valid, 404 = invalid
+          if (err.status === 404) {
+            return of({ valid: false as const, reason: 'invalid' as const });
           }
 
+          // Fail closed on validation errors (network/server/etc) to avoid
+          // allowing invalid tokens onto the reset password page.
           return of({ valid: false as const, reason: 'invalid' as const });
         }
 
-        return of({ valid: true as const });
+        return of({ valid: false as const, reason: 'invalid' as const });
       })
     );
   }

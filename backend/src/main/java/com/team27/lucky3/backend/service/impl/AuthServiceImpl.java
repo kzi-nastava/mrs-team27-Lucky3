@@ -238,5 +238,16 @@ public class AuthServiceImpl implements AuthService {
                 "Welcome! Please click here to activate your account: " + link
         );
     }
-}
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isPasswordResetTokenValid(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return false;
+        }
+
+        return tokenRepository.findByToken(token.trim())
+                .filter(t -> t.getExpiryDate() != null && t.getExpiryDate().isAfter(LocalDateTime.now()))
+                .isPresent();
+    }
+}

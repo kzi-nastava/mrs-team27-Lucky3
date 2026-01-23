@@ -1,11 +1,8 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, UrlTree } from '@angular/router';
-import { catchError, map, of } from 'rxjs';
-import { AuthService } from './auth.service';
+import { CanActivateFn, Router } from '@angular/router';
 
 export const resetPasswordTokenGuard: CanActivateFn = (route) => {
   const router = inject(Router);
-  const authService = inject(AuthService);
 
   const tokenFromParam = route.paramMap.get('token');
   const tokenFromQuery = route.queryParamMap.get('token');
@@ -17,21 +14,8 @@ export const resetPasswordTokenGuard: CanActivateFn = (route) => {
     });
   }
 
-  return authService.validatePasswordResetToken(token).pipe(
-    map((result) => {
-      if (result.valid) return true;
-
-      const reason = result.reason === 'expired' ? 'expired-token' : 'invalid-token';
-      return router.createUrlTree(['/forgot-password'], {
-        queryParams: { reason }
-      });
-    }),
-    catchError(() =>
-      of(
-        router.createUrlTree(['/forgot-password'], {
-          queryParams: { reason: 'invalid-token' }
-        })
-      )
-    )
-  );
+  // Let the component validate the token with the backend. This allows the reset-password
+  // page to render immediately (with a loader) instead of keeping the previous page visible
+  // while we wait for the validation request.
+  return true;
 };
