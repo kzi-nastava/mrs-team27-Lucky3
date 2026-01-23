@@ -58,12 +58,27 @@ public class RideServiceImpl implements RideService {
     public RideEstimationResponse estimateRide(CreateRideRequest request) {
         LocationDto start = request.getStart();
         LocationDto end = request.getDestination();
+        List<LocationDto> stops = request.getStops() != null ? request.getStops() : new ArrayList<>();
         VehicleType type = request.getRequirements() != null ? request.getRequirements().getVehicleType() : VehicleType.STANDARD;
 
-        // Fetch Route from OSRM
-        String url = String.format(OSRM_API_URL,
-                start.getLongitude(), start.getLatitude(),
-                end.getLongitude(), end.getLatitude());
+        // Build waypoints: start -> stops -> destination
+        List<LocationDto> allWaypoints = new ArrayList<>();
+        allWaypoints.add(start);
+        allWaypoints.addAll(stops);
+        allWaypoints.add(end);
+
+        // Build OSRM URL with all waypoints
+        StringBuilder waypointsBuilder = new StringBuilder();
+        for (int i = 0; i < allWaypoints.size(); i++) {
+            LocationDto waypoint = allWaypoints.get(i);
+            waypointsBuilder.append(waypoint.getLongitude()).append(",").append(waypoint.getLatitude());
+            if (i < allWaypoints.size() - 1) {
+                waypointsBuilder.append(";");
+            }
+        }
+
+        String url = String.format("http://router.project-osrm.org/route/v1/driving/%s?overview=full&geometries=geojson",
+                waypointsBuilder.toString());
 
         double distanceKm = 0.0;
         int durationMinutes = 0;
@@ -73,43 +88,61 @@ public class RideServiceImpl implements RideService {
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode route = root.path("routes").get(0);
+                JsonNode routes = root.path("routes");
 
-                // OSRM returns distance in meters and duration in seconds
-                double distanceMeters = route.path("distance").asDouble();
-                double durationSeconds = route.path("duration").asDouble();
+                if (routes.isArray() && routes.size() > 0) {
+                    JsonNode route = routes.get(0);
 
-                distanceKm = Math.round((distanceMeters / 1000.0) * 100.0) / 100.0;
-                durationMinutes = (int) Math.round(durationSeconds / 60.0);
+                    // OSRM returns total distance in meters and total duration in seconds
+                    double distanceMeters = route.path("distance").asDouble();
+                    double durationSeconds = route.path("duration").asDouble();
 
-                // Extract Geometry (Coordinates)
-                JsonNode coordinates = route.path("geometry").path("coordinates");
-                if (coordinates.isArray()) {
-                    int order = 0;
-                    for (JsonNode coord : coordinates) {
-                        // OSRM GeoJSON is [lon, lat]
-                        double lon = coord.get(0).asDouble();
-                        double lat = coord.get(1).asDouble();
-                        // We don't need address for every single point on the line
-                        routePoints.add(new RoutePointResponse(new LocationDto("", lat, lon), order++));
+                    distanceKm = Math.round((distanceMeters / 1000.0) * 100.0) / 100.0;
+                    durationMinutes = (int) Math.round(durationSeconds / 60.0);
+
+                    // Extract Geometry (Coordinates for the entire route including all stops)
+                    JsonNode geometry = route.path("geometry");
+                    JsonNode coordinates = geometry.path("coordinates");
+
+                    if (coordinates.isArray()) {
+                        int order = 0;
+                        for (JsonNode coord : coordinates) {
+                            // OSRM GeoJSON format is [lon, lat]
+                            double lon = coord.get(0).asDouble();
+                            double lat = coord.get(1).asDouble();
+                            routePoints.add(new RoutePointResponse(new LocationDto("", lat, lon), order++));
+                        }
                     }
+
+                    System.out.println(String.format("Route calculated: %d waypoints, %.2f km, %d minutes",
+                            allWaypoints.size(), distanceKm, durationMinutes));
                 }
             }
         } catch (Exception e) {
-            // Fallback to Haversine if OSRM fails (or handle error appropriately)
+            // Fallback to Haversine if OSRM fails
             System.err.println("OSRM Routing failed: " + e.getMessage());
-            distanceKm = calculateHaversineDistance(mapLocation(start), mapLocation(end));
+
+            // Calculate distance as sum of all segments
+            distanceKm = 0.0;
+            for (int i = 0; i < allWaypoints.size() - 1; i++) {
+                LocationDto from = allWaypoints.get(i);
+                LocationDto to = allWaypoints.get(i + 1);
+                distanceKm += calculateHaversineDistance(mapLocation(from), mapLocation(to));
+            }
+
             durationMinutes = (int) Math.ceil(distanceKm * 1.2); // Rough estimate
-            // Add at least start and end points
-            routePoints.add(new RoutePointResponse(start, 0));
-            routePoints.add(new RoutePointResponse(end, 1));
+
+            // Add all waypoints as route points
+            for (int i = 0; i < allWaypoints.size(); i++) {
+                routePoints.add(new RoutePointResponse(allWaypoints.get(i), i));
+            }
         }
 
-        // Calculate Price
+        // Calculate Price based on total distance
         double basePrice = getBasePriceForVehicle(type);
         double estimatedCost = Math.round((basePrice + (distanceKm * PRICE_PER_KM)) * 100.0) / 100.0;
 
-        // Find Closest Driver Time (Simple logic retained)
+        // Find Closest Driver Time
         int timeToPickup = calculateDriverArrival(start, type);
 
         return new RideEstimationResponse(durationMinutes, estimatedCost, timeToPickup, distanceKm, routePoints);

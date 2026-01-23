@@ -46,6 +46,8 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   petTransport: boolean = false;
   babyTransport: boolean = false;
 
+  private stopMarkers: L.Marker[] = []; // ADD THIS
+
   // --- ICONS ---
 
   private availableVehicleIcon = L.divIcon({
@@ -86,6 +88,16 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
     iconSize: [32, 42],
     iconAnchor: [16, 42],
   });
+
+  private stopIcon = L.divIcon({
+    className: '',
+    html: `<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:rgba(59,130,246,0.15);border:3px solid #3b82f6;box-shadow:0 0 10px rgba(59,130,246,0.4);">
+      <div style="width:10px;height:10px;border-radius:50%;background:#3b82f6;"></div>
+    </div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+  
 
   constructor(
     private rideService: RideService,
@@ -203,15 +215,17 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
       }
 
       // Geocode intermediate stops
-      const stops = [];
+      const stops: Array<{address: string, latitude: number, longitude: number}> = [];
+      const stopCoords: Array<{lat: number, lng: number}> = [];
       for (const stopAddress of rideData.intermediateStops) {
-        const stopCoords = await this.geocodeAddress(stopAddress);
-        if (stopCoords) {
+        const coords = await this.geocodeAddress(stopAddress);
+        if (coords) {
           stops.push({
             address: stopAddress,
-            latitude: stopCoords.lat,
-            longitude: stopCoords.lng
+            latitude: coords.lat,
+            longitude: coords.lng
           });
+          stopCoords.push(coords); // ADD THIS
         } else {
           console.warn(`Could not geocode stop: ${stopAddress}`);
         }
@@ -229,13 +243,13 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
           latitude: destCoords.lat, 
           longitude: destCoords.lng 
         },
-        stops: stops, // From form
+        stops: stops,
         passengerEmails: [],
         scheduledTime: null,
         requirements: {
-          vehicleType: rideData.vehicleType, // From form: 'STANDARD', 'LUXURY', 'VAN'
-          babyTransport: rideData.babyTransport, // From form checkbox
-          petTransport: rideData.petTransport // From form checkbox
+          vehicleType: rideData.vehicleType,
+          babyTransport: rideData.babyTransport,
+          petTransport: rideData.petTransport
         }
       };
 
@@ -243,7 +257,8 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
       this.rideService.estimateRide(request).subscribe({
         next: (response) => {
           this.orderingResult = response;
-          this.displayRoute(startCoords, destCoords, response);
+          // Pass stop coordinates to displayRoute
+          this.displayRoute(startCoords, destCoords, stopCoords, stops, response);
           this.isOrdering = false;
           this.cdr.detectChanges();
         },
@@ -263,36 +278,91 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   }
 
 
-  private displayRoute(start: L.LatLng, end: L.LatLng, estimation: RideEstimationResponse): void {
+
+  private displayRoute(
+    start: L.LatLng, 
+    end: L.LatLng, 
+    stopCoords: {lat: number, lng: number}[],
+    stopAddresses: any[],
+    estimation: RideEstimationResponse
+  ): void {
     this.clearRoute();
 
-    // Add Markers with custom icons
-    this.pickupMarker = L.marker(start, { icon: this.pickupIcon, zIndexOffset: 1000 }).addTo(this.map).bindPopup('Pickup');
-    this.destinationMarker = L.marker(end, { icon: this.destinationIcon, zIndexOffset: 1000 }).addTo(this.map).bindPopup('Final destination');
+    // Add Pickup Marker
+    this.pickupMarker = L.marker(start, { 
+      icon: this.pickupIcon, 
+      zIndexOffset: 1000 
+    })
+      .addTo(this.map)
+      .bindPopup('<b>Pickup</b><br>' + this.pickupAddress);
+
+    // Add Stop Markers
+    this.stopMarkers = [];
+    stopCoords.forEach((coords, index) => {
+      const stopMarker = L.marker([coords.lat, coords.lng], {
+        icon: this.stopIcon,
+        zIndexOffset: 900
+      })
+        .addTo(this.map)
+        .bindPopup(`<b>Stop ${index + 1}</b><br>${stopAddresses[index].address}`);
+      
+      this.stopMarkers.push(stopMarker);
+    });
+
+    // Add Destination Marker
+    this.destinationMarker = L.marker(end, { 
+      icon: this.destinationIcon, 
+      zIndexOffset: 1000 
+    })
+      .addTo(this.map)
+      .bindPopup('<b>Final Destination</b><br>' + this.destinationAddress);
 
     // Draw Route (Yellow + Dashed)
     if (estimation.routePoints && estimation.routePoints.length > 0) {
-        const latLngs = estimation.routePoints.map(p => L.latLng(p.location.latitude, p.location.longitude));
-        
-        this.routeLayer = L.polyline(latLngs, {
-          color: '#eab308', // Yellow
-          weight: 4,
-          opacity: 0.9,
-          dashArray: '12, 8', // Dashed
-          lineCap: 'round',
-          lineJoin: 'round'
-        }).addTo(this.map);
+      const latLngs = estimation.routePoints.map(p => 
+        L.latLng(p.location.latitude, p.location.longitude)
+      );
+      
+      this.routeLayer = L.polyline(latLngs, {
+        color: '#eab308', // Yellow
+        weight: 4,
+        opacity: 0.9,
+        dashArray: '12, 8', // Dashed
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(this.map);
 
-        this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
+      this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
     } else {
-        this.map.fitBounds(L.latLngBounds([start, end]), { padding: [50, 50] });
+      // If no route points from backend, create bounds including all points
+      const allPoints = [start, end, ...stopCoords.map(c => L.latLng(c.lat, c.lng))];
+      this.map.fitBounds(L.latLngBounds(allPoints), { padding: [50, 50] });
     }
   }
 
   private clearRoute(): void {
-    if (this.routeLayer) { this.map.removeLayer(this.routeLayer); this.routeLayer = null; }
-    if (this.pickupMarker) { this.map.removeLayer(this.pickupMarker); this.pickupMarker = null; }
-    if (this.destinationMarker) { this.map.removeLayer(this.destinationMarker); this.destinationMarker = null; }
+    if (this.pickupMarker) {
+      this.map.removeLayer(this.pickupMarker);
+      this.pickupMarker = null;
+    }
+    
+    if (this.destinationMarker) {
+      this.map.removeLayer(this.destinationMarker);
+      this.destinationMarker = null;
+    }
+    
+    // Clear all stop markers
+    if (this.stopMarkers && this.stopMarkers.length > 0) {
+      this.stopMarkers.forEach(marker => {
+        this.map.removeLayer(marker);
+      });
+      this.stopMarkers = [];
+    }
+    
+    if (this.routeLayer) {
+      this.map.removeLayer(this.routeLayer);
+      this.routeLayer = null;
+    }
   }
 
   resetOrdering(): void {
