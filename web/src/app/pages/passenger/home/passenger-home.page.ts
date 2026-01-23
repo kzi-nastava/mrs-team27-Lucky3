@@ -11,17 +11,17 @@ import { HttpClient } from '@angular/common/http';
 import { RideOrderingFormComponent} from '../ride-ordering-form/ride-ordering-form.component';
 import { RideOrderData } from '../model/order-ride-data.interface';
 import { RideEstimation } from '../model/order-ride-data.interface';
+import { LinkPassengerFormComponent, LinkedPassengersData } from '../link-passenger-form/link-passenger-form.component';
 
 @Component({
   selector: 'app-passenger-home',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, RideOrderingFormComponent],
+  imports: [CommonModule, RouterModule, FormsModule, RideOrderingFormComponent, LinkPassengerFormComponent],
   templateUrl: './passenger-home.page.html',
   styles: []
 })
 export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   @ViewChild(RideOrderingFormComponent) rideOrderingForm!: RideOrderingFormComponent;
-
   private map!: L.Map;
   private vehicleMarkers: L.Marker[] = [];
   private routeLayer: L.Polyline | null = null;
@@ -34,7 +34,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   availableCount = 0;
   occupiedCount = 0;
 
-  // Form state
+  // ride Form state
   showOrderingForm = false;
   pickupAddress = '';
   destinationAddress = '';
@@ -48,6 +48,10 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
 
   private stopMarkers: L.Marker[] = []; // ADD THIS
 
+  // email linking form state
+  showLinkForm: boolean = false;
+
+  
   // --- ICONS ---
 
   private availableVehicleIcon = L.divIcon({
@@ -181,10 +185,20 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
 
   toggleOrderingForm(): void {
     this.showOrderingForm = !this.showOrderingForm;
+    if (this.showOrderingForm) {
+      this.showLinkForm = false;  // Close link form when opening ordering form
+    }
     if (!this.showOrderingForm) {
       this.resetOrdering();
     }
     this.cdr.detectChanges();
+  }
+
+  toggleLinkForm(): void {
+    this.showLinkForm = !this.showLinkForm;
+    if (this.showLinkForm) {
+      this.showOrderingForm = false;  // Close ordering form when opening link form
+    }
   }
 
   async orderRide(rideData: RideOrderData): Promise<void> {
@@ -276,8 +290,6 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
       this.cdr.detectChanges();
     }
   }
-
-
 
   private displayRoute(
     start: L.LatLng, 
@@ -389,5 +401,11 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
     } catch {
       return null;
     }
+  }
+
+  linkPassengers(data: LinkedPassengersData): void {
+    console.log('Linked passenger emails:', data.emails);
+    // Handle the linked passenger emails here
+    // You can store them, send to backend, etc.
   }
 }
