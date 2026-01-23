@@ -6,7 +6,7 @@ import com.team27.lucky3.backend.dto.response.DriverResponse;
 import com.team27.lucky3.backend.entity.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
-import com.team27.lucky3.backend.entity.enums.VehicleType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.team27.lucky3.backend.exception.EmailAlreadyUsedException;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.ActivationTokenRepository;
@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -39,8 +40,7 @@ public class DriverServiceImpl implements DriverService {
     private final EmailService emailService;
     private final ImageService imageService;
 
-    //TODO: fix this
-    private final String activationBaseUrl = "https://localhost/8080/driver-activation/password?token=";
+    private final String activationBaseUrl = "http://localhost:4200/driver/set-password?token=";
 
     @Override
     @Transactional
@@ -220,9 +220,6 @@ public class DriverServiceImpl implements DriverService {
 
     @Transactional(readOnly = true)
     public List<DriverResponse> getAllDrivers() {
-        //return DummyData.createSampleDrivers();
-        //TODO: fix this, read real data from db using repositories
-
         List<User> drivers = userRepository.findAllByRole(UserRole.DRIVER);
 
         return drivers.stream().map(driver -> {
@@ -257,5 +254,32 @@ public class DriverServiceImpl implements DriverService {
                     active24h
             );
         }).toList();
+    }
+
+    @Override
+    public void activateDriverWithPassword(String token, String rawPassword, PasswordEncoder passwordEncoder) {
+        ActivationToken activationToken = activationTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired activation token"));
+
+        if (activationToken.isUsed() || LocalDateTime.now().isAfter(activationToken.getExpiryDate())) {
+            throw new IllegalArgumentException("Token expired or already used");
+        }
+
+        User driver = activationToken.getUser();
+        if (!driver.getRole().equals(UserRole.DRIVER) || driver.isEnabled()) {
+            throw new IllegalStateException("Invalid user for activation");
+        }
+
+        // Encode and set password
+        driver.setPassword(passwordEncoder.encode(rawPassword));
+        driver.setLastPasswordResetDate(Timestamp.valueOf(LocalDateTime.now()));
+        driver.setEnabled(true);
+        driver.setActive(false);
+        userRepository.save(driver);
+
+        // Mark token as used and delete
+        activationToken.setUsed(true);
+        activationTokenRepository.save(activationToken);
+        activationTokenRepository.delete(activationToken);  // Cleanup expired/used tokens
     }
 }

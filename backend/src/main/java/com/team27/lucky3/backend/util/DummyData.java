@@ -72,7 +72,7 @@ public class DummyData {
         LocationDto end = new LocationDto("End Address", 45.2564, 19.8617);
         return new FavoriteRouteResponse(id, "Home to Work", start, end, new ArrayList<>(), 5.0, 15.0);
     }
-
+    //used for testing, can be deleted
     public static List<DriverResponse> createSampleDrivers() {
         List<DriverResponse> drivers = new ArrayList<>();
 

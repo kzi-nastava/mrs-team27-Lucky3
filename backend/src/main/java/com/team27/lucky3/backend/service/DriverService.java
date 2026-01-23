@@ -3,6 +3,7 @@ package com.team27.lucky3.backend.service;
 import com.team27.lucky3.backend.dto.request.CreateDriverRequest;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
 import com.team27.lucky3.backend.entity.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -15,4 +16,5 @@ public interface DriverService {
     DriverResponse createDriver(CreateDriverRequest request, MultipartFile file) throws IOException;
     DriverResponse getDriver(Long id);
     List<DriverResponse> getAllDrivers();
+    void activateDriverWithPassword(String token, String password, PasswordEncoder passwordEncoder);
 }

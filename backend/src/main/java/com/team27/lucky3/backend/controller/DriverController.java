@@ -1,9 +1,7 @@
 package com.team27.lucky3.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.team27.lucky3.backend.dto.request.CreateDriverRequest;
-import com.team27.lucky3.backend.dto.request.UpdateDriverRequest;
-import com.team27.lucky3.backend.dto.request.VehicleInformation;
+import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.DriverChangeRequestCreated;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
 import com.team27.lucky3.backend.entity.DriverChangeRequest;
@@ -21,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,6 +43,14 @@ public class DriverController {
                                                        @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) throws IOException {
         DriverResponse created = driverService.createDriver(request, profileImage);
         return ResponseEntity.ok(created);
+    }
+
+    @PostMapping(value = "/driver-activation/password", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody SetInitialPassword initialPassword,
+                                                   PasswordEncoder passwordEncoder,
+                                                   DriverService driverService) {
+        driverService.activateDriverWithPassword(initialPassword.getToken(), initialPassword.getPassword(), passwordEncoder);
+        return ResponseEntity.noContent().build();
     }
 
     // Get all drivers (admin only)
