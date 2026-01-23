@@ -67,12 +67,10 @@ public class UserServiceImpl implements UserService {
 
     @Transactional(readOnly = true)
     public Image getProfileImage(Long id) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdWithProfileImage(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
-        if (user.getProfileImage() == null) {
-            return imageService.getDefaultAvatar();
-        }
-        return user.getProfileImage();
+        Image img = user.getProfileImage();
+        return (img == null) ? imageService.getDefaultAvatar() : img;
     }
 }

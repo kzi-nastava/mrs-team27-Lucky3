@@ -4,7 +4,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractContro
 import { Router, RouterModule } from '@angular/router';
 import { finalize, take } from 'rxjs';
 import { AuthService } from '../../infrastructure/auth/auth.service';
-import { PassengerRegistrationRequest } from '../../infrastructure/auth/model/registration.model';
+import { PassengerRegistrationRequest } from '../../model/registration.model';
 
 @Component({
   selector: 'app-register',

@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -70,7 +71,9 @@ public class AuthServiceImpl implements AuthService {
 
         // 4. Spec 2.2.1: Drivers automatically become available upon login
         if (user.getRole() == UserRole.DRIVER) {
+            // START CHANGE
             user.setActive(!driverService.hasExceededWorkingHours(user.getId())); // Force inactive if over limit
+            // END CHANGE
             user.setInactiveRequested(false);
             userRepository.save(user);
         }
@@ -232,5 +235,33 @@ public class AuthServiceImpl implements AuthService {
                 "Welcome! Please click here to activate your account: " + link
         );
     }
-}
 
+    @Override
+    @Transactional
+    public void activateDriverWithPassword(String token, String rawPassword) {
+
+        ActivationToken activationToken = activationTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired activation token"));
+
+        if (activationToken.isUsed() || LocalDateTime.now().isAfter(activationToken.getExpiryDate())) {
+            throw new IllegalArgumentException("Token expired or already used");
+        }
+
+        User driver = activationToken.getUser();
+        if (!driver.getRole().equals(UserRole.DRIVER) || driver.isEnabled()) {
+            throw new IllegalStateException("Invalid user for activation");
+        }
+
+        // Encode and set password
+        driver.setPassword(passwordEncoder.encode(rawPassword));
+        driver.setLastPasswordResetDate(Timestamp.valueOf(LocalDateTime.now()));
+        driver.setEnabled(true);
+        driver.setActive(true);
+        userRepository.save(driver);
+
+        // Mark token as used and delete
+        activationToken.setUsed(true);
+        activationTokenRepository.save(activationToken);
+        activationTokenRepository.delete(activationToken);  // Cleanup expired/used tokens
+    }
+}
