@@ -1,5 +1,6 @@
 package com.team27.lucky3.backend.entity;
 
+import com.team27.lucky3.backend.entity.enums.VehicleStatus;
 import com.team27.lucky3.backend.entity.enums.VehicleType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -20,6 +21,9 @@ public class Vehicle {
     @Enumerated(EnumType.STRING)
     private VehicleType vehicleType;
 
+    @Enumerated(EnumType.STRING)
+    private VehicleStatus status;
+
     private String licensePlates;
     private int seatCount;
     private boolean babyTransport;
@@ -37,4 +41,3 @@ public class Vehicle {
     @JoinColumn(name = "driver_id")
     private User driver;
 }
-

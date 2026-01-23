@@ -83,7 +83,7 @@ public class AuthController {
     }
 
     // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
-    @PutMapping(value = "/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody PasswordResetRequest resetRequest) {
         authService.resetPassword(resetRequest.getToken(), resetRequest.getNewPassword());
         return ResponseEntity.noContent().build();

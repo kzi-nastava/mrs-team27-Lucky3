@@ -21,6 +21,7 @@ import { ActiveRidePage } from './pages/driver/active-ride/active-ride.page';
 import { AdminDriversPage } from './pages/admin/drivers/admin-drivers.page';
 import { CreateDriverComponent } from './account-control/create-driver/create-driver.component';
 import {DriverSetPasswordComponent} from "./account-control/driver-set-password/driver-set-password.component";
+import { ActivationSuccessComponent } from './account-control/activation-success/activation-success.component';
 
 export const routes: Routes = [
   // --- PUBLIC ROUTES (No Guards) ---
@@ -54,6 +55,10 @@ export const routes: Routes = [
     component: ResetPasswordComponent
   },
   {
+    path: 'reset-password/:token',
+    component: ResetPasswordComponent
+  },
+  {
     path: 'reset-password-success',
     component: ResetPasswordSuccessComponent
   },
@@ -65,6 +70,15 @@ export const routes: Routes = [
     path: 'driver/set-password',
     component: DriverSetPasswordComponent
   },
+  {
+    path: 'activate/:token',
+    component: ActivationSuccessComponent
+  },
+  {
+    path: 'activate',
+    component: ActivationSuccessComponent
+  },
+
   // --- PASSENGER ROUTES ---
   {
     path: 'passenger/home',

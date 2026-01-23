@@ -1,7 +1,7 @@
 
 export const environment = {
   production: false,
-  apiHost: 'http://localhost:8081/api/',
+  apiHost: '/api/',
   map: {
     defaultLat: 45.2671,
     defaultLng: 19.8335,

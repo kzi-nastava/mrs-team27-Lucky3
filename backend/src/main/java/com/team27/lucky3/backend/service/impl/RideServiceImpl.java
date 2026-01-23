@@ -11,12 +11,16 @@ import com.team27.lucky3.backend.entity.Ride;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.Vehicle;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
+import com.team27.lucky3.backend.entity.enums.VehicleStatus;
 import com.team27.lucky3.backend.entity.enums.VehicleType;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.PanicRepository;
 import com.team27.lucky3.backend.repository.RideRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
 import com.team27.lucky3.backend.repository.VehicleRepository;
+import com.team27.lucky3.backend.repository.InconsistencyReportRepository;
+import com.team27.lucky3.backend.entity.InconsistencyReport;
+import com.team27.lucky3.backend.service.NotificationService;
 import com.team27.lucky3.backend.service.RideService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +45,8 @@ public class RideServiceImpl implements RideService {
     private final UserRepository userRepository;
     private final PanicRepository panicRepository;
     private final VehicleRepository vehicleRepository;
+    private final InconsistencyReportRepository inconsistencyReportRepository;
+    private final NotificationService notificationService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -212,6 +218,31 @@ public class RideServiceImpl implements RideService {
         ride.setPassengersExited(request.getPassengersExited());
 
         Ride savedRide = rideRepository.save(ride);
+
+        // Logic check for next scheduled ride
+        if (ride.getDriver() != null) {
+            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(
+                    ride.getDriver().getId(),
+                    RideStatus.SCHEDULED,
+                    LocalDateTime.now()
+            );
+
+            Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
+            if (vehicle != null) {
+                if (!nextRides.isEmpty()) {
+                    vehicle.setStatus(VehicleStatus.BUSY);
+                    // "load next ride" logic could mean setting the next ride as active or notifying driver,
+                    // but for now we just handle status.
+                    // If we wanted to "activate" next ride automatically, we might do it here or let driver do it.
+                } else {
+                    vehicle.setStatus(VehicleStatus.FREE);
+                }
+                vehicleRepository.save(vehicle);
+            }
+        }
+
+        // Trigger notification
+        notificationService.sendRideFinishedNotification(savedRide);
 
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
@@ -490,5 +521,20 @@ public class RideServiceImpl implements RideService {
             case VAN -> 180.0;
             default -> 120.0;
         };
+    }
+
+    @Override
+    @Transactional
+    public void reportInconsistency(Long rideId, InconsistencyRequest request) {
+        Ride ride = findById(rideId);
+        User reporter = getCurrentUser();
+
+        InconsistencyReport report = new InconsistencyReport();
+        report.setRide(ride);
+        report.setDescription(request.getRemark());
+        report.setTimestamp(LocalDateTime.now());
+        report.setReporter(reporter);
+
+        inconsistencyReportRepository.save(report);
     }
 }

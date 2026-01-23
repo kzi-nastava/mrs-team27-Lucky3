@@ -3,7 +3,7 @@
 
 export const environment = {
   production: false,
-  apiHost: 'http://localhost:8080/api',
+  apiHost: '/api/',
   map: {
     // Default map center coordinates (Novi Sad, Serbia)
     defaultLat: 45.2671,

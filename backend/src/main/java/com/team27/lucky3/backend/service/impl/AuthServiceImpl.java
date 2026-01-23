@@ -9,6 +9,7 @@ import com.team27.lucky3.backend.entity.PasswordResetToken;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
+import com.team27.lucky3.backend.exception.EmailAlreadyUsedException;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.PasswordResetTokenRepository;
 import com.team27.lucky3.backend.repository.RideRepository;
@@ -109,16 +110,23 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null) {
+            return;
+        }
+
+        // forces delete before insert, helps avoid constraint issues
+        tokenRepository.deleteByUser(user);
+        tokenRepository.flush();
 
         String token = UUID.randomUUID().toString();
         PasswordResetToken resetToken = new PasswordResetToken(token, user);
         tokenRepository.save(resetToken);
 
-
         String link = frontendUrl + "/reset-password?token=" + token;
-        emailService.sendSimpleMessage(email, "Reset Password", "Click here to reset: " + link);
+        emailService.sendSimpleMessage(email, "Reset Password", "If an account exists for this email, you’ll receive instructions shortly. " +
+                "You can also open: " + link);
     }
 
     @Override
@@ -142,7 +150,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public User registerPassenger(PassengerRegistrationRequest request, MultipartFile profileImage) throws IOException {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("User with this email already exists.");
+            throw new EmailAlreadyUsedException("User with this email already exists.");
         }
 
         User user = new User();
@@ -209,8 +217,10 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Account is already activated");
         }
 
-        // Delete existing activation token if present
-        activationTokenRepository.findByUser(user).ifPresent(activationTokenRepository::delete);
+        // Ensure there's at most one activation token per user.
+        // (activation_token.user_id has a unique constraint in the DB)
+        activationTokenRepository.deleteByUser(user);
+        activationTokenRepository.flush();
 
         // Generate new Activation Token
         String token = UUID.randomUUID().toString();
