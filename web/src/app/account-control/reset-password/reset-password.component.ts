@@ -103,5 +103,9 @@ export class ResetPasswordComponent {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
 
+  get isTokenError(): boolean {
+    return /reset link/.test((this.error || '').toLowerCase());
+  }
+
   get f() { return this.resetPasswordForm.controls; }
 }

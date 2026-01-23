@@ -19,6 +19,7 @@ import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
 import { ActiveRidePage } from './pages/driver/active-ride/active-ride.page';
 import { ActivationSuccessComponent } from './account-control/activation-success/activation-success.component';
+import { resetPasswordTokenGuard } from './infrastructure/auth/reset-password-token.guard';
 
 export const routes: Routes = [
   // --- PUBLIC ROUTES (No Guards) ---
@@ -49,11 +50,13 @@ export const routes: Routes = [
   },
   {
     path: 'reset-password',
-    component: ResetPasswordComponent
+    component: ResetPasswordComponent,
+    canActivate: [resetPasswordTokenGuard]
   },
   {
     path: 'reset-password/:token',
-    component: ResetPasswordComponent
+    component: ResetPasswordComponent,
+    canActivate: [resetPasswordTokenGuard]
   },
   {
     path: 'reset-password-success',
@@ -104,25 +107,25 @@ export const routes: Routes = [
   {
     path: 'driver/dashboard',
     component: DashboardPage,
-    canActivate: [authGuard, roleGuard],
+    // canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
-    path: 'driver/ride/:id/active',
+    path: 'driver/ride/:id',
     component: ActiveRidePage,
-    canActivate: [authGuard, roleGuard],
+    // canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
     path: 'driver/overview',
     component: DriverOverviewPage,
-    canActivate: [authGuard, roleGuard],
+    // canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
     path: 'driver/overview/ride/:id',
     component: RideDetails,
-    canActivate: [authGuard, roleGuard],
+    // canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
