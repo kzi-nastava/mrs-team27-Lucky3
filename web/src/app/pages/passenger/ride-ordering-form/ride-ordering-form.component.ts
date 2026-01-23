@@ -9,10 +9,13 @@ import { RideEstimation } from '../model/order-ride-data.interface';
   imports: [CommonModule, FormsModule],
   templateUrl: './ride-ordering-form.component.html'
 })
-export class RideEstimationFormComponent {
+export class RideOrderingFormComponent {
+  @Input() orderingResult: RideEstimation | null = null;
   @Input() showOrderingForm: boolean = false;
   @Input() resetOrderingFunction!: () => void; // ADD THIS
-  
+  @Input() orderingError: string = ''; // Make sure this is here
+  @Input() isOrdering: boolean = false; // Make sure this is here
+
   @Output() toggleForm = new EventEmitter<void>();
   @Output() orderRideRequest = new EventEmitter<RideOrderData>();
   //@Output() resetRequest = new EventEmitter<void>();
@@ -23,10 +26,6 @@ export class RideEstimationFormComponent {
   selectedVehicleType: string = 'standard';
   petTransport: boolean = false;
   babyTransport: boolean = false;
-  
-  orderingError: string = '';
-  orderingResult: RideEstimation | null = null;
-  isOrdering: boolean = false;
 
   toggleOrderingForm(): void {
     this.toggleForm.emit();
@@ -34,6 +33,10 @@ export class RideEstimationFormComponent {
 
   addStop(): void {
     this.intermediateStops.push('');
+  }
+
+  trackByIndex(index: number, item: any): number {
+    return index;
   }
 
   removeStop(index: number): void {

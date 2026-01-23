@@ -38,19 +38,22 @@
   </div>
 
   <!-- Ride Estimation Panel - Right Side 70% Height -->
-<div class="fixed top-0 right-0 h-screen w-96 z-10 pointer-events-none flex items-center py-[15vh]">
-  <div class="w-full h-[70vh] flex flex-col pointer-events-auto">
-    
-    <!-- Expanded State - Ride Ordering Form -->
-    <app-ride-ordering-form
-      [showOrderingForm]="showOrderingForm"
-      (toggleForm)="toggleOrderingForm()"
-      (orderRideRequest)="orderRide($event)"
-    >
-    </app-ride-ordering-form>
-    
+  <div class="fixed top-0 right-0 h-screen w-96 z-10 pointer-events-none flex items-center py-[15vh]">
+    <div class="w-full h-[70vh] flex flex-col pointer-events-auto">
+      
+      <!-- Expanded State - Ride Ordering Form -->
+      <app-ride-ordering-form
+        [showOrderingForm]="showOrderingForm"
+        [orderingResult]="orderingResult"
+        (toggleForm)="toggleOrderingForm()"
+        (orderRideRequest)="orderRide($event)"
+        [orderingError]="orderingError"
+        [isOrdering]="isOrdering"
+      >
+      </app-ride-ordering-form>
+      
+    </div>
   </div>
-</div>
 
 
   <!-- Attribution -->

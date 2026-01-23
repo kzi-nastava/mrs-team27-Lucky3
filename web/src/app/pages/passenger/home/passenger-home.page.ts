@@ -8,19 +8,19 @@ import { RideService, CreateRideRequest, RideEstimationResponse } from '../../..
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { VehicleLocationResponse } from '../../../infrastructure/rest/model/vehicle-location.model';
 import { HttpClient } from '@angular/common/http';
-import { RideEstimationFormComponent} from '../ride-estimation-form/ride-ordering-form.component';
+import { RideOrderingFormComponent} from '../ride-ordering-form/ride-ordering-form.component';
 import { RideOrderData } from '../model/order-ride-data.interface';
 import { RideEstimation } from '../model/order-ride-data.interface';
 
 @Component({
   selector: 'app-passenger-home',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, RideEstimationFormComponent],
+  imports: [CommonModule, RouterModule, FormsModule, RideOrderingFormComponent],
   templateUrl: './passenger-home.page.html',
   styles: []
 })
 export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
-  @ViewChild(RideEstimationFormComponent) rideEstimationForm!: RideEstimationFormComponent;
+  @ViewChild(RideOrderingFormComponent) rideOrderingForm!: RideOrderingFormComponent;
 
   private map!: L.Map;
   private vehicleMarkers: L.Marker[] = [];
@@ -176,91 +176,91 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   }
 
   async orderRide(rideData: RideOrderData): Promise<void> {
-  // Update parent state with form data
-  this.pickupAddress = rideData.pickupAddress;
-  this.destinationAddress = rideData.destinationAddress;
+    // Update parent state with form data
+    this.pickupAddress = rideData.pickupAddress;
+    this.destinationAddress = rideData.destinationAddress;
 
-  if (!this.pickupAddress.trim() || !this.destinationAddress.trim()) {
-    this.orderingError = 'Please enter both pickup and destination addresses';
-    return;
-  }
-
-  this.isOrdering = true;
-  this.orderingError = '';
-  this.orderingResult = null;
-  this.cdr.detectChanges();
-
-  try {
-    // Geocode pickup and destination
-    const startCoords = await this.geocodeAddress(this.pickupAddress);
-    const destCoords = await this.geocodeAddress(this.destinationAddress);
-
-    if (!startCoords || !destCoords) {
-      this.orderingError = 'Could not find one of the locations.';
-      this.isOrdering = false;
-      this.cdr.detectChanges();
+    if (!this.pickupAddress.trim() || !this.destinationAddress.trim()) {
+      this.orderingError = 'Please enter both pickup and destination addresses';
       return;
     }
 
-    // Geocode intermediate stops
-    const stops = [];
-    for (const stopAddress of rideData.intermediateStops) {
-      const stopCoords = await this.geocodeAddress(stopAddress);
-      if (stopCoords) {
-        stops.push({
-          address: stopAddress,
-          latitude: stopCoords.lat,
-          longitude: stopCoords.lng
-        });
-      } else {
-        console.warn(`Could not geocode stop: ${stopAddress}`);
-      }
-    }
-
-    // Build Request with form data
-    const request: CreateRideRequest = {
-      start: { 
-        address: this.pickupAddress, 
-        latitude: startCoords.lat, 
-        longitude: startCoords.lng 
-      },
-      destination: { 
-        address: this.destinationAddress, 
-        latitude: destCoords.lat, 
-        longitude: destCoords.lng 
-      },
-      stops: stops, // From form
-      passengerEmails: [],
-      scheduledTime: null,
-      requirements: {
-        vehicleType: rideData.vehicleType, // From form: 'STANDARD', 'LUXURY', 'VAN'
-        babyTransport: rideData.babyTransport, // From form checkbox
-        petTransport: rideData.petTransport // From form checkbox
-      }
-    };
-
-    // Call Backend
-    this.rideService.estimateRide(request).subscribe({
-      next: (response) => {
-        this.orderingResult = response;
-        this.displayRoute(startCoords, destCoords, response);
-        this.isOrdering = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Estimation failed', err);
-        this.orderingError = 'Could not calculate ride. Server might be unreachable.';
-        this.isOrdering = false;
-        this.cdr.detectChanges();
-      }
-    });
-
-  } catch (error) {
-    this.orderingError = 'An error occurred. Please try again.';
-    this.isOrdering = false;
+    this.isOrdering = true;
+    this.orderingError = '';
+    this.orderingResult = null;
     this.cdr.detectChanges();
+
+    try {
+      // Geocode pickup and destination
+      const startCoords = await this.geocodeAddress(this.pickupAddress);
+      const destCoords = await this.geocodeAddress(this.destinationAddress);
+
+      if (!startCoords || !destCoords) {
+        this.orderingError = 'Could not find one of the locations.';
+        this.isOrdering = false;
+        this.cdr.detectChanges();
+        return;
+      }
+
+      // Geocode intermediate stops
+      const stops = [];
+      for (const stopAddress of rideData.intermediateStops) {
+        const stopCoords = await this.geocodeAddress(stopAddress);
+        if (stopCoords) {
+          stops.push({
+            address: stopAddress,
+            latitude: stopCoords.lat,
+            longitude: stopCoords.lng
+          });
+        } else {
+          console.warn(`Could not geocode stop: ${stopAddress}`);
+        }
+      }
+
+      // Build Request with form data
+      const request: CreateRideRequest = {
+        start: { 
+          address: this.pickupAddress, 
+          latitude: startCoords.lat, 
+          longitude: startCoords.lng 
+        },
+        destination: { 
+          address: this.destinationAddress, 
+          latitude: destCoords.lat, 
+          longitude: destCoords.lng 
+        },
+        stops: stops, // From form
+        passengerEmails: [],
+        scheduledTime: null,
+        requirements: {
+          vehicleType: rideData.vehicleType, // From form: 'STANDARD', 'LUXURY', 'VAN'
+          babyTransport: rideData.babyTransport, // From form checkbox
+          petTransport: rideData.petTransport // From form checkbox
+        }
+      };
+
+      // Call Backend
+      this.rideService.estimateRide(request).subscribe({
+        next: (response) => {
+          this.orderingResult = response;
+          this.displayRoute(startCoords, destCoords, response);
+          this.isOrdering = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Estimation failed', err);
+          this.orderingError = 'Could not calculate ride. Server might be unreachable.';
+          this.isOrdering = false;
+          this.cdr.detectChanges();
+        }
+      });
+
+    } catch (error) {
+      this.orderingError = 'An error occurred. Please try again.';
+      this.isOrdering = false;
+      this.cdr.detectChanges();
+    }
   }
-}
 
 
   private displayRoute(start: L.LatLng, end: L.LatLng, estimation: RideEstimationResponse): void {
