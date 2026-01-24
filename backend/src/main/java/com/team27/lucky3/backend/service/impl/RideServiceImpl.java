@@ -67,6 +67,77 @@ public class RideServiceImpl implements RideService {
         LocationDto end = request.getDestination();
         VehicleType type = request.getRequirements() != null ? request.getRequirements().getVehicleType() : VehicleType.STANDARD;
 
+        // Construct coordinates string: start;stop1;stop2;end
+        StringBuilder coords = new StringBuilder();
+        coords.append(start.getLongitude()).append(",").append(start.getLatitude());
+
+        if (request.getStops() != null) {
+            for (LocationDto stop : request.getStops()) {
+                coords.append(";").append(stop.getLongitude()).append(",").append(stop.getLatitude());
+            }
+        }
+        coords.append(";").append(end.getLongitude()).append(",").append(end.getLatitude());
+
+        // Fetch Route from OSRM
+        String url = OSRM_Base_URL + coords.toString() + "?overview=full&geometries=geojson";
+
+        double distanceKm = 0.0;
+        int durationMinutes = 0;
+        List<RoutePointResponse> routePoints = new ArrayList<>();
+
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode route = root.path("routes").get(0);
+
+                // OSRM returns distance in meters and duration in seconds
+                double distanceMeters = route.path("distance").asDouble();
+                double durationSeconds = route.path("duration").asDouble();
+
+                distanceKm = Math.round((distanceMeters / 1000.0) * 100.0) / 100.0;
+                durationMinutes = (int) Math.round(durationSeconds / 60.0);
+
+                // Extract Geometry (Coordinates)
+                JsonNode coordinates = route.path("geometry").path("coordinates");
+                if (coordinates.isArray()) {
+                    int order = 0;
+                    for (JsonNode coord : coordinates) {
+                        // OSRM GeoJSON is [lon, lat]
+                        double lon = coord.get(0).asDouble();
+                        double lat = coord.get(1).asDouble();
+                        // We don't need address for every single point on the line
+                        routePoints.add(new RoutePointResponse(new LocationDto("", lat, lon), order++));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Fallback to Haversine if OSRM fails (or handle error appropriately)
+            System.err.println("OSRM Routing failed: " + e.getMessage());
+            distanceKm = calculateHaversineDistance(mapLocation(start), mapLocation(end));
+            // Add stops to fallback distance calculation if needed, but simple for now
+            durationMinutes = (int) Math.ceil(distanceKm * 1.2); // Rough estimate
+            // Add at least start and end points
+            routePoints.add(new RoutePointResponse(start, 0));
+            routePoints.add(new RoutePointResponse(end, 1));
+        }
+
+        // Calculate Price
+        double basePrice = getBasePriceForVehicle(type);
+        double estimatedCost = Math.round((basePrice + (distanceKm * PRICE_PER_KM)) * 100.0) / 100.0;
+
+        // Find Closest Driver Time (Simple logic retained)
+        int timeToPickup = calculateDriverArrival(start, type);
+
+        return new RideEstimationResponse(durationMinutes, estimatedCost, timeToPickup, distanceKm, routePoints);
+    }
+    /* staro valjda
+    @Override
+    public RideEstimationResponse estimateRide(CreateRideRequest request) {
+        LocationDto start = request.getStart();
+        LocationDto end = request.getDestination();
+        VehicleType type = request.getRequirements() != null ? request.getRequirements().getVehicleType() : VehicleType.STANDARD;
+
         // Fetch Route from OSRM
         String url = String.format(OSRM_API_URL,
                 start.getLongitude(), start.getLatitude(),
@@ -121,7 +192,7 @@ public class RideServiceImpl implements RideService {
 
         return new RideEstimationResponse(durationMinutes, estimatedCost, timeToPickup, distanceKm, routePoints);
     }
-
+*/
     private int calculateDriverArrival(LocationDto start, VehicleType type) {
         List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
         List<Vehicle> candidateVehicles = activeVehicles.stream()
@@ -649,6 +720,44 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
+    public RideResponse getRideDetails(Long id) {
+        return mapToResponse(findById(id));
+    }
+
+    @Override
+    public Page<RideResponse> getRidesHistory(Pageable pageable, LocalDateTime fromDate, LocalDateTime toDate, Long driverId, Long passengerId, String status) {
+        Specification<Ride> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (driverId != null) {
+                predicates.add(cb.equal(root.get("driver").get("id"), driverId));
+            }
+            if (passengerId != null) {
+                Join<Ride, User> passengers = root.join("passengers");
+                predicates.add(cb.equal(passengers.get("id"), passengerId));
+            }
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), RideStatus.valueOf(status)));
+            }
+            if (fromDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("startTime"), fromDate));
+            }
+            if (toDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("endTime"), toDate));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Ride> ridesPage = rideRepository.findAll(spec, pageable);
+        List<RideResponse> dtos = ridesPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, ridesPage.getTotalElements());
+    }
+
+    @Override
     @Transactional
     public void reportInconsistency(Long rideId, InconsistencyRequest request) {
         Ride ride = findById(rideId);
@@ -661,5 +770,38 @@ public class RideServiceImpl implements RideService {
         report.setReporter(reporter);
 
         inconsistencyReportRepository.save(report);
+    }
+
+    @Override
+    public RideResponse getActiveRide(Long userId) {
+        if (userId == null) {
+            User current = getCurrentUser();
+            if (current == null) throw new ResourceNotFoundException("User not found");
+            userId = current.getId();
+        }
+
+        final Long finalUserId = userId;
+        Specification<Ride> spec = (root, query, cb) -> {
+            Join<Ride, User> driver = root.join("driver", jakarta.persistence.criteria.JoinType.LEFT);
+            Join<Ride, User> passengers = root.join("passengers", jakarta.persistence.criteria.JoinType.LEFT);
+
+            Predicate isUser = cb.or(
+                    cb.equal(driver.get("id"), finalUserId),
+                    cb.equal(passengers.get("id"), finalUserId)
+            );
+
+            Predicate isActive = cb.or(
+                    cb.equal(root.get("status"), RideStatus.ACTIVE),
+                    cb.equal(root.get("status"), RideStatus.IN_PROGRESS),
+                    cb.equal(root.get("status"), RideStatus.ACCEPTED)
+            );
+
+            return cb.and(isUser, isActive);
+        };
+
+        return rideRepository.findAll(spec).stream()
+                .findFirst()
+                .map(this::mapToResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("No active ride for user: " + finalUserId));
     }
 }
