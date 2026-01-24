@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -44,7 +44,8 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private rideService: RideService,
-    private authService: AuthService
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -69,6 +70,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
           
           this.backendRides = relevant.map(r => this.mapToRide(r));
           this.updateView();
+          this.cdr.detectChanges();
         },
         error: (err) => console.error('Failed to load history', err)
       });

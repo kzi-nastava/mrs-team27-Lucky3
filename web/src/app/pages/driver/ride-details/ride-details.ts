@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Ride } from '../../../shared/data/mock-data';
@@ -32,7 +32,8 @@ export class RideDetails implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private rideService: RideService
+    private rideService: RideService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -41,6 +42,7 @@ export class RideDetails implements OnInit {
         this.rideService.getRide(Number(id)).subscribe({
             next: (r) => {
                 this.ride = this.mapToRide(r);
+                this.cdr.detectChanges();
             },
             error: (err) => console.error(err)
         });
