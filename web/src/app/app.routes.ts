@@ -133,7 +133,7 @@ export const routes: Routes = [
   {
     path: 'driver/dashboard',
     component: DashboardPage,
-    // canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
@@ -144,13 +144,13 @@ export const routes: Routes = [
   {
     path: 'driver/overview',
     component: DriverOverviewPage,
-    // canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
     path: 'driver/overview/ride/:id',
     component: RideDetails,
-    // canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
