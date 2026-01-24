@@ -260,38 +260,52 @@ public class RideServiceImpl implements RideService {
             throw new IllegalStateException("User must be authenticated to cancel a ride.");
         }
 
-        // Only cancellable in certain states
-        if (ride.getStatus() == RideStatus.FINISHED || ride.getStatus() == RideStatus.CANCELLED || ride.getStatus() == RideStatus.PANIC) {
+        // Not cancellable in terminal states
+        if (ride.getStatus() == RideStatus.FINISHED
+                || ride.getStatus() == RideStatus.CANCELLED
+                || ride.getStatus() == RideStatus.PANIC) {
             throw new IllegalStateException("Ride already finished/cancelled");
         }
 
         boolean isDriver = ride.getDriver() != null && ride.getDriver().getId().equals(currentUser.getId());
-        boolean isPassenger = ride.getPassengers().contains(currentUser);
+        boolean isPassenger = ride.getPassengers() != null && ride.getPassengers().contains(currentUser);
 
         if (isDriver) {
+            // Driver may cancel only before passengers enter the vehicle → before ride starts
             if (ride.getStatus() == RideStatus.IN_PROGRESS || ride.getStatus() == RideStatus.ACTIVE) {
                 throw new IllegalStateException("Driver cannot cancel ride after it has started (passengers entered).");
             }
+
             if (reason == null || reason.trim().isEmpty()) {
                 throw new IllegalStateException("Driver must provide a reason for cancellation.");
             }
+
+            ride.setRejectionReason(reason.trim());
+
         } else if (isPassenger) {
-            if (ride.getScheduledTime() != null) {
-                LocalDateTime limit = ride.getScheduledTime().minusMinutes(10);
-                if (LocalDateTime.now().isAfter(limit)) {
-                    throw new IllegalStateException("You cannot cancel a scheduled ride within 10 minutes of its start time.");
-                }
+            // Passengers can cancel only scheduled rides up to 10 minutes before scheduled start time.
+            if (ride.getScheduledTime() == null) {
+                throw new IllegalStateException("You can cancel only scheduled rides.");
             }
 
-            if (ride.getStatus() == RideStatus.IN_PROGRESS) {
+            LocalDateTime limit = ride.getScheduledTime().minusMinutes(10);
+            if (LocalDateTime.now().isAfter(limit)) {
+                throw new IllegalStateException("You cannot cancel a scheduled ride within 10 minutes of its start time.");
+            }
+
+            if (ride.getStatus() == RideStatus.IN_PROGRESS || ride.getStatus() == RideStatus.ACTIVE) {
                 throw new IllegalStateException("Cannot cancel an active ride. Request a stop instead.");
+            }
+
+            // Reason isn't mandatory for passenger; store only if provided (non-blank)
+            if (reason != null && !reason.trim().isEmpty()) {
+                ride.setRejectionReason(reason.trim());
             }
         } else {
             throw new IllegalStateException("User is not authorized to cancel this ride.");
         }
 
         ride.setStatus(RideStatus.CANCELLED);
-        ride.setRejectionReason(reason);
         ride.setEndTime(LocalDateTime.now());
 
         Ride savedRide = rideRepository.save(ride);

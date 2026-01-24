@@ -21,7 +21,9 @@ import com.team27.lucky3.backend.service.EmailService;
 import com.team27.lucky3.backend.service.ImageService;
 import com.team27.lucky3.backend.util.TokenUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -32,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -48,9 +49,13 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final DriverService driverService;
     private final ImageService imageService;
     private final ActivationTokenRepository activationTokenRepository;
+
+    @Autowired
+    @Lazy
+    private final DriverService driverService;
+
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -71,9 +76,7 @@ public class AuthServiceImpl implements AuthService {
 
         // 4. Spec 2.2.1: Drivers automatically become available upon login
         if (user.getRole() == UserRole.DRIVER) {
-            // START CHANGE
             user.setActive(!driverService.hasExceededWorkingHours(user.getId())); // Force inactive if over limit
-            // END CHANGE
             user.setInactiveRequested(false);
             userRepository.save(user);
         }
@@ -237,31 +240,14 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional
-    public void activateDriverWithPassword(String token, String rawPassword) {
-
-        ActivationToken activationToken = activationTokenRepository.findByToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired activation token"));
-
-        if (activationToken.isUsed() || LocalDateTime.now().isAfter(activationToken.getExpiryDate())) {
-            throw new IllegalArgumentException("Token expired or already used");
+    @Transactional(readOnly = true)
+    public boolean isPasswordResetTokenValid(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return false;
         }
 
-        User driver = activationToken.getUser();
-        if (!driver.getRole().equals(UserRole.DRIVER) || driver.isEnabled()) {
-            throw new IllegalStateException("Invalid user for activation");
-        }
-
-        // Encode and set password
-        driver.setPassword(passwordEncoder.encode(rawPassword));
-        driver.setLastPasswordResetDate(Timestamp.valueOf(LocalDateTime.now()));
-        driver.setEnabled(true);
-        driver.setActive(true);
-        userRepository.save(driver);
-
-        // Mark token as used and delete
-        activationToken.setUsed(true);
-        activationTokenRepository.save(activationToken);
-        activationTokenRepository.delete(activationToken);  // Cleanup expired/used tokens
+        return tokenRepository.findByToken(token.trim())
+                .filter(t -> t.getExpiryDate() != null && t.getExpiryDate().isAfter(LocalDateTime.now()))
+                .isPresent();
     }
 }

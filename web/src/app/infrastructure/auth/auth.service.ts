@@ -29,6 +29,22 @@ export class AuthService {
         localStorage.setItem(this.userKey, response.accessToken);
         // Update the state so the rest of the app knows we are logged in
         this.user$.next(this.getRole());
+      }),
+      catchError((err: unknown) => {
+        if (err instanceof HttpErrorResponse) {
+          if (err.status === 401 || err.status === 403) {
+            return throwError(() => new Error('Invalid email or password.'));
+          }
+
+          
+          if (err.status === 0) {
+            return throwError(() => new Error('Unable to reach the server. Please try again.'));
+          }
+
+          return throwError(() => new Error('Login failed. Please try again.'));
+        }
+
+        return throwError(() => err);
       })
     );
   }
@@ -162,7 +178,74 @@ export class AuthService {
         newPassword: newPassword 
     };
 
-    return this.http.post<void>(`${environment.apiHost}auth/reset-password`, body, { headers });
+    return this.http.post<void>(`${environment.apiHost}auth/reset-password`, body, { headers }).pipe(
+      catchError((err: unknown) => {
+        if (err instanceof HttpErrorResponse) {
+          const message = this.extractHttpErrorMessage(err);
+          const messageLower = (message || '').toLowerCase();
+
+          const isTokenExpired =
+            err.status === 410 ||
+            /expired/.test(messageLower);
+
+          const isTokenInvalid =
+            err.status === 400 ||
+            err.status === 404 ||
+            /invalid/.test(messageLower) ||
+            /token/.test(messageLower);
+
+          if (isTokenExpired) {
+            return throwError(() => new Error('This reset link has expired. Please request a new one.'));
+          }
+
+          if (isTokenInvalid) {
+            return throwError(() => new Error('This reset link is invalid. Please request a new one.'));
+          }
+
+          if (err.status === 0) {
+            return throwError(() => new Error('Unable to reach the server. Please try again.'));
+          }
+
+          if (err.status === 400 && message) {
+            return throwError(() => new Error(message));
+          }
+
+          return throwError(() => new Error('Failed to reset password. Please try again.'));
+        }
+
+        return throwError(() => err);
+      })
+    );
+  }
+
+  validatePasswordResetToken(token: string): Observable<{ valid: boolean; reason?: 'invalid' | 'expired' }> {
+    const headers = new HttpHeaders({ 'skip': 'true' });
+    const params = new HttpParams().set('token', token);
+
+    return this.http.get<void>(`${environment.apiHost}auth/reset-password/validate`, { headers, params }).pipe(
+      map(() => ({ valid: true as const })),
+      catchError((err: unknown) => {
+        if (err instanceof HttpErrorResponse) {
+          const message = this.extractHttpErrorMessage(err);
+          const messageLower = (message || '').toLowerCase();
+
+          if (err.status === 410 || /expired/.test(messageLower)) {
+            return of({ valid: false as const, reason: 'expired' as const });
+          }
+
+          // Backend contract: 204 = valid, 404 = invalid
+          if (err.status === 404) {
+            return of({ valid: false as const, reason: 'invalid' as const });
+          }
+
+          // Fail closed on validation errors (network/server/etc) to avoid
+          // allowing invalid tokens onto the reset password page.
+          return of({ valid: false as const, reason: 'invalid' as const });
+        }
+
+        return of({ valid: false as const, reason: 'invalid' as const });
+      })
+    );
   }
 
   logout(): void {

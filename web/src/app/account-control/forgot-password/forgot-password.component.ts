@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize, take } from 'rxjs';
 import { AuthService } from '../../infrastructure/auth/auth.service';
 
@@ -16,10 +16,12 @@ export class ForgotPasswordComponent {
   forgotPasswordForm: FormGroup;
   loading = false;
   error = '';
+  notice = '';
 
   private readonly pendingResetEmailKey = 'pendingResetEmail';
 
   constructor(
+    private route: ActivatedRoute,
     private router: Router,
     private fb: FormBuilder,
     private authService: AuthService,
@@ -27,6 +29,22 @@ export class ForgotPasswordComponent {
   ) {
     this.forgotPasswordForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]]
+    });
+
+    this.route.queryParams.subscribe((params) => {
+      const reason = (params['reason'] as string | undefined) || '';
+
+      if (reason === 'missing-token') {
+        this.notice = 'Reset link is missing a token. Please request a new link.';
+      } else if (reason === 'invalid-token') {
+        this.notice = 'This reset link is invalid. Please request a new link.';
+      } else if (reason === 'expired-token') {
+        this.notice = 'This reset link has expired. Please request a new link.';
+      } else {
+        this.notice = '';
+      }
+
+      this.cdr.markForCheck();
     });
   }
 
@@ -60,7 +78,9 @@ export class ForgotPasswordComponent {
             // ignore storage failures
           }
 
-          this.router.navigate(['/reset-password-sent']);
+          this.router.navigate(['/reset-password-sent'], { 
+            state: { resetEmailSent: true } 
+          });
         },
         error: (err) => {
           console.error(err);
