@@ -50,6 +50,9 @@ public class User implements UserDetails {
     private boolean isActive;
     private boolean isInactiveRequested;
 
+    @OneToOne(mappedBy = "driver", fetch = FetchType.LAZY)
+    private Vehicle vehicle;
+
     @Column(name = "last_password_reset_date")
     private Timestamp lastPasswordResetDate;
 

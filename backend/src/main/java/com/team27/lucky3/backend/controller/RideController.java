@@ -128,6 +128,6 @@ public class RideController {
     // 2.6.2 During ride: live tracking + inconsistency report (passengers)
     @GetMapping("/active")
     public ResponseEntity<RideResponse> getActiveRide(@RequestParam(required = false) @Min(1) Long userId) {
-        return ResponseEntity.ok(DummyData.createDummyRideResponse(99L, 10L, userId != null ? userId : 123L, RideStatus.IN_PROGRESS));
+        return ResponseEntity.ok(rideService.getActiveRide(userId));
     }
 }

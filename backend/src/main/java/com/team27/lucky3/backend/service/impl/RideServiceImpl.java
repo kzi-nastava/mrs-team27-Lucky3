@@ -473,20 +473,29 @@ public class RideServiceImpl implements RideService {
 
         if (ride.getDriver() != null) {
             // Minimal driver info
-            Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
+            Vehicle vehicle = ride.getDriver().getVehicle();
             VehicleInformation vInfo = null;
             String model = null;
             String plates = null;
+            LocationDto vehicleLocation = null;
             if(vehicle != null) {
                  vInfo = new VehicleInformation(vehicle.getModel(), vehicle.getVehicleType(), vehicle.getLicensePlates(), vehicle.getSeatCount(), vehicle.isBabyTransport(), vehicle.isPetTransport(), ride.getDriver().getId());
                  model = vehicle.getModel();
                  plates = vehicle.getLicensePlates();
+                 if (vehicle.getCurrentLocation() != null) {
+                     vehicleLocation = new LocationDto(
+                             vehicle.getCurrentLocation().getAddress(),
+                             vehicle.getCurrentLocation().getLatitude(),
+                             vehicle.getCurrentLocation().getLongitude()
+                     );
+                 }
             }
             // Logic to get driver status/time would be complex, simplifying here
             DriverResponse dr = new DriverResponse(ride.getDriver().getId(), ride.getDriver().getName(), ride.getDriver().getSurname(), ride.getDriver().getEmail(), "/api/users/"+ride.getDriver().getId()+"/profile-image", ride.getDriver().getRole(), ride.getDriver().getPhoneNumber(), ride.getDriver().getAddress(), vInfo, ride.getDriver().isActive(), ride.getDriver().isBlocked(), "0h 0m");
             res.setDriver(dr);
             res.setModel(model);
             res.setLicensePlates(plates);
+            res.setVehicleLocation(vehicleLocation);
         }
 
         if (ride.getPassengers() != null) {
@@ -630,5 +639,38 @@ public class RideServiceImpl implements RideService {
         report.setReporter(reporter);
 
         inconsistencyReportRepository.save(report);
+    }
+
+    @Override
+    public RideResponse getActiveRide(Long userId) {
+        if (userId == null) {
+            User current = getCurrentUser();
+            if (current == null) throw new ResourceNotFoundException("User not found");
+            userId = current.getId();
+        }
+
+        final Long finalUserId = userId;
+        Specification<Ride> spec = (root, query, cb) -> {
+            Join<Ride, User> driver = root.join("driver", jakarta.persistence.criteria.JoinType.LEFT);
+            Join<Ride, User> passengers = root.join("passengers", jakarta.persistence.criteria.JoinType.LEFT);
+
+            Predicate isUser = cb.or(
+                    cb.equal(driver.get("id"), finalUserId),
+                    cb.equal(passengers.get("id"), finalUserId)
+            );
+
+            Predicate isActive = cb.or(
+                    cb.equal(root.get("status"), RideStatus.ACTIVE),
+                    cb.equal(root.get("status"), RideStatus.IN_PROGRESS),
+                    cb.equal(root.get("status"), RideStatus.ACCEPTED)
+            );
+
+            return cb.and(isUser, isActive);
+        };
+
+        return rideRepository.findAll(spec).stream()
+                .findFirst()
+                .map(this::mapToResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("No active ride for user: " + finalUserId));
     }
 }
