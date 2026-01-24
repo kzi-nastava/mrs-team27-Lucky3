@@ -1,10 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnInit, OnChanges } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-
-export interface LinkedPassengersData {
-  emails: string[];
-}
+import { LinkedPassengersData } from '../model/link-passengers.interface';
 
 @Component({
   selector: 'app-link-passenger-form',
@@ -66,7 +63,6 @@ export class LinkPassengerFormComponent implements OnInit, OnChanges {
   }
 
   onSubmit(): void {
-    console.log('Form submitted');
     if (this.linkForm.valid) {
       const emails = this.emailsArray.controls.map(
         control => control.get('email')?.value

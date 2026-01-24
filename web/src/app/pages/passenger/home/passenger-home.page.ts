@@ -11,7 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RideOrderingFormComponent} from '../ride-ordering-form/ride-ordering-form.component';
 import { RideOrderData } from '../model/order-ride-data.interface';
 import { RideEstimation } from '../model/order-ride-data.interface';
-import { LinkPassengerFormComponent, LinkedPassengersData } from '../link-passenger-form/link-passenger-form.component';
+import { LinkPassengerFormComponent } from '../link-passenger-form/link-passenger-form.component';
+import {LinkedPassengersData} from '../model/link-passengers.interface';
 
 @Component({
   selector: 'app-passenger-home',
@@ -50,7 +51,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
 
   // email linking form state
   showLinkForm: boolean = false;
-
+  linkedPassengers: string[] = [];
   
   // --- ICONS ---
 
@@ -258,7 +259,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
           longitude: destCoords.lng 
         },
         stops: stops,
-        passengerEmails: [],
+        passengerEmails: this.linkedPassengers,
         scheduledTime: null,
         requirements: {
           vehicleType: rideData.vehicleType,
@@ -268,7 +269,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
       };
 
       // Call Backend
-      this.rideService.estimateRide(request).subscribe({
+      this.rideService.orderRide(request).subscribe({
         next: (response) => {
           this.orderingResult = response;
           // Pass stop coordinates to displayRoute
@@ -277,7 +278,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Estimation failed', err);
+          console.error('Ordering failed', err);
           this.orderingError = 'Could not calculate ride. Server might be unreachable.';
           this.isOrdering = false;
           this.cdr.detectChanges();
@@ -404,8 +405,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   }
 
   linkPassengers(data: LinkedPassengersData): void {
-    console.log('Linked passenger emails:', data.emails);
-    // Handle the linked passenger emails here
-    // You can store them, send to backend, etc.
+    // Store emails in the global array for later usage
+    this.linkedPassengers = data.emails;
   }
 }

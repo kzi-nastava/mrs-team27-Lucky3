@@ -3,6 +3,7 @@ package com.team27.lucky3.backend.dto.request;
 import com.team27.lucky3.backend.dto.LocationDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -28,7 +29,7 @@ public class CreateRideRequest {
 
     private List<String> passengerEmails;
 
-    @Future(message = "Scheduled time must be in the future")
+    @FutureOrPresent(message = "Scheduled time must be in the present or future")
     private LocalDateTime scheduledTime;
 
     @NotNull(message = "Ride requirements are required")

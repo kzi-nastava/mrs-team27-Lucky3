@@ -53,6 +53,10 @@ export class RideService {
     return this.http.post<RideEstimationResponse>(`${this.apiUrl}/estimate`, request);
   }
 
+  orderRide(request: CreateRideRequest): Observable<RideEstimationResponse> {
+    return this.http.post<RideEstimationResponse>(`${this.apiUrl}`, request);
+  }
+
   getRide(id: number): Observable<RideResponse> {
     return this.http.get<RideResponse>(`${this.apiUrl}/${id}`);
   }

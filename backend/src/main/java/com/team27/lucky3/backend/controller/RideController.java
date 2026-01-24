@@ -1,12 +1,7 @@
 package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.LocationDto;
-import com.team27.lucky3.backend.dto.request.CreateRideRequest;
-import com.team27.lucky3.backend.dto.request.EndRideRequest;
-import com.team27.lucky3.backend.dto.request.InconsistencyRequest;
-import com.team27.lucky3.backend.dto.request.RideCancellationRequest;
-import com.team27.lucky3.backend.dto.request.RidePanicRequest;
-import com.team27.lucky3.backend.dto.request.RideStopRequest;
+import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.dto.response.RoutePointResponse;
@@ -49,6 +44,7 @@ public class RideController {
     // 2.4.1 Order a ride (logged-in user)
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<RideResponse> createRide(@Valid @RequestBody CreateRideRequest request) {
+
         RideResponse response = DummyData.createDummyRideResponse(12L, 10L, 123L, RideStatus.PENDING);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
