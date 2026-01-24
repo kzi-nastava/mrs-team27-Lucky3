@@ -2,9 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../env/environment';
-import { CreateRideRequest, RideRequirements } from './model/create-ride.model';
+import { CreateRideRequest } from './model/create-ride.model';
 import { LocationDto } from './model/location.model';
 import { EndRideRequest, RideCancellationRequest, RideResponse } from './model/ride-response.model';
+import { RideCreated } from './model/order-ride.model';
 
 export interface PageResponse<T> {
   content: T[];
@@ -27,7 +28,6 @@ export interface RideEstimationResponse {
   routePoints: RoutePoint[];
 }
 
-
 @Injectable({
   providedIn: 'root'
 })
@@ -40,8 +40,8 @@ export class RideService {
     return this.http.post<RideEstimationResponse>(`${this.apiUrl}/estimate`, request);
   }
 
-  orderRide(request: CreateRideRequest): Observable<RideEstimationResponse> {
-    return this.http.post<RideEstimationResponse>(`${this.apiUrl}`, request);
+  orderRide(request: CreateRideRequest): Observable<RideCreated> {
+    return this.http.post<RideCreated>(`${this.apiUrl}`, request);
   }
 
   getRide(id: number): Observable<RideResponse> {

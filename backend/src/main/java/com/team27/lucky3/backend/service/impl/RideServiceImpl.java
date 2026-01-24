@@ -292,6 +292,12 @@ public class RideServiceImpl implements RideService {
             response.setVehicleModel(assignedVehicle.getModel());
             response.setVehicleLicensePlate(assignedVehicle.getLicensePlates());
             response.setStops(request.getStops());
+            response.setRoutePoints(estimation.getRoutePoints());
+            response.setEstimatedTimeInMinutes(estimation.getEstimatedTimeInMinutes());
+            
+            response.setBabyTransport(request.getRequirements().isBabyTransport());
+            response.setPetTransport(request.getRequirements().isPetTransport());
+            response.setRequestedVehicleType(assignedVehicle.getVehicleType());
 
             return response;
         }

@@ -4,21 +4,25 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
 import { environment } from '../../../../env/environment';
-import { RideService, RideEstimationResponse } from '../../../infrastructure/rest/ride.service';
-import { CreateRideRequest} from '../../../infrastructure/rest/model/create-ride.model';
+
+import { RideService, RideEstimationResponse, RoutePoint } from '../../../infrastructure/rest/ride.service';
+import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
+
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { VehicleLocationResponse } from '../../../infrastructure/rest/model/vehicle-location.model';
+import { LocationDto } from '../../../infrastructure/rest/model/location.model';
 import { HttpClient } from '@angular/common/http';
 import { RideOrderingFormComponent} from '../ride-ordering-form/ride-ordering-form.component';
 import { RideOrderData } from '../model/order-ride-data.interface';
-import { RideEstimation } from '../model/order-ride-data.interface';
+import { RideCreated } from '../../../infrastructure/rest/model/order-ride.model';
 import { LinkPassengerFormComponent } from '../link-passenger-form/link-passenger-form.component';
 import {LinkedPassengersData} from '../model/link-passengers.interface';
+import { RideInfoPopupComponent } from '../ride-info-popup/ride-info-popup.component';
 
 @Component({
   selector: 'app-passenger-home',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, RideOrderingFormComponent, LinkPassengerFormComponent],
+  imports: [CommonModule, RouterModule, FormsModule, RideOrderingFormComponent, LinkPassengerFormComponent, RideInfoPopupComponent],
   templateUrl: './passenger-home.page.html',
   styles: []
 })
@@ -41,7 +45,8 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   pickupAddress = '';
   destinationAddress = '';
   isOrdering = false;
-  orderingResult: RideEstimation | null = null;
+  orderingResult!: RideCreated;
+  showPopup = false;
   orderingError = '';
   intermediateStops: string[] = [];
   selectedVehicleType: string = 'standard';
@@ -215,7 +220,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
 
     this.isOrdering = true;
     this.orderingError = '';
-    this.orderingResult = null;
+    //this.orderingResult = null;
     this.cdr.detectChanges();
 
     try {
@@ -241,7 +246,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
             latitude: coords.lat,
             longitude: coords.lng
           });
-          stopCoords.push(coords); // ADD THIS
+          stopCoords.push(coords);
         } else {
           console.warn(`Could not geocode stop: ${stopAddress}`);
         }
@@ -272,10 +277,51 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
       // Call Backend
       this.rideService.orderRide(request).subscribe({
         next: (response) => {
+          console.log('FULL response:', response);
+
           this.orderingResult = response;
-          // Pass stop coordinates to displayRoute
-          this.displayRoute(startCoords, destCoords, stopCoords, stops, response);
+
+          if(response.status === 'REJECTED') {
+            //TODO call popup with rejection reason
+            this.isOrdering = false;
+            this.showPopup = true;
+            this.clearRoute();
+            this.cdr.detectChanges();
+            return;
+          }
+
+          // Build routePoints safely with fallback
+          let routePoints: RoutePoint[];
+          if (response.routePoints && response.routePoints.length > 0) {
+            routePoints = response.routePoints;
+          } else {
+            routePoints = [
+              response.departure && { location: response.departure, order: 0 },
+              ...(response.stops ?? [])
+                .filter(stop => stop?.latitude != null && stop?.longitude != null)
+                .map((stop: LocationDto, i: number) => ({
+                  location: stop,
+                  order: i + 1
+                })),
+              response.destination && { 
+                location: response.destination, 
+                order: (response.stops?.length ?? 0) + 1 
+              }
+            ].filter(Boolean) as RoutePoint[];
+          }
+
+          const estimateResponse: RideEstimationResponse = {
+            estimatedCost: response.estimatedCost,
+            estimatedTimeInMinutes: response.estimatedTimeInMinutes,
+            estimatedDriverArrivalInMinutes: 676767,
+            estimatedDistance: response.distanceKm,
+            routePoints
+          };
+
+          this.displayRoute(startCoords, destCoords, stopCoords, stops, estimateResponse);
           this.isOrdering = false;
+          this.showPopup = true;
+
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -331,6 +377,9 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
       .addTo(this.map)
       .bindPopup('<b>Final Destination</b><br>' + this.destinationAddress);
 
+      console.log('RoutePoints:', estimation.routePoints);
+      console.log('First point:', estimation.routePoints?.[0]);
+      console.log('Location:', estimation.routePoints?.[0]?.location);
     // Draw Route (Yellow + Dashed)
     if (estimation.routePoints && estimation.routePoints.length > 0) {
       const latLngs = estimation.routePoints.map(p => 
@@ -382,7 +431,6 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   resetOrdering(): void {
     this.pickupAddress = '';
     this.destinationAddress = '';
-    this.orderingResult = null;
     this.orderingError = '';
     this.clearRoute();
     const { defaultLat, defaultLng, defaultZoom } = environment.map;
@@ -408,5 +456,9 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   linkPassengers(data: LinkedPassengersData): void {
     // Store emails in the global array for later usage
     this.linkedPassengers = data.emails;
+  }
+
+  closePopup(): void {
+    this.showPopup = false;
   }
 }

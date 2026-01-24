@@ -63,6 +63,13 @@
       >
       </app-ride-ordering-form>
       
+      <app-ride-info-popup 
+        *ngIf="showPopup"
+        [rideData]="orderingResult"
+        
+        (close)="closePopup()">
+      </app-ride-info-popup>
+
     </div>
   </div>
 

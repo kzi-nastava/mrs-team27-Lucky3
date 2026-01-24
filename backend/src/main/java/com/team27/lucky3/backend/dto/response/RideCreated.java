@@ -27,12 +27,15 @@ public class RideCreated{
     //vehicle details
     private String vehicleModel;
     private String vehicleLicensePlate;
-    private VehicleType vehicleType;
+    private Boolean babyTransport;
+    private Boolean petTransport;
+    private VehicleType requestedVehicleType;
 
     //Route details
     private LocationDto departure;
     private LocationDto destination;
     private List<LocationDto> stops;        // optional (keep if you support multi-stops)
+    private List<RoutePointResponse> routePoints;
 
     private List<String> passengersEmails;
 
@@ -54,10 +57,13 @@ public class RideCreated{
                 null,
                 null,
                 null,
+                null,
+                null,
                 r.getRequestedVehicleType(),
                 new LocationDto(r.getStartLocation().getAddress(), r.getStartLocation().getLatitude(), r.getStartLocation().getLongitude()),
                 new LocationDto(r.getEndLocation().getAddress(), r.getEndLocation().getLatitude(), r.getEndLocation().getLongitude()),
                 null, // stops
+                null,
                 r.getInvitedEmails(), // passengers emails
                 r.getScheduledTime(),
                 r.getDistance(),

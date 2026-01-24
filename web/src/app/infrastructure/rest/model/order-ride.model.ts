@@ -1,5 +1,6 @@
 import { LocationDto } from './location.model';
 import { RideRequirements } from './create-ride.model';
+import { RoutePointResponse } from '../model/ride-response.model';
 
 export enum RideStatus {
   PENDING = 'PENDING',
@@ -32,12 +33,15 @@ export interface RideCreated {
   // Vehicle details
   vehicleModel: string;
   vehicleLicensePlate: string;
-  requirements: RideRequirements;
+  babyTransport: boolean;
+  petTransport: boolean;
+  requestedVehicleType: VehicleType;
   
   // Route details
   departure: LocationDto;
   destination: LocationDto;
   stops: LocationDto[];
+  routePoints?: RoutePointResponse[];
   
   passengersEmails: string[];
   

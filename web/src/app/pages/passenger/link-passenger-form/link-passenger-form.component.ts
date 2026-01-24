@@ -27,17 +27,17 @@ export class LinkPassengerFormComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-    console.log('LinkPassengerFormComponent initialized');
+    //console.log('LinkPassengerFormComponent initialized');
   }
 
   ngOnChanges(): void {
-    console.log('showLinkForm changed to:', this.showLinkForm);
+    //console.log('showLinkForm changed to:', this.showLinkForm);
   }
 
   handleButtonClick(): void {
-    console.log('BUTTON CLICKED - showLinkForm before:', this.showLinkForm);
+    //console.log('BUTTON CLICKED - showLinkForm before:', this.showLinkForm);
     this.toggleForm.emit();
-    console.log('toggleForm emitted');
+    //console.log('toggleForm emitted');
   }
 
   get emailsArray(): FormArray {
