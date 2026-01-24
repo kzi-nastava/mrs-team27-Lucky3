@@ -6,7 +6,7 @@ import { RideRequestCardComponent } from '../../../shared/rides/ride-request-car
 import { LiveMapComponent, MapPoint } from '../../../shared/ui/live-map/live-map.component';
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
-import { RideService } from '../../../infrastructure/rest/ride.service';
+import { RideService, CreateRideRequest } from '../../../infrastructure/rest/ride.service';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 
@@ -40,6 +40,10 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   driverLocation: MapPoint | null = null;
   showAllFutureRides = false;
+
+  // Routes for map
+  rideRoute: MapPoint[] | null = null;
+  approachRoute: MapPoint[] | null = null;
 
   private readonly destroy$ = new Subject<void>();
   private driverId: number | null = null;
@@ -117,11 +121,11 @@ export class DashboardPage implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {
-          // Filter for active or useful rides manually if needed, or update backend API to support 'statusIn'
-          // For now, let's grab everything that isn't finished/cancelled to show "future" work
           const validStatuses = ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'SCHEDULED'];
           const relevant = (page.content ?? []).filter(r => validStatuses.includes(r.status as string));
           
+          this.rawRides = relevant;
+
           const mapped = relevant.map(r => this.toDashboardRide(r));
           
           // Sort: IN_PROGRESS first, then by scheduledTime
@@ -139,6 +143,16 @@ export class DashboardPage implements OnInit, OnDestroy {
           });
           
           this.futureRides = mapped;
+          
+          // If we have an active/pending ride, fetch its details to draw routes
+          const activeRide = relevant.find(r => r.id === mapped[0]?.id);
+          if (activeRide) {
+             this.fetchRoutesForRide(activeRide);
+          } else {
+             this.rideRoute = null;
+             this.approachRoute = null;
+          }
+
           this.cdr.detectChanges();
         },
         error: () => {
@@ -172,6 +186,68 @@ export class DashboardPage implements OnInit, OnDestroy {
     };
   }
 
+  private fetchRoutesForRide(ride: RideResponse): void {
+      // 1. Get Ride Route (Yellow)
+      // If backend gave detailed route points, use them. Else, estimate.
+      if (ride.routePoints && ride.routePoints.length > 2) {
+          this.rideRoute = ride.routePoints
+            .sort((a, b) => a.order - b.order)
+            .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+      } else {
+         // Fallback estimate ride itself if missing
+         const start = ride.departure ?? ride.start ?? ride.startLocation;
+         const end = ride.destination ?? ride.endLocation;
+         if (start && end) {
+             const req: CreateRideRequest = {
+                 start, destination: end, stops: ride.stops || [],
+                 passengerEmails: [], scheduledTime: null,
+                 requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+             };
+             this.rideService.estimateRide(req).subscribe(res => {
+                if(res.routePoints?.length) {
+                    this.rideRoute = res.routePoints.map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                    this.cdr.detectChanges();
+                }
+             });
+         }
+      }
+
+      // 2. Approach Route (Blue) - Driver to Pickup
+      // Only relevant if status is ACCEPTED (on way to pickup) or pending/scheduled if specifically showing that
+      // If IN_PROGRESS, driver is AT pickup or moving to dropoff, approach logic might differ (e.g. no approach needed, or approach is just segment to next stop)
+      // Spec says: "the route from the car to the start point"
+      
+      const shouldShowApproach = ride.status !== 'IN_PROGRESS' && ride.status !== 'FINISHED';
+      
+      if (shouldShowApproach && this.driverLocation && (ride.departure || ride.start || ride.startLocation)) {
+          const pickup = ride.departure ?? ride.start ?? ride.startLocation;
+          if (!pickup) return;
+
+          const req: CreateRideRequest = {
+              start: { address: '', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude },
+              destination: pickup,
+              stops: [],
+              passengerEmails: [], scheduledTime: null,
+              requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+          };
+          
+          this.rideService.estimateRide(req).subscribe({
+              next: (res) => {
+                  if (res.routePoints?.length) {
+                      this.approachRoute = res.routePoints.map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                      this.cdr.detectChanges();
+                  }
+              },
+              error: () => {
+                this.approachRoute = null;
+                this.cdr.detectChanges();
+              }
+          });
+      } else {
+          this.approachRoute = null;
+      }
+  }
+
   private fetchDriverLocation(): void {
     if (!this.driverId) return;
 
@@ -181,14 +257,33 @@ export class DashboardPage implements OnInit, OnDestroy {
       .subscribe({
       next: (vehicles) => {
         const mine = vehicles.find(v => v.driverId === this.driverId);
-        this.driverLocation = mine
-          ? { latitude: mine.latitude, longitude: mine.longitude }
-          : null;
-        this.cdr.detectChanges();
+        if (mine) {
+           this.driverLocation = { latitude: mine.latitude, longitude: mine.longitude };
+           
+           if (this.nextRide && !this.approachRoute) {
+               this.reloadRoutesIfMissing();
+           }
+           this.cdr.detectChanges();
+        } else {
+           this.driverLocation = null;
+           this.cdr.detectChanges();
+        }
       },
       error: () => {
         // Keep last known location if the request fails.
       }
     });
+  }
+
+  // Cache of raw ride objects
+  private rawRides: RideResponse[] = [];
+
+  private reloadRoutesIfMissing() {
+      if (!this.futureRides.length) return;
+      const activeId = this.futureRides[0].id;
+      const raw = this.rawRides.find(r => r.id === activeId);
+      if (raw) {
+          this.fetchRoutesForRide(raw);
+      }
   }
 }

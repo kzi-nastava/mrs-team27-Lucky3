@@ -2,7 +2,13 @@
   <div class="h-full flex flex-col lg:grid lg:grid-cols-4">
     <!-- Map (left 3/4) -->
     <div class="lg:col-span-3 relative flex-none basis-[40%] lg:basis-auto lg:h-full">
-      <app-active-ride-map class="absolute inset-0 z-0" [ride]="rideMapData" [routePolyline]="routePolyline" [driverLocation]="driverLocation"></app-active-ride-map>
+      <app-active-ride-map 
+        class="absolute inset-0 z-0" 
+        [ride]="rideMapData" 
+        [routePolyline]="routePolyline" 
+        [approachRoute]="approachRoute"
+        [driverLocation]="driverLocation">
+      </app-active-ride-map>
 
       <div class="absolute top-4 left-4 z-[2000] flex items-center gap-2 pointer-events-auto">
         <button (click)="goBack()" type="button" class="bg-gray-900/80 hover:bg-gray-900 text-gray-200 border border-gray-800 backdrop-blur px-3 py-2 rounded-lg text-sm">

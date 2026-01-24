@@ -33,10 +33,12 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Input() driverLocation: MapPoint | null = null;
   @Input() ride: ActiveRideMapData | null = null;
   @Input() routePolyline: MapPoint[] | null = null;
+  @Input() approachRoute: MapPoint[] | null = null; // Blue line
 
   private map: L.Map | null = null;
   private driverMarker: L.Marker | null = null;
   private routeLine: L.Polyline | null = null;
+  private approachLine: L.Polyline | null = null;
   private startMarker: L.Marker | null = null;
   private stopMarkers: L.Marker[] = [];
   private endMarker: L.Marker | null = null;
@@ -92,6 +94,7 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['ride']) this.syncRide();
     if (changes['routePolyline']) this.syncRide();
+    if (changes['approachRoute']) this.syncApproach();
     if (changes['driverLocation']) this.syncDriver();
   }
 
@@ -183,6 +186,24 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
 
     const bounds = L.latLngBounds(polyPoints as any);
     this.map.fitBounds(bounds, { padding: [40, 40] });
+  }
+
+  private syncApproach(): void {
+    if (!this.map) return;
+    this.approachLine?.remove();
+    this.approachLine = null;
+
+    if (!this.approachRoute || this.approachRoute.length < 2) return;
+
+    const latlngs = this.approachRoute.map(p => [p.latitude, p.longitude] as L.LatLngExpression);
+    this.approachLine = L.polyline(latlngs, {
+      color: '#3b82f6', // blue
+      weight: 4,
+      opacity: 0.8,
+      dashArray: '5, 10',
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(this.map);
   }
 
   private syncDriver(): void {

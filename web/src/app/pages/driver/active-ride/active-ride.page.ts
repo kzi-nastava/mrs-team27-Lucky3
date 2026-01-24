@@ -31,6 +31,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   rideMapData: ActiveRideMapData | null = null;
   routePolyline: MapPoint[] | null = null;
+  approachRoute: MapPoint[] | null = null; // Blue line
   driverLocation: MapPoint | null = null;
 
   // Live metrics
@@ -349,6 +350,40 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     if (r && (!this.routePolyline || this.routePolyline.length <= 2)) {
       this.fetchDetailedRoute(r);
     }
+    
+    // Also fetch approach route (Driver -> Pickup)
+    this.fetchApproachRoute(r);
+  }
+
+  private fetchApproachRoute(r: RideResponse): void {
+      const showApproach = r.status === 'ACCEPTED' || r.status === 'PENDING';
+      if (!showApproach) {
+          this.approachRoute = null;
+          return;
+      }
+      
+      const pickup = r.departure ?? r.start ?? r.startLocation;
+      // We need driver location. If not yet available, we might need to retry once it is.
+      // But usually active-ride polls location. We'll try here, otherwise poll should maybe trigger it.
+      // For now, let's just attempt if we have location.
+      
+      if (this.driverLocation && pickup) {
+          const req: CreateRideRequest = {
+              start: { address: '', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude },
+              destination: pickup,
+              stops: [],
+              passengerEmails: [], scheduledTime: null,
+              requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+          };
+          this.rideService.estimateRide(req).subscribe({
+              next: (res) => {
+                  if (res.routePoints?.length) {
+                       this.approachRoute = res.routePoints.map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                       this.cdr.detectChanges();
+                  }
+              }
+          });
+      }
   }
 
   private fetchDetailedRoute(r: RideResponse): void {
@@ -456,6 +491,12 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         const mine = vehicles.find(v => v.driverId === this.driverId);
         if (!mine) return;
         this.driverLocation = { latitude: mine.latitude, longitude: mine.longitude };
+
+        // Retry approach route if we didn't have location before and ride is accepted
+        if (!this.approachRoute && this.backendRide && (this.backendRide.status === 'ACCEPTED' || this.backendRide.status === 'PENDING')) {
+            this.fetchApproachRoute(this.backendRide);
+        }
+
         this.cdr.detectChanges();
       },
       error: () => {
