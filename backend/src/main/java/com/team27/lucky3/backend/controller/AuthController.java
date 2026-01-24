@@ -111,5 +111,11 @@ public class AuthController {
         authService.activateDriverWithPassword(initialPassword.getToken(), initialPassword.getPassword());
         return ResponseEntity.noContent().build();
     }
-}
 
+    // Validate password reset token (for reset-password page pre-check)
+    @GetMapping("/reset-password/validate")
+    public ResponseEntity<Void> validateResetPasswordToken(@RequestParam @NotBlank String token) {
+        boolean valid = authService.isPasswordResetTokenValid(token);
+        return valid ? ResponseEntity.noContent().build() : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+}
