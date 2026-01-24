@@ -58,7 +58,8 @@ public class RideServiceImpl implements RideService {
 
     private static final double PRICE_PER_KM = 120.0;
 
-    private static final String OSRM_API_URL = "http://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson";
+    // Base OSRM URL without coordinates
+    private static final String OSRM_Base_URL = "http://router.project-osrm.org/route/v1/driving/";
 
     @Override
     public RideEstimationResponse estimateRide(CreateRideRequest request) {
@@ -66,10 +67,19 @@ public class RideServiceImpl implements RideService {
         LocationDto end = request.getDestination();
         VehicleType type = request.getRequirements() != null ? request.getRequirements().getVehicleType() : VehicleType.STANDARD;
 
+        // Construct coordinates string: start;stop1;stop2;end
+        StringBuilder coords = new StringBuilder();
+        coords.append(start.getLongitude()).append(",").append(start.getLatitude());
+
+        if (request.getStops() != null) {
+            for (LocationDto stop : request.getStops()) {
+                coords.append(";").append(stop.getLongitude()).append(",").append(stop.getLatitude());
+            }
+        }
+        coords.append(";").append(end.getLongitude()).append(",").append(end.getLatitude());
+
         // Fetch Route from OSRM
-        String url = String.format(OSRM_API_URL,
-                start.getLongitude(), start.getLatitude(),
-                end.getLongitude(), end.getLatitude());
+        String url = OSRM_Base_URL + coords.toString() + "?overview=full&geometries=geojson";
 
         double distanceKm = 0.0;
         int durationMinutes = 0;
@@ -105,6 +115,7 @@ public class RideServiceImpl implements RideService {
             // Fallback to Haversine if OSRM fails (or handle error appropriately)
             System.err.println("OSRM Routing failed: " + e.getMessage());
             distanceKm = calculateHaversineDistance(mapLocation(start), mapLocation(end));
+            // Add stops to fallback distance calculation if needed, but simple for now
             durationMinutes = (int) Math.ceil(distanceKm * 1.2); // Rough estimate
             // Add at least start and end points
             routePoints.add(new RoutePointResponse(start, 0));
@@ -165,13 +176,23 @@ public class RideServiceImpl implements RideService {
                     .collect(Collectors.toList()));
         }
 
+        // Use real estimation logic
+        RideEstimationResponse estimation = estimateRide(request);
+        ride.setEstimatedCost(estimation.getEstimatedCost());
+        ride.setDistance(estimation.getEstimatedDistance());
+        
+        // Save detailed route points
+        if (estimation.getRoutePoints() != null) {
+            ride.setRoutePoints(estimation.getRoutePoints().stream()
+                .map(rp -> new Location("", rp.getLocation().getLatitude(), rp.getLocation().getLongitude()))
+                .collect(Collectors.toList()));
+        }
+
         ride.setPassengers(Set.of(passenger));
         ride.setStatus(RideStatus.PENDING);
         ride.setRequestedVehicleType(request.getRequirements().getVehicleType());
         ride.setBabyTransport(request.getRequirements().isBabyTransport());
         ride.setPetTransport(request.getRequirements().isPetTransport());
-        ride.setEstimatedCost(450.0); // Dummy estimation
-        ride.setDistance(3.5); // Dummy distance
         ride.setInvitedEmails(request.getPassengerEmails());
 
         Ride savedRide = rideRepository.save(ride);
@@ -440,6 +461,15 @@ public class RideServiceImpl implements RideService {
             res.setDestination(new LocationDto(ride.getEndLocation().getAddress(), ride.getEndLocation().getLatitude(), ride.getEndLocation().getLongitude()));
         }
         res.setScheduledTime(ride.getScheduledTime());
+
+        if (ride.getRoutePoints() != null && !ride.getRoutePoints().isEmpty()) {
+            List<RoutePointResponse> routePoints = new ArrayList<>();
+            int order = 0;
+            for (Location loc : ride.getRoutePoints()) {
+                routePoints.add(new RoutePointResponse(new LocationDto(null, loc.getLatitude(), loc.getLongitude()), order++));
+            }
+            res.setRoutePoints(routePoints);
+        }
 
         if (ride.getDriver() != null) {
             // Minimal driver info

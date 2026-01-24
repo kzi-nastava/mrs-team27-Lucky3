@@ -7,7 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { ActiveRideMapComponent, ActiveRideMapData, MapPoint } from '../../../shared/ui/active-ride-map/active-ride-map.component';
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
-import { RideService } from '../../../infrastructure/rest/ride.service';
+import { RideService, CreateRideRequest } from '../../../infrastructure/rest/ride.service';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 import { environment } from '../../../../env/environment';
 
@@ -60,6 +60,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private completedStopIndexes = new Set<number>();
 
   private readonly geocodeEnabled = true;
+  private pollErrors = 0;
 
   constructor(
     private route: ActivatedRoute,
@@ -343,6 +344,48 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     }
     
     this.cdr.detectChanges();
+
+    // If routePolyline is missing or too simple, try to fetch detailed route from API
+    if (r && (!this.routePolyline || this.routePolyline.length <= 2)) {
+      this.fetchDetailedRoute(r);
+    }
+  }
+
+  private fetchDetailedRoute(r: RideResponse): void {
+    const start = r.departure ?? r.start ?? r.startLocation;
+    const end = r.destination ?? r.endLocation;
+
+    if (!start || !end) return;
+
+    const request: CreateRideRequest = {
+      start: start,
+      destination: end,
+      stops: r.stops ?? [],
+      passengerEmails: [], // not needed
+      scheduledTime: null,
+      requirements: {
+        vehicleType: r.vehicleType || 'STANDARD',
+        babyTransport: r.babyTransport ?? false,
+        petTransport: r.petTransport ?? false
+      }
+    };
+
+    this.rideService.estimateRide(request).subscribe({
+      next: (est) => {
+        if (est.routePoints && est.routePoints.length > 0) {
+          const sorted = est.routePoints.sort((a, b) => a.order - b.order);
+          const poly = sorted
+            .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }))
+            .filter(p => this.isValidCoordinate(p.latitude, p.longitude));
+
+          if (poly.length > 2) {
+            this.routePolyline = poly;
+            this.cdr.detectChanges();
+          }
+        }
+      },
+      error: () => { /* ignore */ }
+    });
   }
 
   private isValidCoordinate(lat: any, lng: any): boolean {
@@ -398,15 +441,25 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private pollDriverLocation(): void {
     if (!this.driverId) return;
 
+    // Stop polling if we have too many consecutive errors (e.g. backend down)
+    if (this.pollErrors > 5) {
+      if (this.locationPoller) {
+        clearInterval(this.locationPoller);
+        this.locationPoller = undefined;
+      }
+      return;
+    }
+
     this.vehicleService.getActiveVehicles().subscribe({
       next: (vehicles) => {
+        this.pollErrors = 0;
         const mine = vehicles.find(v => v.driverId === this.driverId);
         if (!mine) return;
         this.driverLocation = { latitude: mine.latitude, longitude: mine.longitude };
         this.cdr.detectChanges();
       },
       error: () => {
-        // ignore
+        this.pollErrors++;
       }
     });
   }

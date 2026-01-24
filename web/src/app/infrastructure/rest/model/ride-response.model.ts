@@ -44,6 +44,8 @@ export interface RideResponse {
   estimatedTimeInMinutes?: number;
 
   vehicleType?: string;
+  babyTransport?: boolean;
+  petTransport?: boolean;
 
   // Timestamps
   startTime?: string;

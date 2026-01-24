@@ -70,6 +70,15 @@ public class Ride {
     })
     private List<Location> stops;
 
+    @ElementCollection
+    @CollectionTable(name = "ride_route_points", joinColumns = @JoinColumn(name = "ride_id"))
+    @AttributeOverrides({
+            @AttributeOverride(name = "address", column = @Column(name = "rp_address")),
+            @AttributeOverride(name = "latitude", column = @Column(name = "rp_latitude")),
+            @AttributeOverride(name = "longitude", column = @Column(name = "rp_longitude"))
+    })
+    private List<Location> routePoints;
+
     @ManyToOne
     @JoinColumn(name = "driver_id")
     private User driver;
