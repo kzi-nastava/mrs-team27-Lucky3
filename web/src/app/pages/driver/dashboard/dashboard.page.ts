@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatCardComponent } from '../../../shared/ui/stat-card/stat-card.component';
 import { ToggleSwitchComponent } from '../../../shared/ui/toggle-switch/toggle-switch.component';
@@ -65,7 +65,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   constructor(
     private vehicleService: VehicleService,
     private authService: AuthService,
-    private rideService: RideService
+    private rideService: RideService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -138,6 +139,7 @@ export class DashboardPage implements OnInit, OnDestroy {
           });
           
           this.futureRides = mapped;
+          this.cdr.detectChanges();
         },
         error: () => {
           // keep previous list on failure
@@ -182,6 +184,7 @@ export class DashboardPage implements OnInit, OnDestroy {
         this.driverLocation = mine
           ? { latitude: mine.latitude, longitude: mine.longitude }
           : null;
+        this.cdr.detectChanges();
       },
       error: () => {
         // Keep last known location if the request fails.
