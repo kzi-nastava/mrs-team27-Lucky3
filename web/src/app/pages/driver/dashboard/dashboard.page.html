@@ -97,7 +97,7 @@
                 <span class="text-gray-300 text-xl">!</span>
               </div>
               <div class="text-white font-semibold">No accepted rides yet</div>
-              <div class="text-gray-400 text-sm mt-1">You’ll see your next scheduled ride here.</div>
+              <div class="text-gray-400 text-sm mt-1">You'll see your next scheduled ride here.</div>
             </div>
           </ng-template>
         </div>
@@ -108,7 +108,12 @@
             <h2 class="text-lg font-bold">Map</h2>
             <span class="text-xs text-gray-400" *ngIf="!driverLocation">Location unavailable</span>
           </div>
-          <app-live-map [driverLocation]="driverLocation" heightClass="h-[360px]"></app-live-map>
+          <app-live-map 
+            [driverLocation]="driverLocation" 
+            [rideRoute]="rideRoute"
+            [approachRoute]="approachRoute"
+            heightClass="h-[360px]">
+          </app-live-map>
         </div>
       </div>
 

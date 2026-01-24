@@ -33,10 +33,12 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Input() driverLocation: MapPoint | null = null;
   @Input() ride: ActiveRideMapData | null = null;
   @Input() routePolyline: MapPoint[] | null = null;
+  @Input() approachRoute: MapPoint[] | null = null; // Blue line
 
   private map: L.Map | null = null;
   private driverMarker: L.Marker | null = null;
   private routeLine: L.Polyline | null = null;
+  private approachLine: L.Polyline | null = null;
   private startMarker: L.Marker | null = null;
   private stopMarkers: L.Marker[] = [];
   private endMarker: L.Marker | null = null;
@@ -45,11 +47,12 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   private invalidateQueued = false;
   private onWindowResize = () => this.queueInvalidateSize();
 
+  // Blue circle icon for vehicle location
   private driverIcon = L.divIcon({
     className: '',
-    html: `<div style="width:18px;height:18px;border-radius:9999px;background:rgba(234,179,8,0.95);box-shadow:0 0 0 6px rgba(234,179,8,0.20), 0 0 18px rgba(234,179,8,0.35);"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9]
+    html: `<div style="width:16px;height:16px;border-radius:9999px;background:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,0.25);border:2px solid #fff;"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8]
   });
 
   private startIcon = L.divIcon({
@@ -92,7 +95,13 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['ride']) this.syncRide();
     if (changes['routePolyline']) this.syncRide();
+    if (changes['approachRoute']) this.syncApproach();
     if (changes['driverLocation']) this.syncDriver();
+    
+    // Always ensure approach line is on top after any sync
+    if (this.approachLine) {
+      this.approachLine.bringToFront();
+    }
   }
 
   ngOnDestroy(): void {
@@ -183,6 +192,25 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
 
     const bounds = L.latLngBounds(polyPoints as any);
     this.map.fitBounds(bounds, { padding: [40, 40] });
+  }
+
+  private syncApproach(): void {
+    if (!this.map) return;
+    this.approachLine?.remove();
+    this.approachLine = null;
+
+    if (!this.approachRoute || this.approachRoute.length < 2) return;
+
+    const latlngs = this.approachRoute.map(p => [p.latitude, p.longitude] as L.LatLngExpression);
+    this.approachLine = L.polyline(latlngs, {
+      color: '#00a2ff', // light blue (sky-300)
+      weight: 3,
+      opacity: 0.95,
+      dashArray: '8, 8',
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(this.map);
+    this.approachLine.bringToFront();
   }
 
   private syncDriver(): void {

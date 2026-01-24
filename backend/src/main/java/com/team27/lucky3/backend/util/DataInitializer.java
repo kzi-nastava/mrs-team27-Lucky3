@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -51,7 +52,7 @@ public class DataInitializer implements CommandLineRunner {
         driver.setPassword(passwordEncoder.encode("password"));
         driver.setRole(UserRole.DRIVER);
         driver.setActive(true);
-        driver.setAddress("123 Driver Lane");
+        driver.setAddress("Bulevar Oslobodjenja 1, Novi Sad");
         driver.setPhoneNumber("555-1234");
         driver.setEnabled(true);
         userRepository.save(driver);
@@ -63,7 +64,7 @@ public class DataInitializer implements CommandLineRunner {
         passenger.setEmail("passenger@example.com");
         passenger.setPassword(passwordEncoder.encode("password"));
         passenger.setRole(UserRole.PASSENGER);
-        passenger.setAddress("456 Passenger Ave");
+        passenger.setAddress("Jevrejska 10, Novi Sad");
         passenger.setPhoneNumber("555-5678");
         passenger.setEnabled(true);
         userRepository.save(passenger);
@@ -75,7 +76,7 @@ public class DataInitializer implements CommandLineRunner {
         admin.setEmail("admin@example.com");
         admin.setPassword(passwordEncoder.encode("password"));
         admin.setRole(UserRole.ADMIN);
-        admin.setAddress("789 Admin Blvd");
+        admin.setAddress("Trg Slobode 1, Novi Sad");
         admin.setPhoneNumber("555-9999");
         admin.setEnabled(true);
         userRepository.save(admin);
@@ -89,7 +90,9 @@ public class DataInitializer implements CommandLineRunner {
         vehicle.setSeatCount(4);
         vehicle.setBabyTransport(true);
         vehicle.setPetTransport(false);
-        vehicle.setCurrentLocation(new Location("Central Station", 40.7128, -74.0060));
+        // Changed to a location near "Trg Slobode" so we have a realistic approach route
+        // E.g., near "Srpsko Narodno Pozoriste"
+        vehicle.setCurrentLocation(new Location("Srpsko Narodno Pozoriste, Novi Sad", 45.2546, 19.8425));
         vehicleRepository.save(vehicle);
 
         // 5. Create Rides
@@ -99,12 +102,12 @@ public class DataInitializer implements CommandLineRunner {
         ridePending.setDriver(driver);
         ridePending.setPassengers(Collections.singleton(passenger));
         ridePending.setStatus(RideStatus.PENDING);
-        ridePending.setStartLocation(new Location("Times Square", 40.7580, -73.9855));
-        ridePending.setEndLocation(new Location("Central Park", 40.785091, -73.968285));
+        ridePending.setStartLocation(new Location("Trg Slobode, Novi Sad", 45.2551, 19.8450));
+        ridePending.setEndLocation(new Location("Petrovaradinska Tvrdjava, Novi Sad", 45.2530, 19.8610));
         ridePending.setScheduledTime(LocalDateTime.now().plusHours(2));
-        ridePending.setEstimatedCost(15.50);
+        ridePending.setEstimatedCost(450.00);
         ridePending.setDistance(3.2);
-        ridePending.setTotalCost(15.50);
+        ridePending.setTotalCost(450.00);
         ridePending.setPetTransport(false);
         ridePending.setBabyTransport(false);
         ridePending.setRequestedVehicleType(VehicleType.STANDARD);
@@ -115,17 +118,17 @@ public class DataInitializer implements CommandLineRunner {
         rideActive.setDriver(driver);
         rideActive.setPassengers(Collections.singleton(passenger));
         rideActive.setStatus(RideStatus.IN_PROGRESS);
-        rideActive.setStartLocation(new Location("Empire State Building", 40.748817, -73.985428));
-        rideActive.setEndLocation(new Location("Brooklyn Bridge", 40.7061, -73.9969));
+        rideActive.setStartLocation(new Location("Promenada Shopping Center, Novi Sad", 45.2420, 19.8520));
+        rideActive.setEndLocation(new Location("Strand Beach, Novi Sad", 45.2429, 19.8424));
         rideActive.setStartTime(LocalDateTime.now().minusMinutes(10));
-        rideActive.setEstimatedCost(20.00);
-        rideActive.setDistance(5.5);
-        rideActive.setTotalCost(20.00); // will be updated
+        rideActive.setEstimatedCost(320.00);
+        rideActive.setDistance(2.1);
+        rideActive.setTotalCost(320.00); // will be updated
         rideActive.setPetTransport(false);
         rideActive.setBabyTransport(true);
         rideActive.setRequestedVehicleType(VehicleType.STANDARD);
         // Important: Add stops if needed, or empty list
-        rideActive.setStops(Collections.emptyList());
+        rideActive.setStops(List.of(new Location("Univerzitetski Park, Novi Sad", 45.2455, 19.8510)));
         rideRepository.save(rideActive);
 
         // Ride 3: FINISHED
@@ -133,12 +136,12 @@ public class DataInitializer implements CommandLineRunner {
         rideFinished.setDriver(driver);
         rideFinished.setPassengers(Collections.singleton(passenger));
         rideFinished.setStatus(RideStatus.FINISHED);
-        rideFinished.setStartLocation(new Location("JFK Airport", 40.6413, -73.7781));
-        rideFinished.setEndLocation(new Location("Manhattan", 40.7831, -73.9712));
+        rideFinished.setStartLocation(new Location("Liman Park, Novi Sad", 45.248, 19.840));
+        rideFinished.setEndLocation(new Location("Spens, Novi Sad", 45.2465, 19.8480));
         rideFinished.setStartTime(LocalDateTime.now().minusDays(1).minusHours(1));
         rideFinished.setEndTime(LocalDateTime.now().minusDays(1));
-        rideFinished.setTotalCost(45.00);
-        rideFinished.setDistance(25.0);
+        rideFinished.setTotalCost(280.00);
+        rideFinished.setDistance(1.5);
         rideRepository.save(rideFinished);
 
         System.out.println("Dummy data initialized. Driver: driver@example.com / password");

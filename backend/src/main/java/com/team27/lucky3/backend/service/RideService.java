@@ -29,4 +29,5 @@ public interface RideService {
     );
     RideEstimationResponse estimateRide(CreateRideRequest request);
     void reportInconsistency(Long rideId, InconsistencyRequest request);
+    RideResponse getActiveRide(Long userId);
 }

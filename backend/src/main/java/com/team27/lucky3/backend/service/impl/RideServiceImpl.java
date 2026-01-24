@@ -58,7 +58,8 @@ public class RideServiceImpl implements RideService {
 
     private static final double PRICE_PER_KM = 120.0;
 
-    private static final String OSRM_API_URL = "http://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson";
+    // Base OSRM URL without coordinates
+    private static final String OSRM_Base_URL = "http://router.project-osrm.org/route/v1/driving/";
 
     @Override
     public RideEstimationResponse estimateRide(CreateRideRequest request) {
@@ -66,10 +67,19 @@ public class RideServiceImpl implements RideService {
         LocationDto end = request.getDestination();
         VehicleType type = request.getRequirements() != null ? request.getRequirements().getVehicleType() : VehicleType.STANDARD;
 
+        // Construct coordinates string: start;stop1;stop2;end
+        StringBuilder coords = new StringBuilder();
+        coords.append(start.getLongitude()).append(",").append(start.getLatitude());
+
+        if (request.getStops() != null) {
+            for (LocationDto stop : request.getStops()) {
+                coords.append(";").append(stop.getLongitude()).append(",").append(stop.getLatitude());
+            }
+        }
+        coords.append(";").append(end.getLongitude()).append(",").append(end.getLatitude());
+
         // Fetch Route from OSRM
-        String url = String.format(OSRM_API_URL,
-                start.getLongitude(), start.getLatitude(),
-                end.getLongitude(), end.getLatitude());
+        String url = OSRM_Base_URL + coords.toString() + "?overview=full&geometries=geojson";
 
         double distanceKm = 0.0;
         int durationMinutes = 0;
@@ -105,6 +115,7 @@ public class RideServiceImpl implements RideService {
             // Fallback to Haversine if OSRM fails (or handle error appropriately)
             System.err.println("OSRM Routing failed: " + e.getMessage());
             distanceKm = calculateHaversineDistance(mapLocation(start), mapLocation(end));
+            // Add stops to fallback distance calculation if needed, but simple for now
             durationMinutes = (int) Math.ceil(distanceKm * 1.2); // Rough estimate
             // Add at least start and end points
             routePoints.add(new RoutePointResponse(start, 0));
@@ -165,13 +176,23 @@ public class RideServiceImpl implements RideService {
                     .collect(Collectors.toList()));
         }
 
+        // Use real estimation logic
+        RideEstimationResponse estimation = estimateRide(request);
+        ride.setEstimatedCost(estimation.getEstimatedCost());
+        ride.setDistance(estimation.getEstimatedDistance());
+        
+        // Save detailed route points
+        if (estimation.getRoutePoints() != null) {
+            ride.setRoutePoints(estimation.getRoutePoints().stream()
+                .map(rp -> new Location("", rp.getLocation().getLatitude(), rp.getLocation().getLongitude()))
+                .collect(Collectors.toList()));
+        }
+
         ride.setPassengers(Set.of(passenger));
         ride.setStatus(RideStatus.PENDING);
         ride.setRequestedVehicleType(request.getRequirements().getVehicleType());
         ride.setBabyTransport(request.getRequirements().isBabyTransport());
         ride.setPetTransport(request.getRequirements().isPetTransport());
-        ride.setEstimatedCost(450.0); // Dummy estimation
-        ride.setDistance(3.5); // Dummy distance
         ride.setInvitedEmails(request.getPassengerEmails());
 
         Ride savedRide = rideRepository.save(ride);
@@ -441,22 +462,40 @@ public class RideServiceImpl implements RideService {
         }
         res.setScheduledTime(ride.getScheduledTime());
 
+        if (ride.getRoutePoints() != null && !ride.getRoutePoints().isEmpty()) {
+            List<RoutePointResponse> routePoints = new ArrayList<>();
+            int order = 0;
+            for (Location loc : ride.getRoutePoints()) {
+                routePoints.add(new RoutePointResponse(new LocationDto(null, loc.getLatitude(), loc.getLongitude()), order++));
+            }
+            res.setRoutePoints(routePoints);
+        }
+
         if (ride.getDriver() != null) {
             // Minimal driver info
-            Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
+            Vehicle vehicle = ride.getDriver().getVehicle();
             VehicleInformation vInfo = null;
             String model = null;
             String plates = null;
+            LocationDto vehicleLocation = null;
             if(vehicle != null) {
                  vInfo = new VehicleInformation(vehicle.getModel(), vehicle.getVehicleType(), vehicle.getLicensePlates(), vehicle.getSeatCount(), vehicle.isBabyTransport(), vehicle.isPetTransport(), ride.getDriver().getId());
                  model = vehicle.getModel();
                  plates = vehicle.getLicensePlates();
+                 if (vehicle.getCurrentLocation() != null) {
+                     vehicleLocation = new LocationDto(
+                             vehicle.getCurrentLocation().getAddress(),
+                             vehicle.getCurrentLocation().getLatitude(),
+                             vehicle.getCurrentLocation().getLongitude()
+                     );
+                 }
             }
             // Logic to get driver status/time would be complex, simplifying here
             DriverResponse dr = new DriverResponse(ride.getDriver().getId(), ride.getDriver().getName(), ride.getDriver().getSurname(), ride.getDriver().getEmail(), "/api/users/"+ride.getDriver().getId()+"/profile-image", ride.getDriver().getRole(), ride.getDriver().getPhoneNumber(), ride.getDriver().getAddress(), vInfo, ride.getDriver().isActive(), ride.getDriver().isBlocked(), "0h 0m");
             res.setDriver(dr);
             res.setModel(model);
             res.setLicensePlates(plates);
+            res.setVehicleLocation(vehicleLocation);
         }
 
         if (ride.getPassengers() != null) {
@@ -600,5 +639,38 @@ public class RideServiceImpl implements RideService {
         report.setReporter(reporter);
 
         inconsistencyReportRepository.save(report);
+    }
+
+    @Override
+    public RideResponse getActiveRide(Long userId) {
+        if (userId == null) {
+            User current = getCurrentUser();
+            if (current == null) throw new ResourceNotFoundException("User not found");
+            userId = current.getId();
+        }
+
+        final Long finalUserId = userId;
+        Specification<Ride> spec = (root, query, cb) -> {
+            Join<Ride, User> driver = root.join("driver", jakarta.persistence.criteria.JoinType.LEFT);
+            Join<Ride, User> passengers = root.join("passengers", jakarta.persistence.criteria.JoinType.LEFT);
+
+            Predicate isUser = cb.or(
+                    cb.equal(driver.get("id"), finalUserId),
+                    cb.equal(passengers.get("id"), finalUserId)
+            );
+
+            Predicate isActive = cb.or(
+                    cb.equal(root.get("status"), RideStatus.ACTIVE),
+                    cb.equal(root.get("status"), RideStatus.IN_PROGRESS),
+                    cb.equal(root.get("status"), RideStatus.ACCEPTED)
+            );
+
+            return cb.and(isUser, isActive);
+        };
+
+        return rideRepository.findAll(spec).stream()
+                .findFirst()
+                .map(this::mapToResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("No active ride for user: " + finalUserId));
     }
 }

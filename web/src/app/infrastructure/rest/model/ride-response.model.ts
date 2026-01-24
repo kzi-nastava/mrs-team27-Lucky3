@@ -44,6 +44,11 @@ export interface RideResponse {
   estimatedTimeInMinutes?: number;
 
   vehicleType?: string;
+  model?: string;
+  licensePlates?: string;
+  vehicleLocation?: LocationDto;
+  babyTransport?: boolean;
+  petTransport?: boolean;
 
   // Timestamps
   startTime?: string;
