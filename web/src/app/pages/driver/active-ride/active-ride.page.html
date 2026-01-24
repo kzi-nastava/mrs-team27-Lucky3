@@ -135,9 +135,9 @@
           <button 
             type="button" 
             (click)="confirmCancelRide()" 
-            [disabled]="isCancelling || !cancelReason?.trim()"
+            [disabled]="isCancelling || !cancelReason.trim()"
             class="flex-1 py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:opacity-50 disabled:active:scale-100"
-            [ngClass]="(!cancelReason?.trim() || isCancelling) ? 'bg-red-900/50 text-red-200/50 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20'">
+            [ngClass]="(!cancelReason.trim() || isCancelling) ? 'bg-red-900/50 text-red-200/50 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20'">
             {{ isCancelling ? 'Cancelling...' : 'Confirm Cancel' }}
           </button>
         </div>
