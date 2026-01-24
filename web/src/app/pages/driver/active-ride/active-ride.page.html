@@ -1,4 +1,4 @@
-<div class="bg-black text-white h-full overflow-hidden">
+<div class="bg-black text-white h-full overflow-hidden" *ngIf="ride; else loading">
   <div class="h-full flex flex-col lg:grid lg:grid-cols-4">
     <!-- Map (left 3/4) -->
     <div class="lg:col-span-3 relative flex-none basis-[40%] lg:basis-auto lg:h-full">
@@ -76,11 +76,22 @@
         </div>
       </div>
 
-      <!-- End Ride button -->
-      <div class="pt-4 sticky bottom-0 bg-[#0B0B0C]">
-        <button type="button" (click)="openEndModal()" class="w-full py-3 rounded-xl font-bold bg-red-500 hover:bg-red-400 text-white transition-colors">
-          End Ride
-        </button>
+      <!-- Controls -->
+      <div class="pt-4 sticky bottom-0 bg-[#0B0B0C] space-y-3">
+        <ng-container *ngIf="rideStatus === 'PENDING' || rideStatus === 'ACCEPTED'">
+          <button type="button" (click)="startRide()" class="w-full py-3 rounded-xl font-bold bg-yellow-500 hover:bg-yellow-400 text-black transition-colors">
+            Start Ride
+          </button>
+          <button type="button" (click)="cancelRide()" class="w-full py-3 rounded-xl font-bold bg-red-500 hover:bg-red-400 text-white transition-colors">
+            Cancel Ride
+          </button>
+        </ng-container>
+
+        <ng-container *ngIf="rideStatus === 'IN_PROGRESS' || rideStatus === 'ACTIVE'">
+          <button type="button" (click)="openEndModal()" class="w-full py-3 rounded-xl font-bold bg-red-500 hover:bg-red-400 text-white transition-colors">
+            End Ride
+          </button>
+        </ng-container>
       </div>
     </div>
   </div>
@@ -169,3 +180,17 @@
     </div>
   </div>
 </div>
+
+<ng-template #loading>
+  <div class="h-full w-full flex items-center justify-center bg-black text-white">
+    <div class="flex flex-col items-center gap-4" *ngIf="!loadingError">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      <div class="text-gray-400">Loading ride details...</div>
+    </div>
+    <div class="flex flex-col items-center gap-4" *ngIf="loadingError">
+      <div class="text-red-500 font-bold text-xl">Error</div>
+      <div class="text-gray-400">{{ loadingError }}</div>
+      <button (click)="goBack()" class="mt-4 bg-gray-800 px-4 py-2 rounded text-white">Back to Dashboard</button>
+    </div>
+  </div>
+</ng-template>

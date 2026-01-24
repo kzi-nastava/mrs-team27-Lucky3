@@ -34,6 +34,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Join;
 
 import static com.team27.lucky3.backend.entity.enums.VehicleType.VAN;
 
@@ -348,6 +354,44 @@ public class RideServiceImpl implements RideService {
                 .orElseThrow(() -> new ResourceNotFoundException("Ride not found with id: " + id));
     }
 
+    @Override
+    public RideResponse getRideDetails(Long id) {
+        return mapToResponse(findById(id));
+    }
+
+    @Override
+    public Page<RideResponse> getRidesHistory(Pageable pageable, LocalDateTime fromDate, LocalDateTime toDate, Long driverId, Long passengerId, String status) {
+        Specification<Ride> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (driverId != null) {
+                predicates.add(cb.equal(root.get("driver").get("id"), driverId));
+            }
+            if (passengerId != null) {
+                Join<Ride, User> passengers = root.join("passengers");
+                predicates.add(cb.equal(passengers.get("id"), passengerId));
+            }
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), RideStatus.valueOf(status)));
+            }
+            if (fromDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("startTime"), fromDate));
+            }
+            if (toDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("endTime"), toDate));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Ride> ridesPage = rideRepository.findAll(spec, pageable);
+        List<RideResponse> dtos = ridesPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, ridesPage.getTotalElements());
+    }
+
     private void checkAndHandleInactiveRequest(User driver) {
         if (driver != null && driver.isInactiveRequested()) {
             driver.setActive(false);
@@ -418,6 +462,12 @@ public class RideServiceImpl implements RideService {
         if (ride.getPassengers() != null) {
              List<UserResponse> passengers = ride.getPassengers().stream().map(p -> new UserResponse(p.getId(), p.getName(), p.getSurname(), p.getEmail(), "/api/users/"+p.getId()+"/profile-image", p.getRole(), p.getPhoneNumber(), p.getAddress())).collect(Collectors.toList());
              res.setPassengers(passengers);
+        }
+
+        if (ride.getStops() != null) {
+            res.setStops(ride.getStops().stream()
+                    .map(s -> new LocationDto(s.getAddress(), s.getLatitude(), s.getLongitude()))
+                    .collect(Collectors.toList()));
         }
 
         return res;

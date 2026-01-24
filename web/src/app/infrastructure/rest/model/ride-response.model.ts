@@ -21,7 +21,7 @@ export interface RideResponse {
 
   // reference_backend shape
   driver?: { id?: number } | null;
-  passengers?: Array<{ id?: number }> | null;
+  passengers?: Array<{ id?: number; name?: string; email?: string }> | null;
   departure?: LocationDto;
   destination?: LocationDto;
   scheduledTime?: string;
@@ -45,9 +45,17 @@ export interface RideResponse {
 
   vehicleType?: string;
 
+  // Timestamps
+  startTime?: string;
+  endTime?: string;
+
   // End ride flags
   passengersExited?: boolean;
   paid?: boolean;
+  
+  // Additional status info
+  panicPressed?: boolean;
+  rejectionReason?: string;
 }
 
 export interface EndRideRequest {

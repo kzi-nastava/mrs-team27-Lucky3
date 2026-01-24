@@ -108,7 +108,7 @@ public class AuthController {
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
     @PutMapping(value = "/driver-activation/password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody SetInitialPassword initialPassword) {
-        authService.activateDriverWithPassword(initialPassword.getToken(), initialPassword.getPassword());
+//        authService.activateDriverWithPassword(initialPassword.getToken(), initialPassword.getPassword());
         return ResponseEntity.noContent().build();
     }
 

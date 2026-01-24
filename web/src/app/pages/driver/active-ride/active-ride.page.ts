@@ -20,11 +20,14 @@ import { environment } from '../../../../env/environment';
 })
 export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private rideId: number | null = null;
-
-  ride: { type: string; pickup: string; dropoff: string } | null = null;
+  // Updated type definition to include undefined/null
+  ride: { type?: string; pickup?: string; dropoff?: string } | null | undefined = null;
+  
   rideStops: { address: string; latitude?: number; longitude?: number }[] = [];
 
   backendRide: RideResponse | null = null;
+  rideStatus: string = '';
+  loadingError: string | null = null;
 
   rideMapData: ActiveRideMapData | null = null;
   routePolyline: MapPoint[] | null = null;
@@ -73,13 +76,19 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     this.rideId = Number.isFinite(parsed) ? parsed : null;
 
     this.driverId = this.authService.getUserId();
+    
+    // Safety check - if ID is bad, go back
+    if (!this.rideId) {
+        this.router.navigate(['/driver/dashboard']);
+        return;
+    }
+    
+    // Load immediately
+    this.loadRide();
   }
 
   ngAfterViewInit(): void {
     this.startedAtMs = Date.now();
-
-    // Load ride details + start ride, then build map geometry
-    this.loadRide();
 
     // Start live updates
     this.pollDriverLocation();
@@ -95,6 +104,27 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   goBack(): void {
     this.router.navigate(['/driver/dashboard']);
+  }
+
+  startRide(): void {
+    if (!this.rideId) return;
+    this.rideService.startRide(this.rideId).subscribe({
+      next: (r) => {
+        void this.applyRideResponse(r);
+        this.startedAtMs = Date.now(); // Reset start time for metric calculation
+      },
+      error: (err) => console.error('Failed to start ride', err)
+    });
+  }
+
+  cancelRide(): void {
+    if (!this.rideId) return;
+    this.rideService.cancelRide(this.rideId, { reason: 'Cancelled by driver' }).subscribe({
+      next: () => {
+        this.router.navigate(['/driver/dashboard']);
+      },
+      error: (err) => console.error('Failed to cancel ride', err)
+    });
   }
 
   openEndModal(): void {
@@ -160,6 +190,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private tick(): void {
+    if (this.rideStatus !== 'IN_PROGRESS') return;
+
     // Update distance traveled based on driver movement
     if (this.driverLocation && this.lastDriverLocation) {
       const moved = this.haversineKm(this.lastDriverLocation, this.driverLocation);
@@ -204,31 +236,32 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private loadRide(): void {
     if (!this.rideId) return;
 
-    // Ensure ride is in progress (backend is idempotent in dummy impl)
-    this.rideService.startRide(this.rideId).subscribe({
+    this.rideService.getRide(this.rideId).subscribe({
       next: (r) => {
+        this.loadingError = null;
         void this.applyRideResponse(r);
       },
-      error: () => {
-        // If start fails, still try to load ride details.
-        this.rideService.getRide(this.rideId!).subscribe({
-          next: (r) => void this.applyRideResponse(r)
-        });
+      error: (err) => {
+        console.error('Error loading ride', err);
+        this.loadingError = 'Failed to load ride info.';
       }
     });
   }
 
   private async applyRideResponse(r: RideResponse): Promise<void> {
     this.backendRide = r;
+    this.rideStatus = r.status || '';
 
+    // If 'departure' / 'destination' fields are null, check legacy fields or address strings
+    // Backend RideResponse structure guarantees location objects have 'address' if not null.
     const start = r.departure ?? r.start ?? r.startLocation;
     const end = r.destination ?? r.endLocation;
     const stops = r.stops ?? [];
-
+    
     this.ride = {
-      type: r.vehicleType ?? '—',
-      pickup: start?.address ?? '—',
-      dropoff: end?.address ?? '—'
+      type: r.vehicleType ?? 'Standard',
+      pickup: start?.address ?? 'Unknown Pickup',
+      dropoff: end?.address ?? 'Unknown Dropoff'
     };
 
     this.rideStops = stops.map(s => ({ address: s.address, latitude: s.latitude, longitude: s.longitude }));
@@ -277,8 +310,10 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
-    // Final fallback: small synthetic route around default center (so the UI doesn't look broken).
+    // Final fallback: small synthetic route around default center, ONLY if we have absolutely nothing.
+    // If backend data is missing, let's at least show something safe, but maybe alert?
     if (!this.rideMapData) {
+      console.warn('No valid ride geometry found, using map default.');
       const { defaultLat, defaultLng } = environment.map;
       this.rideMapData = {
         start: { latitude: defaultLat, longitude: defaultLng },
@@ -288,6 +323,12 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.totalPlannedDistanceKm = this.computePlannedDistanceKm(this.rideMapData);
+    
+    // Fallback: If map calculation is zero (e.g. single point), check if backend gave us distance
+    if (this.totalPlannedDistanceKm === 0 && (r.distanceKm || r.estimatedDistance)) {
+       this.totalPlannedDistanceKm = r.distanceKm ?? r.estimatedDistance ?? 0;
+    }
+
     this.distanceLeftKm = this.totalPlannedDistanceKm;
 
     // Initialize cost floor from backend if present

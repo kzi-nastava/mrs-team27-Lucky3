@@ -18,6 +18,15 @@ public interface RideService {
     RideResponse stopRide(Long id, RideStopRequest request);
     RideResponse panicRide(Long id, RidePanicRequest request);
     Ride findById(Long id);
+    RideResponse getRideDetails(Long id);
+    org.springframework.data.domain.Page<RideResponse> getRidesHistory(
+            org.springframework.data.domain.Pageable pageable,
+            java.time.LocalDateTime fromDate,
+            java.time.LocalDateTime toDate,
+            Long driverId,
+            Long passengerId,
+            String status
+    );
     RideEstimationResponse estimateRide(CreateRideRequest request);
     void reportInconsistency(Long rideId, InconsistencyRequest request);
 }

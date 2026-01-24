@@ -74,7 +74,7 @@
           <ng-container *ngIf="nextRide; else noNextRide">
             <app-ride-request-card
               class="block"
-              [link]="['/driver/ride', nextRide.id, 'active']"
+              [link]="['/driver/ride', nextRide.id]"
               [showAction]="false"
               [type]="nextRide.type"
               [price]="nextRide.price"
@@ -125,6 +125,7 @@
             <ng-container *ngIf="dashboardRides.length > 0; else noMoreRides">
               <app-ride-request-card
                 *ngFor="let ride of dashboardRides"
+                [link]="['/driver/ride', ride.id]"
                 [type]="ride.type"
                 [price]="ride.price"
                 [distance]="ride.distance"
@@ -147,6 +148,7 @@
             <div class="space-y-4">
               <app-ride-request-card
                 *ngFor="let ride of futureRides"
+                [link]="['/driver/ride', ride.id]"
                 [type]="ride.type"
                 [price]="ride.price"
                 [distance]="ride.distance"
