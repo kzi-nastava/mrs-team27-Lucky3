@@ -6,7 +6,7 @@ import com.team27.lucky3.backend.dto.response.DriverResponse;
 import com.team27.lucky3.backend.entity.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
-import com.team27.lucky3.backend.entity.enums.VehicleType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.team27.lucky3.backend.exception.EmailAlreadyUsedException;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.ActivationTokenRepository;
@@ -16,12 +16,14 @@ import com.team27.lucky3.backend.repository.VehicleRepository;
 import com.team27.lucky3.backend.service.DriverService;
 import com.team27.lucky3.backend.service.EmailService;
 import com.team27.lucky3.backend.service.ImageService;
+import com.team27.lucky3.backend.util.DummyData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -38,8 +40,7 @@ public class DriverServiceImpl implements DriverService {
     private final EmailService emailService;
     private final ImageService imageService;
 
-    //TODO: fix this
-    private final String activationBaseUrl = "https://localhost/8080/driver-activation/password?token=";
+    private final String activationBaseUrl = "http://localhost:4200/driver/set-password?token=";
 
     @Override
     @Transactional
@@ -176,6 +177,7 @@ public class DriverServiceImpl implements DriverService {
                 savedDriver.getAddress(),
                 vehicleInfo,
                 savedDriver.isActive(),
+                savedDriver.isBlocked(),
                 active24h
         );
     }
@@ -211,8 +213,73 @@ public class DriverServiceImpl implements DriverService {
                 driver.getAddress(),
                 vehicleInfo,
                 driver.isActive(),
+                driver.isBlocked(),
                 active24h
         );
     }
 
+    @Transactional(readOnly = true)
+    public List<DriverResponse> getAllDrivers() {
+        List<User> drivers = userRepository.findAllByRole(UserRole.DRIVER);
+
+        return drivers.stream().map(driver -> {
+            Vehicle vehicle = vehicleRepository.findByDriverId(driver.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found for driver"));
+
+            VehicleInformation vehicleInfo = new VehicleInformation();
+            vehicleInfo.setDriverId(vehicle.getDriver().getId());
+            vehicleInfo.setModel(vehicle.getModel());
+            vehicleInfo.setVehicleType(vehicle.getVehicleType()); // ensure enum value matches DB
+            vehicleInfo.setLicenseNumber(vehicle.getLicensePlates());
+            vehicleInfo.setPassengerSeats(vehicle.getSeatCount());
+            vehicleInfo.setBabyTransport(vehicle.isBabyTransport());
+            vehicleInfo.setPetTransport(vehicle.isPetTransport());
+            vehicleInfo.setDriverId(driver.getId());
+
+            String active24h = "0h/8h";
+/*Long id, String name, String surname, String email, String profilePictureUrl,
+ UserRole role, String phoneNumber, String address, VehicleInformation vehicle, boolean isActive, boolean isBlocked, String active24h*/
+            return new DriverResponse(
+                    driver.getId(),
+                    driver.getName(),
+                    driver.getSurname(),
+                    driver.getEmail(),
+                    "/api/users/"+driver.getId()+"/profile-image",
+                    UserRole.DRIVER,
+                    driver.getPhoneNumber(),
+                    driver.getAddress(),
+                    vehicleInfo,
+                    driver.isActive(),
+                    driver.isBlocked(),
+                    active24h
+            );
+        }).toList();
+    }
+
+    @Override
+    public void activateDriverWithPassword(String token, String rawPassword, PasswordEncoder passwordEncoder) {
+        ActivationToken activationToken = activationTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired activation token"));
+
+        if (activationToken.isUsed() || LocalDateTime.now().isAfter(activationToken.getExpiryDate())) {
+            throw new IllegalArgumentException("Token expired or already used");
+        }
+
+        User driver = activationToken.getUser();
+        if (!driver.getRole().equals(UserRole.DRIVER) || driver.isEnabled()) {
+            throw new IllegalStateException("Invalid user for activation");
+        }
+
+        // Encode and set password
+        driver.setPassword(passwordEncoder.encode(rawPassword));
+        driver.setLastPasswordResetDate(Timestamp.valueOf(LocalDateTime.now()));
+        driver.setEnabled(true);
+        driver.setActive(false);
+        userRepository.save(driver);
+
+        // Mark token as used and delete
+        activationToken.setUsed(true);
+        activationTokenRepository.save(activationToken);
+        activationTokenRepository.delete(activationToken);  // Cleanup expired/used tokens
+    }
 }

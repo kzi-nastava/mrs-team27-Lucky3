@@ -18,6 +18,9 @@ import { HomePage } from './pages/home.page/home.page';
 import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
 import { ActiveRidePage } from './pages/driver/active-ride/active-ride.page';
+import { AdminDriversPage } from './pages/admin/drivers/admin-drivers.page';
+import { CreateDriverComponent } from './account-control/create-driver/create-driver.component';
+import {DriverSetPasswordComponent} from "./account-control/driver-set-password/driver-set-password.component";
 import { ActivationSuccessComponent } from './account-control/activation-success/activation-success.component';
 import { resetPasswordTokenGuard } from './infrastructure/auth/reset-password-token.guard';
 import { registerVerificationGuard, resetPasswordSentGuard, resetPasswordSuccessGuard } from './infrastructure/auth/flow.guards';
@@ -71,6 +74,10 @@ export const routes: Routes = [
     canActivate: [registerVerificationGuard]
   },
   {
+    path: 'driver/set-password',
+    component: DriverSetPasswordComponent
+  },
+  {
     path: 'activate/:token',
     component: ActivationSuccessComponent,
     canActivate: [activationGuard]
@@ -105,6 +112,18 @@ export const routes: Routes = [
   {
     path: 'admin/dashboard',
     component: AdminDashboardPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/drivers',
+    component: AdminDriversPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/create-driver',
+    component: CreateDriverComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },
