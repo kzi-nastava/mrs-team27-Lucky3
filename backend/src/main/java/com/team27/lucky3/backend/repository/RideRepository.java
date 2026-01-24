@@ -25,6 +25,15 @@ public interface RideRepository extends JpaRepository<Ride, Long>, JpaSpecificat
     List<Ride> findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(Long driverId, RideStatus status, LocalDateTime startTime);
 
 
+    @Query("SELECT DISTINCT r.driver.id FROM Ride r " +
+            "WHERE r.driver.id IN :driverIds " +
+            "AND r.status NOT IN ('FINISHED', 'REJECTED', 'CANCELLED') " +
+            "AND ((r.startTime < :endTime AND r.endTime > :startTime))")
+    List<Long> findDriversWithRidesInTimeRange(
+            @Param("driverIds") List<Long> driverIds,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
+    );
 //     @Query("SELECT r FROM Ride r WHERE " +
 //            "(:driverId IS NULL OR r.driver.id = :driverId) AND " +
 //            "(:status IS NULL OR r.status = :status) AND " +

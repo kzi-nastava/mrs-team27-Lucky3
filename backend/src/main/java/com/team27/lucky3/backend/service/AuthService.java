@@ -17,4 +17,5 @@ public interface AuthService {
     void activateAccount(String token);
     void resendActivationEmail(String email);
     boolean isPasswordResetTokenValid(String token);
+    void activateDriverWithPassword(String token, String password);
 }

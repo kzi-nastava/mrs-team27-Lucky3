@@ -4,13 +4,14 @@ import com.team27.lucky3.backend.dto.request.CreateRideRequest;
 import com.team27.lucky3.backend.dto.request.EndRideRequest;
 import com.team27.lucky3.backend.dto.request.RidePanicRequest;
 import com.team27.lucky3.backend.dto.request.RideStopRequest;
+import com.team27.lucky3.backend.dto.response.RideCreated;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.entity.Ride;
 import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
 import com.team27.lucky3.backend.dto.request.InconsistencyRequest;
 
 public interface RideService {
-    RideResponse createRide(CreateRideRequest request);
+    RideCreated createRide(CreateRideRequest request);
     RideResponse acceptRide(Long id);
     RideResponse startRide(Long id);
     RideResponse endRide(Long id, EndRideRequest request);

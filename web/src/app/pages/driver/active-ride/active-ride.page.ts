@@ -7,7 +7,8 @@ import { firstValueFrom } from 'rxjs';
 import { ActiveRideMapComponent, ActiveRideMapData, MapPoint } from '../../../shared/ui/active-ride-map/active-ride-map.component';
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
-import { RideService, CreateRideRequest } from '../../../infrastructure/rest/ride.service';
+import { RideService } from '../../../infrastructure/rest/ride.service';
+import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 import { environment } from '../../../../env/environment';
 
