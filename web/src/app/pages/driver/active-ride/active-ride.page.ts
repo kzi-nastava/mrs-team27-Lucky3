@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -67,7 +67,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     private http: HttpClient,
     private rideService: RideService,
     private vehicleService: VehicleService,
-    private authService: AuthService
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -231,6 +232,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       // Update completed stops
       this.updateCompletedStops();
     }
+    this.cdr.detectChanges();
   }
 
   private loadRide(): void {
@@ -263,6 +265,9 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       pickup: start?.address ?? 'Unknown Pickup',
       dropoff: end?.address ?? 'Unknown Dropoff'
     };
+    
+    // Explicitly detect changes to show the ride info immediately
+    this.cdr.detectChanges();
 
     this.rideStops = stops.map(s => ({ address: s.address, latitude: s.latitude, longitude: s.longitude }));
 
@@ -336,6 +341,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     if (costFloor > 0) {
       this.currentCost = Math.max(this.currentCost, costFloor);
     }
+    
+    this.cdr.detectChanges();
   }
 
   private isValidCoordinate(lat: any, lng: any): boolean {
@@ -396,6 +403,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         const mine = vehicles.find(v => v.driverId === this.driverId);
         if (!mine) return;
         this.driverLocation = { latitude: mine.latitude, longitude: mine.longitude };
+        this.cdr.detectChanges();
       },
       error: () => {
         // ignore
