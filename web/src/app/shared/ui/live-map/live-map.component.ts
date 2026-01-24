@@ -32,24 +32,13 @@ export class LiveMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private invalidateQueued = false;
   private onWindowResize = () => this.queueInvalidateSize();
 
-  // Blue vehicle icon for driver
+  // Blue circle icon for vehicle location
   private driverIcon = L.divIcon({
     className: '',
-    html: `
-      <div style="width:32px;height:32px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.55));">
-        <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-          <path d="M16 38.5V31c0-3.5 2.4-6.6 5.8-7.5l9.5-2.6a2 2 0 0 1 1 0l9.5 2.6c3.4.9 5.8 4 5.8 7.5v7.5" fill="#3b82f6" stroke="#E5E7EB" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M20 31h24" stroke="#93C5FD" stroke-width="3" stroke-linecap="round"/>
-          <path d="M14 38.5c0-1.4 1.1-2.5 2.5-2.5h31c1.4 0 2.5 1.1 2.5 2.5V46c0 1.1-.9 2-2 2h-2.5" stroke="#E5E7EB" stroke-width="2" stroke-linecap="round"/>
-          <path d="M16.5 48H46.5" stroke="#E5E7EB" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="22" cy="48" r="4.5" fill="#111827" stroke="#E5E7EB" stroke-width="2"/>
-          <circle cx="42" cy="48" r="4.5" fill="#111827" stroke="#E5E7EB" stroke-width="2"/>
-        </svg>
-      </div>
-    `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16]
+    html: `<div style="width:16px;height:16px;border-radius:9999px;background:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,0.25);border:2px solid #fff;"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -8]
   });
 
   private pickupIcon = L.divIcon({
@@ -193,16 +182,18 @@ export class LiveMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       latlngs.forEach(ll => bounds.extend(ll));
     }
 
-    // 2. Approach Polyline (Blue)
+    // 2. Approach Polyline (Light Blue - dotted line)
     if (this.approachRoute && this.approachRoute.length > 1) {
       const latlngs = this.approachRoute.map(p => [p.latitude, p.longitude] as L.LatLngExpression);
       this.approachPolyline = L.polyline(latlngs, {
-        color: '#3b82f6', // blue
-        weight: 5,
-        opacity: 0.9,
+        color: '#00a2ff', // light blue (sky-300)
+        weight: 3,
+        opacity: 0.95,
+        dashArray: '8, 8',
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(this.map);
+      this.approachPolyline.bringToFront();
 
       latlngs.forEach(ll => bounds.extend(ll));
       

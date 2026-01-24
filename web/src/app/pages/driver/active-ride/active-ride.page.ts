@@ -356,34 +356,57 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private fetchApproachRoute(r: RideResponse): void {
-      const showApproach = r.status === 'ACCEPTED' || r.status === 'PENDING';
-      if (!showApproach) {
+      // Show approach route for any non-FINISHED ride
+      if (r.status === 'FINISHED' || r.status === 'CANCELLED') {
           this.approachRoute = null;
           return;
       }
       
       const pickup = r.departure ?? r.start ?? r.startLocation;
-      // We need driver location. If not yet available, we might need to retry once it is.
-      // But usually active-ride polls location. We'll try here, otherwise poll should maybe trigger it.
-      // For now, let's just attempt if we have location.
-      
-      if (this.driverLocation && pickup) {
-          const req: CreateRideRequest = {
-              start: { address: '', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude },
-              destination: pickup,
-              stops: [],
-              passengerEmails: [], scheduledTime: null,
-              requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
-          };
-          this.rideService.estimateRide(req).subscribe({
-              next: (res) => {
-                  if (res.routePoints?.length) {
-                       this.approachRoute = res.routePoints.map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
-                       this.cdr.detectChanges();
-                  }
-              }
-          });
+      if (!pickup) {
+          this.approachRoute = null;
+          return;
       }
+      
+      // Prefer vehicleLocation from ride response (from backend), else use driver's polled location
+      const vehicleLoc = r.vehicleLocation ?? 
+        (this.driverLocation ? { address: '', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude } : null);
+      
+      // Update driver marker position from vehicle location if available from ride
+      // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+      if (r.vehicleLocation && !this.driverLocation) {
+          setTimeout(() => {
+              this.driverLocation = { latitude: r.vehicleLocation!.latitude, longitude: r.vehicleLocation!.longitude };
+              this.cdr.detectChanges();
+          }, 0);
+      }
+      
+      if (!vehicleLoc) {
+          // No vehicle location yet, will retry when location is polled
+          return;
+      }
+      
+      // Calculate approach route using API (same as yellow line)
+      const req: CreateRideRequest = {
+          start: { address: vehicleLoc.address || '', latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
+          destination: pickup,
+          stops: [],
+          passengerEmails: [], scheduledTime: null,
+          requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+      };
+      this.rideService.estimateRide(req).subscribe({
+          next: (res) => {
+              if (res.routePoints?.length) {
+                   this.approachRoute = res.routePoints
+                     .sort((a, b) => a.order - b.order)
+                     .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                   this.cdr.detectChanges();
+              }
+          },
+          error: () => {
+              this.approachRoute = null;
+          }
+      });
   }
 
   private fetchDetailedRoute(r: RideResponse): void {
@@ -492,8 +515,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         if (!mine) return;
         this.driverLocation = { latitude: mine.latitude, longitude: mine.longitude };
 
-        // Retry approach route if we didn't have location before and ride is accepted
-        if (!this.approachRoute && this.backendRide && (this.backendRide.status === 'ACCEPTED' || this.backendRide.status === 'PENDING')) {
+        // Fetch approach route if we have a ride and no approach route yet
+        if (!this.approachRoute && this.backendRide) {
             this.fetchApproachRoute(this.backendRide);
         }
 

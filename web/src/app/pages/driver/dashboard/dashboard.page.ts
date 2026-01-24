@@ -212,19 +212,30 @@ export class DashboardPage implements OnInit, OnDestroy {
          }
       }
 
-      // 2. Approach Route (Blue) - Driver to Pickup
-      // Only relevant if status is ACCEPTED (on way to pickup) or pending/scheduled if specifically showing that
-      // If IN_PROGRESS, driver is AT pickup or moving to dropoff, approach logic might differ (e.g. no approach needed, or approach is just segment to next stop)
-      // Spec says: "the route from the car to the start point"
+      // 2. Approach Route (Light Blue) - Vehicle to Pickup
+      // Show approach route for any non-FINISHED ride
       
-      const shouldShowApproach = ride.status !== 'IN_PROGRESS' && ride.status !== 'FINISHED';
+      const shouldShowApproach = ride.status !== 'FINISHED' && ride.status !== 'CANCELLED';
       
-      if (shouldShowApproach && this.driverLocation && (ride.departure || ride.start || ride.startLocation)) {
-          const pickup = ride.departure ?? ride.start ?? ride.startLocation;
-          if (!pickup) return;
-
+      // Prefer vehicleLocation from ride response (from backend), else use driver's polled location
+      const vehicleLoc = ride.vehicleLocation ?? 
+        (this.driverLocation ? { address: '', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude } : null);
+      
+      // Update driver marker position from vehicle location if available from ride
+      // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+      if (ride.vehicleLocation && !this.driverLocation) {
+          setTimeout(() => {
+              this.driverLocation = { latitude: ride.vehicleLocation!.latitude, longitude: ride.vehicleLocation!.longitude };
+              this.cdr.detectChanges();
+          }, 0);
+      }
+      
+      const pickup = ride.departure ?? ride.start ?? ride.startLocation;
+      
+      if (shouldShowApproach && vehicleLoc && pickup) {
+          // Calculate approach route using API (same as yellow line)
           const req: CreateRideRequest = {
-              start: { address: '', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude },
+              start: { address: vehicleLoc.address || '', latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
               destination: pickup,
               stops: [],
               passengerEmails: [], scheduledTime: null,
@@ -234,7 +245,9 @@ export class DashboardPage implements OnInit, OnDestroy {
           this.rideService.estimateRide(req).subscribe({
               next: (res) => {
                   if (res.routePoints?.length) {
-                      this.approachRoute = res.routePoints.map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                      this.approachRoute = res.routePoints
+                        .sort((a, b) => a.order - b.order)
+                        .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
                       this.cdr.detectChanges();
                   }
               },
