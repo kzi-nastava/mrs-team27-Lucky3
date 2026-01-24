@@ -112,12 +112,31 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
 
     this.rideService
-      .getRidesHistory({ driverId: this.driverId, status: 'ACCEPTED', page: 0, size: 20 })
+      .getRidesHistory({ driverId: this.driverId, page: 0, size: 20 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {
-          const mapped = (page.content ?? []).map(r => this.toDashboardRide(r));
-          mapped.sort((a, b) => (a.scheduledTime ?? '').localeCompare(b.scheduledTime ?? ''));
+          // Filter for active or useful rides manually if needed, or update backend API to support 'statusIn'
+          // For now, let's grab everything that isn't finished/cancelled to show "future" work
+          const validStatuses = ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'SCHEDULED'];
+          const relevant = (page.content ?? []).filter(r => validStatuses.includes(r.status as string));
+          
+          const mapped = relevant.map(r => this.toDashboardRide(r));
+          
+          // Sort: IN_PROGRESS first, then by scheduledTime
+          mapped.sort((a, b) => {
+             // Find original objects to check status
+             const rideA = relevant.find(r => r.id === a.id);
+             const rideB = relevant.find(r => r.id === b.id);
+             
+             const statusA = rideA?.status === 'IN_PROGRESS' ? 0 : 1;
+             const statusB = rideB?.status === 'IN_PROGRESS' ? 0 : 1;
+             
+             if (statusA !== statusB) return statusA - statusB;
+             
+             return (a.scheduledTime ?? '').localeCompare(b.scheduledTime ?? '');
+          });
+          
           this.futureRides = mapped;
         },
         error: () => {
