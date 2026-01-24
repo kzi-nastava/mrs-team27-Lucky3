@@ -100,7 +100,8 @@ export class RegisterComponent {
           }
           // Navigate to success page
           this.router.navigate(['/register-verification-sent'], { 
-            queryParams: { email: registrationData.email } 
+            queryParams: { email: registrationData.email },
+            state: { registered: true }                     
           });
         },
         error: (err) => {

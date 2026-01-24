@@ -78,7 +78,9 @@ export class ForgotPasswordComponent {
             // ignore storage failures
           }
 
-          this.router.navigate(['/reset-password-sent']);
+          this.router.navigate(['/reset-password-sent'], { 
+            state: { resetEmailSent: true } 
+          });
         },
         error: (err) => {
           console.error(err);

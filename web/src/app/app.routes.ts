@@ -20,9 +20,10 @@ import { roleGuard } from './infrastructure/auth/role.guard';
 import { ActiveRidePage } from './pages/driver/active-ride/active-ride.page';
 import { ActivationSuccessComponent } from './account-control/activation-success/activation-success.component';
 import { resetPasswordTokenGuard } from './infrastructure/auth/reset-password-token.guard';
+import { registerVerificationGuard, resetPasswordSentGuard, resetPasswordSuccessGuard } from './infrastructure/auth/flow.guards';
+import { activationGuard } from './infrastructure/auth/activation.guard';
 
 export const routes: Routes = [
-  // --- PUBLIC ROUTES (No Guards) ---
   {
     path: '',
     component: HomePage,
@@ -46,7 +47,8 @@ export const routes: Routes = [
   },
   {
     path: 'reset-password-sent',
-    component: ResetPasswordSentComponent
+    component: ResetPasswordSentComponent,
+    canActivate: [resetPasswordSentGuard]
   },
   {
     path: 'reset-password',
@@ -60,19 +62,23 @@ export const routes: Routes = [
   },
   {
     path: 'reset-password-success',
-    component: ResetPasswordSuccessComponent
+    component: ResetPasswordSuccessComponent,
+    canActivate: [resetPasswordSuccessGuard]
   },
   {
     path: 'register-verification-sent',
-    component: RegisterVerificationSentComponent
+    component: RegisterVerificationSentComponent,
+    canActivate: [registerVerificationGuard]
   },
   {
     path: 'activate/:token',
-    component: ActivationSuccessComponent
+    component: ActivationSuccessComponent,
+    canActivate: [activationGuard]
   },
   {
     path: 'activate',
-    component: ActivationSuccessComponent
+    component: ActivationSuccessComponent,
+    canActivate: [activationGuard]
   },
 
   // --- PASSENGER ROUTES ---

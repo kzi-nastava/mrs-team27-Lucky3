@@ -114,7 +114,9 @@ export class ResetPasswordComponent {
             // ignore storage failures
           }
 
-          this.router.navigate(['/reset-password-success']);
+          this.router.navigate(['/reset-password-success'], { 
+            state: { passwordResetSuccess: true } 
+          });
         },
         error: (err) => {
           console.error(err);
