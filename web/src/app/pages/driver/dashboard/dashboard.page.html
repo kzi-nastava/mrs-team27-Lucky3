@@ -67,14 +67,20 @@
         <!-- Next Ride -->
         <div class="bg-[#1C1C1E] p-4 rounded-xl border border-gray-800">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-bold">Next Ride</h2>
+            <ng-container *ngIf="nextRide; else defaultHeader">
+              <div *ngIf="nextRide.status === 'IN_PROGRESS'" class="bg-green-500/20 border border-green-500/30 text-green-400 px-3 py-1 rounded-lg text-sm font-bold uppercase tracking-wider">Active ride</div>
+              <div *ngIf="nextRide.status !== 'IN_PROGRESS'" class="bg-blue-600/20 border border-blue-600/30 text-blue-400 px-3 py-1 rounded-lg text-sm font-bold uppercase tracking-wider">Pending</div>
+            </ng-container>
+            <ng-template #defaultHeader>
+              <h2 class="text-lg font-bold">Next Ride</h2>
+            </ng-template>
             <span *ngIf="nextRide" class="text-xs text-gray-400">Tap to view details</span>
           </div>
 
           <ng-container *ngIf="nextRide; else noNextRide">
             <app-ride-request-card
               class="block"
-              [link]="['/driver/ride', nextRide.id, 'active']"
+              [link]="['/driver/ride', nextRide.id]"
               [showAction]="false"
               [type]="nextRide.type"
               [price]="nextRide.price"
@@ -91,7 +97,7 @@
                 <span class="text-gray-300 text-xl">!</span>
               </div>
               <div class="text-white font-semibold">No accepted rides yet</div>
-              <div class="text-gray-400 text-sm mt-1">You’ll see your next scheduled ride here.</div>
+              <div class="text-gray-400 text-sm mt-1">You'll see your next scheduled ride here.</div>
             </div>
           </ng-template>
         </div>
@@ -102,7 +108,12 @@
             <h2 class="text-lg font-bold">Map</h2>
             <span class="text-xs text-gray-400" *ngIf="!driverLocation">Location unavailable</span>
           </div>
-          <app-live-map [driverLocation]="driverLocation" heightClass="h-[360px]"></app-live-map>
+          <app-live-map 
+            [driverLocation]="driverLocation" 
+            [rideRoute]="rideRoute"
+            [approachRoute]="approachRoute"
+            heightClass="h-[360px]">
+          </app-live-map>
         </div>
       </div>
 
@@ -125,6 +136,7 @@
             <ng-container *ngIf="dashboardRides.length > 0; else noMoreRides">
               <app-ride-request-card
                 *ngFor="let ride of dashboardRides"
+                [link]="['/driver/ride', ride.id]"
                 [type]="ride.type"
                 [price]="ride.price"
                 [distance]="ride.distance"
@@ -147,6 +159,7 @@
             <div class="space-y-4">
               <app-ride-request-card
                 *ngFor="let ride of futureRides"
+                [link]="['/driver/ride', ride.id]"
                 [type]="ride.type"
                 [price]="ride.price"
                 [distance]="ride.distance"

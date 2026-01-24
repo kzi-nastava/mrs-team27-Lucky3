@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { AuthService } from '../../infrastructure/auth/auth.service';
 
 interface SidebarItem {
   icon: string;
@@ -51,7 +52,7 @@ export class Sidebar implements OnInit {
     { icon: 'logout', label: 'Logout', route: '/login', variant: 'danger' }
   ];
 
-  constructor(private router: Router) {
+  constructor(private router: Router, private authService: AuthService) {
     this.items = this.driverItems;
   }
 
@@ -86,7 +87,12 @@ export class Sidebar implements OnInit {
     this.closeSidebar.emit();
   }
 
-  onItemClick() {
+  onItemClick(item: SidebarItem) {
+    // Handle logout separately to clear localStorage
+    if (item.icon === 'logout') {
+      this.authService.logout();
+      return;
+    }
     // On mobile, close sidebar when item is clicked
     if (window.innerWidth < 1024) {
       this.close();

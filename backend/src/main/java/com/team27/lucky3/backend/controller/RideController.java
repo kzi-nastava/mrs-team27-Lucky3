@@ -62,44 +62,34 @@ public class RideController {
             @RequestParam(required = false) @Min(1) Long passengerId,
             @RequestParam(required = false) String status) {
 
-        List<RideResponse> rides = List.of(
-                DummyData.createDummyRideResponse(1L, 10L, 123L, RideStatus.FINISHED),
-                DummyData.createDummyRideResponse(2L, 10L, 123L, RideStatus.CANCELLED)
-        );
-        return ResponseEntity.ok(new PageImpl<>(rides, pageable, rides.size()));
+        return ResponseEntity.ok(rideService.getRidesHistory(pageable, fromDate, toDate, driverId, passengerId, status));
     }
 
     // 2.9.2 & 2.9.3 Admin ride history + detailed ride view (admin)
     @GetMapping("/{id}")
     public ResponseEntity<RideResponse> getRide(@PathVariable @Min(1) Long id) {
-        if (id == 404) throw new ResourceNotFoundException("Ride not found");
-        return ResponseEntity.ok(DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.IN_PROGRESS));
+        return ResponseEntity.ok(rideService.getRideDetails(id));
     }
 
     @PutMapping("/{id}/accept")
     public ResponseEntity<RideResponse> acceptRide(@PathVariable @Min(1) Long id) {
-        if (id == 404) throw new ResourceNotFoundException("Ride not found");
-        return ResponseEntity.ok(DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.ACCEPTED));
+        return ResponseEntity.ok(rideService.acceptRide(id));
     }
 
     @PutMapping("/{id}/start")
     public ResponseEntity<RideResponse> startRide(@PathVariable @Min(1) Long id) {
-        if (id == 404) throw new ResourceNotFoundException("Ride not found");
-        return ResponseEntity.ok(DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.IN_PROGRESS));
+        return ResponseEntity.ok(rideService.startRide(id));
     }
 
     @PutMapping("/{id}/end")
     public ResponseEntity<RideResponse> endRide(
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody EndRideRequest request) {
-        if (id == 404) throw new ResourceNotFoundException("Ride not found");
-        RideResponse response = DummyData.createDummyRideResponse(id, 10L, 123L, RideStatus.FINISHED);
-        response.setPassengersExited(request.getPassengersExited());
-        response.setPaid(request.getPaid());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(rideService.endRide(id, request));
     }
 
     @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('DRIVER') or hasRole('PASSENGER')")
     public ResponseEntity<RideResponse> cancelRide(
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody RideCancellationRequest request) {
@@ -138,6 +128,6 @@ public class RideController {
     // 2.6.2 During ride: live tracking + inconsistency report (passengers)
     @GetMapping("/active")
     public ResponseEntity<RideResponse> getActiveRide(@RequestParam(required = false) @Min(1) Long userId) {
-        return ResponseEntity.ok(DummyData.createDummyRideResponse(99L, 10L, userId != null ? userId : 123L, RideStatus.IN_PROGRESS));
+        return ResponseEntity.ok(rideService.getActiveRide(userId));
     }
 }

@@ -39,4 +39,5 @@ public class RideResponse {
     private Boolean babyTransport;
     private Boolean paid;
     private Boolean passengersExited;
+    private List<LocationDto> stops;
 }

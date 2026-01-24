@@ -1,9 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Ride, mockRides } from '../../../shared/data/mock-data';
+import { Ride } from '../../../shared/data/mock-data';
 import { RidesTableComponent } from '../../../shared/rides/rides-table/rides-table.component';
+import { RideService } from '../../../infrastructure/rest/ride.service';
+import { AuthService } from '../../../infrastructure/auth/auth.service';
+import { Subject, takeUntil } from 'rxjs';
+import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 
 @Component({
   selector: 'app-driver-overview',
@@ -12,34 +16,83 @@ import { RidesTableComponent } from '../../../shared/rides/rides-table/rides-tab
   templateUrl: './driver-overview.page.html',
   styleUrl: './driver-overview.page.css'
 })
-export class DriverOverviewPage implements OnInit {
+export class DriverOverviewPage implements OnInit, OnDestroy {
   timeFilter: 'today' | 'week' | 'month' | 'all' = 'week';
   filter: 'all' | 'completed' | 'cancelled' = 'all';
   dateFilter: string = '';
   sortField: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers' = 'startDate';
   sortDirection: 'asc' | 'desc' = 'desc';
 
-  // Mock Data
-  mockRides: Ride[] = mockRides;
-  
-  driver = {
-    id: 'd1',
-    rating: 4.90,
-    ratingCount: 1198
-  };
-
   sortedRides: Ride[] = [];
+  private backendRides: Ride[] = [];
+  
   stats = {
     totalEarnings: 0,
+    earnings: 0, // legacy field?
     totalRides: 0,
     avgRating: 0,
     totalDistance: 0
   };
 
-  constructor(private router: Router) {}
+  driver = {
+    ratingCount: 0 // Mock for now, until we fetch driver details
+  };
+
+  private destroy$ = new Subject<void>();
+  private driverId: number | null = null;
+
+  constructor(
+    private router: Router,
+    private rideService: RideService,
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
-    this.updateView();
+    this.driverId = this.authService.getUserId();
+    this.loadRides();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadRides(): void {
+    if (!this.driverId) return;
+
+    this.rideService.getRidesHistory({ driverId: this.driverId, page: 0, size: 100 }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (page) => {
+          // Filter to only past rides (FINISHED, CANCELLED)
+          const pastStatuses = ['FINISHED', 'CANCELLED'];
+          const relevant = (page.content ?? []).filter(r => pastStatuses.includes(r.status as string));
+          
+          this.backendRides = relevant.map(r => this.mapToRide(r));
+          this.updateView();
+          this.cdr.detectChanges();
+        },
+        error: (err) => console.error('Failed to load history', err)
+      });
+  }
+
+  private mapToRide(r: RideResponse): Ride {
+    return {
+      id: String(r.id),
+      driverId: String(this.driverId),
+      startedAt: r.startTime,
+      requestedAt: r.startTime ?? '', // Fallback or add field to RideResponse if needed
+      completedAt: r.endTime,
+      status: r.status === 'FINISHED' ? 'completed' : 'cancelled', // map enum
+      fare: r.totalCost ?? 0,
+      distance: r.distanceKm ?? 0,
+      pickup: { address: r.departure?.address ?? r.start?.address ?? r.startLocation?.address ?? '—' },
+      destination: { address: r.destination?.address ?? r.endLocation?.address ?? '—' },
+      hasPanic: r.panicPressed,
+      passengerName: r.passengers?.[0]?.name ?? 'Unknown',
+      cancelledBy: 'driver', // simplified
+      cancellationReason: r.rejectionReason
+    };
   }
 
   updateView() {
@@ -48,7 +101,7 @@ export class DriverOverviewPage implements OnInit {
   }
 
   calculateStats() {
-    let statsRides = this.mockRides.filter(ride => ride.driverId === this.driver.id);
+    let statsRides = this.backendRides;
     statsRides = this.filterByTime(statsRides);
 
     // Only count completed rides for earnings and distance
@@ -56,14 +109,16 @@ export class DriverOverviewPage implements OnInit {
 
     this.stats = {
       totalEarnings: completedRides.reduce((sum, r) => sum + r.fare, 0),
+      earnings: 0,
       totalRides: statsRides.length,
-      avgRating: this.driver.rating,
+      // avgRating: this.driver.rating, // need rating endpoint
+      avgRating: 0,
       totalDistance: completedRides.reduce((sum, r) => sum + r.distance, 0)
     };
   }
 
   sortAndFilterRides() {
-    let filtered = this.mockRides.filter(ride => ride.driverId === this.driver.id);
+    let filtered = this.backendRides;
     
     // Apply Time Filter
     filtered = this.filterByTime(filtered);

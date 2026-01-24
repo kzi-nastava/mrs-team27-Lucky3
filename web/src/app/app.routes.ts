@@ -25,6 +25,7 @@ import { ActivationSuccessComponent } from './account-control/activation-success
 import { resetPasswordTokenGuard } from './infrastructure/auth/reset-password-token.guard';
 import { registerVerificationGuard, resetPasswordSentGuard, resetPasswordSuccessGuard } from './infrastructure/auth/flow.guards';
 import { activationGuard } from './infrastructure/auth/activation.guard';
+import { rideAccessGuard } from './infrastructure/auth/ride-access.guard';
 
 export const routes: Routes = [
   {
@@ -132,25 +133,24 @@ export const routes: Routes = [
   {
     path: 'driver/dashboard',
     component: DashboardPage,
-    // canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
     path: 'driver/ride/:id',
     component: ActiveRidePage,
-    // canActivate: [authGuard, roleGuard],
-    data: { roles: ['DRIVER'] }
+    canActivate: [rideAccessGuard]
   },
   {
     path: 'driver/overview',
     component: DriverOverviewPage,
-    // canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {
     path: 'driver/overview/ride/:id',
     component: RideDetails,
-    // canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
   {

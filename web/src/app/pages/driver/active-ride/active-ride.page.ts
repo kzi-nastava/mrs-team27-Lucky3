@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -7,7 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { ActiveRideMapComponent, ActiveRideMapData, MapPoint } from '../../../shared/ui/active-ride-map/active-ride-map.component';
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
-import { RideService } from '../../../infrastructure/rest/ride.service';
+import { RideService, CreateRideRequest } from '../../../infrastructure/rest/ride.service';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 import { environment } from '../../../../env/environment';
 
@@ -20,14 +20,18 @@ import { environment } from '../../../../env/environment';
 })
 export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private rideId: number | null = null;
-
-  ride: { type: string; pickup: string; dropoff: string } | null = null;
+  // Updated type definition to include undefined/null
+  ride: { type?: string; pickup?: string; dropoff?: string } | null | undefined = null;
+  
   rideStops: { address: string; latitude?: number; longitude?: number }[] = [];
 
   backendRide: RideResponse | null = null;
+  rideStatus: string = '';
+  loadingError: string | null = null;
 
   rideMapData: ActiveRideMapData | null = null;
   routePolyline: MapPoint[] | null = null;
+  approachRoute: MapPoint[] | null = null; // Blue line
   driverLocation: MapPoint | null = null;
 
   // Live metrics
@@ -50,6 +54,11 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   isEnding = false;
   endRideError = '';
 
+  showCancelModal = false;
+  cancelReason = '';
+  isCancelling = false;
+  cancelRideError = '';
+
   private driverId: number | null = null;
 
   // stop completion tracking
@@ -57,6 +66,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private completedStopIndexes = new Set<number>();
 
   private readonly geocodeEnabled = true;
+  private pollErrors = 0;
 
   constructor(
     private route: ActivatedRoute,
@@ -64,7 +74,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     private http: HttpClient,
     private rideService: RideService,
     private vehicleService: VehicleService,
-    private authService: AuthService
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -73,13 +84,19 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     this.rideId = Number.isFinite(parsed) ? parsed : null;
 
     this.driverId = this.authService.getUserId();
+    
+    // Safety check - if ID is bad, go back
+    if (!this.rideId) {
+        this.router.navigate(['/driver/dashboard']);
+        return;
+    }
+    
+    // Load immediately
+    this.loadRide();
   }
 
   ngAfterViewInit(): void {
     this.startedAtMs = Date.now();
-
-    // Load ride details + start ride, then build map geometry
-    this.loadRide();
 
     // Start live updates
     this.pollDriverLocation();
@@ -95,6 +112,60 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   goBack(): void {
     this.router.navigate(['/driver/dashboard']);
+  }
+
+  startRide(): void {
+    if (!this.rideId) return;
+    this.rideService.startRide(this.rideId).subscribe({
+      next: (r) => {
+        void this.applyRideResponse(r);
+        this.startedAtMs = Date.now(); // Reset start time for metric calculation
+      },
+      error: (err) => console.error('Failed to start ride', err)
+    });
+  }
+
+  openCancelModal(): void {
+    this.cancelRideError = '';
+    this.cancelReason = '';
+    this.showCancelModal = true;
+  }
+
+  closeCancelModal(): void {
+    if (this.isCancelling) return;
+    this.showCancelModal = false;
+  }
+
+  confirmCancelRide(): void {
+    if (!this.rideId) return;
+    if (!this.cancelReason || this.cancelReason.trim().length === 0) {
+      this.cancelRideError = 'Please provide a reason.';
+      return;
+    }
+
+    this.isCancelling = true;
+    this.rideService.cancelRide(this.rideId, { reason: this.cancelReason }).subscribe({
+      next: () => {
+        this.isCancelling = false;
+        this.showCancelModal = false;
+        this.router.navigate(['/driver/dashboard']);
+      },
+      error: (err) => {
+        this.isCancelling = false;
+        console.error('Failed to cancel ride', err);
+        this.cancelRideError = 'Failed to cancel. Please try again.';
+      }
+    });
+  }
+
+  cancelRide(): void {
+    if (!this.rideId) return;
+    this.rideService.cancelRide(this.rideId, { reason: 'Cancelled by driver' }).subscribe({
+      next: () => {
+        this.router.navigate(['/driver/dashboard']);
+      },
+      error: (err) => console.error('Failed to cancel ride', err)
+    });
   }
 
   openEndModal(): void {
@@ -160,6 +231,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private tick(): void {
+    if (this.rideStatus !== 'IN_PROGRESS') return;
+
     // Update distance traveled based on driver movement
     if (this.driverLocation && this.lastDriverLocation) {
       const moved = this.haversineKm(this.lastDriverLocation, this.driverLocation);
@@ -199,37 +272,42 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       // Update completed stops
       this.updateCompletedStops();
     }
+    this.cdr.detectChanges();
   }
 
   private loadRide(): void {
     if (!this.rideId) return;
 
-    // Ensure ride is in progress (backend is idempotent in dummy impl)
-    this.rideService.startRide(this.rideId).subscribe({
+    this.rideService.getRide(this.rideId).subscribe({
       next: (r) => {
+        this.loadingError = null;
         void this.applyRideResponse(r);
       },
-      error: () => {
-        // If start fails, still try to load ride details.
-        this.rideService.getRide(this.rideId!).subscribe({
-          next: (r) => void this.applyRideResponse(r)
-        });
+      error: (err) => {
+        console.error('Error loading ride', err);
+        this.loadingError = 'Failed to load ride info.';
       }
     });
   }
 
   private async applyRideResponse(r: RideResponse): Promise<void> {
     this.backendRide = r;
+    this.rideStatus = r.status || '';
 
+    // If 'departure' / 'destination' fields are null, check legacy fields or address strings
+    // Backend RideResponse structure guarantees location objects have 'address' if not null.
     const start = r.departure ?? r.start ?? r.startLocation;
     const end = r.destination ?? r.endLocation;
     const stops = r.stops ?? [];
-
+    
     this.ride = {
-      type: r.vehicleType ?? '—',
-      pickup: start?.address ?? '—',
-      dropoff: end?.address ?? '—'
+      type: r.vehicleType ?? 'Standard',
+      pickup: start?.address ?? 'Unknown Pickup',
+      dropoff: end?.address ?? 'Unknown Dropoff'
     };
+    
+    // Explicitly detect changes to show the ride info immediately
+    this.cdr.detectChanges();
 
     this.rideStops = stops.map(s => ({ address: s.address, latitude: s.latitude, longitude: s.longitude }));
 
@@ -277,8 +355,10 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
-    // Final fallback: small synthetic route around default center (so the UI doesn't look broken).
+    // Final fallback: small synthetic route around default center, ONLY if we have absolutely nothing.
+    // If backend data is missing, let's at least show something safe, but maybe alert?
     if (!this.rideMapData) {
+      console.warn('No valid ride geometry found, using map default.');
       const { defaultLat, defaultLng } = environment.map;
       this.rideMapData = {
         start: { latitude: defaultLat, longitude: defaultLng },
@@ -288,6 +368,12 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.totalPlannedDistanceKm = this.computePlannedDistanceKm(this.rideMapData);
+    
+    // Fallback: If map calculation is zero (e.g. single point), check if backend gave us distance
+    if (this.totalPlannedDistanceKm === 0 && (r.distanceKm || r.estimatedDistance)) {
+       this.totalPlannedDistanceKm = r.distanceKm ?? r.estimatedDistance ?? 0;
+    }
+
     this.distanceLeftKm = this.totalPlannedDistanceKm;
 
     // Initialize cost floor from backend if present
@@ -295,6 +381,107 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     if (costFloor > 0) {
       this.currentCost = Math.max(this.currentCost, costFloor);
     }
+    
+    this.cdr.detectChanges();
+
+    // If routePolyline is missing or too simple, try to fetch detailed route from API
+    if (r && (!this.routePolyline || this.routePolyline.length <= 2)) {
+      this.fetchDetailedRoute(r);
+    }
+    
+    // Also fetch approach route (Driver -> Pickup)
+    this.fetchApproachRoute(r);
+  }
+
+  private fetchApproachRoute(r: RideResponse): void {
+      // Show approach route for any non-FINISHED ride
+      if (r.status === 'FINISHED' || r.status === 'CANCELLED') {
+          this.approachRoute = null;
+          return;
+      }
+      
+      const pickup = r.departure ?? r.start ?? r.startLocation;
+      if (!pickup) {
+          this.approachRoute = null;
+          return;
+      }
+      
+      // Prefer vehicleLocation from ride response (from backend), else use driver's polled location
+      const vehicleLoc = r.vehicleLocation ?? 
+        (this.driverLocation ? { address: '', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude } : null);
+      
+      // Update driver marker position from vehicle location if available from ride
+      // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+      if (r.vehicleLocation && !this.driverLocation) {
+          setTimeout(() => {
+              this.driverLocation = { latitude: r.vehicleLocation!.latitude, longitude: r.vehicleLocation!.longitude };
+              this.cdr.detectChanges();
+          }, 0);
+      }
+      
+      if (!vehicleLoc) {
+          // No vehicle location yet, will retry when location is polled
+          return;
+      }
+      
+      // Calculate approach route using API (same as yellow line)
+      const req: CreateRideRequest = {
+          start: { address: vehicleLoc.address || '', latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
+          destination: pickup,
+          stops: [],
+          passengerEmails: [], scheduledTime: null,
+          requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+      };
+      this.rideService.estimateRide(req).subscribe({
+          next: (res) => {
+              if (res.routePoints?.length) {
+                   this.approachRoute = res.routePoints
+                     .sort((a, b) => a.order - b.order)
+                     .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                   this.cdr.detectChanges();
+              }
+          },
+          error: () => {
+              this.approachRoute = null;
+          }
+      });
+  }
+
+  private fetchDetailedRoute(r: RideResponse): void {
+    const start = r.departure ?? r.start ?? r.startLocation;
+    const end = r.destination ?? r.endLocation;
+
+    if (!start || !end) return;
+
+    const request: CreateRideRequest = {
+      start: start,
+      destination: end,
+      stops: r.stops ?? [],
+      passengerEmails: [], // not needed
+      scheduledTime: null,
+      requirements: {
+        vehicleType: r.vehicleType || 'STANDARD',
+        babyTransport: r.babyTransport ?? false,
+        petTransport: r.petTransport ?? false
+      }
+    };
+
+    this.rideService.estimateRide(request).subscribe({
+      next: (est) => {
+        if (est.routePoints && est.routePoints.length > 0) {
+          const sorted = est.routePoints.sort((a, b) => a.order - b.order);
+          const poly = sorted
+            .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }))
+            .filter(p => this.isValidCoordinate(p.latitude, p.longitude));
+
+          if (poly.length > 2) {
+            this.routePolyline = poly;
+            this.cdr.detectChanges();
+          }
+        }
+      },
+      error: () => { /* ignore */ }
+    });
   }
 
   private isValidCoordinate(lat: any, lng: any): boolean {
@@ -350,14 +537,31 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private pollDriverLocation(): void {
     if (!this.driverId) return;
 
+    // Stop polling if we have too many consecutive errors (e.g. backend down)
+    if (this.pollErrors > 5) {
+      if (this.locationPoller) {
+        clearInterval(this.locationPoller);
+        this.locationPoller = undefined;
+      }
+      return;
+    }
+
     this.vehicleService.getActiveVehicles().subscribe({
       next: (vehicles) => {
+        this.pollErrors = 0;
         const mine = vehicles.find(v => v.driverId === this.driverId);
         if (!mine) return;
         this.driverLocation = { latitude: mine.latitude, longitude: mine.longitude };
+
+        // Fetch approach route if we have a ride and no approach route yet
+        if (!this.approachRoute && this.backendRide) {
+            this.fetchApproachRoute(this.backendRide);
+        }
+
+        this.cdr.detectChanges();
       },
       error: () => {
-        // ignore
+        this.pollErrors++;
       }
     });
   }

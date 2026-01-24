@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatCardComponent } from '../../../shared/ui/stat-card/stat-card.component';
 import { ToggleSwitchComponent } from '../../../shared/ui/toggle-switch/toggle-switch.component';
@@ -6,7 +6,7 @@ import { RideRequestCardComponent } from '../../../shared/rides/ride-request-car
 import { LiveMapComponent, MapPoint } from '../../../shared/ui/live-map/live-map.component';
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
-import { RideService } from '../../../infrastructure/rest/ride.service';
+import { RideService, CreateRideRequest } from '../../../infrastructure/rest/ride.service';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 
@@ -18,6 +18,7 @@ type DashboardRide = {
   time: string;
   pickup: string;
   dropoff: string;
+  status: string;
   scheduledTime?: string;
 };
 
@@ -40,6 +41,10 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   driverLocation: MapPoint | null = null;
   showAllFutureRides = false;
+
+  // Routes for map
+  rideRoute: MapPoint[] | null = null;
+  approachRoute: MapPoint[] | null = null;
 
   private readonly destroy$ = new Subject<void>();
   private driverId: number | null = null;
@@ -65,7 +70,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   constructor(
     private vehicleService: VehicleService,
     private authService: AuthService,
-    private rideService: RideService
+    private rideService: RideService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -94,13 +100,17 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   cancelRide(id: number): void {
+    const reason = window.prompt('Please enter a reason for cancellation:');
+    if (!reason) return;
+
     const previous = [...this.futureRides];
     this.futureRides = this.futureRides.filter(r => r.id !== id);
 
-    this.rideService.cancelRide(id, { reason: 'Driver cancelled ride' }).subscribe({
+    this.rideService.cancelRide(id, { reason }).subscribe({
       error: () => {
         // revert on failure
         this.futureRides = previous;
+        alert('Failed to cancel the ride. Please try again.');
       }
     });
   }
@@ -112,13 +122,43 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
 
     this.rideService
-      .getRidesHistory({ driverId: this.driverId, status: 'ACCEPTED', page: 0, size: 20 })
+      .getRidesHistory({ driverId: this.driverId, page: 0, size: 20 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {
-          const mapped = (page.content ?? []).map(r => this.toDashboardRide(r));
-          mapped.sort((a, b) => (a.scheduledTime ?? '').localeCompare(b.scheduledTime ?? ''));
+          const validStatuses = ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'SCHEDULED'];
+          const relevant = (page.content ?? []).filter(r => validStatuses.includes(r.status as string));
+          
+          this.rawRides = relevant;
+
+          const mapped = relevant.map(r => this.toDashboardRide(r));
+          
+          // Sort: IN_PROGRESS first, then by scheduledTime
+          mapped.sort((a, b) => {
+             // Find original objects to check status
+             const rideA = relevant.find(r => r.id === a.id);
+             const rideB = relevant.find(r => r.id === b.id);
+             
+             const statusA = rideA?.status === 'IN_PROGRESS' ? 0 : 1;
+             const statusB = rideB?.status === 'IN_PROGRESS' ? 0 : 1;
+             
+             if (statusA !== statusB) return statusA - statusB;
+             
+             return (a.scheduledTime ?? '').localeCompare(b.scheduledTime ?? '');
+          });
+          
           this.futureRides = mapped;
+          
+          // If we have an active/pending ride, fetch its details to draw routes
+          const activeRide = relevant.find(r => r.id === mapped[0]?.id);
+          if (activeRide) {
+             this.fetchRoutesForRide(activeRide);
+          } else {
+             this.rideRoute = null;
+             this.approachRoute = null;
+          }
+
+          this.cdr.detectChanges();
         },
         error: () => {
           // keep previous list on failure
@@ -138,6 +178,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     const price = Number(r.totalCost ?? r.estimatedCost ?? 0);
     const type = String(r.vehicleType ?? '—');
+    const status = String(r.status ?? 'PENDING');
 
     return {
       id: Number(r.id),
@@ -147,8 +188,84 @@ export class DashboardPage implements OnInit, OnDestroy {
       time,
       pickup,
       dropoff,
+      status,
       scheduledTime: r.scheduledTime
     };
+  }
+
+  private fetchRoutesForRide(ride: RideResponse): void {
+      // 1. Get Ride Route (Yellow)
+      // If backend gave detailed route points, use them. Else, estimate.
+      if (ride.routePoints && ride.routePoints.length > 2) {
+          this.rideRoute = ride.routePoints
+            .sort((a, b) => a.order - b.order)
+            .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+      } else {
+         // Fallback estimate ride itself if missing
+         const start = ride.departure ?? ride.start ?? ride.startLocation;
+         const end = ride.destination ?? ride.endLocation;
+         if (start && end) {
+             const req: CreateRideRequest = {
+                 start, destination: end, stops: ride.stops || [],
+                 passengerEmails: [], scheduledTime: null,
+                 requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+             };
+             this.rideService.estimateRide(req).subscribe(res => {
+                if(res.routePoints?.length) {
+                    this.rideRoute = res.routePoints.map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                    this.cdr.detectChanges();
+                }
+             });
+         }
+      }
+
+      // 2. Approach Route (Light Blue) - Vehicle to Pickup
+      // Show approach route for any non-FINISHED ride
+      
+      const shouldShowApproach = ride.status !== 'FINISHED' && ride.status !== 'CANCELLED';
+      
+      // Prefer vehicleLocation from ride response (from backend), else use driver's polled location
+      const vehicleLoc = ride.vehicleLocation ?? 
+        (this.driverLocation ? { address: '', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude } : null);
+      
+      // Update driver marker position from vehicle location if available from ride
+      // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+      if (ride.vehicleLocation && !this.driverLocation) {
+          setTimeout(() => {
+              this.driverLocation = { latitude: ride.vehicleLocation!.latitude, longitude: ride.vehicleLocation!.longitude };
+              this.cdr.detectChanges();
+          }, 0);
+      }
+      
+      const pickup = ride.departure ?? ride.start ?? ride.startLocation;
+      
+      if (shouldShowApproach && vehicleLoc && pickup) {
+          // Calculate approach route using API (same as yellow line)
+          const req: CreateRideRequest = {
+              start: { address: vehicleLoc.address || '', latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
+              destination: pickup,
+              stops: [],
+              passengerEmails: [], scheduledTime: null,
+              requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+          };
+          
+          this.rideService.estimateRide(req).subscribe({
+              next: (res) => {
+                  if (res.routePoints?.length) {
+                      this.approachRoute = res.routePoints
+                        .sort((a, b) => a.order - b.order)
+                        .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                      this.cdr.detectChanges();
+                  }
+              },
+              error: () => {
+                this.approachRoute = null;
+                this.cdr.detectChanges();
+              }
+          });
+      } else {
+          this.approachRoute = null;
+      }
   }
 
   private fetchDriverLocation(): void {
@@ -160,13 +277,33 @@ export class DashboardPage implements OnInit, OnDestroy {
       .subscribe({
       next: (vehicles) => {
         const mine = vehicles.find(v => v.driverId === this.driverId);
-        this.driverLocation = mine
-          ? { latitude: mine.latitude, longitude: mine.longitude }
-          : null;
+        if (mine) {
+           this.driverLocation = { latitude: mine.latitude, longitude: mine.longitude };
+           
+           if (this.nextRide && !this.approachRoute) {
+               this.reloadRoutesIfMissing();
+           }
+           this.cdr.detectChanges();
+        } else {
+           this.driverLocation = null;
+           this.cdr.detectChanges();
+        }
       },
       error: () => {
         // Keep last known location if the request fails.
       }
     });
+  }
+
+  // Cache of raw ride objects
+  private rawRides: RideResponse[] = [];
+
+  private reloadRoutesIfMissing() {
+      if (!this.futureRides.length) return;
+      const activeId = this.futureRides[0].id;
+      const raw = this.rawRides.find(r => r.id === activeId);
+      if (raw) {
+          this.fetchRoutesForRide(raw);
+      }
   }
 }
