@@ -45,7 +45,7 @@
   <button
     *ngIf="showAction"
     type="button"
-    (click)="onActionClick()"
+    (click)="$event.preventDefault(); $event.stopPropagation(); onActionClick()"
     class="w-full py-3 font-bold rounded-lg transition-colors"
     [ngClass]="actionVariant === 'danger'
       ? 'bg-red-500/15 hover:bg-red-500/20 text-red-400 border border-red-500/20'

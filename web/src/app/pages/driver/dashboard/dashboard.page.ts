@@ -18,6 +18,7 @@ type DashboardRide = {
   time: string;
   pickup: string;
   dropoff: string;
+  status: string;
   scheduledTime?: string;
 };
 
@@ -95,13 +96,17 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   cancelRide(id: number): void {
+    const reason = window.prompt('Please enter a reason for cancellation:');
+    if (!reason) return;
+
     const previous = [...this.futureRides];
     this.futureRides = this.futureRides.filter(r => r.id !== id);
 
-    this.rideService.cancelRide(id, { reason: 'Driver cancelled ride' }).subscribe({
+    this.rideService.cancelRide(id, { reason }).subscribe({
       error: () => {
         // revert on failure
         this.futureRides = previous;
+        alert('Failed to cancel the ride. Please try again.');
       }
     });
   }
@@ -159,6 +164,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     const price = Number(r.totalCost ?? r.estimatedCost ?? 0);
     const type = String(r.vehicleType ?? '—');
+    const status = String(r.status ?? 'PENDING');
 
     return {
       id: Number(r.id),
@@ -168,6 +174,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       time,
       pickup,
       dropoff,
+      status,
       scheduledTime: r.scheduledTime
     };
   }

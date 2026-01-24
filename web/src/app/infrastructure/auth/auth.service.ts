@@ -6,6 +6,7 @@ import { environment } from '../../../env/environment';
 import { Login } from '../../model/login.model';
 import { AuthResponse } from '../../model/auth-response.model';
 import { PassengerRegistrationRequest } from '../../model/registration.model';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root'
@@ -17,7 +18,10 @@ export class AuthService {
   // Holds the current role (or null). Components subscribe to this
   user$ = new BehaviorSubject<string | null>(this.getRole());
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private router: Router
+  ) {}
 
   login(auth: Login): Observable<AuthResponse> {
     // "skip" header tells interceptor NOT to add the token for this request
@@ -82,6 +86,19 @@ export class AuthService {
         return throwError(() => err);
       })
     );
+  }
+
+  logout(): void {
+    this.http.post(`${environment.apiHost}auth/logout`, {}).subscribe({
+      next: () => this.doLocalLogout(),
+      error: () => this.doLocalLogout()
+    });
+  }
+
+  private doLocalLogout(): void {
+    localStorage.removeItem(this.userKey);
+    this.user$.next(null);
+    this.router.navigate(['/login']);
   }
 
   private extractHttpErrorMessage(err: HttpErrorResponse): string {
@@ -248,17 +265,12 @@ export class AuthService {
     );
   }
 
-  logout(): void {
-    localStorage.removeItem(this.userKey);
-    this.user$.next(null);
-  }
-
   getUserId(): number | null {
     const token = localStorage.getItem(this.userKey);
     if (!token) return null;
 
     if (this.jwtHelper.isTokenExpired(token)) {
-      this.logout();
+      this.doLocalLogout();
       return null;
     }
 
@@ -280,7 +292,7 @@ export class AuthService {
     if (!token) return null;
 
     if (this.jwtHelper.isTokenExpired(token)) {
-      this.logout();
+      this.doLocalLogout();
       return null;
     }
 
