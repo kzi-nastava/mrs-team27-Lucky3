@@ -171,38 +171,136 @@ public class RideServiceImpl implements RideService {
         return (int) Math.ceil(minDistance / 0.83);
     }
 
+    /*
+    1. Ako ne postoji nijedan vozač prijavljen/aktivan, vožnja se odbija i korisniku stiže notifikacija da trenutno nema aktivnih vozača.
+
+    2. Ako su svi vozači trenutno zauzeti i ako imaju već zakazanu buduću vožnju,
+    takođe se vožnja odbija uz slanje notifikacije da trenutno nema aktivnih vozača.
+
+    3. Ako ima slobodnih vozača, sistem bira najbližeg, a ako su svi zauzeti, bira se onaj koji je najbliži polazištu
+    i najbliži zavšetku trenutne vožnje (preostalo mu je još 10 minuta prethodne vožnje).
+    Korisniku se šalje notifikacija o dodeljenoj vožnji.
+
+    4. Ako vozač ima više od 8 radnih sati u poslednja 24 časa, ne postoji mogućnost da mu sistem dodeli vožnju.
+     */
     @Override
     @Transactional
-    public RideResponse createRide(CreateRideRequest request) {
+    public RideCreated createRide(CreateRideRequest request) {
         User passenger = getCurrentUser();
+        RideCreated response = new RideCreated();
+
         if (passenger == null) {
             throw new IllegalStateException("User must be logged in to create a ride");
         }
-
-        Ride ride = new Ride();
-
-        ride.setStartTime(null); // Will be set when accepted/started
-        ride.setScheduledTime(request.getScheduledTime());
-        ride.setStartLocation(mapLocation(request.getStart()));
-        ride.setEndLocation(mapLocation(request.getDestination()));
-
-        if (request.getStops() != null) {
-            ride.setStops(request.getStops().stream()
-                    .map(this::mapLocation)
-                    .collect(Collectors.toList()));
+        // 1. Look for available drivers (in vehicle repository) - no available drivers
+        List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
+        if (activeVehicles.isEmpty()) { // no available drivers
+            response.setStatus(RideStatus.REJECTED);
+            response.setRejectionReason("No active drivers available at the moment.");
+            return response;
         }
+        // estimate ride
+        RideEstimationResponse estimation = estimateRide(request);
 
-        ride.setPassengers(Set.of(passenger));
-        ride.setStatus(RideStatus.PENDING);
-        ride.setRequestedVehicleType(request.getRequirements().getVehicleType());
-        ride.setBabyTransport(request.getRequirements().isBabyTransport());
-        ride.setPetTransport(request.getRequirements().isPetTransport());
-        ride.setEstimatedCost(450.0); // Dummy estimation
-        ride.setDistance(3.5); // Dummy distance
-        ride.setInvitedEmails(request.getPassengerEmails());
+        // 3. Find available drivers
+        LocalDateTime rideStartTime = request.getScheduledTime() != null
+                ? request.getScheduledTime()
+                : LocalDateTime.now();
+        LocalDateTime rideEndTime = rideStartTime.plusMinutes(estimation.getEstimatedTimeInMinutes());
 
-        Ride savedRide = rideRepository.save(ride);
-        return mapToResponse(savedRide);
+        // Get all driver IDs from active vehicles
+        List<Long> activeDriverIds = activeVehicles.stream()
+                .map(v -> v.getDriver().getId())
+                .collect(Collectors.toList());
+
+        // Find drivers with overlapping rides
+        List<Long> busyDriverIds = rideRepository.findDriversWithRidesInTimeRange(
+                activeDriverIds,
+                rideStartTime,
+                rideEndTime
+        );
+
+        // Filter out busy drivers
+        List<Vehicle> availableFreeVehicles = activeVehicles.stream()
+                .filter(v -> !busyDriverIds.contains(v.getDriver().getId()))
+                .collect(Collectors.toList());
+
+
+        // there exists free driver
+        if (!availableFreeVehicles.isEmpty()) {
+            //assign the closest free driver
+            Vehicle assignedVehicle = null;
+            double minDistance = Double.MAX_VALUE;
+            Location rideStartLocation = mapLocation(request.getStart());
+            for (Vehicle v : availableFreeVehicles) {
+                if (v.getCurrentLocation() != null) {
+                    double dist = calculateHaversineDistance(rideStartLocation, v.getCurrentLocation());
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        assignedVehicle = v;
+                    }
+                }
+            }
+            if (assignedVehicle == null) {
+                response.setStatus(RideStatus.REJECTED);
+                response.setRejectionReason("No drivers with valid location found.");
+                return response;
+            }
+
+            // Create and save the ride
+            Ride ride = new Ride();
+            ride.setStartTime(rideStartTime);
+            ride.setEndTime(rideEndTime);
+            ride.setScheduledTime(rideStartTime);   //same as start time for now
+            ride.setTotalCost(estimation.getEstimatedCost());
+            ride.setEstimatedCost(estimation.getEstimatedCost());
+            ride.setDistance(estimation.getEstimatedDistance());
+            ride.setStatus(RideStatus.SCHEDULED);
+            //ride.setPanicPressed(false);
+            //ride.setRejectionReason(null);
+            ride.setPetTransport(request.getRequirements().isPetTransport());
+            ride.setBabyTransport(request.getRequirements().isBabyTransport());
+            ride.setRequestedVehicleType(assignedVehicle.getVehicleType());
+            ride.setPaid(false); // ne znam sta bih stavio ovde?
+            ride.setPassengersExited(false);
+            ride.setStartLocation(new Location( request.getStart().getAddress(),
+                                                request.getStart().getLatitude(),
+                                                request.getStart().getLongitude()));
+            ride.setEndLocation(new Location( request.getDestination().getAddress(),
+                                              request.getDestination().getLatitude(),
+                                              request.getDestination().getLongitude()));
+            // Set stops
+            if (request.getStops() != null && !request.getStops().isEmpty()) {
+                List<Location> rideStops = request.getStops().stream()
+                        .map(stop -> new Location(stop.getAddress(),
+                                stop.getLatitude(),
+                                stop.getLongitude()))
+                        .collect(Collectors.toList());
+                ride.setStops(rideStops);
+            } else {
+                ride.setStops(new ArrayList<>());
+            }
+            ride.setDriver(assignedVehicle.getDriver());
+            ride.setPassengers(null);   //TODO: fix this, but for now no need
+            ride.setInvitedEmails(request.getPassengerEmails());
+            ride.setInconsistencyReports(null);
+            ride = rideRepository.save(ride);
+
+            //creating response
+            response = RideCreated.fromRide(ride);
+            response.setDriverProfilePictureUrl("/api/users/"+assignedVehicle.getDriver().getId()+"/profile-image");
+            response.setVehicleModel(assignedVehicle.getModel());
+            response.setVehicleLicensePlate(assignedVehicle.getLicensePlates());
+            response.setStops(request.getStops());
+
+            return response;
+        }
+        // Further filter based on working hours (max 8h in last 24h)
+
+        //TODO: finish this. It should find driver that is closest to finish his current ride
+        response.setStatus(RideStatus.REJECTED);
+        response.setRejectionReason("All drivers are currently busy.");
+        return response;
     }
 
     @Override

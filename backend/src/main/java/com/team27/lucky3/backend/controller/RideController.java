@@ -2,6 +2,7 @@ package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.*;
+import com.team27.lucky3.backend.dto.response.RideCreated;
 import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.dto.response.RoutePointResponse;
@@ -20,6 +21,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,10 +44,10 @@ public class RideController {
     }
 
     // 2.4.1 Order a ride (logged-in user)
+    @PreAuthorize("hasRole('PASSENGER')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<RideResponse> createRide(@Valid @RequestBody CreateRideRequest request) {
-
-        RideResponse response = DummyData.createDummyRideResponse(12L, 10L, 123L, RideStatus.PENDING);
+    public ResponseEntity<RideCreated> createRide(@Valid @RequestBody CreateRideRequest request) {
+        RideCreated response = rideService.createRide(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
