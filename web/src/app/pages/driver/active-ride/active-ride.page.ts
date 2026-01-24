@@ -53,6 +53,11 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   isEnding = false;
   endRideError = '';
 
+  showCancelModal = false;
+  cancelReason = '';
+  isCancelling = false;
+  cancelRideError = '';
+
   private driverId: number | null = null;
 
   // stop completion tracking
@@ -115,6 +120,39 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         this.startedAtMs = Date.now(); // Reset start time for metric calculation
       },
       error: (err) => console.error('Failed to start ride', err)
+    });
+  }
+
+  openCancelModal(): void {
+    this.cancelRideError = '';
+    this.cancelReason = '';
+    this.showCancelModal = true;
+  }
+
+  closeCancelModal(): void {
+    if (this.isCancelling) return;
+    this.showCancelModal = false;
+  }
+
+  confirmCancelRide(): void {
+    if (!this.rideId) return;
+    if (!this.cancelReason || this.cancelReason.trim().length === 0) {
+      this.cancelRideError = 'Please provide a reason.';
+      return;
+    }
+
+    this.isCancelling = true;
+    this.rideService.cancelRide(this.rideId, { reason: this.cancelReason }).subscribe({
+      next: () => {
+        this.isCancelling = false;
+        this.showCancelModal = false;
+        this.router.navigate(['/driver/dashboard']);
+      },
+      error: (err) => {
+        this.isCancelling = false;
+        console.error('Failed to cancel ride', err);
+        this.cancelRideError = 'Failed to cancel. Please try again.';
+      }
     });
   }
 
