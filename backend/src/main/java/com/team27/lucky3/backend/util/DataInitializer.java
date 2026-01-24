@@ -90,7 +90,9 @@ public class DataInitializer implements CommandLineRunner {
         vehicle.setSeatCount(4);
         vehicle.setBabyTransport(true);
         vehicle.setPetTransport(false);
-        vehicle.setCurrentLocation(new Location("Zeleznicka Stanica, Novi Sad", 45.2650, 19.8290));
+        // Changed to a location near "Trg Slobode" so we have a realistic approach route
+        // E.g., near "Srpsko Narodno Pozoriste"
+        vehicle.setCurrentLocation(new Location("Srpsko Narodno Pozoriste, Novi Sad", 45.2546, 19.8425));
         vehicleRepository.save(vehicle);
 
         // 5. Create Rides
