@@ -18,6 +18,7 @@ import { Ride } from '../../../shared/data/mock-data';
 })
 export class RideHistoryComponent implements OnInit, OnDestroy  {
   sortedRides: Ride[] = [];
+  selectedRide: Ride | null = null;
   private backendRides: Ride[] = [];
   
   dateFilter: string = '';
@@ -197,39 +198,6 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
     });
   }
 
-  private sortRides(rides: RideResponse[]): RideResponse[] {
-    if (!this.sortDirection || !this.sortField) {
-      return [...rides];
-    }
-
-    return [...rides].sort((a, b) => {
-      const aValue = this.getNestedValue(a, this.sortField);
-      const bValue = this.getNestedValue(b, this.sortField);
-      
-      const comparison = this.compare(aValue, bValue);
-      return this.sortDirection === 'asc' ? comparison : -comparison;
-    });
-  }
-
-  private getNestedValue(obj: any, field: string): any {
-    // Handle nested properties like 'driver.name'
-    const value = obj[field];
-    return value !== undefined ? value : '';
-  }
-
-  private compare(a: any, b: any): number {
-    if (a === null || a === undefined) return 1;
-    if (b === null || b === undefined) return -1;
-    
-    if (typeof a === 'string' && typeof b === 'string') {
-      return a.toLowerCase().localeCompare(b.toLowerCase());
-    }
-    
-    if (a < b) return -1;
-    if (a > b) return 1;
-    return 0;
-  }
-
   onViewDetails(ride: RideResponse): void {
     console.log('View ride details:', ride);
     // Implement navigation to ride details page or open modal
@@ -296,5 +264,26 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
     return status.replace('_', ' ');
   }
 
+  onRideSelected(ride: Ride) {
+    this.selectedRide = ride;
+  }
+
+  addToFavorites(ride: Ride) {
+    // Extract route information for favorites
+    const favoriteRoute = {
+      routeName: "Ruta: " + ride.pickup.address + " to " + ride.destination.address,
+      distance: ride.distance,
+      // Add any other route-specific details you want to save
+    };
+    
+    // TODO: Call your backend service to save to favorites
+    // this.favoriteService.addFavoriteRoute(favoriteRoute).subscribe(...)
+    
+    console.log('Adding route to favorites:', favoriteRoute);
+    
+    // Show success message (optional)
+    alert(`Route added to favorites!`);
+    this.selectedRide = null;
+  }
   
 }
