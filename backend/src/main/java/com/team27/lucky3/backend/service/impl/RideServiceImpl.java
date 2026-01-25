@@ -450,7 +450,8 @@ public class RideServiceImpl implements RideService {
         }
 
         boolean isDriver = ride.getDriver() != null && ride.getDriver().getId().equals(currentUser.getId());
-        boolean isPassenger = ride.getPassengers() != null && ride.getPassengers().contains(currentUser);
+        boolean isPassenger = ride.getPassengers() != null && ride.getPassengers().stream()
+                .anyMatch(p -> p.getId().equals(currentUser.getId()));
 
         if (isDriver) {
             // Driver may cancel only before passengers enter the vehicle → before ride starts
