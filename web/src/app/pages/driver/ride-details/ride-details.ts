@@ -57,7 +57,11 @@ export class RideDetails implements OnInit {
       startedAt: r.startTime,
       requestedAt: r.startTime ?? '',
       completedAt: r.endTime,
-      status: r.status === 'FINISHED' ? 'completed' : (r.status === 'CANCELLED' ? 'cancelled' : 'active'),
+      status: r.status === 'FINISHED' ? 'Finished' :
+              r.status === 'CANCELLED' ? 'Canceled' :
+              r.status === 'PENDING' ? 'Pending' :
+              r.status === 'ACCEPTED' ? 'Accepted' :
+              r.status === 'REJECTED' ? 'Rejected' : 'all',
       fare: r.totalCost ?? 0,
       distance: r.distanceKm ?? 0,
       pickup: { address: r.departure?.address ?? r.start?.address ?? r.startLocation?.address ?? '—' },

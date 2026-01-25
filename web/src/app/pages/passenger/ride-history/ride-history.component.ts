@@ -21,7 +21,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
   private backendRides: Ride[] = [];
   
   dateFilter: string = '';
-  filter: 'all' | 'completed' | 'cancelled' = 'all';
+  filter: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Canceled' = 'all';
   sortField: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers' = 'startDate';
   timeFilter: 'today' | 'week' | 'month' | 'all' = 'all';
   sortDirection: 'asc' | 'desc' = 'desc';
@@ -54,6 +54,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
           // Filter to only past rides (FINISHED, CANCELLED)
           const pastStatuses = ['FINISHED', 'CANCELLED', 'PENDING', 'SCHEDULED', 'ACCEPTED', 'ACTIVE', 'IN_PROGRESS', 'REJECTED', 'PANIC']; //TODO: adjust later if needed
           const relevant = (page.content ?? []).filter(r => pastStatuses.includes(r.status as string));
+          console.log('Fetched rides from backend:', page.content);
           
           this.backendRides = relevant.map(r => this.mapToRide(r));
           console.log('Loaded rides:', this.backendRides);
@@ -71,7 +72,11 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
       startedAt: r.startTime,
       requestedAt: r.startTime ?? '', // Fallback or add field to RideResponse if needed
       completedAt: r.endTime,
-      status: r.status === 'FINISHED' ? 'completed' : 'cancelled', // map enum
+      status: r.status === 'FINISHED' ? 'Finished' :
+              r.status === 'CANCELLED' ? 'Canceled' :
+              r.status === 'PENDING' ? 'Pending' :
+              r.status === 'ACCEPTED' ? 'Accepted' :
+              r.status === 'REJECTED' ? 'Rejected' : 'all',
       fare: r.totalCost ?? 0,
       distance: r.distanceKm ?? 0,
       pickup: { address: r.departure?.address ?? r.start?.address ?? r.startLocation?.address ?? '—' },
@@ -88,7 +93,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
     this.updateView();
   }
 
-  setFilter(status: 'all' | 'completed' | 'cancelled') {
+  setFilter(status: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Canceled') {
     this.filter = status;
     this.updateView();
   }
@@ -115,6 +120,8 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
 
     // Apply Status Filter
     if (this.filter !== 'all') {
+      console.log('Applying status filter:', this.filter);
+      console.log('Rides before status filter:', filtered);
       filtered = filtered.filter(ride => ride.status === this.filter);
     }
 
