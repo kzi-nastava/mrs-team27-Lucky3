@@ -3,9 +3,7 @@ package com.team27.lucky3.backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -38,6 +36,9 @@ public class User implements UserDetails {
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "profile_image_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @JsonIgnore // also prevents accidental serialization
     private Image profileImage;
 
     @Enumerated(EnumType.STRING)
