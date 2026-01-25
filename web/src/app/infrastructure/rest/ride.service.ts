@@ -5,7 +5,6 @@ import { environment } from '../../../env/environment';
 import { CreateRideRequest } from './model/create-ride.model';
 import { LocationDto } from './model/location.model';
 import { EndRideRequest, RideCancellationRequest, RideResponse } from './model/ride-response.model';
-import { RideCreated } from './model/order-ride.model';
 
 export interface PageResponse<T> {
   content: T[];
@@ -40,8 +39,8 @@ export class RideService {
     return this.http.post<RideEstimationResponse>(`${this.apiUrl}/estimate`, request);
   }
 
-  orderRide(request: CreateRideRequest): Observable<RideCreated> {
-    return this.http.post<RideCreated>(`${this.apiUrl}`, request);
+  orderRide(request: CreateRideRequest): Observable<RideResponse> {
+    return this.http.post<RideResponse>(`${this.apiUrl}`, request);
   }
 
   getRide(id: number): Observable<RideResponse> {

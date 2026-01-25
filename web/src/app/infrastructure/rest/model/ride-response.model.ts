@@ -19,9 +19,25 @@ export interface RideResponse {
   id: number;
   status?: RideStatus;
 
-  // reference_backend shape
-  driver?: { id?: number } | null;
-  passengers?: Array<{ id?: number; name?: string; email?: string }> | null;
+  // reference_backend shape - full driver info from DriverResponse
+  driver?: {
+    id?: number;
+    name?: string;
+    surname?: string;
+    email?: string;
+    profilePicture?: string;
+    phoneNumber?: string;
+    address?: string;
+    vehicle?: {
+      model?: string;
+      vehicleType?: string;
+      licensePlates?: string;
+      seatCount?: number;
+      babyTransport?: boolean;
+      petTransport?: boolean;
+    };
+  } | null;
+  passengers?: Array<{ id?: number; name?: string; surname?: string; email?: string }> | null;
   departure?: LocationDto;
   destination?: LocationDto;
   scheduledTime?: string;
