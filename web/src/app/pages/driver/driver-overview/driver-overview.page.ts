@@ -84,7 +84,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
       requestedAt: r.startTime ?? '', // Fallback or add field to RideResponse if needed
       completedAt: r.endTime,
       status: r.status === 'FINISHED' ? 'Finished' :
-              r.status === 'CANCELLED' ? 'Canceled' :
+              r.status === 'CANCELLED' ? 'Cancelled' :
               r.status === 'PENDING' ? 'Pending' :
               r.status === 'ACCEPTED' ? 'Accepted' :
               r.status === 'REJECTED' ? 'Rejected' : 'all',

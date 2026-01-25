@@ -22,7 +22,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
   private backendRides: Ride[] = [];
   
   dateFilter: string = '';
-  filter: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Canceled' = 'all';
+  filter: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Cancelled' = 'all';
   sortField: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers' = 'startDate';
   timeFilter: 'today' | 'week' | 'month' | 'all' = 'all';
   sortDirection: 'asc' | 'desc' = 'desc';
@@ -74,7 +74,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
       requestedAt: r.startTime ?? '', // Fallback or add field to RideResponse if needed
       completedAt: r.endTime,
       status: r.status === 'FINISHED' ? 'Finished' :
-              r.status === 'CANCELLED' ? 'Canceled' :
+              r.status === 'CANCELLED' ? 'Cancelled' :
               r.status === 'PENDING' ? 'Pending' :
               r.status === 'ACCEPTED' ? 'Accepted' :
               r.status === 'REJECTED' ? 'Rejected' : 'all',
@@ -94,7 +94,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
     this.updateView();
   }
 
-  setFilter(status: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Canceled') {
+  setFilter(status: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Cancelled') {
     this.filter = status;
     this.updateView();
   }

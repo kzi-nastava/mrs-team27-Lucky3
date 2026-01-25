@@ -66,7 +66,7 @@
         <!-- Status Filter Buttons -->
         <div class="flex gap-2 bg-gray-900 p-1 rounded-lg">
           <button
-            *ngFor="let status of ['all', 'Pending', 'Accepted', 'Finished', 'Rejected', 'Canceled']"
+            *ngFor="let status of ['all', 'Pending', 'Accepted', 'Finished', 'Rejected', 'Cancelled']"
             (click)="setFilter($any(status))"
             class="px-4 py-1.5 rounded-md text-sm font-medium transition-all capitalize"
             [ngClass]="{
