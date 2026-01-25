@@ -130,6 +130,7 @@ public class RideController {
 
     // 2.4.3 Adding route to favourite
     // MARK as favourite (create)
+    @PreAuthorize("hasRole('PASSENGER')")
     @PostMapping("/{id}/favourite-route")
     public ResponseEntity<Void> addFavouriteRoute(
             @PathVariable @Min(1) Long id,
@@ -139,7 +140,8 @@ public class RideController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @DeleteMapping("/{passengerId}/favourite-route/{favouriteRouteId}")
+    @PreAuthorize("hasRole('PASSENGER')")
+    @DeleteMapping("/{passengerId}/favourite-routes/{favouriteRouteId}")
     public ResponseEntity<Void> removeFavouriteRoute(
             @PathVariable @Min(1) Long passengerId,
             @PathVariable @Min(1) Long favouriteRouteId

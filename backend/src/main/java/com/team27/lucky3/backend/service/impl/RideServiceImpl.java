@@ -923,9 +923,17 @@ public class RideServiceImpl implements RideService {
         return start + " → " + end;
     }
 
+    @Transactional
     @Override
     public void removeFromFavorite(Long userId, Long favouriteId) {
 
+        FavoriteRoute favorite = favoriteRouteRepository
+                .findByIdAndUserId(favouriteId, userId)   // <- safest (ownership check in DB)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Favorite route not found for userId=" + userId + ", favouriteId=" + favouriteId
+                ));
+
+        favoriteRouteRepository.delete(favorite);
     }
 
     @Override

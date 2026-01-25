@@ -64,16 +64,16 @@ passengerId: number | null = null;
 
   removeFavorite(routeId: number): void {
     if (confirm('Are you sure you want to remove this route from favorites?')) {
-      // Call your ride service to remove favorite
-      // this.rideService.removeFavoriteRoute(routeId).subscribe({
-      //   next: () => {
-      //     this.favoriteRoutes = this.favoriteRoutes.filter(route => route.id !== routeId);
-      //   },
-      //   error: (error) => {
-      //     this.errorMessage = 'Failed to remove favorite route';
-      //     console.error('Error removing favorite route:', error);
-      //   }
-      // });
+       //Calling ride service to remove favorite
+       this.rideService.removeFavoriteRoute(this.passengerId!, routeId).subscribe({
+         next: () => {
+           this.favoriteRoutes = this.favoriteRoutes.filter(route => route.id !== routeId);
+         },
+         error: (error) => {
+           this.errorMessage = 'Failed to remove favorite route';
+           console.error('Error removing favorite route:', error);
+         }
+       });
 
       // Mock removal
       this.favoriteRoutes = this.favoriteRoutes.filter(route => route.id !== routeId);
