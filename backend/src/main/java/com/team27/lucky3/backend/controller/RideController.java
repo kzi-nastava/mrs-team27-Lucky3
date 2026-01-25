@@ -2,9 +2,7 @@ package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.*;
-import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
-import com.team27.lucky3.backend.dto.response.RideResponse;
-import com.team27.lucky3.backend.dto.response.RoutePointResponse;
+import com.team27.lucky3.backend.dto.response.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.service.RideService;
@@ -150,4 +148,10 @@ public class RideController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('PASSENGER')")
+    @GetMapping("/{id}/favourite-routes")
+    public ResponseEntity<List<FavoriteRouteResponse>> getFavoriteRoutes(@PathVariable @Min(1) Long id) {
+        List<FavoriteRouteResponse> favoriteRoutes = rideService.getFavoriteRoutes(id);
+        return ResponseEntity.ok(favoriteRoutes);
+    }
 }

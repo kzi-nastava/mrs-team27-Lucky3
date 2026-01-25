@@ -927,4 +927,21 @@ public class RideServiceImpl implements RideService {
     public void removeFromFavorite(Long userId, Long favouriteId) {
 
     }
+
+    @Override
+    public List<FavoriteRouteResponse> getFavoriteRoutes(Long userId){
+        return favoriteRouteRepository.findByUserId(userId).stream()
+                .map(fr -> new FavoriteRouteResponse(
+                        fr.getId(),
+                        fr.getRouteName(),
+                        new LocationDto(fr.getStartLocation().getAddress(), fr.getStartLocation().getLatitude(), fr.getStartLocation().getLongitude()),
+                        new LocationDto(fr.getEndLocation().getAddress(), fr.getEndLocation().getLatitude(), fr.getEndLocation().getLongitude()),
+                        fr.getStops().stream()
+                                .map(s -> new LocationDto(s.getAddress(), s.getLatitude(), s.getLongitude()))
+                                .collect(Collectors.toList()),
+                        0.0,
+                        0.0
+                ))
+                .collect(Collectors.toList());
+    }
 }

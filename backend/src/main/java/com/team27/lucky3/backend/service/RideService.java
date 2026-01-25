@@ -1,10 +1,13 @@
 package com.team27.lucky3.backend.service;
 
 import com.team27.lucky3.backend.dto.request.*;
+import com.team27.lucky3.backend.dto.response.FavoriteRouteResponse;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.entity.Ride;
 import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
 import org.springframework.http.ResponseEntity;
+
+import java.util.List;
 
 public interface RideService {
     RideResponse createRide(CreateRideRequest request);
@@ -29,4 +32,5 @@ public interface RideService {
     RideResponse getActiveRide(Long userId);
     void addToFavorite(Long userId, FavouriteRouteRequest request);
     void removeFromFavorite(Long userId, Long favouriteId);
+    List<FavoriteRouteResponse> getFavoriteRoutes(Long userId);
 }

@@ -1,15 +1,20 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { RideService } from '../../../infrastructure/rest/ride.service';
-import { RideService } from '../../../infrastructure/rest/ride.service';
+import { LocationDto } from '../../../infrastructure/rest/model/location.model';
+import { AuthService } from '../../../infrastructure/auth/auth.service';
 
-export interface FavoriteRoute {
+//matching DTO from backend
+export interface FavoriteRouteResponse {
   id: number;
-  name: string;
-  start: string;
-  destination: string;
+  routeName: string;
+  startLocation: LocationDto;
+  endLocation: LocationDto;
+  stops: LocationDto[];
+  distance: number;       // Double in Java
+  estimatedTime: number;  // Double in Java
 }
 
 @Component({
@@ -19,28 +24,34 @@ export interface FavoriteRoute {
   templateUrl: './favorite-page.component.html'
 })
 export class FavoritePageComponent implements OnInit {
-  favoriteRoutes: FavoriteRoute[] = [];
+  favoriteRoutes: FavoriteRouteResponse[] = [];
   isLoading: boolean = true;
   errorMessage: string = '';
+passengerId: number | null = null;
 
   constructor(
+    private authService: AuthService, // Inject your auth service here
     private router: Router,
-    private rideService: RideService  // Inject your ride service here
+    private rideService: RideService,  // Inject your ride service here
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.loadFavoriteRoutes();
-  }
+      this.passengerId = this.authService.getUserId();
+      //load favorite routes
+      this.loadFavoriteRoutes();
+    }
 
   loadFavoriteRoutes(): void {
     this.isLoading = true;
     this.errorMessage = '';
     
     // Call your ride service to get favorite routes
-    this.rideService.getFavoriteRoutes().subscribe({
+    this.rideService.getFavoriteRoutes(this.passengerId!).subscribe({
       next: (routes) => {
          this.favoriteRoutes = routes;
          this.isLoading = false;
+         this.cdr.detectChanges();
        },
        error: (error) => {
          this.errorMessage = 'Failed to load favorite routes';
@@ -49,15 +60,6 @@ export class FavoritePageComponent implements OnInit {
        }
     });
 
-    // Mock data for testing
-    setTimeout(() => {
-      this.favoriteRoutes = [
-        { id: 1, name: 'Morning Commute', start: 'Home', destination: 'Office' },
-        { id: 2, name: 'Weekend Trip', start: 'City Center', destination: 'Airport' },
-        { id: 3, name: 'Gym Route', start: 'Apartment', destination: 'Fitness Center' }
-      ];
-      this.isLoading = false;
-    }, 500);
   }
 
   removeFavorite(routeId: number): void {
@@ -78,7 +80,7 @@ export class FavoritePageComponent implements OnInit {
     }
   }
 
-  orderRoute(route: FavoriteRoute): void {
+  orderRoute(route: FavoriteRouteResponse): void {
     // Call your ride service to order the route
     // this.rideService.orderRoute(route).subscribe({
     //   next: (response) => {
@@ -92,6 +94,6 @@ export class FavoritePageComponent implements OnInit {
     // });
 
     console.log('Ordering route:', route);
-    alert(`Ordering route: ${route.name} from ${route.start} to ${route.destination}`);
+    alert(`Ordering route: ${route.routeName} from ${route.startLocation} to ${route.endLocation}`);
   }
 }
