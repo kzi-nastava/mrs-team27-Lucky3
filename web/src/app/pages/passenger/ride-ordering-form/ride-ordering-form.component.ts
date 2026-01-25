@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RideOrderData } from '../model/order-ride-data.interface';
@@ -21,6 +21,10 @@ export class RideOrderingFormComponent {
   @Output() orderRideRequest = new EventEmitter<RideOrderData>();
   //@Output() resetRequest = new EventEmitter<void>();
 
+  // NEW: Inputs for prefilled locations
+  @Input() prefilledStartLocation: string | null = null;
+  @Input() prefilledEndLocation: string | null = null;
+
   pickupAddress: string = '';
   destinationAddress: string = '';
   intermediateStops: string[] = [];
@@ -34,6 +38,26 @@ export class RideOrderingFormComponent {
 
   addStop(): void {
     this.intermediateStops.push('');
+  }
+
+  // NEW: Handle changes to input properties when ordering from favourites
+  ngOnChanges(changes: SimpleChanges): void {
+    // Check if inputs were cleared (set to null)
+    if (changes['prefilledStartLocation']) {
+      if (this.prefilledStartLocation === null) {
+        this.pickupAddress = '';
+      } else if (this.prefilledStartLocation) {
+        this.pickupAddress = this.prefilledStartLocation;
+      }
+    }
+    
+    if (changes['prefilledEndLocation']) {
+      if (this.prefilledEndLocation === null) {
+        this.destinationAddress = '';
+      } else if (this.prefilledEndLocation) {
+        this.destinationAddress = this.prefilledEndLocation;
+      }
+    }
   }
 
   trackByIndex(index: number, item: any): number {
@@ -72,6 +96,8 @@ export class RideOrderingFormComponent {
     this.babyTransport = false;
     this.orderingResult = null;
     this.orderingError = '';
+    this.prefilledEndLocation = null;
+    this.prefilledStartLocation = null;
     // this.resetRequest.emit();
   }
 

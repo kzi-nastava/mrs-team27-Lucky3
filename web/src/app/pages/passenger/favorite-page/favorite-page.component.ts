@@ -81,19 +81,18 @@ passengerId: number | null = null;
   }
 
   orderRoute(route: FavoriteRouteResponse): void {
-    // Call your ride service to order the route
-    // this.rideService.orderRoute(route).subscribe({
-    //   next: (response) => {
-    //     console.log('Route ordered successfully:', response);
-    //     this.router.navigate(['/order-confirmation', response.orderId]);
-    //   },
-    //   error: (error) => {
-    //     this.errorMessage = 'Failed to order route';
-    //     console.error('Error ordering route:', error);
-    //   }
-    // });
+    // Navigate to the ride ordering page with route data as state
+    this.router.navigate(['/passenger/home'], {
+        state: {
+        startLocation: route.startLocation,
+        endLocation: route.endLocation,
+        stops: route.stops || [],
+        routeName: route.routeName,
+        fromFavorites: true
+        }
+    });
 
-    console.log('Ordering route:', route);
-    alert(`Ordering route: ${route.routeName} from ${route.startLocation} to ${route.endLocation}`);
+    //console.log('Ordering route:', route);
+    //alert(`Ordering route: ${route.routeName} from ${route.startLocation} to ${route.endLocation}`);
   }
 }
