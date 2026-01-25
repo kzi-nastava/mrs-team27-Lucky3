@@ -2,7 +2,6 @@ package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.*;
-import com.team27.lucky3.backend.dto.response.RideCreated;
 import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.dto.response.RoutePointResponse;
@@ -46,8 +45,8 @@ public class RideController {
     // 2.4.1 Order a ride (logged-in user)
     @PreAuthorize("hasRole('PASSENGER')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<RideCreated> createRide(@Valid @RequestBody CreateRideRequest request) {
-        RideCreated response = rideService.createRide(request);
+    public ResponseEntity<RideResponse> createRide(@Valid @RequestBody CreateRideRequest request) {
+        RideResponse response = rideService.createRide(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
