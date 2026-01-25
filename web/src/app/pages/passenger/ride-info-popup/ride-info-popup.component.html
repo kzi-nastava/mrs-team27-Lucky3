@@ -3,15 +3,15 @@
   <div class="bg-gray-300 rounded-lg p-8 max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl">
     
     <!-- Error Display -->
-    <div *ngIf="rideData?.status === 'REJECTED'" class="mb-5">
+    <div *ngIf="rideData.status === 'REJECTED'" class="mb-5">
       <h2 class="text-2xl font-bold text-gray-800 border-b-2 border-gray-600 pb-3 mb-4">Error</h2>
       <p class="text-red-700 bg-white bg-opacity-50 p-4 rounded border-l-4 border-red-700">
-        {{ rideData?.rejectionReason || 'Ride was rejected' }}
+        {{ rideData.rejectionReason || 'Ride was rejected' }}
       </p>
     </div>
 
     <!-- Success Display -->
-    <div *ngIf="rideData?.status !== 'REJECTED'">
+    <div *ngIf="rideData.status !== 'REJECTED'">
       <h2 class="text-2xl font-bold text-gray-800 border-b-2 border-gray-600 pb-3 mb-5">
         Ride Created Successfully
       </h2>
@@ -20,9 +20,9 @@
       <div class="mb-5 p-4 bg-white bg-opacity-30 rounded">
         <h3 class="text-lg font-semibold text-gray-700 mb-3">Ride Details</h3>
         <p class="my-2 text-gray-900"><strong>Status:</strong> {{ rideData.status }}</p>
-        <p class="my-2 text-gray-900"><strong>Distance:</strong> {{ rideData.distanceKm }} km</p>
-        <p class="my-2 text-gray-900"><strong>Estimated Time:</strong> {{ rideData.estimatedTimeInMinutes }} min</p>
-        <p class="my-2 text-gray-900"><strong>Estimated Cost:</strong> ${{ rideData.estimatedCost.toFixed(2) }}</p>
+        <p class="my-2 text-gray-900"><strong>Distance:</strong> {{ rideData.distanceKm || rideData.estimatedDistance }} km</p>
+        <p class="my-2 text-gray-900"><strong>Estimated Time:</strong> {{ rideData.estimatedTimeInMinutes || '—' }} min</p>
+        <p class="my-2 text-gray-900"><strong>Estimated Cost:</strong> ${{ (rideData.estimatedCost || 0).toFixed(2) }}</p>
         <p *ngIf="rideData.scheduledTime" class="my-2 text-gray-900">
           <strong>Scheduled Time:</strong> {{ rideData.scheduledTime | date:'medium' }}
         </p>
@@ -31,33 +31,41 @@
       <!-- Driver Information -->
       <div class="mb-5 p-4 bg-white bg-opacity-30 rounded">
         <h3 class="text-lg font-semibold text-gray-700 mb-3">Driver Information</h3>
-        <div class="flex items-center gap-4">
-          <img *ngIf="rideData.driverProfilePictureUrl" 
-               [src]="rideData.driverProfilePictureUrl" 
-               [src]="'http://localhost:8081/api/users/' + rideData.driverId + '/profile-image'"
+        <div *ngIf="rideData.driver; else noDriver" class="flex items-center gap-4">
+          <img *ngIf="rideData.driver.id" 
+               [src]="'http://localhost:8081/api/users/' + rideData.driver.id + '/profile-image'"
                alt="Driver Photo"
-               class="w-16 h-16 rounded-full object-cover">
+               class="w-16 h-16 rounded-full object-cover"
+               onerror="this.style.display='none'">
           <div>
             <p class="my-2 text-gray-900">
-              <strong>Name:</strong> {{ rideData.driverName }} {{ rideData.driverSurname }}
+              <strong>Name:</strong> {{ rideData.driver.name }} {{ rideData.driver.surname }}
             </p>
-            <p class="my-2 text-gray-900"><strong>Email:</strong> {{ rideData.driverEmail }}</p>
+            <p class="my-2 text-gray-900"><strong>Email:</strong> {{ rideData.driver.email }}</p>
           </div>
         </div>
+        <ng-template #noDriver>
+          <p class="text-gray-600 italic">Waiting for driver assignment...</p>
+        </ng-template>
       </div>
 
       <!-- Vehicle Information -->
       <div class="mb-5 p-4 bg-white bg-opacity-30 rounded">
         <h3 class="text-lg font-semibold text-gray-700 mb-3">Vehicle Information</h3>
-        <p class="my-2 text-gray-900"><strong>Model:</strong> {{ rideData.vehicleModel }}</p>
-        <p class="my-2 text-gray-900"><strong>License Plate:</strong> {{ rideData.vehicleLicensePlate }}</p>
-        <p class="my-2 text-gray-900"><strong>Type:</strong> {{ rideData.requestedVehicleType }}</p>
+        <div *ngIf="rideData.model || rideData.licensePlates; else noVehicle">
+          <p class="my-2 text-gray-900"><strong>Model:</strong> {{ rideData.model || '—' }}</p>
+          <p class="my-2 text-gray-900"><strong>License Plate:</strong> {{ rideData.licensePlates || '—' }}</p>
+          <p class="my-2 text-gray-900"><strong>Type:</strong> {{ rideData.vehicleType || '—' }}</p>
+        </div>
+        <ng-template #noVehicle>
+          <p class="text-gray-600 italic">Vehicle details will be available when driver is assigned</p>
+        </ng-template>
         <div class="flex gap-2 mt-2">
-          <span *ngIf="rideData?.petTransport" 
+          <span *ngIf="rideData.petTransport" 
                 class="inline-block bg-green-500 text-white px-2 py-1 rounded text-sm">
             Pets Allowed
           </span>
-          <span *ngIf="rideData?.babyTransport" 
+          <span *ngIf="rideData.babyTransport" 
                 class="inline-block bg-green-500 text-white px-2 py-1 rounded text-sm">
             Baby Seat Available
           </span>
@@ -67,7 +75,7 @@
       <!-- Route -->
       <div class="mb-5 p-4 bg-white bg-opacity-30 rounded">
         <h3 class="text-lg font-semibold text-gray-700 mb-3">Route</h3>
-        <p class="my-2 text-gray-900"><strong>From:</strong> {{ rideData?.departure?.address }}</p>
+        <p class="my-2 text-gray-900"><strong>From:</strong> {{ rideData.departure?.address || rideData.start?.address || '—' }}</p>
         <div *ngIf="rideData.stops && rideData.stops.length > 0" class="my-2">
           <p class="text-gray-900"><strong>Stops:</strong></p>
           <ul class="list-disc ml-5 mt-1">
@@ -76,20 +84,22 @@
             </li>
           </ul>
         </div>
-        <p class="my-2 text-gray-900"><strong>To:</strong> {{ rideData?.destination?.address }}</p>
+        <p class="my-2 text-gray-900"><strong>To:</strong> {{ rideData.destination?.address || rideData.endLocation?.address || '—' }}</p>
       </div>
 
       <!-- Linked Passengers -->
       <div class="mb-5 p-4 bg-white bg-opacity-30 rounded">
         <h3 class="text-lg font-semibold text-gray-700 mb-3">Linked Passengers</h3>
-        <div *ngIf="rideData.passengersEmails.length > 0" >
+        <div *ngIf="rideData.passengers && rideData.passengers.length > 0">
           <ul class="list-disc ml-5">
-            <li *ngFor="let email of rideData.passengersEmails" class="my-1 text-gray-900">
-              {{ email }}
+            <li *ngFor="let p of rideData.passengers" class="my-1 text-gray-900">
+              {{ p.email || p.name }}
             </li>
           </ul>
         </div>
-        <div *ngIf="rideData.passengersEmails.length === 0">No linked passengers.</div>
+        <div *ngIf="!rideData.passengers || rideData.passengers.length === 0">
+          <p class="text-gray-600">No linked passengers.</p>
+        </div>
       </div>
     </div>
 

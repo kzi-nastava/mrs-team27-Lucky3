@@ -14,7 +14,7 @@ import { LocationDto } from '../../../infrastructure/rest/model/location.model';
 import { HttpClient } from '@angular/common/http';
 import { RideOrderingFormComponent} from '../ride-ordering-form/ride-ordering-form.component';
 import { RideOrderData } from '../model/order-ride-data.interface';
-import { RideCreated } from '../../../infrastructure/rest/model/order-ride.model';
+import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 import { LinkPassengerFormComponent } from '../link-passenger-form/link-passenger-form.component';
 import {LinkedPassengersData} from '../model/link-passengers.interface';
 import { RideInfoPopupComponent } from '../ride-info-popup/ride-info-popup.component';
@@ -45,7 +45,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   pickupAddress = '';
   destinationAddress = '';
   isOrdering = false;
-  orderingResult!: RideCreated;
+  orderingResult!: RideResponse;
   showPopup = false;
   orderingError = '';
   intermediateStops: string[] = [];
@@ -311,10 +311,10 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
           }
 
           const estimateResponse: RideEstimationResponse = {
-            estimatedCost: response.estimatedCost,
-            estimatedTimeInMinutes: response.estimatedTimeInMinutes,
+            estimatedCost: response.estimatedCost ?? 0,
+            estimatedTimeInMinutes: response.estimatedTimeInMinutes ?? 0,
             estimatedDriverArrivalInMinutes: 676767,
-            estimatedDistance: response.distanceKm,
+            estimatedDistance: response.distanceKm ?? 0,
             routePoints
           };
 

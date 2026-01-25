@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RideOrderData } from '../model/order-ride-data.interface';
 import { RideEstimation } from '../model/order-ride-data.interface';
-import { RideCreated } from '../../../infrastructure/rest/model/order-ride.model';
+import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 
 @Component({
   selector: 'app-ride-ordering-form',
@@ -11,7 +11,7 @@ import { RideCreated } from '../../../infrastructure/rest/model/order-ride.model
   templateUrl: './ride-ordering-form.component.html'
 })
 export class RideOrderingFormComponent {
-  @Input() orderingResult: RideCreated | null = null;
+  @Input() orderingResult: RideResponse | null = null;
   @Input() showOrderingForm: boolean = false;
   @Input() resetOrderingFunction!: () => void; // ADD THIS
   @Input() orderingError: string = ''; // Make sure this is here
@@ -76,7 +76,7 @@ export class RideOrderingFormComponent {
   }
 
   // Method to set estimation result from parent
-  setOrderingResult(result: RideCreated | null): void {
+  setOrderingResult(result: RideResponse | null): void {
     this.orderingResult = result;
     this.isOrdering = false;
   }
