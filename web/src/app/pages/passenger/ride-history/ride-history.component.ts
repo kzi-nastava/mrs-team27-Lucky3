@@ -269,21 +269,31 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
   }
 
   addToFavorites(ride: Ride) {
-    // Extract route information for favorites
-    const favoriteRoute = {
-      routeName: "Ruta: " + ride.pickup.address + " to " + ride.destination.address,
-      distance: ride.distance,
-      // Add any other route-specific details you want to save
+    if (!this.passengerId) {
+      console.error('Passenger ID is not available');
+      alert('Unable to add to favorites. Please log in again.');
+      return;
+    }
+
+    const favoriteRouteRequest = {
+      start: ride.pickup.address,
+      destination: ride.destination.address,
+      // TODO route name could be added here if needed
     };
     
-    // TODO: Call your backend service to save to favorites
-    // this.favoriteService.addFavoriteRoute(favoriteRoute).subscribe(...)
-    
-    console.log('Adding route to favorites:', favoriteRoute);
-    
-    // Show success message (optional)
-    alert(`Route added to favorites!`);
-    this.selectedRide = null;
+    //console.log('Adding route to favorites:', favoriteRouteRequest);
+
+    this.rideService.addRouteToFavorites(this.passengerId, favoriteRouteRequest).subscribe({
+      next: () => {
+        //console.log('Route added to favorites');
+        alert('Route added to favorites successfully!');
+        this.selectedRide = null;
+      },
+      error: (error) => {
+        //console.error('Error adding route to favorites:', error);
+        alert('Failed to add route to favorites. Please try again.');
+      }
+    });
   }
   
 }
