@@ -4,7 +4,7 @@ export interface Ride {
   startedAt?: string;
   requestedAt: string;
   completedAt?: string;
-  status: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Canceled';
+  status: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Cancelled';
   fare: number;
   distance: number;
   pickup: { address: string };
@@ -64,7 +64,7 @@ export const mockRides: Ride[] = [
     startedAt: '2025-12-18T17:45:00',
     requestedAt: '2025-12-18T17:40:00',
     completedAt: undefined,
-    status: 'Canceled',
+    status: 'Cancelled',
     fare: 0,
     distance: 0,
     pickup: { address: '1234 Valencia St, San Francisco, CA 94110' },

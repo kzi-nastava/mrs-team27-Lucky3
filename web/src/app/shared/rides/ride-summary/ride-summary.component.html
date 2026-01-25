@@ -3,8 +3,8 @@
     <div>
       <div class="flex items-center gap-3 mb-2">
         <h1 class="text-2xl font-bold text-white">Ride #{{ ride.id }}</h1>
-        <span *ngIf="ride.status === 'completed'" class="badge badge-completed">Completed</span>
-        <span *ngIf="ride.status === 'cancelled'" class="badge badge-cancelled">Cancelled</span>
+        <span *ngIf="ride.status === 'Finished'" class="badge badge-completed">Completed</span>
+        <span *ngIf="ride.status === 'Cancelled'" class="badge badge-cancelled">Cancelled</span>
         <span *ngIf="ride.hasPanic" class="badge badge-panic">Panic</span>
       </div>
       <p class="text-sm text-gray-400">
