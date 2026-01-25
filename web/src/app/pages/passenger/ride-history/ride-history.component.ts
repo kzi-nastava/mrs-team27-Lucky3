@@ -1,100 +1,193 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { RideResponse, RideStatus } from '../../../infrastructure/rest/model/ride-response.model';
+import { RidesTableComponent } from '../../../shared/rides/rides-table/rides-table.component';
 import { RouterModule } from '@angular/router';
-
-type FilterType = 'all' | 'completed' | 'cancelled';
-type SortField = keyof RideResponse;
-type SortDirection = 'asc' | 'desc' | '';
-
-export interface SortEvent {
-  field: SortField;
-  direction: SortDirection;
-}
+import { RideService } from '../../../infrastructure/rest/ride.service';
+import { AuthService } from '../../../infrastructure/auth/auth.service';
+import { Subject, takeUntil } from 'rxjs';
+import { Ride } from '../../../shared/data/mock-data';
 
 @Component({
   selector: 'app-ride-history',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, RidesTableComponent],
   templateUrl: './ride-history.component.html'
 })
-export class RideHistoryComponent implements OnInit {
-  rides: RideResponse[] = [];
-  filteredRides: RideResponse[] = [];
-  sortedRides: RideResponse[] = [];
+export class RideHistoryComponent implements OnInit, OnDestroy  {
+  sortedRides: Ride[] = [];
+  private backendRides: Ride[] = [];
   
-  filter: FilterType = 'all';
   dateFilter: string = '';
+  filter: 'all' | 'completed' | 'cancelled' = 'all';
+  sortField: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers' = 'startDate';
+  timeFilter: 'today' | 'week' | 'month' | 'all' = 'all';
+  sortDirection: 'asc' | 'desc' = 'desc';
   
-  sortField: SortField = 'id';
-  sortDirection: SortDirection = 'desc';
+  private passengerId: number | null = null;
+  private destroy$ = new Subject<void>();
 
-  private apiUrl = 'http://localhost:8081/api/rides';
+  constructor(
+    private router: Router,
+    private rideService: RideService,
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
-  constructor(private http: HttpClient) {}
-
-  ngOnInit(): void {
+  ngOnInit() {
+    this.passengerId = this.authService.getUserId();
     this.loadRides();
+  }
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadRides(): void {
-    this.http.get<RideResponse[]>(this.apiUrl).subscribe({
-      next: (data) => {
-        this.rides = data;
-        this.updateView();
-      },
-      error: (error) => {
-        console.error('Error fetching rides:', error);
+    if (!this.passengerId) return;
+
+    this.rideService.getRidesHistory({ passengerId: this.passengerId, page: 0, size: 100 }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (page) => {
+          // Filter to only past rides (FINISHED, CANCELLED)
+          const pastStatuses = ['FINISHED', 'CANCELLED', 'PENDING', 'SCHEDULED', 'ACCEPTED', 'ACTIVE', 'IN_PROGRESS', 'REJECTED', 'PANIC']; //TODO: adjust later if needed
+          const relevant = (page.content ?? []).filter(r => pastStatuses.includes(r.status as string));
+          
+          this.backendRides = relevant.map(r => this.mapToRide(r));
+          console.log('Loaded rides:', this.backendRides);
+          this.updateView();
+          this.cdr.detectChanges();
+        },
+        error: (err) => console.error('Failed to load history', err)
+      });
+  }
+
+  private mapToRide(r: RideResponse): Ride {
+    return {
+      id: String(r.id),
+      driverId: String(r.driverId),
+      startedAt: r.startTime,
+      requestedAt: r.startTime ?? '', // Fallback or add field to RideResponse if needed
+      completedAt: r.endTime,
+      status: r.status === 'FINISHED' ? 'completed' : 'cancelled', // map enum
+      fare: r.totalCost ?? 0,
+      distance: r.distanceKm ?? 0,
+      pickup: { address: r.departure?.address ?? r.start?.address ?? r.startLocation?.address ?? '—' },
+      destination: { address: r.destination?.address ?? r.endLocation?.address ?? '—' },
+      hasPanic: r.panicPressed,
+      passengerName: r.passengers?.[0]?.name ?? 'Unknown',
+      cancelledBy: 'driver', // TODO: fix this | simplified
+      cancellationReason: r.rejectionReason
+    };
+  }
+
+  setTimeFilter(period: 'today' | 'week' | 'month' | 'all') {
+    this.timeFilter = period;
+    this.updateView();
+  }
+
+  setFilter(status: 'all' | 'completed' | 'cancelled') {
+    this.filter = status;
+    this.updateView();
+  }
+
+  updateView() {
+    this.sortAndFilterRides();
+  }
+
+  handleSort(field: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers') {
+    if (this.sortField === field) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortField = field;
+      this.sortDirection = 'desc';
+    }
+    this.sortAndFilterRides();
+  }
+
+  sortAndFilterRides() {
+    let filtered = this.backendRides;
+    
+    // Apply Time Filter
+    filtered = this.filterByTime(filtered);
+
+    // Apply Status Filter
+    if (this.filter !== 'all') {
+      filtered = filtered.filter(ride => ride.status === this.filter);
+    }
+
+    // Apply Specific Date Filter
+    if (this.dateFilter) {
+      const date = new Date(this.dateFilter);
+      filtered = filtered.filter(ride => {
+        const rideDate = new Date(ride.startedAt || ride.requestedAt);
+        return rideDate.toDateString() === date.toDateString();
+      });
+    }
+
+    console.log('Filtered rides:', filtered);
+    this.sortedRides = filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (this.sortField) {
+        case 'startDate':
+          aValue = new Date(a.startedAt || a.requestedAt).getTime();
+          bValue = new Date(b.startedAt || b.requestedAt).getTime();
+          break;
+        case 'endDate':
+          aValue = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+          bValue = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+          break;
+        case 'distance':
+          aValue = a.distance;
+          bValue = b.distance;
+          break;
+        case 'route':
+          aValue = a.pickup.address + a.destination.address;
+          bValue = b.pickup.address + b.destination.address;
+          break;
+        case 'passengers':
+          aValue = 1;
+          bValue = 1;
+          break;
+        default:
+          return 0;
       }
+
+      if (aValue < bValue) return this.sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return this.sortDirection === 'asc' ? 1 : -1;
+      return 0;
     });
   }
 
-  setFilter(filter: FilterType): void {
-    this.filter = filter;
-    this.updateView();
-  }
+  filterByTime(rides: Ride[]): Ride[] {
+    if (this.timeFilter === 'all') return rides;
 
-  updateView(): void {
-    // Apply status filter
-    this.filteredRides = this.rides.filter(ride => {
-      const statusMatch = this.matchesStatusFilter(ride);
-      const dateMatch = this.matchesDateFilter(ride);
-      return statusMatch && dateMatch;
+    const today = new Date();
+    
+    return rides.filter(ride => {
+      const rideDate = new Date(ride.startedAt || ride.requestedAt);
+      
+      if (this.timeFilter === 'today') {
+        return rideDate.toDateString() === today.toDateString();
+      }
+      
+      if (this.timeFilter === 'week') {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        weekAgo.setHours(0, 0, 0, 0);
+        return rideDate >= weekAgo && rideDate <= today;
+      }
+      
+      if (this.timeFilter === 'month') {
+        return rideDate.getMonth() === today.getMonth() && rideDate.getFullYear() === today.getFullYear();
+      }
+      
+      return true;
     });
-
-    // Apply sorting
-    this.sortedRides = this.sortRides(this.filteredRides);
-  }
-
-  private matchesStatusFilter(ride: RideResponse): boolean {
-    if (this.filter === 'all') return true;
-    
-    const status = ride.status?.toLowerCase();
-    if (this.filter === 'completed') {
-      return status === 'finished';
-    }
-    if (this.filter === 'cancelled') {
-      return status === 'cancelled';
-    }
-    return true;
-  }
-
-  private matchesDateFilter(ride: RideResponse): boolean {
-    if (!this.dateFilter) return true;
-    
-    const rideDate = ride.scheduledTime || ride.startTime;
-    if (!rideDate) return false;
-    
-    const rideDateOnly = new Date(rideDate).toISOString().split('T')[0];
-    return rideDateOnly === this.dateFilter;
-  }
-
-  handleSort(event: SortEvent): void {
-    this.sortField = event.field;
-    this.sortDirection = event.direction;
-    this.updateView();
   }
 
   private sortRides(rides: RideResponse[]): RideResponse[] {
@@ -196,21 +289,5 @@ export class RideHistoryComponent implements OnInit {
     return status.replace('_', ' ');
   }
 
-  onSort(field: SortField): void {
-    if (this.sortField === field) {
-      // Toggle direction
-      if (this.sortDirection === 'asc') {
-        this.sortDirection = 'desc';
-      } else if (this.sortDirection === 'desc') {
-        this.sortDirection = '';
-      } else {
-        this.sortDirection = 'asc';
-      }
-    } else {
-      this.sortField = field;
-      this.sortDirection = 'asc';
-    }
-    
-    this.updateView();
-  }
+  
 }
