@@ -129,4 +129,25 @@ public class RideController {
     public ResponseEntity<RideResponse> getActiveRide(@RequestParam(required = false) @Min(1) Long userId) {
         return ResponseEntity.ok(rideService.getActiveRide(userId));
     }
+
+    // 2.4.3 Adding route to favourite
+    // MARK as favourite (create)
+    @PostMapping("/{id}/favourite-route")
+    public ResponseEntity<Void> addFavouriteRoute(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody FavouriteRouteRequest request
+    ) {
+        rideService.addToFavorite(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @DeleteMapping("/{passengerId}/favourite-route/{favouriteRouteId}")
+    public ResponseEntity<Void> removeFavouriteRoute(
+            @PathVariable @Min(1) Long passengerId,
+            @PathVariable @Min(1) Long favouriteRouteId
+    ) {
+        rideService.removeFromFavorite(passengerId, favouriteRouteId);
+        return ResponseEntity.noContent().build();
+    }
+
 }

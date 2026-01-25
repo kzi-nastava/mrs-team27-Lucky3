@@ -5,28 +5,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.*;
-import com.team27.lucky3.backend.entity.Location;
-import com.team27.lucky3.backend.entity.Panic;
-import com.team27.lucky3.backend.entity.Ride;
-import com.team27.lucky3.backend.entity.User;
-import com.team27.lucky3.backend.entity.Vehicle;
+import com.team27.lucky3.backend.entity.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.VehicleStatus;
 import com.team27.lucky3.backend.entity.enums.VehicleType;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
-import com.team27.lucky3.backend.repository.PanicRepository;
-import com.team27.lucky3.backend.repository.RideRepository;
-import com.team27.lucky3.backend.repository.UserRepository;
-import com.team27.lucky3.backend.repository.VehicleRepository;
-import com.team27.lucky3.backend.repository.InconsistencyReportRepository;
-import com.team27.lucky3.backend.entity.InconsistencyReport;
+import com.team27.lucky3.backend.repository.*;
 import com.team27.lucky3.backend.service.NotificationService;
 import com.team27.lucky3.backend.service.RideService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -49,6 +42,7 @@ public class RideServiceImpl implements RideService {
 
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
+    private final FavoriteRouteRepository favoriteRouteRepository;
     private final PanicRepository panicRepository;
     private final VehicleRepository vehicleRepository;
     private final InconsistencyReportRepository inconsistencyReportRepository;
@@ -868,5 +862,69 @@ public class RideServiceImpl implements RideService {
                 .findFirst()
                 .map(this::mapToResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("No active ride for user: " + finalUserId));
+    }
+
+    @Override
+    @Transactional
+    public void addToFavorite(Long userId, FavouriteRouteRequest request) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+        String startAddress = normalize(request.getStart());
+        String endAddress = normalize(request.getDestination());
+
+        // optional: guard against blank strings (since you used @NotNull, not @NotBlank)
+        if (!StringUtils.hasText(startAddress) || !StringUtils.hasText(endAddress)) {
+            throw new IllegalArgumentException("Start and destination must not be blank.");
+        }
+
+        boolean exists = favoriteRouteRepository
+                .existsByUserIdAndStartLocationAddressIgnoreCaseAndEndLocationAddressIgnoreCase(
+                        userId, startAddress, endAddress
+                );
+
+        if (exists) {
+            // idempotent behavior
+            return;
+        }
+
+        FavoriteRoute fav = new FavoriteRoute();
+        fav.setUser(user);
+
+        fav.setStartLocation(toLocation(startAddress));
+        fav.setEndLocation(toLocation(endAddress));
+
+        // Request doesn't have stops -> store empty list
+        fav.setStops(new ArrayList<>());
+
+        // routeName optional -> generate if missing
+        fav.setRouteName(resolveRouteName(request, startAddress, endAddress));
+
+        favoriteRouteRepository.save(fav);
+    }
+
+    private String normalize(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private Location toLocation(String address) {
+        Location loc = new Location();
+        loc.setAddress(address);
+        loc.setLatitude(0.0);
+        loc.setLongitude(0.0);
+        return loc;
+    }
+
+    private String resolveRouteName(FavouriteRouteRequest request, String start, String end) {
+        if (StringUtils.hasText(request.getRouteName())) {
+            return request.getRouteName().trim();
+        }
+        return start + " → " + end;
+    }
+
+    @Override
+    public void removeFromFavorite(Long userId, Long favouriteId) {
+
     }
 }

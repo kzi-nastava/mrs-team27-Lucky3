@@ -26,6 +26,7 @@ import { resetPasswordTokenGuard } from './infrastructure/auth/reset-password-to
 import { registerVerificationGuard, resetPasswordSentGuard, resetPasswordSuccessGuard } from './infrastructure/auth/flow.guards';
 import { activationGuard } from './infrastructure/auth/activation.guard';
 import { rideAccessGuard } from './infrastructure/auth/ride-access.guard';
+import {RideHistoryComponent} from "./pages/passenger/ride-history/ride-history.component";
 
 export const routes: Routes = [
   {
@@ -99,6 +100,12 @@ export const routes: Routes = [
   {
     path: 'passenger/profile',
     component: UserProfilePage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['PASSENGER'] }
+  },
+  {
+    path: 'passenger/ride-history',
+    component: RideHistoryComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['PASSENGER'] }
   },

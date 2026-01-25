@@ -1,13 +1,10 @@
 package com.team27.lucky3.backend.service;
 
-import com.team27.lucky3.backend.dto.request.CreateRideRequest;
-import com.team27.lucky3.backend.dto.request.EndRideRequest;
-import com.team27.lucky3.backend.dto.request.RidePanicRequest;
-import com.team27.lucky3.backend.dto.request.RideStopRequest;
+import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.entity.Ride;
 import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
-import com.team27.lucky3.backend.dto.request.InconsistencyRequest;
+import org.springframework.http.ResponseEntity;
 
 public interface RideService {
     RideResponse createRide(CreateRideRequest request);
@@ -30,4 +27,6 @@ public interface RideService {
     RideEstimationResponse estimateRide(CreateRideRequest request);
     void reportInconsistency(Long rideId, InconsistencyRequest request);
     RideResponse getActiveRide(Long userId);
+    void addToFavorite(Long userId, FavouriteRouteRequest request);
+    void removeFromFavorite(Long userId, Long favouriteId);
 }

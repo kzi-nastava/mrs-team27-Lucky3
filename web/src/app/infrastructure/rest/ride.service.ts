@@ -5,6 +5,7 @@ import { environment } from '../../../env/environment';
 import { CreateRideRequest } from './model/create-ride.model';
 import { LocationDto } from './model/location.model';
 import { EndRideRequest, RideCancellationRequest, RideResponse } from './model/ride-response.model';
+import { Ride } from '../../shared/data/mock-data';
 
 export interface PageResponse<T> {
   content: T[];
@@ -84,5 +85,9 @@ export class RideService {
 
   cancelRide(id: number, request: RideCancellationRequest): Observable<RideResponse> {
     return this.http.put<RideResponse>(`${this.apiUrl}/${id}/cancel`, request);
+  }
+
+  addRouteToFavorites(rideId: number, favoriteRoute: any): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${rideId}/favourite-route`, favoriteRoute);
   }
 }

@@ -16,6 +16,9 @@ export class RidesTableComponent {
   
   @Output() sortChange = new EventEmitter<'startDate' | 'endDate' | 'distance' | 'route' | 'passengers'>();
   @Output() viewDetails = new EventEmitter<string>();
+  
+  @Output() rideSelected = new EventEmitter<Ride>(); // Add this
+  selectedRide: Ride | null = null; // Track selected ride
 
   handleSort(field: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers') {
     this.sortChange.emit(field);
@@ -49,5 +52,14 @@ export class RidesTableComponent {
     const endTime = new Date(end).getTime();
     const diff = Math.round((endTime - startTime) / 60000);
     return `${diff} min`;
+  }
+
+  selectRide(ride: Ride) {
+    this.selectedRide = ride;
+    this.rideSelected.emit(ride);
+  }
+  
+  isSelected(ride: Ride): boolean {
+    return this.selectedRide?.id === ride.id;
   }
 }

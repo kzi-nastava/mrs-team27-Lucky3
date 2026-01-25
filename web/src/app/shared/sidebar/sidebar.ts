@@ -36,7 +36,7 @@ export class Sidebar implements OnInit {
 
   passengerItems: SidebarItem[] = [
     { icon: 'home', label: 'Home', route: '/passenger/home', active: false },
-    { icon: 'history', label: 'Ride History', route: '/passenger/history', active: false },
+    { icon: 'history', label: 'Ride History', route: '/passenger/ride-history', active: false },
     { icon: 'profile', label: 'Profile', route: '/passenger/profile', active: false },
     { icon: 'support', label: 'Support', route: '/passenger/support', active: false },
     { icon: 'logout', label: 'Logout', route: '/login', variant: 'danger' }

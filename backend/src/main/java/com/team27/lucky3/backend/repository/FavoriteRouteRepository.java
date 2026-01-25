@@ -9,4 +9,10 @@ import java.util.List;
 @Repository
 public interface FavoriteRouteRepository extends JpaRepository<FavoriteRoute, Long> {
     List<FavoriteRoute> findByUserId(Long userId);
+    //prevent adding same route multiple times
+    boolean existsByUserIdAndStartLocationAddressIgnoreCaseAndEndLocationAddressIgnoreCase(
+            Long userId,
+            String startAddress,
+            String endAddress
+    );
 }
