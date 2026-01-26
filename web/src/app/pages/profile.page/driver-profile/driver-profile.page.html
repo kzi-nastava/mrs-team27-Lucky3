@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-black text-white p-4 lg:p-6">
+<div class="min-h-screen bg-black text-white p-1 py-4 lg:p-6">
   <div class="max-w-7xl mx-auto space-y-6">
     <!-- Header -->
     <div class="sm:flex-row items-start sm:items-center gap-4">
@@ -8,6 +8,7 @@
       
     </div>
 
+    
     <!-- Loading State -->
     <div *ngIf="isLoading" class="text-center py-8">
       <p class="text-gray-400">Loading driver profile...</p>
@@ -221,255 +222,329 @@
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       [class.hidden]="!showPersonalForm"
     >
-      <div class="relative w-full max-w-2xl mx-4 rounded-2xl bg-gray-900 p-6 space-y-4">
-        <!-- Close button -->
-        <button
-          class="absolute top-3 right-3 text-gray-400 hover:text-white"
-          (click)="closePersonalForm()"
-          aria-label="Close personal information change form"
-        >
-          ✕
-        </button>
-        <div class="flex flex-row gap-3">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-pen-icon lucide-user-pen"><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/><circle cx="10" cy="7" r="4"/></svg>
-          <h4 class="text-xl font-semibold mb-2">Request personal information change</h4>
-        </div>
-        <p class="text-sm text-gray-400 mb-4 col-span-2">
-          Update your personal details below. Your request will be reviewed by an administrator.
-        </p>
+      <div class="max-h-[calc(70vh-4rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900 pb-4 space-y-6">
+        <div class="relative w-full max-w-2xl mx-4 rounded-2xl bg-gray-900 p-6 space-y-4">
+          <!-- Close button -->
+          <button
+            class="absolute top-3 right-3 text-gray-400 hover:text-white"
+            (click)="closePersonalForm()"
+            aria-label="Close personal information change form"
+          >
+            ✕
+          </button>
 
-
-        <form
-          #personalForm="ngForm"
-          (ngSubmit)="onPersonalSubmit(personalForm)"
-          class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm "
-        >
-          <div class="flex flex-col">
-            <label class="text-gray-400 mb-1">Full name</label>
-            <input
-              type="text"
-              name="fullName"
-              [(ngModel)]="personalFormFullName"
-              #fullNameCtrl="ngModel"
-              required
-              placeholder="Enter new full name"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            />
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="fullNameCtrl.invalid && (fullNameCtrl.dirty || fullNameCtrl.touched || personalForm.submitted)"
-            >
-              Full name is required.
-            </p>
-          </div>
-
-
-          <div class="flex flex-col">
-            <label class="text-gray-400 mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              [(ngModel)]="personalFormEmail"
-              #emailCtrl="ngModel"
-              required
-              placeholder="Enter new email address"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            />
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="emailCtrl.invalid && (emailCtrl.dirty || emailCtrl.touched || personalForm.submitted)"
-            >
-              Email is required.
-            </p>
-          </div>
-
-
-          <div class="flex flex-col">
-            <label class="text-gray-400 mb-1">Phone</label>
-            <input
-              type="tel"
-              name="phone"
-              [(ngModel)]="personalFormPhone"
-              #phoneCtrl="ngModel"
-              required
-              pattern="^\+?[0-9]+$"
-              placeholder="Enter new phone number"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            />
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="phoneCtrl.invalid && (phoneCtrl.dirty || phoneCtrl.touched || personalForm.submitted)"
-            >
-              Phone is required and may start with + then digits only.
-            </p>
-          </div>
-
-
-          <div class="flex flex-col">
-            <label class="text-gray-400 mb-1">Address</label>
-            <input
-              type="text"
-              name="address"
-              [(ngModel)]="personalFormAddress"
-              #addressCtrl="ngModel"
-              required
-              placeholder="Enter new address"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            />
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="addressCtrl.invalid && (addressCtrl.dirty || addressCtrl.touched || personalForm.submitted)"
-            >
-              Address is required.
-            </p>
-          </div>
-        
           <div class="flex flex-row gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-car-icon lucide-car"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
-            <h4 class="text-xl font-semibold mb-2">Request vehicle information change</h4>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-pen-icon lucide-user-pen"><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/><circle cx="10" cy="7" r="4"/></svg>
+            <h4 class="text-xl font-semibold mb-2 ">Request personal information change</h4>
           </div>
-            <br>
 
           <p class="text-sm text-gray-400 mb-4 col-span-2">
-            Update your vehicle details below. Your request will be reviewed by an administrator.
+            Update your personal details below. Your request will be reviewed by an administrator.
           </p>
+
+
+          <form
+            #personalForm="ngForm"
+            (ngSubmit)="onPersonalSubmit(personalForm)"
+            class="grid grid-cols-1 md:grid-cols-2 gap-1 text-sm "
+          >
+            <div class="flex flex-col">
+              <label class="text-gray-400 mb-1">Full name</label>
+              <input
+                type="text"
+                name="fullName"
+                [(ngModel)]="personalFormFullName"
+                #fullNameCtrl="ngModel"
+                required
+                placeholder="Enter new full name"
+                class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+              <p
+                class="text-red-500 text-xs mt-1"
+                *ngIf="fullNameCtrl.invalid && (fullNameCtrl.dirty || fullNameCtrl.touched || personalForm.submitted)"
+              >
+                Full name is required.
+              </p>
+            </div>
+
+
+            <div class="flex flex-col">
+              <label class="text-gray-400 mb-1">Email</label>
+              <input
+                type="email"
+                name="email"
+                [(ngModel)]="personalFormEmail"
+                #emailCtrl="ngModel"
+                required
+                placeholder="Enter new email address"
+                class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+              <p
+                class="text-red-500 text-xs mt-1"
+                *ngIf="emailCtrl.invalid && (emailCtrl.dirty || emailCtrl.touched || personalForm.submitted)"
+              >
+                Email is required.
+              </p>
+            </div>
+
+
+            <div class="flex flex-col">
+              <label class="text-gray-400 mb-1">Phone</label>
+              <input
+                type="tel"
+                name="phone"
+                [(ngModel)]="personalFormPhone"
+                #phoneCtrl="ngModel"
+                required
+                pattern="^\+?[0-9]+$"
+                placeholder="Enter new phone number"
+                class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+              <p
+                class="text-red-500 text-xs mt-1"
+                *ngIf="phoneCtrl.invalid && (phoneCtrl.dirty || phoneCtrl.touched || personalForm.submitted)"
+              >
+                Phone is required and may start with + then digits only.
+              </p>
+            </div>
+
+
+            <div class="flex flex-col">
+              <label class="text-gray-400 mb-1">Address</label>
+              <input
+                type="text"
+                name="address"
+                [(ngModel)]="personalFormAddress"
+                #addressCtrl="ngModel"
+                required
+                placeholder="Enter new address"
+                class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+              <p
+                class="text-red-500 text-xs mt-1"
+                *ngIf="addressCtrl.invalid && (addressCtrl.dirty || addressCtrl.touched || personalForm.submitted)"
+              >
+                Address is required.
+              </p>
+            </div>
           
-          <div class="flex flex-col">
-            <label class="text-gray-400 mb-1">Model</label>
-            <input
-              type="text"
-              name="vehicleModel"
-              [(ngModel)]="vehicleFormModel"
-              #vehicleModelCtrl="ngModel"
-              required
-              placeholder="Enter new vehicle model"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            />
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="vehicleModelCtrl.invalid && (vehicleModelCtrl.dirty || vehicleModelCtrl.touched || personalForm.submitted)"
-            >
-              Model is required.
+            <div class="flex flex-row gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-car-icon lucide-car"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+              <h4 class="text-xl font-semibold mb-2">Request vehicle information change</h4>
+            </div>
+
+            <p class="text-sm text-gray-400 col-span-2 mb-4">
+              Update your vehicle details below. Your request will be reviewed by an administrator.
             </p>
-          </div>
+            
+            <!-- vehicle model -->
+            <div class="flex flex-col">
+              <label class="text-gray-400 mb-1">Model</label>
+              <input
+                type="text"
+                name="vehicleModel"
+                [(ngModel)]="vehicleFormModel"
+                #vehicleModelCtrl="ngModel"
+                required
+                placeholder="Enter new vehicle model"
+                class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+              <p
+                class="text-red-500 text-xs mt-1"
+                *ngIf="vehicleModelCtrl.invalid && (vehicleModelCtrl.dirty || vehicleModelCtrl.touched || personalForm.submitted)"
+              >
+                Model is required.
+              </p>
+            </div>
+
+            <!-- license plate -->
+            <div class="flex flex-col">
+              <label class="text-gray-400 mb-1">License plate</label>
+              <input
+                type="text"
+                name="licensePlate"
+                [(ngModel)]="vehicleFormLicensePlate"
+                #licensePlateCtrl="ngModel"
+                required
+                placeholder="Enter new license plate"
+                class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+              <p
+                class="text-red-500 text-xs mt-1"
+                *ngIf="licensePlateCtrl.invalid && (licensePlateCtrl.dirty || licensePlateCtrl.touched || personalForm.submitted)"
+              >
+                License plate is required.
+              </p>
+            </div>
+            
+            <!-- year -->
+            <div class="flex flex-col">
+              <label class="text-gray-400 mb-1">Year</label>
+              <input
+                type="number"
+                name="vehicleYear"
+                [(ngModel)]="vehicleFormYear"
+                #vehicleYearCtrl="ngModel"
+                required
+                placeholder="Enter vehicle year"
+                class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+              <p
+                class="text-red-500 text-xs mt-1"
+                *ngIf="vehicleYearCtrl.invalid && (vehicleYearCtrl.dirty || vehicleYearCtrl.touched || personalForm.submitted)"
+              >
+                Year is required.
+              </p>
+            </div>
+            <!-- capacity -->
+            <div class="flex flex-col">
+              <label class="text-gray-400 mb-1">Capacity</label>
+              <input
+                type="number"
+                name="vehicleCapacity"
+                [(ngModel)]="vehicleFormCapacity"
+                #vehicleCapacityCtrl="ngModel"
+                required
+                placeholder="Enter passenger capacity"
+                class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+              <p
+                class="text-red-500 text-xs mt-1"
+                *ngIf="vehicleCapacityCtrl.invalid && (vehicleCapacityCtrl.dirty || vehicleCapacityCtrl.touched || personalForm.submitted)"
+              >
+                Capacity is required.
+              </p>
+            </div>
+
+            <!-- vehicle type -->
+            <div class="flex flex-col">
+                <label class="text-gray-400 mb-1">Vehicle Type</label>
+                <div class="space-y-1">
+                  <!-- Standard -->
+                  <label class="flex items-center gap-1 cursor-pointer group bg-gray-800/50 hover:bg-gray-800 p-3 rounded-lg border border-gray-700 hover:border-yellow-500/50 transition-all">
+                    <input 
+                      type="radio" 
+                      name="vehicleType" 
+                      [(ngModel)]="vehicleFormType" 
+                      value="standard"
+                      class="w-4 h-4 accent-yellow-500 flex-shrink-0"
+                    >
+                    <div class="flex-1">
+                      <div class="text-white font-small text-sm">Standard</div>
+                    </div>
+                  </label>
+
+                  <!-- Luxury -->
+                  <label class="flex items-center gap-1 cursor-pointer group bg-gray-800/50 hover:bg-gray-800 p-3 rounded-lg border border-gray-700 hover:border-yellow-500/50 transition-all">
+                    <input 
+                      type="radio" 
+                      name="vehicleType" 
+                      [(ngModel)]="vehicleFormType" 
+                      value="luxury"
+                      class="w-4 h-4 accent-yellow-500 flex-shrink-0"
+                    >
+                    <div class="flex-1">
+                      <div class="text-white font-small text-sm">Luxury</div>
+                    </div>
+                  </label>
+
+                  <!-- Van -->
+                  <label class="flex items-center gap-1 cursor-pointer group bg-gray-800/50 hover:bg-gray-800 p-3 rounded-lg border border-gray-700 hover:border-yellow-500/50 transition-all">
+                    <input 
+                      type="radio" 
+                      name="vehicleType" 
+                      [(ngModel)]="vehicleFormType" 
+                      value="van"
+                      class="w-4 h-4 accent-yellow-500 flex-shrink-0"
+                    >
+                    <div class="flex-1">
+                      <div class="text-white font-small text-sm">Van</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Additional Options -->
+            <div class="flex flex-col m-4">
+              <label class="text-white text-sm font-medium mb-3 block">Additional Options</label>
+              <div class="space-y-2">
+                <label class="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="petTransport"
+                    class="w-4 h-4 accent-yellow-500 rounded flex-shrink-0"
+                  >
+                  <span class="text-gray-300 group-hover:text-white transition-colors text-sm">Pet Transport</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="babyTransport"
+                    class="w-4 h-4 accent-yellow-500 rounded flex-shrink-0"
+                  >
+                  <span class="text-gray-300 group-hover:text-white transition-colors text-sm">Baby Transport</span>
+                </label>
+              </div>
+            </div>
 
 
-          <div class="flex flex-col">
-            <label class="text-gray-400 mb-1">License plate</label>
-            <input
-              type="text"
-              name="licensePlate"
-              [(ngModel)]="vehicleFormLicensePlate"
-              #licensePlateCtrl="ngModel"
-              required
-              placeholder="Enter new license plate"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            />
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="licensePlateCtrl.invalid && (licensePlateCtrl.dirty || licensePlateCtrl.touched || personalForm.submitted)"
-            >
-              License plate is required.
-            </p>
-          </div>
+            <!-- Profile Photo Upload -->
+            <label for="photo-upload" class="flex flex-col col-span-2 items-center justify-center w-full h-40 bg-black border-2 border-dashed border-gray-700 rounded-xl cursor-pointer hover:border-yellow-500 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500 mb-2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" x2="12" y1="3" y2="15"/>
+              </svg>
+              <span class="text-gray-400" *ngIf="!selectedFile">Click to upload photo</span>
+              <span class="text-green-400" *ngIf="selectedFile">{{ selectedFile.name }} selected</span>
+              <span class="text-gray-600 text-xs mt-1">PNG, JPG up to 5MB</span>
+              <input 
+                type="file" 
+                id="photo-upload" 
+                accept="image/*" 
+                class="hidden" 
+                (change)="onFileSelected($event)"
+              />
+            </label>
+
+            <div class="flex flex-col md:col-span-2">
+              <label class="text-gray-400 mb-1">Reason for change</label>
+              <textarea
+                rows="3"
+                name="reason"
+                [(ngModel)]="personalFormReason"
+                #reasonCtrl="ngModel"
+                required
+                placeholder="Explain why you are requesting these changes"
+                class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              ></textarea>
+              <p
+                class="text-red-500 text-xs mt-1"
+                *ngIf="reasonCtrl.invalid && (reasonCtrl.dirty || reasonCtrl.touched || personalForm.submitted)"
+              >
+                Reason is required.
+              </p>
+            </div>
 
 
-          <div class="flex flex-col">
-            <label class="text-gray-400 mb-1">Year</label>
-            <input
-              type="number"
-              name="vehicleYear"
-              [(ngModel)]="vehicleFormYear"
-              #vehicleYearCtrl="ngModel"
-              required
-              placeholder="Enter vehicle year"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            />
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="vehicleYearCtrl.invalid && (vehicleYearCtrl.dirty || vehicleYearCtrl.touched || personalForm.submitted)"
-            >
-              Year is required.
-            </p>
-          </div>
-
-
-          <div class="flex flex-col">
-            <label class="text-gray-400 mb-1">Color</label>
-            <input
-              type="text"
-              name="vehicleColor"
-              [(ngModel)]="vehicleFormColor"
-              #vehicleColorCtrl="ngModel"
-              required
-              placeholder="Enter vehicle color"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            />
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="vehicleColorCtrl.invalid && (vehicleColorCtrl.dirty || vehicleColorCtrl.touched || personalForm.submitted)"
-            >
-              Color is required.
-            </p>
-          </div>
-
-
-          <div class="flex flex-col md:col-span-2">
-            <label class="text-gray-400 mb-1">Capacity</label>
-            <input
-              type="number"
-              name="vehicleCapacity"
-              [(ngModel)]="vehicleFormCapacity"
-              #vehicleCapacityCtrl="ngModel"
-              required
-              placeholder="Enter passenger capacity"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            />
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="vehicleCapacityCtrl.invalid && (vehicleCapacityCtrl.dirty || vehicleCapacityCtrl.touched || personalForm.submitted)"
-            >
-              Capacity is required.
-            </p>
-          </div>
-
-
-          <div class="flex flex-col md:col-span-2">
-            <label class="text-gray-400 mb-1">Reason for change</label>
-            <textarea
-              rows="3"
-              name="reason"
-              [(ngModel)]="personalFormReason"
-              #reasonCtrl="ngModel"
-              required
-              placeholder="Explain why you are requesting these changes"
-              class="bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            ></textarea>
-            <p
-              class="text-red-500 text-xs mt-1"
-              *ngIf="reasonCtrl.invalid && (reasonCtrl.dirty || reasonCtrl.touched || personalForm.submitted)"
-            >
-              Reason is required.
-            </p>
-          </div>
-
-
-          <div class="flex justify-end gap-2 pt-2 md:col-span-2">
-            <button
-              type="button"
-              class="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-800"
-              (click)="closePersonalForm()"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg hover:bg-yellow-500"
-            >
-              Submit request
-            </button>
-          </div>
-        </form>
+            <div class="flex justify-end gap-2 pt-2 md:col-span-2">
+              <button
+                type="button"
+                class="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-800"
+                (click)="closePersonalForm()"
+              >
+                Cancel
+              </button>
+              
+              <button
+                type="submit"
+                class="bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg hover:bg-yellow-500"
+              >
+                Submit request
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 

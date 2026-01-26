@@ -17,7 +17,7 @@ export interface UserProfile {
 
 export interface VehicleInformation {
   model: string;
-  vehicleType: VehicleType;
+  vehicleType: string;
   licenseNumber: string;
   passengerSeats: number;
   babyTransport: boolean;
@@ -96,9 +96,35 @@ export class UserService {
     return this.updateUserProfile(userId, userProfile, profileImage);
   }
 
+  updateDriverProfile(driverId: number, changeRequest: ChangeInformationRequest, profileImage?: File): Observable<DriverResponse> {
+    const formData = new FormData();
+    
+    // Create a Blob for the JSON data with proper content type
+    const requestBlob = new Blob([JSON.stringify(changeRequest)], {
+      type: 'application/json'
+    });
+    
+    // Append JSON as 'user' part
+    formData.append('request', requestBlob);
+    
+    // Append image file if provided
+    if (profileImage) {
+      formData.append('profileImage', profileImage);
+    }
+    return this.http.put<DriverResponse>(`${this.driverApiUrl}/${driverId}`, formData);
+  }
+
+  updateCurrentDriverProfile(changeRequest: ChangeInformationRequest, profileImage?: File): Observable<DriverResponse> {
+    const driverId = this.authService.getUserId();
+    if (driverId === null) {
+      throw new Error('User is not authenticated');
+    }
+    return this.updateDriverProfile(driverId, changeRequest, profileImage);
+  }
+
   // ========== Driver Methods ==========
   getCurrentDriver(): Observable<DriverResponse> {
-    const userId = this.authService.getUserId();
-    return this.http.get<DriverResponse>(`${this.driverApiUrl}/${userId}`);
+    const driverId = this.authService.getUserId();
+    return this.http.get<DriverResponse>(`${this.driverApiUrl}/${driverId}`);
   }
 }
