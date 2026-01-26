@@ -17,6 +17,7 @@ public interface RideService {
     RideResponse cancelRide(Long id, String reason);
     RideResponse stopRide(Long id, RideStopRequest request);
     RideResponse panicRide(Long id, RidePanicRequest request);
+    RideResponse completeStop(Long rideId, Integer stopIndex);
     Ride findById(Long id);
     RideResponse getRideDetails(Long id);
     org.springframework.data.domain.Page<RideResponse> getRidesHistory(

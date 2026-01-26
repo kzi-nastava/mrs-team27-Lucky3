@@ -26,6 +26,7 @@ import { resetPasswordTokenGuard } from './infrastructure/auth/reset-password-to
 import { registerVerificationGuard, resetPasswordSentGuard, resetPasswordSuccessGuard } from './infrastructure/auth/flow.guards';
 import { activationGuard } from './infrastructure/auth/activation.guard';
 import { rideAccessGuard } from './infrastructure/auth/ride-access.guard';
+import { passengerRideAccessGuard } from './infrastructure/auth/passenger-ride-access.guard';
 import {RideHistoryComponent} from "./pages/passenger/ride-history/ride-history.component";
 import { FavoritePageComponent } from './pages/passenger/favorite-page/favorite-page.component';
 
@@ -115,6 +116,11 @@ export const routes: Routes = [
     component: FavoritePageComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['PASSENGER'] }
+  },
+  {
+    path: 'passenger/ride/:id',
+    component: ActiveRidePage,
+    canActivate: [passengerRideAccessGuard]
   },
 
   // --- ADMIN ROUTES ---

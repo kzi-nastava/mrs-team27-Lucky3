@@ -74,6 +74,9 @@ export interface RideResponse {
   passengersExited?: boolean;
   paid?: boolean;
   
+  // Stop tracking
+  completedStopIndexes?: number[];
+  
   // Additional status info
   panicPressed?: boolean;
   rejectionReason?: string;

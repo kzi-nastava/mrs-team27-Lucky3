@@ -64,21 +64,25 @@ public class RideController {
 
     // 2.9.2 & 2.9.3 Admin ride history + detailed ride view (admin)
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RideResponse> getRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.getRideDetails(id));
     }
 
     @PutMapping("/{id}/accept")
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> acceptRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.acceptRide(id));
     }
 
     @PutMapping("/{id}/start")
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> startRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.startRide(id));
     }
 
     @PutMapping("/{id}/end")
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> endRide(
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody EndRideRequest request) {
@@ -114,12 +118,22 @@ public class RideController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{id}/stop/{stopIndex}/complete")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<RideResponse> completeStop(
+            @PathVariable @Min(1) Long id,
+            @PathVariable @Min(0) Integer stopIndex) {
+        RideResponse response = rideService.completeStop(id, stopIndex);
+        return ResponseEntity.ok(response);
+    }
+
     // 2.6.2 During ride: live tracking + inconsistency report (passengers)
     @PostMapping("/{id}/inconsistencies")
+    @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<Void> reportInconsistency(
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody InconsistencyRequest request) {
-        if (id == 404) throw new ResourceNotFoundException("Ride not found");
+        rideService.reportInconsistency(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

@@ -33,12 +33,16 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Input() driverLocation: MapPoint | null = null;
   @Input() ride: ActiveRideMapData | null = null;
   @Input() routePolyline: MapPoint[] | null = null;
-  @Input() approachRoute: MapPoint[] | null = null; // Blue line
+  @Input() approachRoute: MapPoint[] | null = null; // Blue line (vehicle to next stop)
+  @Input() remainingRoute: MapPoint[] | null = null; // Yellow dotted (rest of route after next stop)
+  @Input() completedStopIndexes: Set<number> = new Set();
+  @Input() isRideInProgress: boolean = false;
 
   private map: L.Map | null = null;
   private driverMarker: L.Marker | null = null;
   private routeLine: L.Polyline | null = null;
   private approachLine: L.Polyline | null = null;
+  private remainingLine: L.Polyline | null = null;
   private startMarker: L.Marker | null = null;
   private stopMarkers: L.Marker[] = [];
   private endMarker: L.Marker | null = null;
@@ -62,12 +66,22 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
     iconAnchor: [7, 7]
   });
 
-  private stopIcon = L.divIcon({
-    className: '',
-    html: `<div style="width:12px;height:12px;border-radius:9999px;background:rgba(255,255,255,0.85);box-shadow:0 0 0 5px rgba(255,255,255,0.12);border:2px solid rgba(156,163,175,0.9);"></div>`,
-    iconSize: [12, 12],
-    iconAnchor: [6, 6]
-  });
+  private getStopIcon(isCompleted: boolean) {
+    if (isCompleted) {
+      return L.divIcon({
+        className: '',
+        html: `<div style="width:12px;height:12px;border-radius:9999px;background:rgba(34,197,94,0.95);box-shadow:0 0 0 5px rgba(34,197,94,0.18);border:2px solid white;"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      });
+    }
+    return L.divIcon({
+      className: '',
+      html: `<div style="width:12px;height:12px;border-radius:9999px;background:rgba(156,163,175,0.85);box-shadow:0 0 0 5px rgba(156,163,175,0.12);border:2px solid rgba(255,255,255,0.9);"></div>`,
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
+    });
+  }
 
   private endIcon = L.divIcon({
     className: '',
@@ -93,9 +107,20 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['ride']) this.syncRide();
-    if (changes['routePolyline']) this.syncRide();
-    if (changes['approachRoute']) this.syncApproach();
+    // Sync approach and remaining routes first (these affect how the main route is rendered)
+    if (changes['approachRoute']) {
+      this.syncApproach();
+    }
+    if (changes['remainingRoute']) {
+      this.syncRemainingRoute();
+    }
+    
+    // Then sync the main ride display (markers, full route if no approach/remaining)
+    if (changes['ride'] || changes['completedStopIndexes'] || changes['routePolyline'] || 
+        changes['approachRoute'] || changes['remainingRoute']) {
+      this.syncRide();
+    }
+    
     if (changes['driverLocation']) this.syncDriver();
     
     // Always ensure approach line is on top after any sync
@@ -174,19 +199,33 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
 
     const polyPoints = detailed.length >= 2 ? detailed : coarsePoints;
 
-    this.routeLine = L.polyline(polyPoints, {
-      color: '#eab308',
-      weight: 4,
-      opacity: 0.9,
-      dashArray: '12, 8',
-      lineCap: 'round',
-      lineJoin: 'round'
-    }).addTo(this.map);
+    // For PENDING rides: Always show the full yellow route (the planned ride path)
+    // For IN-PROGRESS rides: Don't show the full route - the approach (blue) + remaining (yellow) routes handle it
+    if (!this.isRideInProgress) {
+      // Yellow dotted line for the full route (only for pending rides)
+      this.routeLine = L.polyline(polyPoints, {
+        color: '#eab308',
+        weight: 4,
+        opacity: 0.9,
+        dashArray: '12, 8',
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(this.map);
+    }
 
-    this.startMarker = L.marker(coarsePoints[0], { icon: this.startIcon, zIndexOffset: 900 }).addTo(this.map);
+    // Only show start marker when ride is NOT in progress (start point already passed)
+    if (!this.isRideInProgress) {
+      this.startMarker = L.marker(coarsePoints[0], { icon: this.startIcon, zIndexOffset: 900 }).addTo(this.map);
+    }
 
     const stopPoints = coarsePoints.slice(1, -1);
-    this.stopMarkers = stopPoints.map(p => L.marker(p, { icon: this.stopIcon, zIndexOffset: 850 }).addTo(this.map!));
+    this.stopMarkers = stopPoints
+      .map((p, idx) => {
+        // Skip completed stops - don't display them at all
+        if (this.completedStopIndexes.has(idx)) return null;
+        return L.marker(p, { icon: this.getStopIcon(false), zIndexOffset: 850 }).addTo(this.map!);
+      })
+      .filter((m): m is L.Marker => m !== null);
 
     this.endMarker = L.marker(coarsePoints[coarsePoints.length - 1], { icon: this.endIcon, zIndexOffset: 900 }).addTo(this.map);
 
@@ -202,15 +241,34 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
     if (!this.approachRoute || this.approachRoute.length < 2) return;
 
     const latlngs = this.approachRoute.map(p => [p.latitude, p.longitude] as L.LatLngExpression);
+    // Blue solid line from vehicle to next stop
     this.approachLine = L.polyline(latlngs, {
-      color: '#00a2ff', // light blue (sky-300)
-      weight: 3,
+      color: '#3b82f6', // blue-500
+      weight: 5,
       opacity: 0.95,
-      dashArray: '8, 8',
       lineCap: 'round',
       lineJoin: 'round'
     }).addTo(this.map);
     this.approachLine.bringToFront();
+  }
+
+  private syncRemainingRoute(): void {
+    if (!this.map) return;
+    this.remainingLine?.remove();
+    this.remainingLine = null;
+
+    if (!this.remainingRoute || this.remainingRoute.length < 2) return;
+
+    const latlngs = this.remainingRoute.map(p => [p.latitude, p.longitude] as L.LatLngExpression);
+    // Yellow dotted line for remaining route
+    this.remainingLine = L.polyline(latlngs, {
+      color: '#eab308', // yellow-500
+      weight: 4,
+      opacity: 0.9,
+      dashArray: '12, 8',
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(this.map);
   }
 
   private syncDriver(): void {
