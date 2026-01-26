@@ -668,6 +668,10 @@ public class RideServiceImpl implements RideService {
                     .collect(Collectors.toList()));
         }
 
+        if (ride.getCompletedStopIndexes() != null) {
+            res.setCompletedStopIndexes(ride.getCompletedStopIndexes());
+        }
+
         if (ride.getRoutePoints() != null && !ride.getRoutePoints().isEmpty()) {
             List<RoutePointResponse> routePoints = new ArrayList<>();
             int order = 0;
@@ -846,6 +850,23 @@ public class RideServiceImpl implements RideService {
         Ride ride = findById(rideId);
         User reporter = getCurrentUser();
 
+        if (reporter == null) {
+            throw new IllegalStateException("User must be authenticated to report inconsistency.");
+        }
+
+        // Validate that the user is a passenger of this ride
+        boolean isPassenger = ride.getPassengers() != null && ride.getPassengers().stream()
+                .anyMatch(p -> p.getId().equals(reporter.getId()));
+
+        if (!isPassenger) {
+            throw new IllegalStateException("Only passengers can report inconsistencies.");
+        }
+
+        // Validate ride is in progress
+        if (ride.getStatus() != RideStatus.IN_PROGRESS && ride.getStatus() != RideStatus.ACTIVE) {
+            throw new IllegalStateException("Can only report inconsistency for rides in progress.");
+        }
+
         InconsistencyReport report = new InconsistencyReport();
         report.setRide(ride);
         report.setDescription(request.getRemark());
@@ -853,6 +874,53 @@ public class RideServiceImpl implements RideService {
         report.setReporter(reporter);
 
         inconsistencyReportRepository.save(report);
+    }
+
+    @Override
+    @Transactional
+    public RideResponse completeStop(Long rideId, Integer stopIndex) {
+        Ride ride = findById(rideId);
+        User currentUser = getCurrentUser();
+
+        if (currentUser == null) {
+            throw new IllegalStateException("User must be authenticated.");
+        }
+
+        // Validate that the user is the driver
+        if (ride.getDriver() == null || !ride.getDriver().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException("Only the assigned driver can complete stops.");
+        }
+
+        // Validate ride is in progress
+        if (ride.getStatus() != RideStatus.IN_PROGRESS && ride.getStatus() != RideStatus.ACTIVE) {
+            throw new IllegalStateException("Ride must be in progress to complete stops.");
+        }
+
+        // Validate stop index (-1 means start location)
+        if (stopIndex < -1 || (stopIndex >= 0 && (ride.getStops() == null || stopIndex >= ride.getStops().size()))) {
+            throw new IllegalArgumentException("Invalid stop index: " + stopIndex);
+        }
+
+        // Initialize completedStopIndexes if null
+        if (ride.getCompletedStopIndexes() == null) {
+            ride.setCompletedStopIndexes(new java.util.HashSet<>());
+        }
+
+        // Add the stop index to completed set
+        ride.getCompletedStopIndexes().add(stopIndex);
+
+        // Log the stop completion
+        String stopAddress = stopIndex == -1 
+                ? ride.getStartLocation().getAddress() 
+                : ride.getStops().get(stopIndex).getAddress();
+        System.out.println("[STOP COMPLETED] Ride ID: " + rideId + ", Stop Index: " + stopIndex + 
+                ", Stop Address: " + stopAddress +
+                ", Completed By Driver: " + currentUser.getId() + 
+                ", Timestamp: " + LocalDateTime.now());
+
+        // Save the ride with updated completedStopIndexes
+        Ride savedRide = rideRepository.save(ride);
+        return mapToResponse(savedRide);
     }
 
     @Override
@@ -864,7 +932,9 @@ public class RideServiceImpl implements RideService {
         }
 
         final Long finalUserId = userId;
-        Specification<Ride> spec = (root, query, cb) -> {
+        
+        // First, try to find IN_PROGRESS or ACTIVE rides (highest priority)
+        Specification<Ride> inProgressSpec = (root, query, cb) -> {
             Join<Ride, User> driver = root.join("driver", jakarta.persistence.criteria.JoinType.LEFT);
             Join<Ride, User> passengers = root.join("passengers", jakarta.persistence.criteria.JoinType.LEFT);
 
@@ -873,16 +943,42 @@ public class RideServiceImpl implements RideService {
                     cb.equal(passengers.get("id"), finalUserId)
             );
 
-            Predicate isActive = cb.or(
+            Predicate isInProgress = cb.or(
                     cb.equal(root.get("status"), RideStatus.ACTIVE),
-                    cb.equal(root.get("status"), RideStatus.IN_PROGRESS),
-                    cb.equal(root.get("status"), RideStatus.ACCEPTED)
+                    cb.equal(root.get("status"), RideStatus.IN_PROGRESS)
             );
 
-            return cb.and(isUser, isActive);
+            return cb.and(isUser, isInProgress);
         };
 
-        return rideRepository.findAll(spec).stream()
+        // Check for in-progress rides first
+        var inProgressRides = rideRepository.findAll(inProgressSpec);
+        if (!inProgressRides.isEmpty()) {
+            return mapToResponse(inProgressRides.get(0));
+        }
+
+        // If no in-progress ride, find earliest PENDING/ACCEPTED/SCHEDULED ride
+        Specification<Ride> pendingSpec = (root, query, cb) -> {
+            Join<Ride, User> driver = root.join("driver", jakarta.persistence.criteria.JoinType.LEFT);
+            Join<Ride, User> passengers = root.join("passengers", jakarta.persistence.criteria.JoinType.LEFT);
+
+            Predicate isUser = cb.or(
+                    cb.equal(driver.get("id"), finalUserId),
+                    cb.equal(passengers.get("id"), finalUserId)
+            );
+
+            Predicate isPending = cb.or(
+                    cb.equal(root.get("status"), RideStatus.PENDING),
+                    cb.equal(root.get("status"), RideStatus.ACCEPTED),
+                    cb.equal(root.get("status"), RideStatus.SCHEDULED)
+            );
+
+            query.orderBy(cb.asc(root.get("scheduledTime")), cb.asc(root.get("id")));
+
+            return cb.and(isUser, isPending);
+        };
+
+        return rideRepository.findAll(pendingSpec).stream()
                 .findFirst()
                 .map(this::mapToResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("No active ride for user: " + finalUserId));

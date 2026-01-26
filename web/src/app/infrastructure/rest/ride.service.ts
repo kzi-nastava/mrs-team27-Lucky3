@@ -102,4 +102,32 @@ export class RideService {
   stopRide(id: number, request: any): Observable<RideResponse> {
     return this.http.put<RideResponse>(`${this.apiUrl}/${id}/stop`, request);
   }
+
+  /**
+   * Get the active ride for a user (IN_PROGRESS first, then earliest PENDING/SCHEDULED)
+   */
+  getActiveRideForUser(userId: number): Observable<RideResponse | null> {
+    return this.http.get<RideResponse>(`${this.apiUrl}/active?userId=${userId}`);
+  }
+
+  /**
+   * Complete a stop during an in-progress ride
+   */
+  completeStop(rideId: number, stopIndex: number): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${rideId}/stop/${stopIndex}/complete`, {});
+  }
+
+  /**
+   * Report an inconsistency during a ride (passenger only)
+   */
+  reportInconsistency(rideId: number, request: { remark: string }): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${rideId}/inconsistencies`, request);
+  }
+
+  /**
+   * Cancel ride as passenger (no reason required)
+   */
+  cancelRideAsPassenger(id: number): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/cancel`, { reason: '' });
+  }
 }

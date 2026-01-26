@@ -66,36 +66,69 @@
   </div>
   
   <nav class="flex-1 p-4 space-y-1 min-w-[16rem]">
-    <a *ngFor="let item of items"
-       [routerLink]="item.icon !== 'logout' ? item.route : null"
-       (click)="onItemClick(item)"
-       class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer"
-       [ngClass]="{
-         'text-red-500 hover:bg-red-500/10': item.variant === 'danger',
-         'bg-gray-800 text-white': item.active && item.variant !== 'danger',
-         'text-gray-400 hover:bg-gray-800/50': !item.active && item.variant !== 'danger'
-       }"
-    >
-      <!-- Icons (SVG) -->
-      <ng-container [ngSwitch]="item.icon">
-        <svg *ngSwitchCase="'dashboard'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-        <svg *ngSwitchCase="'earnings'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        <svg *ngSwitchCase="'profile'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <svg *ngSwitchCase="'support'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-        <svg *ngSwitchCase="'logout'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-        <svg *ngSwitchCase="'home'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        <svg *ngSwitchCase="'history'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
-        <svg *ngSwitchCase="'reports'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
-        <svg *ngSwitchCase="'drivers'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <svg *ngSwitchCase="'pricing'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        <svg *ngSwitchCase="'favorite'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-      </ng-container>
-      
-      <span class="flex-1 text-left">{{ item.label }}</span>
-      
-      <span *ngIf="item.badge" class="px-2 py-0.5 bg-white text-black text-xs rounded-full font-bold">
-        {{ item.badge }}
-      </span>
-    </a>
+    <ng-container *ngFor="let item of items">
+      <!-- Items with route (normal navigation) -->
+      <a *ngIf="!item.action && item.icon !== 'logout'"
+         [routerLink]="item.route"
+         (click)="onItemClick(item)"
+         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer"
+         [ngClass]="{
+           'text-red-500 hover:bg-red-500/10': item.variant === 'danger',
+           'bg-gray-800 text-white': item.active && item.variant !== 'danger',
+           'text-gray-400 hover:bg-gray-800/50': !item.active && item.variant !== 'danger'
+         }"
+      >
+        <ng-container *ngTemplateOutlet="iconTemplate; context: { item: item }"></ng-container>
+        <span class="flex-1 text-left">{{ item.label }}</span>
+        <span *ngIf="item.badge" class="px-2 py-0.5 bg-white text-black text-xs rounded-full font-bold">
+          {{ item.badge }}
+        </span>
+      </a>
+
+      <!-- Items with action (like Active Ride) -->
+      <button *ngIf="item.action"
+         (click)="onItemClick(item)"
+         [disabled]="item.icon === 'active-ride' && !hasActiveRide"
+         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer"
+         [ngClass]="{
+           'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30': item.icon === 'active-ride' && hasActiveRide,
+           'text-gray-600 cursor-not-allowed': item.icon === 'active-ride' && !hasActiveRide,
+           'bg-gray-800 text-white': item.active && item.icon !== 'active-ride',
+           'text-gray-400 hover:bg-gray-800/50': !item.active && item.icon !== 'active-ride' && hasActiveRide
+         }"
+      >
+        <ng-container *ngTemplateOutlet="iconTemplate; context: { item: item }"></ng-container>
+        <span class="flex-1 text-left">{{ item.label }}</span>
+        <span *ngIf="item.icon === 'active-ride' && hasActiveRide" class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+      </button>
+
+      <!-- Logout item -->
+      <a *ngIf="item.icon === 'logout'"
+         (click)="onItemClick(item)"
+         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer text-red-500 hover:bg-red-500/10"
+      >
+        <ng-container *ngTemplateOutlet="iconTemplate; context: { item: item }"></ng-container>
+        <span class="flex-1 text-left">{{ item.label }}</span>
+      </a>
+    </ng-container>
   </nav>
+
+  <!-- Icon Template -->
+  <ng-template #iconTemplate let-item="item">
+    <ng-container [ngSwitch]="item.icon">
+      <svg *ngSwitchCase="'dashboard'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+      <svg *ngSwitchCase="'earnings'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <svg *ngSwitchCase="'profile'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <svg *ngSwitchCase="'support'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+      <svg *ngSwitchCase="'logout'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+      <svg *ngSwitchCase="'home'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <svg *ngSwitchCase="'history'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+      <svg *ngSwitchCase="'reports'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+      <svg *ngSwitchCase="'drivers'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <svg *ngSwitchCase="'pricing'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <svg *ngSwitchCase="'favorite'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <!-- Active Ride icon (car) -->
+      <svg *ngSwitchCase="'active-ride'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+    </ng-container>
+  </ng-template>
 </aside>

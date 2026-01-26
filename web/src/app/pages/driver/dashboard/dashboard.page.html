@@ -124,13 +124,23 @@
             <span class="text-xs text-gray-400" *ngIf="!driverLocation && isOnline">Location unavailable</span>
             <span class="text-xs text-gray-400" *ngIf="!isOnline && !isInactiveRequested">You are offline</span>
           </div>
-          <app-live-map 
-            [driverLocation]="driverLocation" 
-            [rideRoute]="rideRoute"
-            [approachRoute]="approachRoute"
-            [isOffline]="!isOnline && !isInactiveRequested"
-            heightClass="h-[360px]">
-          </app-live-map>
+          <div class="h-[360px] rounded-xl overflow-hidden border border-gray-800 relative">
+            <app-active-ride-map 
+              class="absolute inset-0"
+              [ride]="rideMapData" 
+              [routePolyline]="routePolyline" 
+              [approachRoute]="approachRoute"
+              [remainingRoute]="remainingRoute"
+              [driverLocation]="driverLocation"
+              [completedStopIndexes]="completedStopIndexes"
+              [isRideInProgress]="isNextRideInProgress">
+            </app-active-ride-map>
+            <!-- Offline overlay -->
+            <div *ngIf="!isOnline && !isInactiveRequested" 
+                 class="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+              <span class="text-gray-400 text-sm">Go online to see the map</span>
+            </div>
+          </div>
         </div>
       </div>
 
