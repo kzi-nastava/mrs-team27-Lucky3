@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
 import { environment } from '../../../../env/environment';
@@ -39,6 +39,9 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   // Counts for the UI
   availableCount = 0;
   occupiedCount = 0;
+
+  prefilledStartLocation: string | null = null;
+  prefilledEndLocation: string | null = null;
 
   // ride Form state
   showOrderingForm = false;
@@ -114,8 +117,35 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
     private rideService: RideService,
     private vehicleService: VehicleService,
     private http: HttpClient,
+    private router: Router,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) {
+    // Access navigation state in constructor
+    const navigation = this.router.getCurrentNavigation();
+    if (navigation?.extras.state) {
+      const state = navigation.extras.state;
+      if (state['fromFavorites']) {
+        // Pre-fill the form with favorite route data
+        this.prefillOrderingForm(
+          state['startLocation'].address,  // Extract address here
+          state['endLocation'].address     // Extract address here
+        );
+      }
+    }
+  }
+
+  private prefillOrderingForm(
+    startLocation: string,
+    endLocation: string
+  ): void {
+    // Show the ordering form
+    this.showOrderingForm = true;
+    
+    // Set the prefilled values
+    this.prefilledStartLocation = startLocation || '';
+    this.prefilledEndLocation = endLocation || '';
+    
+  }
 
   ngOnInit(): void {}
 
@@ -198,6 +228,16 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
     if (!this.showOrderingForm) {
       this.resetOrdering();
     }
+    // Clear prefilled data when closing form
+    
+    //if (!this.showOrderingForm) {
+      // Clear parent properties
+      this.prefilledStartLocation = null;
+      this.prefilledEndLocation = null;
+      
+      this.resetOrdering();
+    //}
+
     this.cdr.detectChanges();
   }
 
@@ -461,4 +501,5 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   closePopup(): void {
     this.showPopup = false;
   }
+  
 }

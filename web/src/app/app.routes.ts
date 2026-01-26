@@ -27,6 +27,7 @@ import { registerVerificationGuard, resetPasswordSentGuard, resetPasswordSuccess
 import { activationGuard } from './infrastructure/auth/activation.guard';
 import { rideAccessGuard } from './infrastructure/auth/ride-access.guard';
 import {RideHistoryComponent} from "./pages/passenger/ride-history/ride-history.component";
+import { FavoritePageComponent } from './pages/passenger/favorite-page/favorite-page.component';
 
 export const routes: Routes = [
   {
@@ -106,6 +107,12 @@ export const routes: Routes = [
   {
     path: 'passenger/ride-history',
     component: RideHistoryComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['PASSENGER'] }
+  },
+  {
+    path: 'passenger/favorites',
+    component: FavoritePageComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['PASSENGER'] }
   },

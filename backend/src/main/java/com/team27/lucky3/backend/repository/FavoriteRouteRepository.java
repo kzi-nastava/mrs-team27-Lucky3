@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FavoriteRouteRepository extends JpaRepository<FavoriteRoute, Long> {
@@ -15,4 +16,5 @@ public interface FavoriteRouteRepository extends JpaRepository<FavoriteRoute, Lo
             String startAddress,
             String endAddress
     );
+    Optional<FavoriteRoute> findByIdAndUserId(Long id, Long userId); // userId maps to favorite.user.id
 }

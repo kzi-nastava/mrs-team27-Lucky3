@@ -90,4 +90,12 @@ export class RideService {
   addRouteToFavorites(rideId: number, favoriteRoute: any): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${rideId}/favourite-route`, favoriteRoute);
   }
+
+  getFavoriteRoutes(passengerId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${passengerId}/favourite-routes`);
+  }
+
+  removeFavoriteRoute(passengerId: number, routeId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${passengerId}/favourite-routes/${routeId}`);
+  }
 }

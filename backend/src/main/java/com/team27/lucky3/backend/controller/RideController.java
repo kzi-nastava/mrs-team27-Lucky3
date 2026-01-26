@@ -2,9 +2,7 @@ package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.*;
-import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
-import com.team27.lucky3.backend.dto.response.RideResponse;
-import com.team27.lucky3.backend.dto.response.RoutePointResponse;
+import com.team27.lucky3.backend.dto.response.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.service.RideService;
@@ -132,6 +130,7 @@ public class RideController {
 
     // 2.4.3 Adding route to favourite
     // MARK as favourite (create)
+    @PreAuthorize("hasRole('PASSENGER')")
     @PostMapping("/{id}/favourite-route")
     public ResponseEntity<Void> addFavouriteRoute(
             @PathVariable @Min(1) Long id,
@@ -141,7 +140,8 @@ public class RideController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @DeleteMapping("/{passengerId}/favourite-route/{favouriteRouteId}")
+    @PreAuthorize("hasRole('PASSENGER')")
+    @DeleteMapping("/{passengerId}/favourite-routes/{favouriteRouteId}")
     public ResponseEntity<Void> removeFavouriteRoute(
             @PathVariable @Min(1) Long passengerId,
             @PathVariable @Min(1) Long favouriteRouteId
@@ -150,4 +150,10 @@ public class RideController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('PASSENGER')")
+    @GetMapping("/{id}/favourite-routes")
+    public ResponseEntity<List<FavoriteRouteResponse>> getFavoriteRoutes(@PathVariable @Min(1) Long id) {
+        List<FavoriteRouteResponse> favoriteRoutes = rideService.getFavoriteRoutes(id);
+        return ResponseEntity.ok(favoriteRoutes);
+    }
 }
