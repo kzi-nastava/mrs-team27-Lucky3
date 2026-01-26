@@ -7,6 +7,8 @@ import { LiveMapComponent, MapPoint } from '../../../shared/ui/live-map/live-map
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
 import { RideService } from '../../../infrastructure/rest/ride.service';
+import { DriverService } from '../../../infrastructure/rest/driver.service';
+import { ToastComponent } from '../../../shared/ui/toast/toast.component';
 import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
@@ -31,14 +33,22 @@ type DashboardRide = {
     StatCardComponent,
     ToggleSwitchComponent,
     RideRequestCardComponent,
-    LiveMapComponent
+    LiveMapComponent,
+    ToastComponent
   ],
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.css']
 })
 export class DashboardPage implements OnInit, OnDestroy {
-  isOnline: boolean = true;
+  isOnline: boolean = false;
+  isStatusLoading: boolean = false;
+  isInactiveRequested: boolean = false;  // Track when driver requested to go offline but has active ride
   driverName: string = 'James';
+
+  // Toast notification
+  toastMessage: string = '';
+  toastType: 'success' | 'error' | 'warning' | 'info' = 'info';
+  showToast: boolean = false;
 
   driverLocation: MapPoint | null = null;
   showAllFutureRides = false;
@@ -72,11 +82,15 @@ export class DashboardPage implements OnInit, OnDestroy {
     private vehicleService: VehicleService,
     private authService: AuthService,
     private rideService: RideService,
+    private driverService: DriverService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.driverId = this.authService.getUserId();
+
+    // Load current driver status from backend
+    this.loadDriverStatus();
 
     // Driver live location polling
     timer(0, 10000)
@@ -92,8 +106,90 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  onStatusChange(status: boolean) {
-    this.isOnline = status;
+  private loadDriverStatus(): void {
+    if (!this.driverId) return;
+
+    this.driverService.getStatus(this.driverId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (status) => {
+          this.isOnline = status.active;
+          this.isInactiveRequested = status.inactiveRequested;
+          
+          // If driver is offline (and not just "inactive requested"), clear ride data
+          if (!status.active && !status.inactiveRequested) {
+            this.clearRideData();
+          }
+          
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Default to offline on error
+          this.isOnline = false;
+          this.isInactiveRequested = false;
+          this.clearRideData();
+          this.cdr.markForCheck();
+        }
+      });
+  }
+  
+  private clearRideData(): void {
+    this.rideRoute = null;
+    this.approachRoute = null;
+    this.futureRides = [];
+    this.rawRides = [];
+  }
+
+  onStatusChange(newStatus: boolean): void {
+    if (!this.driverId || this.isStatusLoading) {
+      // Revert if no driver ID
+      this.isOnline = !newStatus;
+      return;
+    }
+
+    this.isStatusLoading = true;
+    const previousStatus = this.isOnline;
+
+    this.driverService.toggleStatus(this.driverId, newStatus)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isOnline = response.active;
+          this.isInactiveRequested = response.inactiveRequested;
+          this.isStatusLoading = false;
+          
+          if (response.inactiveRequested) {
+            this.displayToast('You have an active ride. You will go offline once the ride is complete.', 'warning');
+          } else if (response.active) {
+            this.displayToast('You are now online and available for rides.', 'success');
+            // Reload rides when coming online
+            this.loadFutureRides();
+          } else {
+            this.displayToast('You are now offline.', 'info');
+            // Clear ride data when going offline
+            this.clearRideData();
+          }
+          
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          // Revert to previous status
+          this.isOnline = previousStatus;
+          this.isStatusLoading = false;
+          this.displayToast(err.message || 'Failed to change status. Please try again.', 'error');
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  displayToast(message: string, type: 'success' | 'error' | 'warning' | 'info'): void {
+    this.toastMessage = message;
+    this.toastType = type;
+    this.showToast = true;
+  }
+
+  onToastClose(): void {
+    this.showToast = false;
   }
 
   toggleAllFutureRides(): void {

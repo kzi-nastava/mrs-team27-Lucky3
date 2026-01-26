@@ -3,6 +3,7 @@ package com.team27.lucky3.backend.service.impl;
 import com.team27.lucky3.backend.dto.request.CreateDriverRequest;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
+import com.team27.lucky3.backend.dto.response.DriverStatusResponse;
 import com.team27.lucky3.backend.entity.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
@@ -88,6 +89,28 @@ public class DriverServiceImpl implements DriverService {
 
         // 8 hours = 8 * 60 * 60 = 28800 seconds
         return totalSeconds > 28800;
+    }
+
+    @Override
+    public boolean hasActiveRide(Long driverId) {
+        return rideRepository.existsByDriverIdAndStatusIn(
+                driverId, List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS));
+    }
+
+    @Override
+    public DriverStatusResponse getDriverStatus(Long driverId) {
+        User driver = userRepository.findById(driverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found"));
+
+        boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
+                driverId, List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS));
+
+        return new DriverStatusResponse(
+                driver.getId(),
+                driver.isActive(),
+                driver.isInactiveRequested(),
+                hasActiveRide
+        );
     }
 
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)

@@ -19,6 +19,7 @@ export class LiveMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() rideRoute: MapPoint[] | null = null;     // Yellow line (The main ride)
   @Input() approachRoute: MapPoint[] | null = null; // Blue line (Driver -> Pickup)
   @Input() heightClass: string = 'h-[360px]';
+  @Input() isOffline: boolean = false;  // When true, shows "Offline" overlay and hides routes
 
   private map: L.Map | null = null;
   private driverMarker: L.Marker | null = null;
@@ -76,7 +77,7 @@ export class LiveMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (changes['driverLocation']) {
       this.syncDriverMarker();
     }
-    if (changes['rideRoute'] || changes['approachRoute']) {
+    if (changes['rideRoute'] || changes['approachRoute'] || changes['isOffline']) {
       this.syncRoutes();
     }
   }
@@ -160,6 +161,11 @@ export class LiveMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (this.dropoffMarker) {
         this.dropoffMarker.remove();
         this.dropoffMarker = null;
+    }
+
+    // If offline, don't draw any routes
+    if (this.isOffline) {
+      return;
     }
 
     const bounds = L.latLngBounds([]);

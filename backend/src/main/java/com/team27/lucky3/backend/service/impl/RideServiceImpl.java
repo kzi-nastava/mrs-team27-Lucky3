@@ -205,6 +205,7 @@ public class RideServiceImpl implements RideService {
         List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
         List<Vehicle> candidateVehicles = activeVehicles.stream()
                 .filter(v -> v.getVehicleType() == type || type == null)
+                .filter(v -> !v.getDriver().isInactiveRequested())
                 .toList();
 
         if (candidateVehicles.isEmpty()) return -1;
@@ -343,6 +344,7 @@ public class RideServiceImpl implements RideService {
                 .filter(v -> requestedType == null || v.getVehicleType() == requestedType)
                 .filter(v -> !request.getRequirements().isBabyTransport() || v.isBabyTransport())
                 .filter(v -> !request.getRequirements().isPetTransport() || v.isPetTransport())
+                .filter(v -> !v.getDriver().isInactiveRequested())
                 .collect(Collectors.toList());
 
         System.out.println("[DEBUG] Compatible vehicles after filtering: " + compatibleVehicles.size());

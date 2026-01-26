@@ -8,6 +8,11 @@ import { AuthResponse } from '../../model/auth-response.model';
 import { PassengerRegistrationRequest } from '../../model/registration.model';
 import { Router } from '@angular/router';
 
+export interface LogoutResult {
+  success: boolean;
+  error?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -88,7 +93,37 @@ export class AuthService {
     );
   }
 
-  logout(): void {
+  logout(): Observable<LogoutResult> {
+    return this.http.post<void>(`${environment.apiHost}auth/logout`, {}).pipe(
+      map(() => {
+        this.doLocalLogout();
+        return { success: true };
+      }),
+      catchError((err: unknown) => {
+        if (err instanceof HttpErrorResponse) {
+          // 409 Conflict means driver has an active ride or is_inactive_requested is set
+          if (err.status === 409) {
+            const message = this.extractHttpErrorMessage(err);
+            return of({ 
+              success: false, 
+              error: message || 'You cannot log out because you are currently on a ride.' 
+            });
+          }
+          
+          // For other errors, still log out locally
+          this.doLocalLogout();
+          return of({ success: true });
+        }
+        
+        // For unknown errors, still log out locally
+        this.doLocalLogout();
+        return of({ success: true });
+      })
+    );
+  }
+
+  // Legacy logout that always completes (for backward compatibility)
+  logoutForced(): void {
     this.http.post(`${environment.apiHost}auth/logout`, {}).subscribe({
       next: () => this.doLocalLogout(),
       error: () => this.doLocalLogout()

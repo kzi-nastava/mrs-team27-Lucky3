@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.DriverChangeRequestCreated;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
+import com.team27.lucky3.backend.dto.response.DriverStatusResponse;
 import com.team27.lucky3.backend.entity.DriverChangeRequest;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.DriverChangeStatus;
@@ -35,6 +36,31 @@ import java.util.List;
 public class DriverController {
     private final DriverService driverService;
     private final DriverChangeRequestService driverChangeRequestService;
+
+    // 2.2.1 Toggle driver online/offline status
+    @PreAuthorize("hasRole('DRIVER')")
+    @PutMapping("/{id}/status")
+    public ResponseEntity<DriverStatusResponse> toggleDriverStatus(
+            @PathVariable Long id,
+            @RequestParam boolean active) {
+        User driver = driverService.toggleActivity(id, active);
+        boolean hasActiveRide = driverService.hasActiveRide(id);
+        DriverStatusResponse response = new DriverStatusResponse(
+                driver.getId(),
+                driver.isActive(),
+                driver.isInactiveRequested(),
+                hasActiveRide
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    // 2.2.1 Get current driver status
+    @PreAuthorize("hasRole('DRIVER')")
+    @GetMapping("/{id}/status")
+    public ResponseEntity<DriverStatusResponse> getDriverStatus(@PathVariable Long id) {
+        DriverStatusResponse response = driverService.getDriverStatus(id);
+        return ResponseEntity.ok(response);
+    }
 
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
     @PreAuthorize("hasRole('ADMIN')")
