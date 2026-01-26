@@ -726,7 +726,12 @@ public class RideServiceImpl implements RideService {
         ride.setPassengersExited(true);
         ride.setPaid(true);
 
-        return mapToResponse(rideRepository.save(ride));
+        Ride savedRide = rideRepository.save(ride);
+
+        // Time-delayed Inactive Logic (same as endRide)
+        checkAndHandleInactiveRequest(savedRide.getDriver());
+
+        return mapToResponse(savedRide);
     }
 
     @Override

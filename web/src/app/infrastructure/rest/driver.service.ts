@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, ReplaySubject, catchError, throwError } from 'rxjs';
 import { environment } from '../../../env/environment';
 
 export interface DriverStatusResponse {
@@ -14,8 +14,33 @@ export interface DriverStatusResponse {
 })
 export class DriverService {
   private readonly apiUrl = `${environment.apiHost}drivers`;
+  
+  // ReplaySubject buffers the last event so late subscribers (like dashboard after navigation) receive it
+  private statusRefresh$ = new ReplaySubject<void>(1);
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * Get observable to listen for status refresh events
+   */
+  get onStatusRefresh(): Observable<void> {
+    return this.statusRefresh$.asObservable();
+  }
+
+  /**
+   * Trigger a status refresh (call this after ride ends)
+   */
+  triggerStatusRefresh(): void {
+    this.statusRefresh$.next();
+  }
+
+  /**
+   * Clear the status refresh buffer (call after processing)
+   */
+  clearStatusRefresh(): void {
+    // Create new ReplaySubject to clear the buffer
+    this.statusRefresh$ = new ReplaySubject<void>(1);
+  }
 
   /**
    * Toggle driver online/offline status

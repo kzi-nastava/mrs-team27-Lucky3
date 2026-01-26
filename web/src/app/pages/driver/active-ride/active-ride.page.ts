@@ -8,6 +8,7 @@ import { ActiveRideMapComponent, ActiveRideMapData, MapPoint } from '../../../sh
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
 import { RideService } from '../../../infrastructure/rest/ride.service';
+import { DriverService } from '../../../infrastructure/rest/driver.service';
 import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 import { environment } from '../../../../env/environment';
@@ -82,6 +83,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     private rideService: RideService,
     private vehicleService: VehicleService,
     private authService: AuthService,
+    private driverService: DriverService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -247,6 +249,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       next: () => {
         this.isEnding = false;
         this.showEndModal = false;
+        // Trigger status refresh so dashboard updates immediately
+        this.driverService.triggerStatusRefresh();
         this.router.navigate(['/driver/dashboard']);
       },
       error: () => {
@@ -291,17 +295,42 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       }
     };
 
-    this.rideService.stopRide(this.rideId, stopRequest).subscribe({
-      next: () => {
-        this.isStoppingEarly = false;
-        this.showStopEarlyModal = false;
-        this.router.navigate(['driver/dashboard']);
-      },
-      error: () => {
-        this.isStoppingEarly = false;
-        this.stopEarlyError = 'Failed to stop ride. Please try again.';
-      }
-    });
+    const handleSuccess = () => {
+      this.isStoppingEarly = false;
+      this.showStopEarlyModal = false;
+      // Trigger status refresh so dashboard updates immediately
+      this.driverService.triggerStatusRefresh();
+      this.router.navigate(['driver/dashboard']);
+    };
+
+    const performStop = (forceOffline: boolean) => {
+      if (!this.rideId) return;
+      this.rideService.stopRide(this.rideId, stopRequest).subscribe({
+        next: () => {
+          if (forceOffline && this.driverId) {
+            this.driverService.toggleStatus(this.driverId, false).subscribe({
+              next: () => handleSuccess(),
+              error: () => handleSuccess()
+            });
+          } else {
+            handleSuccess();
+          }
+        },
+        error: () => {
+          this.isStoppingEarly = false;
+          this.stopEarlyError = 'Failed to stop ride. Please try again.';
+        }
+      });
+    };
+
+    if (this.driverId) {
+      this.driverService.getStatus(this.driverId).subscribe({
+        next: (status) => performStop(status.inactiveRequested),
+        error: () => performStop(false)
+      });
+    } else {
+      performStop(false);
+    }
   }
 
   private tick(): void {

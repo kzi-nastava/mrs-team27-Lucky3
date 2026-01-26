@@ -92,6 +92,16 @@ export class DashboardPage implements OnInit, OnDestroy {
     // Load current driver status from backend
     this.loadDriverStatus();
 
+    // Listen for status refresh events (e.g., when a ride ends)
+    this.driverService.onStatusRefresh
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadDriverStatus();
+        this.loadFutureRides();
+        // Clear the buffer so we don't re-process on next navigation
+        this.driverService.clearStatusRefresh();
+      });
+
     // Driver live location polling
     timer(0, 10000)
       .pipe(takeUntil(this.destroy$))
@@ -116,7 +126,7 @@ export class DashboardPage implements OnInit, OnDestroy {
           this.isOnline = status.active;
           this.isInactiveRequested = status.inactiveRequested;
           
-          // If driver is offline (and not just "inactive requested"), clear ride data
+          // If driver is truly offline (not active and not inactive requested), clear ride data
           if (!status.active && !status.inactiveRequested) {
             this.clearRideData();
           }
@@ -159,6 +169,8 @@ export class DashboardPage implements OnInit, OnDestroy {
           this.isStatusLoading = false;
           
           if (response.inactiveRequested) {
+            // Driver requested to go offline but has active ride
+            // Keep showing as online until ride completes
             this.displayToast('You have an active ride. You will go offline once the ride is complete.', 'warning');
           } else if (response.active) {
             this.displayToast('You are now online and available for rides.', 'success');

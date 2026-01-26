@@ -34,8 +34,8 @@
       </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Stats Grid - only show when online -->
+    <div *ngIf="isOnline || isInactiveRequested" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <app-stat-card 
         title="Today's Earnings" 
         [value]="'$' + stats.earnings"
@@ -76,17 +76,17 @@
         <!-- Next Ride -->
         <div class="bg-[#1C1C1E] p-4 rounded-xl border border-gray-800">
           <div class="flex items-center justify-between mb-4">
-            <ng-container *ngIf="nextRide; else defaultHeader">
+            <ng-container *ngIf="nextRide && (isOnline || isInactiveRequested); else defaultHeader">
               <div *ngIf="nextRide.status === 'IN_PROGRESS'" class="bg-green-500/20 border border-green-500/30 text-green-400 px-3 py-1 rounded-lg text-sm font-bold uppercase tracking-wider">Active ride</div>
               <div *ngIf="nextRide.status !== 'IN_PROGRESS'" class="bg-blue-600/20 border border-blue-600/30 text-blue-400 px-3 py-1 rounded-lg text-sm font-bold uppercase tracking-wider">Pending</div>
             </ng-container>
             <ng-template #defaultHeader>
               <h2 class="text-lg font-bold">Next Ride</h2>
             </ng-template>
-            <span *ngIf="nextRide" class="text-xs text-gray-400">Tap to view details</span>
+            <span *ngIf="nextRide && (isOnline || isInactiveRequested)" class="text-xs text-gray-400">Tap to view details</span>
           </div>
 
-          <ng-container *ngIf="nextRide; else noNextRide">
+          <ng-container *ngIf="nextRide && (isOnline || isInactiveRequested); else noNextRide">
             <app-ride-request-card
               class="block"
               [link]="['/driver/ride', nextRide.id]"
