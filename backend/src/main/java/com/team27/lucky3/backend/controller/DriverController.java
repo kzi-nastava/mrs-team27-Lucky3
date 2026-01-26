@@ -62,6 +62,7 @@ public class DriverController {
         return ResponseEntity.ok(drivers);
     }
 
+
     @GetMapping("/{id}")
     public ResponseEntity<DriverResponse> getDriver(@PathVariable Long id) {
         DriverResponse response = driverService.getDriver(id);

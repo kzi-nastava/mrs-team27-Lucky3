@@ -38,12 +38,12 @@ export class PersonalInfoComponent implements OnInit {
   }
 
   loadUserProfile(): void {
-    console.log('Loading user profile...');
+    //console.log('Loading user profile...');
     this.isLoading = true;
     
     this.userService.getCurrentUser().subscribe({
       next: (user: UserProfile) => {
-        console.log('User data received:', user);
+        //console.log('User data received:', user);
         
         this.name = user.name;
         this.surname = user.surname;
@@ -52,14 +52,6 @@ export class PersonalInfoComponent implements OnInit {
         this.address = user.address;
         this.imageUrl = user.imageUrl || '';
         this.isLoading = false;
-        
-        console.log('Component properties updated:', {
-          name: this.name,
-          surname: this.surname,
-          email: this.email,
-          phone: this.phone,
-          address: this.address
-        });
         
         // Manually trigger change detection
         this.cdr.detectChanges();

@@ -8,126 +8,188 @@
       
     </div>
 
-    
-    <div class="card flex items-center gap-6 p-6 bg-gray-900 rounded-xl">
-        <!-- Avatar (circular) -->
-        <img src="assets/images/avatar.jpg" alt="Avatar" class="w-24 h-24 rounded-full object-cover border-2 border-gray-700"/>
-        
-        <!-- User Info -->
-        <div class="flex flex-col gap-1">
-          <h2 class="text-xl font-bold">{{fullName}}</h2>
-          <p class="text-gray-400">{{email}}</p>
-        </div>
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="text-center py-8">
+      <p class="text-gray-400">Loading driver profile...</p>
     </div>
 
-    <!-- Profile & Vehicle Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- My Profile Card -->
-      <div class="flex flex-col rounded-xl bg-gray-900 p-6 gap-4">
-        <h2 class="text-2xl font-bold">My Profile</h2>
+    <!-- Error State -->
+    <div *ngIf="errorMessage && !isLoading" class="bg-red-500/20 border border-red-500 rounded-xl p-4">
+      <p class="text-red-400">{{ errorMessage }}</p>
+    </div>
 
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+    <!-- Profile Content (Only show when loaded) -->
+    <div *ngIf="!isLoading && driver">
+      <div class="card flex items-center gap-6 p-6 bg-gray-900 rounded-xl mb-6">
+          <!-- Avatar (circular) -->
+          <img 
+            [src]="driver.imageUrl" 
+            alt="Avatar" 
+            class="w-24 h-24 rounded-full object-cover border-2 border-gray-700"
+          />
           
-          <!--name-->
-          <div class="flex flex-row gap-3 items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-pen-icon lucide-user-pen"><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/><circle cx="10" cy="7" r="4"/></svg>
-            <div class="flex flex-col">
-              <span class="text-gray-400">Name</span>
-              <span class="text-white font-medium">{{fullName}}</span>
-            </div>
+          <!-- User Info -->
+          <div class="flex flex-col gap-1">
+            <h2 class="text-xl font-bold">{{ driver.name }} {{ driver.surname }}</h2>
+            <p class="text-gray-400">{{ driver.email }}</p>
           </div>
-
-          <!--email-->
-          <div class="flex flex-row gap-3 items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail-icon lucide-mail"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
-            <div class="flex flex-col">
-              <span class="text-gray-400">Email</span>
-              <span class="text-white font-medium">{{email}}</span>
-            </div>
-          </div>
-          
-          <!--phone-->
-          <div class="flex flex-row gap-3 items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone-icon lucide-phone"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>
-            <div class="flex flex-col">
-              <span class="text-gray-400">Phone</span>
-              <span class="text-white font-medium">{{phone}}</span>
-            </div>
-          </div>
-          
-
-          
-          <!--address-->
-          <div class="flex flex-row gap-3 items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin-house-icon lucide-map-pin-house"><path d="M15 22a1 1 0 0 1-1-1v-4a1 1 0 0 1 .445-.832l3-2a1 1 0 0 1 1.11 0l3 2A1 1 0 0 1 22 17v4a1 1 0 0 1-1 1z"/><path d="M18 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 .601.2"/><path d="M18 22v-3"/><circle cx="10" cy="10" r="3"/></svg>
-            <div class="flex flex-col">
-              <span class="text-gray-400">Address</span>
-              <span class="text-white font-medium">{{address}}</span>
-            </div>
-          </div>
-
-        </div>
-        <hr>
-
-        <div class="bg-[#F9C31F30] border border-[#F9C31F80] rounded-2xl p-4 flex flex-row gap-6 p-6">
-          <div class="bg-[#F9C31F90] flex justify-center items-center p-4 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-icon lucide-clock"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
-          </div>
-          <div>
-            <p class="text-sm text-gray-400">Active in last</p>
-            <h3 class="text-lg font-bold text-[#F9C31F]">6 hours</h3>
-          </div>
-        </div>
       </div>
 
-      <!-- Vehicle Information Card -->
-      <div class="flex flex-col rounded-xl bg-gray-900 p-6 gap-4">
-        <h2 class="text-2xl font-bold">Vehicle Information</h2>
 
-        <div class="flex flex-row gap-3 items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-car-icon lucide-car"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
-          <div class="flex flex-col">
-              <span class="text-gray-400">Model</span>
-              <span class="text-white font-medium">{{vehicleModel}}</span>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+      <!-- Profile & Vehicle Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- My Profile Card -->
+        <div class="flex flex-col rounded-xl bg-gray-900 p-6 gap-4">
+          <h2 class="text-2xl font-bold">My Profile</h2>
+
           
-          <div class="flex flex-col">
-            <span class="text-gray-400">License Plate</span>
-            <span class="text-white font-large">{{licensePlate}}</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            
+            <!--name-->
+            <div class="flex flex-row gap-3 items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-pen-icon lucide-user-pen"><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/><circle cx="10" cy="7" r="4"/></svg>
+              <div class="flex flex-col">
+                <span class="text-gray-400">Name</span>
+                <span class="text-white font-medium">{{ driver.name }} {{ driver.surname }}</span>
+              </div>
+            </div>
+
+
+            <!--email-->
+            <div class="flex flex-row gap-3 items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail-icon lucide-mail"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+              <div class="flex flex-col">
+                <span class="text-gray-400">Email</span>
+                <span class="text-white font-medium">{{ driver.email }}</span>
+              </div>
+            </div>
+            
+            <!--phone-->
+            <div class="flex flex-row gap-3 items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone-icon lucide-phone"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>
+              <div class="flex flex-col">
+                <span class="text-gray-400">Phone</span>
+                <span class="text-white font-medium">{{ driver.phoneNumber }}</span>
+              </div>
+            </div>
+            
+
+
+            
+            <!--address-->
+            <div class="flex flex-row gap-3 items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin-house-icon lucide-map-pin-house"><path d="M15 22a1 1 0 0 1-1-1v-4a1 1 0 0 1 .445-.832l3-2a1 1 0 0 1 1.11 0l3 2A1 1 0 0 1 22 17v4a1 1 0 0 1-1 1z"/><path d="M18 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 .601.2"/><path d="M18 22v-3"/><circle cx="10" cy="10" r="3"/></svg>
+              <div class="flex flex-col">
+                <span class="text-gray-400">Address</span>
+                <span class="text-white font-medium">{{ driver.address }}</span>
+              </div>
+            </div>
+
+
           </div>
-          <div class="flex flex-col">
-            <span class="text-gray-400">Year</span>
-            <span class="text-white font-medium">{{vehicleYear}}</span>
+          <hr>
+
+
+          <div class="bg-[#F9C31F30] border border-[#F9C31F80] rounded-2xl p-4 flex flex-row gap-6 p-6">
+            <div class="bg-[#F9C31F90] flex justify-center items-center p-4 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-icon lucide-clock"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+            <div>
+              <p class="text-sm text-gray-400">Active in last</p>
+              <h3 class="text-lg font-bold text-[#F9C31F]">{{ driver.active24h }}</h3>
+            </div>
           </div>
-          <div class="flex flex-col">
-            <span class="text-gray-400">Color</span>
-            <span class="text-white font-medium">{{vehicleColor}}</span>
-          </div>
-          <div class="flex flex-row gap-3 items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users-icon lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg>
-            <div class="flex flex-col">
-              <span class="text-gray-400">Capacity</span>
-              <span class="text-white font-medium">{{vehicleCapacity}} passengers</span>
+
+          <!-- Driver Status Indicators -->
+          <div class="flex gap-2">
+            <div 
+              class="px-3 py-1 rounded-full text-sm font-medium"
+              [class.bg-green-500/20]="driver.isActive"
+              [class.text-green-400]="driver.isActive"
+              [class.bg-gray-500/20]="!driver.isActive"
+              [class.text-gray-400]="!driver.isActive"
+            >
+              {{ driver.isActive ? 'Active' : 'Inactive' }}
+            </div>
+            <div 
+              *ngIf="driver.isBlocked"
+              class="px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-400"
+            >
+              Blocked
             </div>
           </div>
         </div>
 
-        <hr>
-        <div class="flex flex-col pl-3">
-          <span class="text-gray-400">Vehicle features</span>
-          <span class="text-white font-small">Baby seat available</span>
-        </div>
-      </div>
 
+        <!-- Vehicle Information Card -->
+        <div class="flex flex-col rounded-xl bg-gray-900 p-6 gap-4">
+          <h2 class="text-2xl font-bold">Vehicle Information</h2>
+
+
+          <div class="flex flex-row gap-3 items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-car-icon lucide-car"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+            <div class="flex flex-col">
+                <span class="text-gray-400">Model</span>
+                <span class="text-white font-medium">{{ driver.vehicle.model }}</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            
+            <div class="flex flex-col">
+              <span class="text-gray-400">License Plate</span>
+              <span class="text-white font-large">{{ driver.vehicle.licenseNumber }}</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-gray-400">Vehicle Type</span>
+              <span class="text-white font-medium">{{ driver.vehicle.vehicleType }}</span>
+            </div>
+            <div class="flex flex-row gap-3 items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users-icon lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg>
+              <div class="flex flex-col">
+                <span class="text-gray-400">Capacity</span>
+                <span class="text-white font-medium">{{ driver.vehicle.passengerSeats }} passengers</span>
+              </div>
+            </div>
+          </div>
+
+
+          <hr>
+          <div class="flex flex-col pl-3 gap-2">
+            <span class="text-gray-400">Vehicle features</span>
+            <div class="flex flex-col gap-1">
+              <span 
+                class="text-white font-small flex items-center gap-2"
+                *ngIf="driver.vehicle.babyTransport"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400"><path d="M20 6 9 17l-5-5"/></svg>
+                Baby seat available
+              </span>
+              <span 
+                class="text-white font-small flex items-center gap-2"
+                *ngIf="driver.vehicle.petTransport"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400"><path d="M20 6 9 17l-5-5"/></svg>
+                Pet transport available
+              </span>
+              <span 
+                class="text-gray-500 font-small"
+                *ngIf="!driver.vehicle.babyTransport && !driver.vehicle.petTransport"
+              >
+                No special features
+              </span>
+            </div>
+          </div>
+        </div>
+
+
+      </div>
     </div>
     
     <!-- Additional Sections (if any) -->
-    <div class="flex flex-col rounded-xl bg-gray-900 p-6 gap-4">
+    <div class="flex flex-col rounded-xl bg-gray-900 p-6 gap-4" *ngIf="!isLoading">
         <h3 class="text-2xl">Profile change requests</h3>
         <span class="text-gray-400">Driver profile changes must be approved by an administrator. Requests can be approved or rejected; after approval the changes become visible.</span>
+
 
         <div class="border border-[#F9C31F80] rounded-2xl p-4 flex justify-between gap-6 p-6">
           <div class="flex flex-row items-center gap-2">
@@ -143,6 +205,7 @@
           </div>
         </div>
 
+
         <!-- Button that opens the personal information popup -->
         <button
           class="bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg hover:bg-yellow-500"
@@ -151,6 +214,7 @@
           Request personal information change
         </button>
 
+
         <button
           class="bg-yellow-400 text-black font-semibold px-4 py-2 rounded-lg hover:bg-yellow-500 mt-2"
           (click)="openVehicleForm()"
@@ -158,6 +222,7 @@
           Request vehicle information change
         </button>
     </div>
+
 
     <!-- Personal Information Change Popup Overlay -->
     <div
@@ -180,6 +245,7 @@
         <p class="text-sm text-gray-400 mb-4">
           Update your personal details below. Your request will be reviewed by an administrator.
         </p>
+
 
         <form
           #personalForm="ngForm"
@@ -205,6 +271,7 @@
             </p>
           </div>
 
+
           <div class="flex flex-col">
             <label class="text-gray-400 mb-1">Email</label>
             <input
@@ -223,6 +290,7 @@
               Email is required.
             </p>
           </div>
+
 
           <div class="flex flex-col">
             <label class="text-gray-400 mb-1">Phone</label>
@@ -244,6 +312,7 @@
             </p>
           </div>
 
+
           <div class="flex flex-col">
             <label class="text-gray-400 mb-1">Address</label>
             <input
@@ -262,6 +331,7 @@
               Address is required.
             </p>
           </div>
+
 
           <div class="flex flex-col md:col-span-2">
             <label class="text-gray-400 mb-1">Reason for change</label>
@@ -282,6 +352,7 @@
             </p>
           </div>
 
+
           <div class="flex justify-end gap-2 pt-2 md:col-span-2">
             <button
               type="button"
@@ -300,6 +371,7 @@
         </form>
       </div>
     </div>
+
 
     <!-- Vehicle Information Change Popup Overlay -->
     <div
@@ -320,9 +392,11 @@
           <h4 class="text-xl font-semibold mb-2">Request vehicle information change</h4>
         </div>
 
+
         <p class="text-sm text-gray-400 mb-4">
           Update your vehicle details below. Your request will be reviewed by an administrator.
         </p>
+
 
         <form
           #vehicleForm="ngForm"
@@ -348,6 +422,7 @@
             </p>
           </div>
 
+
           <div class="flex flex-col">
             <label class="text-gray-400 mb-1">License plate</label>
             <input
@@ -366,6 +441,7 @@
               License plate is required.
             </p>
           </div>
+
 
           <div class="flex flex-col">
             <label class="text-gray-400 mb-1">Year</label>
@@ -386,6 +462,7 @@
             </p>
           </div>
 
+
           <div class="flex flex-col">
             <label class="text-gray-400 mb-1">Color</label>
             <input
@@ -404,6 +481,7 @@
               Color is required.
             </p>
           </div>
+
 
           <div class="flex flex-col md:col-span-2">
             <label class="text-gray-400 mb-1">Capacity</label>
@@ -424,6 +502,7 @@
             </p>
           </div>
 
+
           <div class="flex flex-col md:col-span-2">
             <label class="text-gray-400 mb-1">Reason for change</label>
             <textarea
@@ -443,6 +522,7 @@
             </p>
           </div>
 
+
           <div class="flex justify-end gap-2 pt-2 md:col-span-2">
             <button
               type="button"
@@ -461,6 +541,7 @@
         </form>
       </div>
     </div>
+
 
     <!-- Success Popup Overlay -->
     <div
@@ -495,6 +576,7 @@
         </div>
       </div>
     </div>
+
 
   </div>
 </div>
