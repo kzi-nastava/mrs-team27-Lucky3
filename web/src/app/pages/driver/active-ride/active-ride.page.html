@@ -122,6 +122,30 @@
       </div>
 
       <div class="p-6 space-y-5">
+        <!-- Cost Summary -->
+        <div class="bg-black/40 border border-gray-800 rounded-xl p-4">
+          <div class="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wide">Cost Summary</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-[#1C1C1E] border border-gray-700 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Current Cost</div>
+              <div class="font-bold text-yellow-500 text-lg">{{ currentCostDisplay }}</div>
+            </div>
+            <div class="bg-[#1C1C1E] border border-gray-700 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Total Estimated</div>
+              <div class="font-bold text-white text-lg">{{ (backendRide?.totalCost ?? backendRide?.estimatedCost) ? ((backendRide?.totalCost ?? backendRide?.estimatedCost) | currency:'RSD ':'symbol':'1.0-0') : '—' }}</div>
+            </div>
+          </div>
+          <div class="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-center justify-between">
+            <div>
+              <div class="text-xs text-red-400">Potential Loss</div>
+              <div class="text-[10px] text-gray-500">Revenue not earned</div>
+            </div>
+            <div class="font-bold text-red-400 text-lg">
+              {{ (backendRide?.totalCost ?? backendRide?.estimatedCost) ? (((backendRide?.totalCost ?? backendRide?.estimatedCost ?? 0) - (currentCost || 0)) | currency:'RSD ':'symbol':'1.0-0') : '—' }}
+            </div>
+          </div>
+        </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-2">Reason for cancellation</label>
           <textarea 
@@ -185,6 +209,30 @@
           </div>
         </div>
 
+        <!-- Cost Summary -->
+        <div class="bg-black/40 border border-gray-800 rounded-xl p-4">
+          <div class="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wide">Cost Summary</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-[#1C1C1E] border border-gray-700 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Current Cost</div>
+              <div class="font-bold text-yellow-500 text-lg">{{ currentCostDisplay }}</div>
+            </div>
+            <div class="bg-[#1C1C1E] border border-gray-700 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Total Estimated</div>
+              <div class="font-bold text-white text-lg">{{ (backendRide?.totalCost ?? backendRide?.estimatedCost) ? ((backendRide?.totalCost ?? backendRide?.estimatedCost) | currency:'RSD ':'symbol':'1.0-0') : '—' }}</div>
+            </div>
+          </div>
+          <div class="mt-3 bg-green-500/10 border border-green-500/30 rounded-lg p-3 flex items-center justify-between">
+            <div>
+              <div class="text-xs text-green-400">You Save</div>
+              <div class="text-[10px] text-gray-500">By stopping early</div>
+            </div>
+            <div class="font-bold text-green-400 text-lg">
+              {{ (backendRide?.totalCost ?? backendRide?.estimatedCost) ? (((backendRide?.totalCost ?? backendRide?.estimatedCost ?? 0) - (currentCost || 0)) | currency:'RSD ':'symbol':'1.0-0') : '—' }}
+            </div>
+          </div>
+        </div>
+
         <!-- Current Ride Stats -->
         <div class="grid grid-cols-2 gap-3">
           <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
@@ -192,20 +240,14 @@
             <div class="font-semibold">{{ ride!.type || '—' }}</div>
           </div>
           <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
-            <div class="text-xs text-gray-400">Current Cost</div>
-            <div class="font-bold text-yellow-500">{{ currentCostDisplay }}</div>
+            <div class="text-xs text-gray-400">Time Left</div>
+            <div class="font-semibold text-blue-400">{{ timeLeftDisplay !== '—' ? timeLeftDisplay + ' left' : '—' }}</div>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
-            <div class="text-xs text-gray-400">Time Elapsed</div>
-            <div class="font-semibold text-blue-400">{{ timeLeftDisplay !== '—' ? timeLeftDisplay + ' left' : '—' }}</div>
-          </div>
-          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
-            <div class="text-xs text-gray-400">Distance Left</div>
-            <div class="font-semibold text-blue-400">{{ distanceLeftDisplay }}</div>
-          </div>
+        <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+          <div class="text-xs text-gray-400">Distance Left</div>
+          <div class="font-semibold text-blue-400">{{ distanceLeftDisplay }}</div>
         </div>
 
         <!-- Route Info -->
@@ -221,7 +263,7 @@
           </div>
           <div class="flex items-start gap-2 text-sm mt-2">
             <div class="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0 animate-pulse"></div>
-            <div class="text-orange-400 font-medium">Current location (new endpoint)</div>
+            <div class="text-orange-400 font-medium break-words">{{ currentLocationAddress }}</div>
           </div>
         </div>
 

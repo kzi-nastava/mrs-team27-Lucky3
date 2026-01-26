@@ -105,6 +105,7 @@ public class RideController {
     }
 
     @PutMapping("/{id}/stop")
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> stopRide(
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody RideStopRequest request) {
