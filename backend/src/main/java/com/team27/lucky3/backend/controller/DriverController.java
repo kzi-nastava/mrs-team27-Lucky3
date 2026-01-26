@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.DriverChangeRequestCreated;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
+import com.team27.lucky3.backend.dto.response.DriverStatsResponse;
 import com.team27.lucky3.backend.dto.response.DriverStatusResponse;
 import com.team27.lucky3.backend.entity.DriverChangeRequest;
 import com.team27.lucky3.backend.entity.User;
@@ -59,6 +60,14 @@ public class DriverController {
     @GetMapping("/{id}/status")
     public ResponseEntity<DriverStatusResponse> getDriverStatus(@PathVariable Long id) {
         DriverStatusResponse response = driverService.getDriverStatus(id);
+        return ResponseEntity.ok(response);
+    }
+
+    // Get driver statistics (earnings, rides completed, rating, online hours)
+    @PreAuthorize("hasRole('DRIVER')")
+    @GetMapping("/{id}/stats")
+    public ResponseEntity<DriverStatsResponse> getDriverStats(@PathVariable Long id) {
+        DriverStatsResponse response = driverService.getDriverStats(id);
         return ResponseEntity.ok(response);
     }
 

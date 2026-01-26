@@ -9,6 +9,15 @@ export interface DriverStatusResponse {
   inactiveRequested: boolean;
 }
 
+export interface DriverStatsResponse {
+  driverId: number;
+  totalEarnings: number;
+  completedRides: number;
+  averageRating: number;
+  totalRatings: number;
+  onlineHoursToday: string;  // Formatted as "Xh Ym"
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -63,5 +72,12 @@ export class DriverService {
    */
   getStatus(driverId: number): Observable<DriverStatusResponse> {
     return this.http.get<DriverStatusResponse>(`${this.apiUrl}/${driverId}/status`);
+  }
+
+  /**
+   * Get driver statistics (earnings, rides completed, rating, online hours)
+   */
+  getStats(driverId: number): Observable<DriverStatsResponse> {
+    return this.http.get<DriverStatsResponse>(`${this.apiUrl}/${driverId}/stats`);
   }
 }
