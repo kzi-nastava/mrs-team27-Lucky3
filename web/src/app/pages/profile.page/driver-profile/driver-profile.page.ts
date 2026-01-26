@@ -6,8 +6,7 @@ import { ChangeInformationRequest, DriverResponse, UserService } from '../../../
 @Component({
   selector: 'app-driver-profile.page',
   imports: [CommonModule, FormsModule],
-  templateUrl: './driver-profile.page.html',
-  styleUrl: './driver-profile.page.css',
+  templateUrl: './driver-profile.page.html'
 })
 export class DriverProfilePage {
   
@@ -22,7 +21,7 @@ export class DriverProfilePage {
   personalFormReason = '';
 
   // Vehicle form fields (used while editing)
-  vehicleFormModel = '';
+  vehicleFormModel = '124';
   vehicleFormLicensePlate = '';
   vehicleFormYear: number | null = null;
   vehicleFormColor = '';
@@ -74,6 +73,12 @@ export class DriverProfilePage {
     this.personalFormPhone = this.driver ? this.driver.phoneNumber : '';
     this.personalFormAddress = this.driver ? this.driver.address : '';
     this.personalFormReason = '';
+   
+    this.vehicleFormModel = this.driver?.vehicle.model || '';
+    this.vehicleFormLicensePlate = this.driver?.vehicle.licenseNumber || '';
+    this.vehicleFormYear = 2018; // Placeholder as year is not in VehicleInformation
+    this.vehicleFormColor = "black"; // Placeholder as color is not in VehicleInformation
+    this.vehicleFormCapacity = this.driver?.vehicle.passengerSeats || null;
 
     // Reset validation state so previous errors disappear
     if (this.personalForm) {
@@ -83,8 +88,15 @@ export class DriverProfilePage {
         phone: this.personalFormPhone,
         address: this.personalFormAddress,
         reason: this.personalFormReason,
+        
+        vehicleModel: this.vehicleFormModel,
+        licensePlate: this.vehicleFormLicensePlate,
+        vehicleYear: this.vehicleFormYear,
+        vehicleColor: this.vehicleFormColor,
+        vehicleCapacity: this.vehicleFormCapacity,
       });
     }
+
 
     this.showPersonalForm = true;
   }
@@ -130,26 +142,6 @@ export class DriverProfilePage {
     }
 
     this.showVehicleForm = true;
-  }
-
-  closeVehicleForm() {
-    this.showVehicleForm = false;
-  }
-
-  onVehicleSubmit(form: any) {
-    if (form.invalid) {
-      return;
-    }
-    // Persist form changes into the displayed vehicle data
-    /*this.vehicleModel = this.vehicleFormModel;
-    this.licensePlate = this.vehicleFormLicensePlate;
-    this.vehicleYear = this.vehicleFormYear;
-    this.vehicleColor = this.vehicleFormColor;
-    this.vehicleCapacity = this.vehicleFormCapacity;*/
-
-    this.closeVehicleForm();
-    this.successMessage = 'Your vehicle information change request has been sent successfully.';
-    this.showSuccessPopup = true;
   }
 
   closeSuccessPopup() {
