@@ -91,9 +91,18 @@
         </ng-container>
 
         <ng-container *ngIf="rideStatus === 'IN_PROGRESS' || rideStatus === 'ACTIVE'">
+          
+          <button 
+            type="button" 
+            (click)="openStopEarlyModal()" 
+            class="w-full py-3 rounded-xl font-bold bg-orange-600 hover:bg-orange-500 text-white transition-colors shadow-lg shadow-orange-900/20">
+            Stop Early (at current location)
+          </button>
+          
           <button type="button" (click)="openEndModal()" class="w-full py-3 rounded-xl font-bold bg-red-500 hover:bg-red-400 text-white transition-colors">
             End Ride
           </button>
+
         </ng-container>
       </div>
     </div>
@@ -140,6 +149,118 @@
             [ngClass]="(!cancelReason.trim() || isCancelling) ? 'bg-red-900/50 text-red-200/50 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20'">
             {{ isCancelling ? 'Cancelling...' : 'Confirm Cancel' }}
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stop Early Modal -->
+  <div *ngIf="showStopEarlyModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4" (click)="closeStopEarlyModal()">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm z-[9998]"></div>
+
+    <div class="relative z-[9999] w-full max-w-lg bg-[#111113] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+        <div class="font-bold text-lg text-white flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          Stop Ride Early
+        </div>
+        <button type="button" (click)="closeStopEarlyModal()" class="text-gray-400 hover:text-white transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- Warning Banner -->
+        <div class="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+          <div class="flex items-start gap-3">
+            <div class="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0 animate-pulse"></div>
+            <div>
+              <div class="text-orange-400 font-semibold text-sm">Price Recalculation</div>
+              <div class="text-orange-300/80 text-xs mt-1">The ride will end at your current location and the final price will be recalculated based on the actual distance traveled.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current Ride Stats -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+            <div class="text-xs text-gray-400">Ride Type</div>
+            <div class="font-semibold">{{ ride!.type || '—' }}</div>
+          </div>
+          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+            <div class="text-xs text-gray-400">Current Cost</div>
+            <div class="font-bold text-yellow-500">{{ currentCostDisplay }}</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+            <div class="text-xs text-gray-400">Time Elapsed</div>
+            <div class="font-semibold text-blue-400">{{ timeLeftDisplay !== '—' ? timeLeftDisplay + ' left' : '—' }}</div>
+          </div>
+          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+            <div class="text-xs text-gray-400">Distance Left</div>
+            <div class="font-semibold text-blue-400">{{ distanceLeftDisplay }}</div>
+          </div>
+        </div>
+
+        <!-- Route Info -->
+        <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+          <div class="text-xs text-gray-400 mb-2">Original Route</div>
+          <div class="flex items-start gap-2 text-sm">
+            <div class="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0"></div>
+            <div class="text-gray-200 break-words">{{ ride!.pickup || '—' }}</div>
+          </div>
+          <div class="flex items-start gap-2 text-sm mt-2">
+            <div class="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0"></div>
+            <div class="text-gray-200 break-words line-through opacity-50">{{ ride!.dropoff || '—' }}</div>
+          </div>
+          <div class="flex items-start gap-2 text-sm mt-2">
+            <div class="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0 animate-pulse"></div>
+            <div class="text-orange-400 font-medium">Current location (new endpoint)</div>
+          </div>
+        </div>
+
+        <!-- Completed Stops -->
+        <div *ngIf="completedStopLabels.length > 0" class="bg-black/40 border border-gray-800 rounded-lg p-3">
+          <div class="text-xs text-gray-400 mb-2">Stops Completed</div>
+          <div class="space-y-1">
+            <div *ngFor="let label of completedStopLabels" class="flex items-center gap-2 text-sm text-gray-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+              </svg>
+              {{ label }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="stopEarlyError" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
+          <div class="w-2 h-2 rounded-full bg-red-500 shrink-0"></div>
+          <span class="text-red-300 text-sm font-medium">{{ stopEarlyError }}</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3 pt-2">
+          <button type="button" (click)="closeStopEarlyModal()" class="flex-1 py-3 rounded-xl font-bold bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors">
+            Continue Ride
+          </button>
+          <button 
+            type="button" 
+            (click)="confirmStopEarly()" 
+            [disabled]="isStoppingEarly"
+            class="flex-1 py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:active:scale-100"
+            [ngClass]="isStoppingEarly ? 'bg-orange-900/50 text-orange-200/50 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-900/30'">
+            {{ isStoppingEarly ? 'Stopping...' : 'Confirm Stop' }}
+          </button>
+        </div>
+
+        <div class="text-[11px] text-gray-500 text-center">
+          This action cannot be undone. The ride will end immediately.
         </div>
       </div>
     </div>

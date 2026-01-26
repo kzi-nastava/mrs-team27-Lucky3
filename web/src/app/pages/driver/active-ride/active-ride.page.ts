@@ -60,6 +60,11 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   isCancelling = false;
   cancelRideError = '';
 
+  // Stop early modal
+  showStopEarlyModal = false;
+  isStoppingEarly = false;
+  stopEarlyError = '';
+
   private driverId: number | null = null;
 
   // stop completion tracking
@@ -227,6 +232,49 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       error: () => {
         this.isEnding = false;
         this.endRideError = 'Could not end ride. Please try again.';
+      }
+    });
+  }
+
+  openStopEarlyModal(): void {
+    if (!this.driverLocation) {
+      this.stopEarlyError = 'Cannot stop ride: Driver location unknown.';
+      return;
+    }
+    this.stopEarlyError = '';
+    this.showStopEarlyModal = true;
+  }
+
+  closeStopEarlyModal(): void {
+    if (this.isStoppingEarly) return;
+    this.showStopEarlyModal = false;
+  }
+
+  confirmStopEarly(): void {
+    if (!this.rideId || !this.driverLocation || this.isStoppingEarly) return;
+
+    this.isStoppingEarly = true;
+    this.stopEarlyError = '';
+
+    const stopRequest = {
+      stopLocation: {
+        address: "Stopped early at current location",
+        latitude: this.driverLocation.latitude,
+        longitude: this.driverLocation.longitude
+      }
+    };
+
+    this.rideService.stopRide(this.rideId, stopRequest).subscribe({
+      next: (response) => {
+        console.log('Ride stopped early. New cost:', response.totalCost);
+        this.isStoppingEarly = false;
+        this.showStopEarlyModal = false;
+        this.router.navigate(['/driver/dashboard']);
+      },
+      error: (err) => {
+        console.error('Failed to stop ride early', err);
+        this.isStoppingEarly = false;
+        this.stopEarlyError = 'Failed to stop ride. Please try again.';
       }
     });
   }
