@@ -8,6 +8,7 @@ import { ActiveRideMapComponent, ActiveRideMapData, MapPoint } from '../../../sh
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
 import { RideService } from '../../../infrastructure/rest/ride.service';
+import { DriverService } from '../../../infrastructure/rest/driver.service';
 import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 import { environment } from '../../../../env/environment';
@@ -60,6 +61,12 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   isCancelling = false;
   cancelRideError = '';
 
+  // Stop early modal
+  showStopEarlyModal = false;
+  isStoppingEarly = false;
+  stopEarlyError = '';
+  currentLocationAddress = 'Fetching location...';
+
   private driverId: number | null = null;
 
   // stop completion tracking
@@ -76,6 +83,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     private rideService: RideService,
     private vehicleService: VehicleService,
     private authService: AuthService,
+    private driverService: DriverService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -114,6 +122,29 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   goBack(): void {
     this.router.navigate(['/driver/dashboard']);
   }
+
+  private static readonly PRICE_PER_KM = 120;
+
+  private getBasePriceRsd(vehicleType?: string): number {
+    switch ((vehicleType ?? '').toUpperCase()) {
+      case 'LUXURY': return 200;
+      case 'VAN': return 180;
+      default: return 120;
+    }
+  }
+
+  private getEstimatedTotalRsd(): number {
+    return this.backendRide?.estimatedCost ?? this.backendRide?.totalCost ?? 0;
+  }
+
+  get currentCostDisplay(): string {
+    return `RSD ${this.currentCost.toFixed(0)}`;
+  }
+
+  get savedRsd(): number {
+    return Math.max(0, this.getEstimatedTotalRsd() - this.currentCost);
+  }
+
 
   startRide(): void {
     if (!this.rideId) return;
@@ -182,10 +213,6 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     this.showEndModal = false;
   }
 
-  get currentCostDisplay(): string {
-    return `$${this.currentCost.toFixed(2)}`;
-  }
-
   get timeLeftDisplay(): string {
     if (this.timeLeftMin == null) return '—';
     if (this.timeLeftMin < 1) return '< 1 min';
@@ -222,6 +249,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       next: () => {
         this.isEnding = false;
         this.showEndModal = false;
+        // Trigger status refresh so dashboard updates immediately
+        this.driverService.triggerStatusRefresh();
         this.router.navigate(['/driver/dashboard']);
       },
       error: () => {
@@ -231,48 +260,110 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private tick(): void {
-    if (this.rideStatus !== 'IN_PROGRESS') return;
+  openStopEarlyModal(): void {
+    if (!this.driverLocation) {
+      this.stopEarlyError = 'Cannot stop ride: Driver location unknown.';
+      return;
+    }
+    this.stopEarlyError = '';
+    this.showStopEarlyModal = true;
 
-    // Update distance traveled based on driver movement
-    if (this.driverLocation && this.lastDriverLocation) {
-      const moved = this.haversineKm(this.lastDriverLocation, this.driverLocation);
-      if (moved > 0 && moved < 0.25) {
-        // Ignore huge jumps (bad GPS); cap at 250m/s tick
-        this.distanceTraveledKm += moved;
+    const { latitude, longitude } = this.driverLocation;
+    this.currentLocationAddress = 'Fetching location...';
+    this.reverseGeocode(latitude, longitude).then(addr => {
+      this.currentLocationAddress = addr;
+      this.cdr.detectChanges();
+    });
+  }
+
+  closeStopEarlyModal(): void {
+    if (this.isStoppingEarly) return;
+    this.showStopEarlyModal = false;
+  }
+
+  confirmStopEarly(): void {
+    if (!this.rideId || !this.driverLocation || this.isStoppingEarly) return;
+
+    this.isStoppingEarly = true;
+    this.stopEarlyError = '';
+
+    const stopRequest = {
+      stopLocation: {
+        address: this.currentLocationAddress || 'Stopped early',
+        latitude: this.driverLocation.latitude,
+        longitude: this.driverLocation.longitude
       }
+    };
+
+    const handleSuccess = () => {
+      this.isStoppingEarly = false;
+      this.showStopEarlyModal = false;
+      // Trigger status refresh so dashboard updates immediately
+      this.driverService.triggerStatusRefresh();
+      this.router.navigate(['driver/dashboard']);
+    };
+
+    const performStop = (forceOffline: boolean) => {
+      if (!this.rideId) return;
+      this.rideService.stopRide(this.rideId, stopRequest).subscribe({
+        next: () => {
+          if (forceOffline && this.driverId) {
+            this.driverService.toggleStatus(this.driverId, false).subscribe({
+              next: () => handleSuccess(),
+              error: () => handleSuccess()
+            });
+          } else {
+            handleSuccess();
+          }
+        },
+        error: () => {
+          this.isStoppingEarly = false;
+          this.stopEarlyError = 'Failed to stop ride. Please try again.';
+        }
+      });
+    };
+
+    if (this.driverId) {
+      this.driverService.getStatus(this.driverId).subscribe({
+        next: (status) => performStop(status.inactiveRequested),
+        error: () => performStop(false)
+      });
+    } else {
+      performStop(false);
     }
-    if (this.driverLocation) {
-      this.lastDriverLocation = { ...this.driverLocation };
-    }
+  }
 
-    // Cost model: keep it simple but live.
-    // base + perKm + perMin
-    const elapsedMin = (Date.now() - this.startedAtMs) / 60000;
-    const base = 1.5;
-    const perKm = 1.35;
-    const perMin = 0.35;
+  private tick(): void {
+    // Support multiple status formats
+    const activeStatuses = ['INPROGRESS', 'IN_PROGRESS', 'ACTIVE'];
+    if (!activeStatuses.includes(this.rideStatus)) return;
 
-    const computed = base + perKm * this.distanceTraveledKm + perMin * elapsedMin;
-    // never go below initial estimate if present
-    const minEstimate =
-      this.backendRide?.totalCost ??
-      this.backendRide?.estimatedCost ??
-      0;
-    this.currentCost = Math.max(minEstimate, computed);
-
-    // Remaining distance/time (if we have route geometry)
-    if (this.driverLocation) {
+    // Calculate distance traveled from pickup to current location
+    if (this.driverLocation && this.rideMapData?.start) {
+      // Calculate total planned distance
+      const totalPlanned = this.totalPlannedDistanceKm ?? 0;
+      
+      // Calculate remaining distance from current position
       const remainingKm = this.computeRemainingKm(this.driverLocation);
       this.distanceLeftKm = remainingKm;
-
-      // Assume average speed (km/h)
+      
+      // Distance traveled = total planned - remaining
+      this.distanceTraveledKm = Math.max(0, totalPlanned - remainingKm);
+      
+      // Calculate time left based on remaining distance
       const avgSpeedKmh = 32;
       this.timeLeftMin = avgSpeedKmh > 0 ? (remainingKm / avgSpeedKmh) * 60 : null;
-
-      // Update completed stops
-      this.updateCompletedStops();
     }
+
+    // Calculate current cost: base price + (distance traveled * price per km)
+    const base = this.getBasePriceRsd(this.backendRide?.vehicleType ?? this.ride?.type);
+    const computed = base + this.distanceTraveledKm * ActiveRidePage.PRICE_PER_KM;
+
+    const est = this.getEstimatedTotalRsd();
+    // Don't cap at estimated - let it reflect actual distance traveled
+    this.currentCost = computed;
+
+    this.updateCompletedStops();
     this.cdr.detectChanges();
   }
 
@@ -377,11 +468,10 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
     this.distanceLeftKm = this.totalPlannedDistanceKm;
 
-    // Initialize cost floor from backend if present
-    const costFloor = r.totalCost ?? r.estimatedCost ?? 0;
-    if (costFloor > 0) {
-      this.currentCost = Math.max(this.currentCost, costFloor);
-    }
+    // Initialize current cost to base price (no distance traveled yet)
+    const base = this.getBasePriceRsd(r.vehicleType ?? this.ride?.type);
+    this.currentCost = base;
+    this.distanceTraveledKm = 0;
     
     this.cdr.detectChanges();
 
@@ -532,6 +622,21 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       return null;
     } catch {
       return null;
+    }
+  }
+
+  private async reverseGeocode(lat: number, lon: number): Promise<string> {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
+      const data: any = await firstValueFrom(this.http.get(url));
+      if (data && data.display_name) {
+        // Return a shortened version of the address
+        const parts = data.display_name.split(',');
+        return parts.slice(0, 3).join(',').trim();
+      }
+      return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    } catch {
+      return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
     }
   }
 

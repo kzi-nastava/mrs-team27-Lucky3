@@ -92,18 +92,17 @@ public class AuthController {
     // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
-        try {
-            // 1. Get token using TokenUtils
-            String token = tokenUtils.getToken(request);
+        // 1. Get token using TokenUtils
+        String token = tokenUtils.getToken(request);
 
-            if (token != null) {
-                // 2. Get Email from token (matches AuthService.logout signature)
-                String email = tokenUtils.getEmailFromToken(token);
-                if (email != null) {
-                    authService.logout(email);
-                }
+        if (token != null) {
+            // 2. Get Email from token (matches AuthService.logout signature)
+            String email = tokenUtils.getEmailFromToken(token);
+            if (email != null) {
+                // This will throw IllegalStateException if driver has an active ride
+                // The GlobalExceptionHandler will convert it to a 409 Conflict response
+                authService.logout(email);
             }
-        } catch (Exception e) {
 
         }
         return ResponseEntity.noContent().build();

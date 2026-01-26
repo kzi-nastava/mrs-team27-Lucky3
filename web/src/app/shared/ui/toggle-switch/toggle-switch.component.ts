@@ -10,9 +10,11 @@ import { CommonModule } from '@angular/common';
 export class ToggleSwitchComponent {
   @Input() checked: boolean = false;
   @Input() label: string = '';
+  @Input() disabled: boolean = false;
   @Output() checkedChange = new EventEmitter<boolean>();
 
   toggle() {
+    if (this.disabled) return;
     this.checked = !this.checked;
     this.checkedChange.emit(this.checked);
   }

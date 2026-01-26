@@ -108,12 +108,26 @@ public class RideServiceImpl implements RideService {
         } catch (Exception e) {
             // Fallback to Haversine if OSRM fails (or handle error appropriately)
             System.err.println("OSRM Routing failed: " + e.getMessage());
-            distanceKm = calculateHaversineDistance(mapLocation(start), mapLocation(end));
-            // Add stops to fallback distance calculation if needed, but simple for now
+
+            // Calculate distance through all stops: start -> stop1 -> stop2 -> ... -> end
+            distanceKm = 0.0;
+            Location currentPos = mapLocation(start);
+            int order = 0;
+            routePoints.add(new RoutePointResponse(start, order++));
+
+            if (request.getStops() != null) {
+                for (LocationDto stop : request.getStops()) {
+                    Location stopLoc = mapLocation(stop);
+                    distanceKm += calculateHaversineDistance(currentPos, stopLoc);
+                    currentPos = stopLoc;
+                    routePoints.add(new RoutePointResponse(stop, order++));
+                }
+            }
+
+            distanceKm += calculateHaversineDistance(currentPos, mapLocation(end));
+            routePoints.add(new RoutePointResponse(end, order));
+
             durationMinutes = (int) Math.ceil(distanceKm * 1.2); // Rough estimate
-            // Add at least start and end points
-            routePoints.add(new RoutePointResponse(start, 0));
-            routePoints.add(new RoutePointResponse(end, 1));
         }
 
         // Calculate Price
@@ -191,6 +205,7 @@ public class RideServiceImpl implements RideService {
         List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
         List<Vehicle> candidateVehicles = activeVehicles.stream()
                 .filter(v -> v.getVehicleType() == type || type == null)
+                .filter(v -> !v.getDriver().isInactiveRequested())
                 .toList();
 
         if (candidateVehicles.isEmpty()) return -1;
@@ -329,6 +344,7 @@ public class RideServiceImpl implements RideService {
                 .filter(v -> requestedType == null || v.getVehicleType() == requestedType)
                 .filter(v -> !request.getRequirements().isBabyTransport() || v.isBabyTransport())
                 .filter(v -> !request.getRequirements().isPetTransport() || v.isPetTransport())
+                .filter(v -> !v.getDriver().isInactiveRequested())
                 .collect(Collectors.toList());
 
         System.out.println("[DEBUG] Compatible vehicles after filtering: " + compatibleVehicles.size());
@@ -688,23 +704,31 @@ public class RideServiceImpl implements RideService {
         ride.setEndLocation(newEndLocation);
         ride.setEndTime(LocalDateTime.now());
         ride.setStatus(RideStatus.FINISHED);
+
+        // Pickup => All Stops => New End
+        double totalDistance = 0.0;
+        Location currentPos = ride.getStartLocation();
+
+        if (ride.getStops() != null) {
+            for (Location stop : ride.getStops()) {
+                totalDistance += calculateHaversineDistance(currentPos, stop);
+                currentPos = stop;
+            }
+        }
+
+        totalDistance += calculateHaversineDistance(currentPos, newEndLocation);
+        ride.setDistance(totalDistance);
+
+        double basePrice = getBasePriceForVehicle(ride.getRequestedVehicleType());
+        double newPrice = basePrice + (totalDistance * 120.0);
+        ride.setTotalCost(Math.round(newPrice * 100.0) / 100.0);
+
         ride.setPassengersExited(true);
         ride.setPaid(true);
 
-
-        double distanceKm = calculateHaversineDistance(
-                ride.getStartLocation(),
-                newEndLocation
-        );
-        ride.setDistance(distanceKm);
-
-        double basePrice = getBasePriceForVehicle(ride.getRequestedVehicleType());
-        double newPrice = basePrice + (distanceKm * 120.0);
-        ride.setTotalCost(Math.round(newPrice * 100.0) / 100.0); // Round to 2 decimals
-
         Ride savedRide = rideRepository.save(ride);
 
-        // Handle Driver Inactivity
+        // Time-delayed Inactive Logic (same as endRide)
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
         return mapToResponse(savedRide);

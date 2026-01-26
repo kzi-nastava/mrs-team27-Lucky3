@@ -93,18 +93,20 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
 
-        // Spec 2.2.1: Driver specific logout logic
+        // Spec 2.2.1
         if (user.getRole() == UserRole.DRIVER) {
+
             boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
                     user.getId(),
                     List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS)
             );
 
             if (hasActiveRide) {
-                throw new IllegalStateException("Cannot logout while having an active ride.");
+                throw new IllegalStateException("You cannot log out because you are currently on a ride.");
             }
 
             user.setActive(false);
+            user.setInactiveRequested(false);
             userRepository.save(user);
         }
 

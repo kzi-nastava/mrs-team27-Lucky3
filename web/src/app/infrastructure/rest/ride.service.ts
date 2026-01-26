@@ -98,4 +98,8 @@ export class RideService {
   removeFavoriteRoute(passengerId: number, routeId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${passengerId}/favourite-routes/${routeId}`);
   }
+
+  stopRide(id: number, request: any): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/stop`, request);
+  }
 }

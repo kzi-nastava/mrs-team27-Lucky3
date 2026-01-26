@@ -1,7 +1,7 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { filter, take } from 'rxjs/operators';
 import { AuthService } from '../../infrastructure/auth/auth.service';
 
 interface SidebarItem {
@@ -23,6 +23,10 @@ interface SidebarItem {
 export class Sidebar implements OnInit {
   @Input() isOpen = false;
   @Output() closeSidebar = new EventEmitter<void>();
+
+  // Logout error modal
+  showLogoutError = false;
+  logoutErrorMessage = '';
 
   items: SidebarItem[] = [];
 
@@ -53,7 +57,11 @@ export class Sidebar implements OnInit {
     { icon: 'logout', label: 'Logout', route: '/login', variant: 'danger' }
   ];
 
-  constructor(private router: Router, private authService: AuthService) {
+  constructor(
+    private router: Router,
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
+  ) {
     this.items = this.driverItems;
   }
 
@@ -88,10 +96,29 @@ export class Sidebar implements OnInit {
     this.closeSidebar.emit();
   }
 
+  closeLogoutError() {
+    this.showLogoutError = false;
+    this.logoutErrorMessage = '';
+  }
+
+  goToDashboard() {
+    this.closeLogoutError();
+    this.router.navigate(['/driver/dashboard']);
+  }
+
   onItemClick(item: SidebarItem) {
     // Handle logout separately to clear localStorage
     if (item.icon === 'logout') {
-      this.authService.logout();
+      this.authService.logout().pipe(take(1)).subscribe(result => {
+        if (!result.success && result.error) {
+          // Driver has an active ride or is online - show modal
+          this.logoutErrorMessage = result.error;
+          this.showLogoutError = true;
+          // Manually trigger change detection to show modal immediately
+          this.cdr.detectChanges();
+        }
+        // If successful, the logout method already handles navigation
+      });
       return;
     }
     // On mobile, close sidebar when item is clicked
