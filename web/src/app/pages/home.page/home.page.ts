@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
+import { Subscription } from 'rxjs';
 import { environment } from '../../../env/environment';
 import { RideService, RideEstimationResponse } from '../../infrastructure/rest/ride.service';
 import { CreateRideRequest } from '../../infrastructure/rest/model/create-ride.model';
 import { VehicleService } from '../../infrastructure/rest/vehicle.service';
 import { VehicleLocationResponse } from '../../infrastructure/rest/model/vehicle-location.model';
+import { SocketService } from '../../infrastructure/rest/socket.service';
 import { HttpClient } from '@angular/common/http';
 
 @Component({
@@ -23,7 +25,7 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   private routeLayer: L.Polyline | null = null;
   private pickupMarker: L.Marker | null = null;
   private destinationMarker: L.Marker | null = null;
-  private refreshInterval: any;
+  private vehicleSubscription: Subscription | null = null;
 
   // Counts for the UI
   availableCount = 0;
@@ -81,6 +83,7 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private rideService: RideService,
     private vehicleService: VehicleService,
+    private socketService: SocketService,
     private http: HttpClient,
     private cdr: ChangeDetectorRef
   ) {}
@@ -89,20 +92,17 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.initMap();
-    this.fetchVehicles();
-    
-    this.refreshInterval = setInterval(() => {
-        this.fetchVehicles();
-    }, 10000);
+    this.initializeVehicleSocket();
   }
 
   ngOnDestroy(): void {
     if (this.map) {
       this.map.remove();
     }
-    if (this.refreshInterval) {
-        clearInterval(this.refreshInterval);
+    if (this.vehicleSubscription) {
+      this.vehicleSubscription.unsubscribe();
     }
+    this.socketService.disconnect();
   }
 
   private initMap(): void {
@@ -124,14 +124,34 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     L.control.zoom({ position: 'bottomleft' }).addTo(this.map);
   }
 
-  private fetchVehicles(): void {
+  /**
+   * Initialize WebSocket connection and subscribe to vehicle updates.
+   * Falls back to REST API for initial data while socket connects.
+   */
+  private initializeVehicleSocket(): void {
+    // Fetch initial data via REST while socket connects
     this.vehicleService.getActiveVehicles().subscribe({
       next: (vehicles) => {
         this.updateVehicleMarkers(vehicles);
         this.updateCounts(vehicles);
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Failed to fetch vehicles', err)
+      error: (err) => console.error('Failed to fetch initial vehicles', err)
+    });
+
+    // Connect to WebSocket
+    this.socketService.connect();
+
+    // Subscribe to real-time vehicle updates
+    this.vehicleSubscription = this.socketService.getVehicleUpdates().subscribe({
+      next: (vehicles) => {
+        if (vehicles) {
+          this.updateVehicleMarkers(vehicles);
+          this.updateCounts(vehicles);
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => console.error('WebSocket vehicle update error', err)
     });
   }
 
