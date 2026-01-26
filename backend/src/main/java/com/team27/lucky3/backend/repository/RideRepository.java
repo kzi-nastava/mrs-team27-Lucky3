@@ -49,5 +49,12 @@ public interface RideRepository extends JpaRepository<Ride, Long>, JpaSpecificat
 //             Pageable pageable);
 
     // Check for active rides for a driver
-
+    
+    // Count completed rides for a driver
+    @Query("SELECT COUNT(r) FROM Ride r WHERE r.driver.id = :driverId AND r.status = 'FINISHED'")
+    Integer countCompletedRidesByDriverId(@Param("driverId") Long driverId);
+    
+    // Sum total earnings for a driver from completed rides
+    @Query("SELECT COALESCE(SUM(r.totalCost), 0) FROM Ride r WHERE r.driver.id = :driverId AND r.status = 'FINISHED'")
+    Double sumTotalEarningsByDriverId(@Param("driverId") Long driverId);
 }

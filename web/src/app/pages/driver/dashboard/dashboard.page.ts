@@ -61,10 +61,10 @@ export class DashboardPage implements OnInit, OnDestroy {
   private driverId: number | null = null;
   
   stats = {
-    earnings: 245.5,
-    ridesCompleted: 12,
-    rating: 4.9,
-    onlineHours: 6.5
+    earnings: 0,
+    ridesCompleted: 0,
+    rating: 0,
+    onlineHours: '0h 0m'
   };
 
   futureRides: DashboardRide[] = [];
@@ -91,6 +91,9 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     // Load current driver status from backend
     this.loadDriverStatus();
+    
+    // Load driver statistics
+    this.loadDriverStats();
 
     // Listen for status refresh events (e.g., when a ride ends)
     this.driverService.onStatusRefresh
@@ -98,6 +101,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       .subscribe(() => {
         this.loadDriverStatus();
         this.loadFutureRides();
+        this.loadDriverStats();
         // Clear the buffer so we don't re-process on next navigation
         this.driverService.clearStatusRefresh();
       });
@@ -106,6 +110,11 @@ export class DashboardPage implements OnInit, OnDestroy {
     timer(0, 10000)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.fetchDriverLocation());
+
+    // Stats polling every 60 seconds (to update online hours in real-time)
+    timer(60000, 60000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.loadDriverStats());
 
     // Upcoming rides (backend)
     this.loadFutureRides();
@@ -148,6 +157,27 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.approachRoute = null;
     this.futureRides = [];
     this.rawRides = [];
+  }
+
+  private loadDriverStats(): void {
+    if (!this.driverId) return;
+
+    this.driverService.getStats(this.driverId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (stats) => {
+          this.stats = {
+            earnings: stats.totalEarnings,
+            ridesCompleted: stats.completedRides,
+            rating: stats.averageRating,
+            onlineHours: stats.onlineHoursToday
+          };
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Keep default stats on error
+        }
+      });
   }
 
   onStatusChange(newStatus: boolean): void {
