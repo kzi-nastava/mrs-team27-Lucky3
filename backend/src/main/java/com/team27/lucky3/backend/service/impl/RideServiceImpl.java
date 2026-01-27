@@ -502,6 +502,8 @@ public class RideServiceImpl implements RideService {
         // Not cancellable in terminal states
         if (ride.getStatus() == RideStatus.FINISHED
                 || ride.getStatus() == RideStatus.CANCELLED
+                || ride.getStatus() == RideStatus.CANCELLED_BY_DRIVER
+                || ride.getStatus() == RideStatus.CANCELLED_BY_PASSENGER
                 || ride.getStatus() == RideStatus.PANIC) {
             throw new IllegalStateException("Ride already finished/cancelled");
         }
@@ -521,18 +523,10 @@ public class RideServiceImpl implements RideService {
             }
 
             ride.setRejectionReason(reason.trim());
+            ride.setStatus(RideStatus.CANCELLED_BY_DRIVER);
 
         } else if (isPassenger) {
-            // Passengers can cancel only scheduled rides up to 10 minutes before scheduled start time.
-            if (ride.getScheduledTime() == null) {
-                throw new IllegalStateException("You can cancel only scheduled rides.");
-            }
-
-            LocalDateTime limit = ride.getScheduledTime().minusMinutes(10);
-            if (LocalDateTime.now().isAfter(limit)) {
-                throw new IllegalStateException("You cannot cancel a scheduled ride within 10 minutes of its start time.");
-            }
-
+            // Passengers can cancel PENDING or SCHEDULED rides, but not IN_PROGRESS ones
             if (ride.getStatus() == RideStatus.IN_PROGRESS || ride.getStatus() == RideStatus.ACTIVE) {
                 throw new IllegalStateException("Cannot cancel an active ride. Request a stop instead.");
             }
@@ -541,11 +535,12 @@ public class RideServiceImpl implements RideService {
             if (reason != null && !reason.trim().isEmpty()) {
                 ride.setRejectionReason(reason.trim());
             }
+            ride.setStatus(RideStatus.CANCELLED_BY_PASSENGER);
         } else {
             throw new IllegalStateException("User is not authorized to cancel this ride.");
         }
 
-        ride.setStatus(RideStatus.CANCELLED);
+        // Status already set above based on who cancelled
         ride.setEndTime(LocalDateTime.now());
         ride.setTotalCost(0.0);
 
@@ -782,6 +777,8 @@ public class RideServiceImpl implements RideService {
         // Validate that the ride is actually active/in-progress
         if (ride.getStatus() == RideStatus.FINISHED ||
                 ride.getStatus() == RideStatus.CANCELLED ||
+                ride.getStatus() == RideStatus.CANCELLED_BY_DRIVER ||
+                ride.getStatus() == RideStatus.CANCELLED_BY_PASSENGER ||
                 ride.getStatus() == RideStatus.PANIC) {
             throw new IllegalStateException("Ride is already finished or cancelled.");
         }

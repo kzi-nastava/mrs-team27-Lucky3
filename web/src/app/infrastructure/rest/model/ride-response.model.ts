@@ -6,6 +6,8 @@ export type RideStatus =
   | 'IN_PROGRESS'
   | 'FINISHED'
   | 'CANCELLED'
+  | 'CANCELLED_BY_DRIVER'
+  | 'CANCELLED_BY_PASSENGER'
   | string;
 
 export interface RoutePointResponse {
