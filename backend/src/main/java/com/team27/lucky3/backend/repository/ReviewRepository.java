@@ -16,4 +16,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // Count total ratings for a driver
     @Query("SELECT COUNT(r) FROM Review r WHERE r.ride.driver.id = :driverId AND r.driverRating > 0")
     Integer countRatingsByDriverId(@Param("driverId") Long driverId);
+    
+    // Check if a passenger has already reviewed a specific ride
+    boolean existsByRideIdAndPassengerId(Long rideId, Long passengerId);
 }
