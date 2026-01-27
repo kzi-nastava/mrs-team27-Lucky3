@@ -57,4 +57,8 @@ public interface RideRepository extends JpaRepository<Ride, Long>, JpaSpecificat
     // Sum total earnings for a driver from completed rides
     @Query("SELECT COALESCE(SUM(r.totalCost), 0) FROM Ride r WHERE r.driver.id = :driverId AND r.status = 'FINISHED'")
     Double sumTotalEarningsByDriverId(@Param("driverId") Long driverId);
+    
+    // Find all rides that are currently in progress (for cost tracking)
+    @Query("SELECT r FROM Ride r WHERE r.status IN ('IN_PROGRESS', 'ACTIVE') AND r.driver IS NOT NULL")
+    List<Ride> findAllInProgressRides();
 }
