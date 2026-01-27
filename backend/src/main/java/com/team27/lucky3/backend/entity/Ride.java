@@ -45,6 +45,16 @@ public class Ride {
     private boolean paid;
     private boolean passengersExited;
 
+    // Fields for tracking vehicle location and calculating cost incrementally
+    @Column(name = "last_tracked_latitude")
+    private Double lastTrackedLatitude;
+    
+    @Column(name = "last_tracked_longitude")
+    private Double lastTrackedLongitude;
+    
+    @Column(name = "distance_traveled")
+    private Double distanceTraveled;
+
     @Embedded
     @AttributeOverrides({
             @AttributeOverride(name = "address", column = @Column(name = "start_address")),

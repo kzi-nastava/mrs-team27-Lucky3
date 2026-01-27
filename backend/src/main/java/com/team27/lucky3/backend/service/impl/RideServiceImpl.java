@@ -620,6 +620,7 @@ public class RideServiceImpl implements RideService {
         res.setTotalCost(ride.getTotalCost());
         res.setEstimatedCost(ride.getEstimatedCost());
         res.setDistanceKm(ride.getDistance());
+        res.setDistanceTraveled(ride.getDistanceTraveled());
         res.setStatus(ride.getStatus());
         res.setPanicPressed(Boolean.TRUE.equals(ride.getPanicPressed()));
         res.setRejectionReason(ride.getRejectionReason());
@@ -858,7 +859,7 @@ public class RideServiceImpl implements RideService {
     private double getBasePriceForVehicle(VehicleType type) {
         if (type == null) return 120.0;
         return switch (type) {
-            case LUXURY -> 200.0;
+            case LUXURY -> 360.0;
             case VAN -> 180.0;
             default -> 120.0;
         };

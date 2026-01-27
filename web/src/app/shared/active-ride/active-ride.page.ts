@@ -41,10 +41,12 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private startedAtMs = Date.now();
   private updateTimer: any;
   private locationPoller: any;
+  private ridePoller: any; // Poll ride data to get updated cost from backend
 
   private totalPlannedDistanceKm: number | null = null;
   private distanceTraveledKm = 0;
   private lastDriverLocation: MapPoint | null = null;
+  private rideStartLocation: MapPoint | null = null; // Track ride start for distance calculation
 
   currentCost = 0;
   timeLeftMin: number | null = null;
@@ -129,12 +131,17 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     this.pollDriverLocation();
     this.locationPoller = setInterval(() => this.pollDriverLocation(), 5000); // Every 5s as per requirement
 
+    // Poll ride data to get updated cost from backend (backend updates cost every 5s)
+    this.pollRideData();
+    this.ridePoller = setInterval(() => this.pollRideData(), 5000);
+
     this.updateTimer = setInterval(() => this.tick(), 1000);
   }
 
   ngOnDestroy(): void {
     if (this.updateTimer) clearInterval(this.updateTimer);
     if (this.locationPoller) clearInterval(this.locationPoller);
+    if (this.ridePoller) clearInterval(this.ridePoller);
   }
 
   goBack(): void {
@@ -219,7 +226,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   private getBasePriceRsd(vehicleType?: string): number {
     switch ((vehicleType ?? '').toUpperCase()) {
-      case 'LUXURY': return 200;
+      case 'LUXURY': return 360;
       case 'VAN': return 180;
       default: return 120;
     }
@@ -556,21 +563,23 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     return totalKm;
   }
 
-  private saveCurrentCost(): void {
-    if (!this.rideId || !this.isRideInProgress || !this.isDriver) return;
+  /**
+   * Fetch updated ride data from backend (cost is calculated by backend service).
+   */
+  private fetchRideCost(): void {
+    if (!this.rideId || !this.isRideInProgress) return;
     
-    const base = this.getBasePriceRsd(this.backendRide?.vehicleType ?? this.ride?.type);
-    const cost = base + this.distanceTraveledKm * ActiveRidePage.PRICE_PER_KM;
-    
-    console.log('Saving cost to backend:', { rideId: this.rideId, cost: Math.round(cost), distanceTraveledKm: this.distanceTraveledKm });
-    
-    this.rideService.updateRideCost(this.rideId, Math.round(cost)).subscribe({
-      next: (response) => {
-        console.log('Cost saved successfully, response:', response);
+    this.rideService.getRide(this.rideId).subscribe({
+      next: (r) => {
+        if (r.totalCost != null && r.totalCost > 0) {
+          this.currentCost = r.totalCost;
+        }
+        if (r.distanceTraveled != null) {
+          this.distanceTraveledKm = r.distanceTraveled;
+        }
+        this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Failed to save ride cost', err);
-      }
+      error: () => { /* ignore */ }
     });
   }
 
@@ -589,8 +598,35 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  /**
+   * Poll ride data to get updated cost from backend.
+   * The backend RideCostTrackingService updates costs every 5 seconds.
+   */
+  private pollRideData(): void {
+    if (!this.rideId || !this.isRideInProgress) return;
+
+    this.rideService.getRide(this.rideId).subscribe({
+      next: (r) => {
+        // Update cost from backend
+        if (r.totalCost != null && r.totalCost > 0) {
+          this.currentCost = r.totalCost;
+        }
+        if (r.distanceTraveled != null) {
+          this.distanceTraveledKm = r.distanceTraveled;
+        }
+        // Update vehicle location from ride response
+        if (r.vehicleLocation && this.isValidCoordinate(r.vehicleLocation.latitude, r.vehicleLocation.longitude)) {
+          this.driverLocation = { latitude: r.vehicleLocation.latitude, longitude: r.vehicleLocation.longitude };
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        // Silently ignore poll errors
+      }
+    });
+  }
+
   private async applyRideResponse(r: RideResponse): Promise<void> {
-    console.log('Ride loaded from backend:', { id: r.id, status: r.status, totalCost: r.totalCost, estimatedCost: r.estimatedCost });
     
     this.backendRide = r;
     this.rideStatus = r.status || '';
@@ -682,23 +718,39 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
     this.distanceLeftKm = this.totalPlannedDistanceKm;
 
+    // Store ride start location for distance calculation
+    const startLoc = r.departure ?? r.start ?? r.startLocation;
+    if (startLoc && this.isValidCoordinate(startLoc.latitude, startLoc.longitude)) {
+      this.rideStartLocation = { latitude: startLoc.latitude, longitude: startLoc.longitude };
+    }
+
     // Initialize cost and distance traveled
     const base = this.getBasePriceRsd(r.vehicleType ?? this.ride?.type);
     
+    // Get vehicle location from ride response
+    const vehicleLoc = r.vehicleLocation;
+    if (vehicleLoc && this.isValidCoordinate(vehicleLoc.latitude, vehicleLoc.longitude)) {
+      this.driverLocation = { latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude };
+      // DON'T set lastDriverLocation here - let the first poll handle it
+      // This allows the poll to detect movement since ride start
+    }
+    
     if (this.isRideInProgress) {
-      // For in-progress rides, restore the saved cost from backend
-      // and calculate distanceTraveledKm from it
-      if (r.totalCost && r.totalCost > base) {
+      // PRIORITY 1: Use backend totalCost if it exists and is valid (ride is saved in DB)
+      if (r.totalCost && r.totalCost >= base) {
         this.currentCost = r.totalCost;
-        // Reverse calculate distance traveled: cost = base + distance * PRICE_PER_KM
         this.distanceTraveledKm = (r.totalCost - base) / ActiveRidePage.PRICE_PER_KM;
-      } else {
+      } 
+      // PRIORITY 2: Calculate from positions as fallback
+      else if (this.rideStartLocation && this.driverLocation) {
+        const calculatedDistance = this.haversineKm(this.rideStartLocation, this.driverLocation);
+        this.distanceTraveledKm = calculatedDistance;
+        this.currentCost = base + this.distanceTraveledKm * ActiveRidePage.PRICE_PER_KM;
+      } 
+      // PRIORITY 3: Start fresh
+      else {
         this.currentCost = base;
         this.distanceTraveledKm = 0;
-      }
-      // Initialize lastDriverLocation for distance tracking
-      if (this.driverLocation) {
-        this.lastDriverLocation = { ...this.driverLocation };
       }
     } else {
       // For pending rides, start fresh
@@ -734,14 +786,6 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       const vehicleLoc = this.driverLocation 
         ? { address: 'Current Location', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude }
         : (r.vehicleLocation ?? null);
-      
-      // Update driver marker position from vehicle location if available from ride and no polled location yet
-      if (r.vehicleLocation && !this.driverLocation) {
-          setTimeout(() => {
-              this.driverLocation = { latitude: r.vehicleLocation!.latitude, longitude: r.vehicleLocation!.longitude };
-              this.cdr.detectChanges();
-          }, 0);
-      }
       
       if (!vehicleLoc) {
           // No vehicle location yet, will retry when location is polled
@@ -918,28 +962,27 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     // For passengers, poll the driver's vehicle from the ride
     const targetDriverId = this.isDriver ? this.driverId : this.backendRide?.driver?.id;
     
-    if (!targetDriverId) return;
+    if (!targetDriverId) {
+      return;
+    }
 
     this.vehicleService.getActiveVehicles().subscribe({
       next: (vehicles) => {
         this.pollErrors = 0;
         const mine = vehicles.find(v => v.driverId === targetDriverId);
-        if (!mine) return;
+        if (!mine) {
+          return;
+        }
         
         const newLocation = { latitude: mine.latitude, longitude: mine.longitude };
         const locationChanged = !this.driverLocation || 
           this.driverLocation.latitude !== newLocation.latitude || 
           this.driverLocation.longitude !== newLocation.longitude;
         
-        // Track actual distance traveled during in-progress ride
-        if (locationChanged && this.isRideInProgress && this.lastDriverLocation) {
-          const segmentKm = this.haversineKm(this.lastDriverLocation, newLocation);
-          // Only add reasonable movements (< 2km per poll to filter GPS jumps)
-          if (segmentKm < 2) {
-            this.distanceTraveledKm += segmentKm;
-            // Save updated cost to backend
-            this.saveCurrentCost();
-          }
+        // When location changes during an in-progress ride, fetch updated cost from backend
+        // The backend RideCostTrackingService calculates cost automatically
+        if (this.isRideInProgress && locationChanged) {
+          this.fetchRideCost();
         }
         
         // Update last known location for next distance calculation

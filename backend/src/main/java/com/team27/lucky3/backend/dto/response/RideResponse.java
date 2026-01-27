@@ -42,4 +42,5 @@ public class RideResponse {
     private Boolean passengersExited;
     private List<LocationDto> stops;
     private Set<Integer> completedStopIndexes;
+    private Double distanceTraveled; // Distance traveled so far (for cost calculation)
 }
