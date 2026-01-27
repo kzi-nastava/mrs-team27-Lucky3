@@ -79,36 +79,15 @@ public class DriverServiceImpl implements DriverService {
             } else {
                 driver.setActive(false);
                 
-                // End the current activity session and update total active hours
+                // End the current activity session
                 activitySessionRepository.findByDriverIdAndEndTimeIsNull(driverId)
                         .ifPresent(session -> {
                             session.setEndTime(LocalDateTime.now());
                             activitySessionRepository.save(session);
-                            
-                            // Update total active seconds on the driver
-                            updateDriverActiveHours(driverId, driver);
                         });
             }
         }
         return userRepository.save(driver);
-    }
-    
-    /**
-     * Helper method to calculate and save active hours to the driver entity
-     */
-    private void updateDriverActiveHours(Long driverId, User driver) {
-        LocalDateTime since = LocalDateTime.now().minusHours(24);
-        List<DriverActivitySession> sessions = activitySessionRepository.findSessionsSince(driverId, since);
-        
-        long totalSeconds = 0;
-        LocalDateTime now = LocalDateTime.now();
-        for (DriverActivitySession session : sessions) {
-            LocalDateTime effectiveStart = session.getStartTime().isBefore(since) ? since : session.getStartTime();
-            LocalDateTime effectiveEnd = session.getEndTime() != null ? session.getEndTime() : now;
-            totalSeconds += Duration.between(effectiveStart, effectiveEnd).getSeconds();
-        }
-        
-        driver.setTotalActiveSeconds(totalSeconds);
     }
 
     @Override
@@ -195,12 +174,6 @@ public class DriverServiceImpl implements DriverService {
             
             totalSeconds += Duration.between(effectiveStart, effectiveEnd).getSeconds();
         }
-        
-        // Save the updated active hours to the driver entity
-        User driver = userRepository.findById(driverId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver not found"));
-        driver.setTotalActiveSeconds(totalSeconds);
-        userRepository.save(driver);
         
         // Format as "Xh Ym"
         long hours = totalSeconds / 3600;

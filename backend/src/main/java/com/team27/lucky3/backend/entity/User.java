@@ -50,10 +50,6 @@ public class User implements UserDetails {
     // 2.2.1 Driver Availability
     private boolean isActive;
     private boolean isInactiveRequested;
-    
-    // Total active hours (in seconds) for the driver - persisted for quick access
-    @Column(name = "total_active_seconds", nullable = false)
-    private long totalActiveSeconds = 0;
 
     @OneToOne(mappedBy = "driver", fetch = FetchType.LAZY)
     private Vehicle vehicle;
