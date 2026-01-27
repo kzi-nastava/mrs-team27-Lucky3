@@ -499,29 +499,61 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private tick(): void {
-    // Support multiple status formats
+    // Calculate distance and time for both pending and in-progress rides
+    this.updateDistanceAndTime();
+
     const activeStatuses = ['INPROGRESS', 'IN_PROGRESS', 'ACTIVE'];
-    if (!activeStatuses.includes(this.rideStatus)) return;
+    if (activeStatuses.includes(this.rideStatus)) {
+      // Calculate current cost: base price + (distance traveled * price per km)
+      // distanceTraveledKm is accumulated in pollDriverLocation based on actual vehicle movement
+      const base = this.getBasePriceRsd(this.backendRide?.vehicleType ?? this.ride?.type);
+      const computed = base + this.distanceTraveledKm * ActiveRidePage.PRICE_PER_KM;
 
-    // Calculate remaining distance from current position
-    if (this.driverLocation && this.rideMapData) {
-      const remainingKm = this.computeRemainingKm(this.driverLocation);
-      this.distanceLeftKm = remainingKm;
-      
-      // Calculate time left based on remaining distance
-      const avgSpeedKmh = 32;
-      this.timeLeftMin = avgSpeedKmh > 0 ? (remainingKm / avgSpeedKmh) * 60 : null;
+      this.currentCost = computed;
+
+      this.updateCompletedStops();
+    } else if (this.isRidePending && this.distanceLeftKm != null) {
+      // For pending rides, estimate cost based on distance: base + distance * price per km
+      const base = this.getBasePriceRsd(this.backendRide?.vehicleType ?? this.ride?.type);
+      this.currentCost = base + this.distanceLeftKm * ActiveRidePage.PRICE_PER_KM;
     }
-
-    // Calculate current cost: base price + (distance traveled * price per km)
-    // distanceTraveledKm is accumulated in pollDriverLocation based on actual vehicle movement
-    const base = this.getBasePriceRsd(this.backendRide?.vehicleType ?? this.ride?.type);
-    const computed = base + this.distanceTraveledKm * ActiveRidePage.PRICE_PER_KM;
-
-    this.currentCost = computed;
-
-    this.updateCompletedStops();
+    
     this.cdr.detectChanges();
+  }
+
+  private updateDistanceAndTime(): void {
+    // Calculate distance based on actual route polylines
+    // In progress: blue line (approach) + yellow line (remaining)
+    // Pending: yellow line (full route from pickup to destination)
+    
+    let distanceKm = 0;
+    
+    if (this.isRideInProgress) {
+      // Distance = approach route (blue) + remaining route (yellow)
+      const approachDistanceKm = this.computePolylineDistanceKm(this.approachRoute);
+      const remainingDistanceKm = this.computePolylineDistanceKm(this.remainingRoute);
+      distanceKm = approachDistanceKm + remainingDistanceKm;
+    } else if (this.isRidePending) {
+      // For pending rides, use the full route polyline or remaining route
+      const routeDistanceKm = this.computePolylineDistanceKm(this.routePolyline) || 
+                              this.computePolylineDistanceKm(this.remainingRoute);
+      distanceKm = routeDistanceKm;
+    }
+    
+    this.distanceLeftKm = distanceKm > 0 ? distanceKm : null;
+    
+    // Time = distance * 3.2 minutes per km
+    this.timeLeftMin = distanceKm > 0 ? distanceKm * 3.2 : null;
+  }
+
+  private computePolylineDistanceKm(polyline: MapPoint[] | null): number {
+    if (!polyline || polyline.length < 2) return 0;
+    
+    let totalKm = 0;
+    for (let i = 0; i < polyline.length - 1; i++) {
+      totalKm += this.haversineKm(polyline[i], polyline[i + 1]);
+    }
+    return totalKm;
   }
 
   private loadRide(): void {
