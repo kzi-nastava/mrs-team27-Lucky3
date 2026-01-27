@@ -17,7 +17,7 @@ import { AdminDashboardPage } from './pages/admin/dashboard/admin-dashboard.page
 import { HomePage } from './pages/home.page/home.page';
 import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
-import { ActiveRidePage } from './pages/driver/active-ride/active-ride.page';
+import { ActiveRidePage } from './shared/active-ride/active-ride.page';
 import { AdminDriversPage } from './pages/admin/drivers/admin-drivers.page';
 import { CreateDriverComponent } from './account-control/create-driver/create-driver.component';
 import {DriverSetPasswordComponent} from "./account-control/driver-set-password/driver-set-password.component";

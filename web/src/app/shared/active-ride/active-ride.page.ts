@@ -4,14 +4,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { ActiveRideMapComponent, ActiveRideMapData, MapPoint } from '../../../shared/ui/active-ride-map/active-ride-map.component';
-import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
-import { AuthService } from '../../../infrastructure/auth/auth.service';
-import { RideService } from '../../../infrastructure/rest/ride.service';
-import { DriverService } from '../../../infrastructure/rest/driver.service';
-import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
-import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
-import { environment } from '../../../../env/environment';
+import { ActiveRideMapComponent, ActiveRideMapData, MapPoint } from '../ui/active-ride-map/active-ride-map.component';
+import { VehicleService } from '../../infrastructure/rest/vehicle.service';
+import { AuthService } from '../../infrastructure/auth/auth.service';
+import { RideService } from '../../infrastructure/rest/ride.service';
+import { DriverService } from '../../infrastructure/rest/driver.service';
+import { CreateRideRequest } from '../../infrastructure/rest/model/create-ride.model';
+import { RideResponse } from '../../infrastructure/rest/model/ride-response.model';
+import { environment } from '../../../env/environment';
 
 @Component({
   selector: 'app-active-ride-page',
