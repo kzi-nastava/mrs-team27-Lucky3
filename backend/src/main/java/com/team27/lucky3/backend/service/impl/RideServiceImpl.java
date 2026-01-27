@@ -547,6 +547,7 @@ public class RideServiceImpl implements RideService {
 
         ride.setStatus(RideStatus.CANCELLED);
         ride.setEndTime(LocalDateTime.now());
+        ride.setTotalCost(0.0);
 
         Ride savedRide = rideRepository.save(ride);
 
