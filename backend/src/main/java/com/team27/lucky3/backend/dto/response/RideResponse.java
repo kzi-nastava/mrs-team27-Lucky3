@@ -32,6 +32,7 @@ public class RideResponse {
     private Integer estimatedTimeInMinutes;
     private String rejectionReason;
     private Boolean panicPressed;
+    private String panicReason;
     private LocationDto departure;
     private LocationDto destination;
     private LocalDateTime scheduledTime;

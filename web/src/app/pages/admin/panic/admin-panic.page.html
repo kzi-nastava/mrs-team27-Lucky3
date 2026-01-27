@@ -1,0 +1,142 @@
+<div class="min-h-screen bg-black text-white p-4 lg:p-6">
+  <div class="max-w-6xl mx-auto space-y-6">
+    
+    <!-- Header -->
+    <div class="bg-red-900/30 p-6 rounded-xl border border-red-800">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center border border-red-500/30">
+            <span class="text-2xl">🚨</span>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold">Panic Notifications</h1>
+            <p class="text-red-300/80 text-sm">Emergency alerts from rides</p>
+          </div>
+        </div>
+        <button
+          (click)="loadPanics()"
+          class="px-4 py-2 rounded-xl bg-red-800/50 hover:bg-red-800 border border-red-700 transition text-sm"
+        >
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="rounded-xl border border-gray-800 bg-gray-900/40 p-6">
+      <div class="animate-pulse space-y-3">
+        <div class="h-4 w-1/3 bg-gray-800 rounded"></div>
+        <div class="h-4 w-2/3 bg-gray-800 rounded"></div>
+        <div class="h-4 w-1/2 bg-gray-800 rounded"></div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="errorMessage" class="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-200">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Panic List -->
+    <div *ngIf="!isLoading" class="space-y-4">
+      
+      <!-- Stats Bar -->
+      <div class="bg-[#1C1C1E] rounded-xl border border-gray-800 p-4 flex items-center justify-between">
+        <div class="text-sm text-gray-300">
+          Total alerts: <span class="font-semibold text-red-400">{{ panics.length }}</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+          <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+          Auto-refreshing every 10s
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="panics.length === 0" class="bg-[#1C1C1E] rounded-xl border border-gray-800 p-10 text-center">
+        <div class="text-4xl mb-4">✅</div>
+        <div class="text-gray-400">No panic notifications</div>
+        <div class="text-gray-500 text-sm mt-1">All rides are running smoothly</div>
+      </div>
+
+      <!-- Panic Cards -->
+      <div *ngFor="let panic of panics" class="bg-[#1C1C1E] rounded-xl border border-red-800/50 overflow-hidden hover:border-red-700 transition-colors">
+        <div class="bg-red-900/30 px-4 py-3 border-b border-red-800/50 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            <span class="font-semibold text-red-300">PANIC ALERT #{{ panic.id }}</span>
+          </div>
+          <div class="text-sm text-red-300/70">
+            {{ getTimeSince(panic.time) }}
+          </div>
+        </div>
+        
+        <div class="p-4 space-y-4">
+          <!-- Time -->
+          <div class="flex items-center gap-2 text-sm">
+            <span class="text-gray-400">Time:</span>
+            <span class="text-white">{{ formatTime(panic.time) }}</span>
+          </div>
+
+          <!-- Triggered By -->
+          <div class="bg-black/40 rounded-lg p-3 border border-gray-800">
+            <div class="text-xs text-gray-400 mb-2">Triggered By</div>
+            <div *ngIf="panic.user" class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-lg">
+                {{ panic.user.name.charAt(0) || '?' }}
+              </div>
+              <div>
+                <div class="font-semibold">{{ panic.user.name }} {{ panic.user.surname }}</div>
+                <div class="text-sm text-gray-400">{{ panic.user.email }}</div>
+                <div class="text-xs text-gray-500">{{ panic.user.role }} • {{ panic.user.phoneNumber || 'No phone' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reason -->
+          <div *ngIf="panic.reason" class="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+            <div class="text-xs text-red-400 mb-1">Reason</div>
+            <div class="text-white">{{ panic.reason }}</div>
+          </div>
+
+          <!-- Ride Info -->
+          <div *ngIf="panic.ride" class="bg-black/40 rounded-lg p-3 border border-gray-800">
+            <div class="text-xs text-gray-400 mb-2">Ride Details</div>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-start gap-2">
+                <span class="text-gray-400 shrink-0">Ride ID:</span>
+                <span class="text-white">#{{ panic.ride.id }}</span>
+              </div>
+              <div *ngIf="panic.ride.startLocation" class="flex items-start gap-2">
+                <span class="text-green-400 shrink-0">From:</span>
+                <span class="text-white">{{ panic.ride.startLocation.address || 'Unknown' }}</span>
+              </div>
+              <div *ngIf="panic.ride.endLocation" class="flex items-start gap-2">
+                <span class="text-red-400 shrink-0">To:</span>
+                <span class="text-white">{{ panic.ride.endLocation.address || 'Unknown' }}</span>
+              </div>
+              <div *ngIf="panic.ride.driver" class="flex items-start gap-2">
+                <span class="text-gray-400 shrink-0">Driver:</span>
+                <span class="text-white">{{ panic.ride.driver.name }} {{ panic.ride.driver.surname }} ({{ panic.ride.driver.phoneNumber || 'No phone' }})</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2 pt-2">
+            <a 
+              *ngIf="panic.ride && panic.ride.driver && panic.ride.driver.phoneNumber"
+              [href]="'tel:' + panic.ride.driver.phoneNumber"
+              class="flex-1 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-center text-sm font-semibold transition-colors">
+              📞 Call Driver
+            </a>
+            <a 
+              *ngIf="panic.user && panic.user.phoneNumber"
+              [href]="'tel:' + panic.user.phoneNumber"
+              class="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-center text-sm font-semibold transition-colors">
+              📞 Call Reporter
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

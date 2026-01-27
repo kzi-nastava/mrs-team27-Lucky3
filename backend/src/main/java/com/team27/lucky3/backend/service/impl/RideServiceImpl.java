@@ -468,6 +468,9 @@ public class RideServiceImpl implements RideService {
 
             Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
             if (vehicle != null) {
+                // Reset panic flag when ride ends
+                vehicle.setCurrentPanic(false);
+                
                 if (!nextRides.isEmpty()) {
                     vehicle.setStatus(VehicleStatus.BUSY);
                     // "load next ride" logic could mean setting the next ride as active or notifying driver,
@@ -549,6 +552,15 @@ public class RideServiceImpl implements RideService {
 
         Ride savedRide = rideRepository.save(ride);
 
+        // Reset vehicle panic flag when ride is cancelled
+        if (ride.getDriver() != null) {
+            Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
+            if (vehicle != null) {
+                vehicle.setCurrentPanic(false);
+                vehicleRepository.save(vehicle);
+            }
+        }
+
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
@@ -622,6 +634,7 @@ public class RideServiceImpl implements RideService {
         res.setDistanceTraveled(ride.getDistanceTraveled());
         res.setStatus(ride.getStatus());
         res.setPanicPressed(Boolean.TRUE.equals(ride.getPanicPressed()));
+        res.setPanicReason(ride.getPanicReason());
         res.setRejectionReason(ride.getRejectionReason());
         res.setPetTransport(ride.isPetTransport());
         res.setBabyTransport(ride.isBabyTransport());
@@ -755,6 +768,9 @@ public class RideServiceImpl implements RideService {
 
             Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
             if (vehicle != null) {
+                // Reset panic flag when ride is stopped early
+                vehicle.setCurrentPanic(false);
+                
                 if (!nextRides.isEmpty()) {
                     vehicle.setStatus(VehicleStatus.BUSY);
                 } else {
@@ -783,6 +799,7 @@ public class RideServiceImpl implements RideService {
                 ride.getStatus() == RideStatus.CANCELLED_BY_DRIVER ||
                 ride.getStatus() == RideStatus.CANCELLED_BY_PASSENGER ||
                 ride.getStatus() == RideStatus.PANIC) {
+
             throw new IllegalStateException("Ride is already finished or cancelled.");
         }
 
@@ -794,10 +811,9 @@ public class RideServiceImpl implements RideService {
             throw new IllegalStateException("Only a participant of the ride can activate panic.");
         }
 
-        // Update Ride Status
-        ride.setStatus(RideStatus.PANIC);
+        // Set panic flag and reason - DO NOT change ride status or end time
         ride.setPanicPressed(true);
-        ride.setEndTime(LocalDateTime.now());
+        ride.setPanicReason(request.getReason());
 
         // Create Panic Record
         Panic panic = new Panic();
@@ -807,11 +823,17 @@ public class RideServiceImpl implements RideService {
         panic.setTimestamp(LocalDateTime.now());
         panicRepository.save(panic);
 
+        // Set vehicle's currentPanic flag so it shows up on the map
+        if (ride.getDriver() != null) {
+            Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
+            if (vehicle != null) {
+                vehicle.setCurrentPanic(true);
+                vehicleRepository.save(vehicle);
+            }
+        }
+
         // Save Ride
         Ride savedRide = rideRepository.save(ride);
-
-        // Handle Driver Inactivity (If driver pressed it or is affected)
-        checkAndHandleInactiveRequest(savedRide.getDriver());
 
         return mapToResponse(savedRide);
     }

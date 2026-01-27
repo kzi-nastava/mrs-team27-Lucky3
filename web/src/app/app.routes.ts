@@ -31,6 +31,7 @@ import {RideHistoryComponent} from "./pages/passenger/ride-history/ride-history.
 import { FavoritePageComponent } from './pages/passenger/favorite-page/favorite-page.component';
 import { ReviewPage } from './pages/review/review.page';
 import { reviewGuard } from './infrastructure/auth/review.guard';
+import { AdminPanicPage } from './pages/admin/panic/admin-panic.page';
 
 export const routes: Routes = [
   {
@@ -154,6 +155,12 @@ export const routes: Routes = [
   {
     path: 'admin/create-driver',
     component: CreateDriverComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/panic',
+    component: AdminPanicPage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },

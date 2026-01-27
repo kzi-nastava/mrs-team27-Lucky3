@@ -83,6 +83,14 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   isPassengerCancelling = false;
   passengerCancelError = '';
 
+  // Panic modal
+  showPanicModal = false;
+  panicReason = '';
+  isPanicking = false;
+  panicError = '';
+  panicActivated = false; // Track if panic is active for this ride
+  panicSuccess = false; // Track if panic was successfully triggered
+
   private driverId: number | null = null;
   private userId: number | null = null;
   userRole: string = '';
@@ -377,6 +385,50 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  // --- PANIC BUTTON METHODS (both driver and passenger) ---
+
+  openPanicModal(): void {
+    this.panicError = '';
+    this.panicReason = '';
+    this.showPanicModal = true;
+  }
+
+  closePanicModal(): void {
+    if (this.isPanicking) return;
+    this.showPanicModal = false;
+    this.panicSuccess = false;
+  }
+
+  confirmPanic(): void {
+    if (!this.rideId) return;
+
+    this.isPanicking = true;
+    this.panicError = '';
+
+    this.rideService.panicRide(this.rideId, this.panicReason.trim()).subscribe({
+      next: (res) => {
+        this.isPanicking = false;
+        this.panicActivated = true;
+        this.panicSuccess = true;
+        // Update backendRide with panic state
+        if (this.backendRide) {
+          this.backendRide.panicPressed = true;
+          this.backendRide.panicReason = this.panicReason.trim();
+        }
+        // Keep modal open briefly to show success, then close
+        setTimeout(() => {
+          this.showPanicModal = false;
+          this.panicSuccess = false;
+        }, 2000);
+      },
+      error: (err) => {
+        this.isPanicking = false;
+        console.error('Failed to trigger panic', err);
+        this.panicError = err.error?.message || 'Failed to trigger panic. Please try again.';
+      }
+    });
+  }
+
   openEndModal(): void {
     this.endRideError = '';
     this.passengersLeft = false;
@@ -635,6 +687,9 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     
     this.backendRide = r;
     this.rideStatus = r.status || '';
+    
+    // Update panic state from backend
+    this.panicActivated = r.panicPressed === true;
 
     // If 'departure' / 'destination' fields are null, check legacy fields or address strings
     // Backend RideResponse structure guarantees location objects have 'address' if not null.

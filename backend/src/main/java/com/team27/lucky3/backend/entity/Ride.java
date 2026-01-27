@@ -33,6 +33,9 @@ public class Ride {
 
     private Boolean panicPressed;
 
+    @Column(name = "panic_reason")
+    private String panicReason;
+
     @Column(name = "rejection_reason")
     private String rejectionReason;
 

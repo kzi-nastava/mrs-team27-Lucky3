@@ -6,4 +6,5 @@ export interface VehicleLocationResponse {
   longitude: number;
   driverId: number;
   available: boolean;
+  currentPanic: boolean;
 }

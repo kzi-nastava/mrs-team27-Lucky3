@@ -205,8 +205,8 @@ public class AuthServiceImpl implements AuthService {
         } else {
             image = imageService.getDefaultAvatar();   // default
         }
-        user.setProfileImage(image);
 
+        user.setProfileImage(image);
         User savedUser = userRepository.save(user);
 
         // Generate Activation Token
