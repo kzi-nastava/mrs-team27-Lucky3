@@ -1,5 +1,11 @@
 <div class="min-h-screen bg-black text-white p-4 lg:p-6">
-  <div class="max-w-7xl mx-auto space-y-6">
+  <div *ngIf="isLoading" class="loading">
+    Loading user profile...
+  </div>
+  <div *ngIf="errorMessage" class="error">
+    {{ errorMessage }}
+  </div>
+  <div *ngIf="!isLoading && !errorMessage" class="max-w-7xl mx-auto space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <h1 class="text-3xl font-bold">Profile information</h1>
@@ -8,7 +14,7 @@
       <!-- Profile Card -->
     <div class="card flex items-center gap-6 p-6 bg-gray-900 rounded-xl">
         <!-- Avatar (circular) -->
-        <img src="assets/images/avatar.jpg" alt="Avatar" class="w-24 h-24 rounded-full object-cover border-2 border-gray-700"/>
+        <img [src]="imageUrl" alt="Avatar" class="w-24 h-24 rounded-full object-cover border-2 border-gray-700"/>
         
         <!-- User Info -->
         <div class="flex flex-col gap-1">

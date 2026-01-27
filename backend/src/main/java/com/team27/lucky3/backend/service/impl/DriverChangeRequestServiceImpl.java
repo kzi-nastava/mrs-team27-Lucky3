@@ -124,6 +124,6 @@ public class DriverChangeRequestServiceImpl implements DriverChangeRequestServic
         } else {
             cr.setStatus(DriverChangeStatus.REJECTED);
         }
-        changeRepo.save(cr);
+        changeRepo.delete(cr);
     }
 }
