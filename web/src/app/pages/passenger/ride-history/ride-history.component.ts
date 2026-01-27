@@ -53,7 +53,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
       .subscribe({
         next: (page) => {
           // Filter to only past rides (FINISHED, CANCELLED)
-          const pastStatuses = ['FINISHED', 'CANCELLED', 'PENDING', 'SCHEDULED', 'ACCEPTED', 'ACTIVE', 'IN_PROGRESS', 'REJECTED', 'PANIC']; //TODO: adjust later if needed
+          const pastStatuses = ['FINISHED', 'CANCELLED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_PASSENGER', 'PENDING', 'SCHEDULED', 'ACCEPTED', 'ACTIVE', 'IN_PROGRESS', 'REJECTED', 'PANIC']; //TODO: adjust later if needed
           const relevant = (page.content ?? []).filter(r => pastStatuses.includes(r.status as string));
           console.log('Fetched rides from backend:', page.content);
           
@@ -75,6 +75,8 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
       completedAt: r.endTime,
       status: r.status === 'FINISHED' ? 'Finished' :
               r.status === 'CANCELLED' ? 'Cancelled' :
+              r.status === 'CANCELLED_BY_DRIVER' ? 'Cancelled' :
+              r.status === 'CANCELLED_BY_PASSENGER' ? 'Cancelled' :
               r.status === 'PENDING' ? 'Pending' :
               r.status === 'ACCEPTED' ? 'Accepted' :
               r.status === 'REJECTED' ? 'Rejected' : 'all',
@@ -84,7 +86,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
       destination: { address: r.destination?.address ?? r.endLocation?.address ?? '—' },
       hasPanic: r.panicPressed,
       passengerName: r.passengers?.[0]?.name ?? 'Unknown',
-      cancelledBy: 'driver', // TODO: fix this | simplified
+      cancelledBy: r.status === 'CANCELLED_BY_DRIVER' ? 'driver' : r.status === 'CANCELLED_BY_PASSENGER' ? 'passenger' : 'driver',
       cancellationReason: r.rejectionReason
     };
   }

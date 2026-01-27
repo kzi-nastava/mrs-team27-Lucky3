@@ -125,9 +125,9 @@ export class RideService {
   }
 
   /**
-   * Cancel ride as passenger (no reason required)
+   * Cancel ride as passenger (reason is optional)
    */
-  cancelRideAsPassenger(id: number): Observable<RideResponse> {
-    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/cancel`, { reason: '' });
+  cancelRideAsPassenger(id: number, reason?: string): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/cancel`, { reason: reason || '' });
   }
 }
