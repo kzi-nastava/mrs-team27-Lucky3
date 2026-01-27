@@ -82,6 +82,12 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   isPassengerCancelling = false;
   passengerCancelError = '';
 
+  // Panic modal
+  showPanicModal = false;
+  panicReason = '';
+  isPanicking = false;
+  panicError = '';
+
   private driverId: number | null = null;
   private userId: number | null = null;
   userRole: string = '';
@@ -368,6 +374,44 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         this.isPassengerCancelling = false;
         console.error('Failed to cancel ride', err);
         this.passengerCancelError = err.error?.message || 'Failed to cancel. You may only cancel scheduled rides more than 10 minutes before start.';
+      }
+    });
+  }
+
+  // --- PANIC BUTTON METHODS (both driver and passenger) ---
+
+  openPanicModal(): void {
+    this.panicError = '';
+    this.panicReason = '';
+    this.showPanicModal = true;
+  }
+
+  closePanicModal(): void {
+    if (this.isPanicking) return;
+    this.showPanicModal = false;
+  }
+
+  confirmPanic(): void {
+    if (!this.rideId) return;
+
+    this.isPanicking = true;
+    this.panicError = '';
+
+    this.rideService.panicRide(this.rideId, this.panicReason.trim()).subscribe({
+      next: () => {
+        this.isPanicking = false;
+        this.showPanicModal = false;
+        // Redirect based on role
+        if (this.isDriver) {
+          this.router.navigate(['/driver/dashboard']);
+        } else {
+          this.router.navigate(['/passenger/home']);
+        }
+      },
+      error: (err) => {
+        this.isPanicking = false;
+        console.error('Failed to trigger panic', err);
+        this.panicError = err.error?.message || 'Failed to trigger panic. Please try again.';
       }
     });
   }

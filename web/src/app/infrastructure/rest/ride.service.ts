@@ -130,4 +130,11 @@ export class RideService {
   cancelRideAsPassenger(id: number): Observable<RideResponse> {
     return this.http.put<RideResponse>(`${this.apiUrl}/${id}/cancel`, { reason: '' });
   }
+
+  /**
+   * Trigger panic button for a ride (driver or passenger)
+   */
+  panicRide(id: number, reason: string): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/panic`, { reason });
+  }
 }
