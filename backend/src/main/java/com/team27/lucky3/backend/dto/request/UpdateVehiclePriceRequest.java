@@ -11,9 +11,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateVehiclePriceRequest {
-    @NotNull
+    @NotNull(message = "Vehicle type is required")
     private VehicleType vehicleType;
 
-    @DecimalMin("0.0")
+    @NotNull(message = "Price per kilometer is required")
+    @DecimalMin(value = "0.0", message = "Price must be zero or positive")
     private Double pricePerKm;
 }
