@@ -306,7 +306,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
         },
         stops: stops,
         passengerEmails: this.linkedPassengers,
-        scheduledTime: null,
+        scheduledTime: rideData.scheduledTime,
         requirements: {
           vehicleType: rideData.vehicleType,
           babyTransport: rideData.babyTransport,
