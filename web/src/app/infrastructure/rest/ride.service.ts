@@ -130,4 +130,11 @@ export class RideService {
   cancelRideAsPassenger(id: number): Observable<RideResponse> {
     return this.http.put<RideResponse>(`${this.apiUrl}/${id}/cancel`, { reason: '' });
   }
+
+  /**
+   * Update the current cost of a ride
+   */
+  updateRideCost(rideId: number, cost: number): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${rideId}/cost`, { totalCost: cost });
+  }
 }

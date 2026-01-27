@@ -556,6 +556,24 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     return totalKm;
   }
 
+  private saveCurrentCost(): void {
+    if (!this.rideId || !this.isRideInProgress || !this.isDriver) return;
+    
+    const base = this.getBasePriceRsd(this.backendRide?.vehicleType ?? this.ride?.type);
+    const cost = base + this.distanceTraveledKm * ActiveRidePage.PRICE_PER_KM;
+    
+    console.log('Saving cost to backend:', { rideId: this.rideId, cost: Math.round(cost), distanceTraveledKm: this.distanceTraveledKm });
+    
+    this.rideService.updateRideCost(this.rideId, Math.round(cost)).subscribe({
+      next: (response) => {
+        console.log('Cost saved successfully, response:', response);
+      },
+      error: (err) => {
+        console.error('Failed to save ride cost', err);
+      }
+    });
+  }
+
   private loadRide(): void {
     if (!this.rideId) return;
 
@@ -572,6 +590,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private async applyRideResponse(r: RideResponse): Promise<void> {
+    console.log('Ride loaded from backend:', { id: r.id, status: r.status, totalCost: r.totalCost, estimatedCost: r.estimatedCost });
+    
     this.backendRide = r;
     this.rideStatus = r.status || '';
 
@@ -662,19 +682,26 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
     this.distanceLeftKm = this.totalPlannedDistanceKm;
 
-    // Initialize current cost to base price (no distance traveled yet for new rides)
-    // For rides already in progress, we'll accumulate distance from this point forward
+    // Initialize cost and distance traveled
     const base = this.getBasePriceRsd(r.vehicleType ?? this.ride?.type);
     
-    // If the ride is already in progress when page loads, start with base price
-    // Distance will be accumulated as vehicle moves
-    if (this.isRideInProgress && this.distanceTraveledKm === 0) {
-      this.currentCost = base;
+    if (this.isRideInProgress) {
+      // For in-progress rides, restore the saved cost from backend
+      // and calculate distanceTraveledKm from it
+      if (r.totalCost && r.totalCost > base) {
+        this.currentCost = r.totalCost;
+        // Reverse calculate distance traveled: cost = base + distance * PRICE_PER_KM
+        this.distanceTraveledKm = (r.totalCost - base) / ActiveRidePage.PRICE_PER_KM;
+      } else {
+        this.currentCost = base;
+        this.distanceTraveledKm = 0;
+      }
       // Initialize lastDriverLocation for distance tracking
       if (this.driverLocation) {
         this.lastDriverLocation = { ...this.driverLocation };
       }
     } else {
+      // For pending rides, start fresh
       this.currentCost = base;
       this.distanceTraveledKm = 0;
     }
@@ -910,6 +937,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
           // Only add reasonable movements (< 2km per poll to filter GPS jumps)
           if (segmentKm < 2) {
             this.distanceTraveledKm += segmentKm;
+            // Save updated cost to backend
+            this.saveCurrentCost();
           }
         }
         
