@@ -11,8 +11,10 @@ import com.team27.lucky3.backend.entity.enums.VehicleStatus;
 import com.team27.lucky3.backend.entity.enums.VehicleType;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.*;
+import com.team27.lucky3.backend.service.EmailService;
 import com.team27.lucky3.backend.service.NotificationService;
 import com.team27.lucky3.backend.service.RideService;
+import com.team27.lucky3.backend.util.ReviewTokenUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +49,8 @@ public class RideServiceImpl implements RideService {
     private final VehicleRepository vehicleRepository;
     private final InconsistencyReportRepository inconsistencyReportRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final ReviewTokenUtils reviewTokenUtils;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -476,6 +480,9 @@ public class RideServiceImpl implements RideService {
         // Trigger notification
         notificationService.sendRideFinishedNotification(savedRide);
 
+        // Send review request emails to passengers
+        sendReviewRequestEmails(savedRide);
+
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
@@ -732,6 +739,9 @@ public class RideServiceImpl implements RideService {
 
         Ride savedRide = rideRepository.save(ride);
 
+        // Send review request emails to passengers (same as endRide)
+        sendReviewRequestEmails(savedRide);
+
         // Time-delayed Inactive Logic (same as endRide)
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
@@ -795,6 +805,54 @@ public class RideServiceImpl implements RideService {
                 * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
+    }
+
+    /**
+     * Sends review request emails to all passengers of a finished ride.
+     * Only sends to passengers whose email does not end with '@example.com'.
+     */
+    private void sendReviewRequestEmails(Ride ride) {
+        if (ride == null || ride.getPassengers() == null || ride.getPassengers().isEmpty()) {
+            return;
+        }
+        
+        if (ride.getDriver() == null) {
+            return;
+        }
+        
+        Long driverId = ride.getDriver().getId();
+        
+        for (User passenger : ride.getPassengers()) {
+            String email = passenger.getEmail();
+            
+            // Skip test emails ending with @example.com
+            if (email == null || email.toLowerCase().endsWith("@example.com")) {
+                continue;
+            }
+            
+            try {
+                // Generate a JWT token valid for 3 days
+                String reviewToken = reviewTokenUtils.generateReviewToken(
+                    ride.getId(), 
+                    passenger.getId(), 
+                    driverId
+                );
+                
+                // Get passenger name for personalization
+                String passengerName = passenger.getName();
+                if (passengerName == null || passengerName.trim().isEmpty()) {
+                    passengerName = "Valued Customer";
+                }
+                
+                // Send the review request email
+                emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
+                
+                System.out.println("Sent review request email to: " + email + " for ride: " + ride.getId());
+            } catch (Exception e) {
+                // Log error but don't fail the ride completion
+                System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
+            }
+        }
     }
 
     private double getBasePriceForVehicle(VehicleType type) {

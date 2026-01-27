@@ -22,6 +22,9 @@ public class ReviewRequest {
     @Size(max = 500, message = "Comment cannot exceed 500 characters")
     private String comment;
 
-    @Min(value = 1, message = "Ride ID must be valid")
+    // Used for authenticated reviews
     private Long rideId;
+    
+    // Used for token-based reviews (from email link)
+    private String token;
 }

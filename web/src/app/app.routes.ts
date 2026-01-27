@@ -29,6 +29,8 @@ import { rideAccessGuard } from './infrastructure/auth/ride-access.guard';
 import { passengerRideAccessGuard } from './infrastructure/auth/passenger-ride-access.guard';
 import {RideHistoryComponent} from "./pages/passenger/ride-history/ride-history.component";
 import { FavoritePageComponent } from './pages/passenger/favorite-page/favorite-page.component';
+import { ReviewPage } from './pages/review/review.page';
+import { reviewGuard } from './infrastructure/auth/review.guard';
 
 export const routes: Routes = [
   {
@@ -90,6 +92,13 @@ export const routes: Routes = [
     path: 'activate',
     component: ActivationSuccessComponent,
     canActivate: [activationGuard]
+  },
+
+  // --- REVIEW PAGE (PUBLIC - TOKEN BASED) ---
+  {
+    path: 'review',
+    component: ReviewPage,
+    canActivate: [reviewGuard]
   },
 
   // --- PASSENGER ROUTES ---
