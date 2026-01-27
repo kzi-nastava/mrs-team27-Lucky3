@@ -34,6 +34,13 @@ export interface ChangeInformationRequest{
   vehicle: VehicleInformation;
 }
 
+export interface ChangeInformationResponse extends ChangeInformationRequest {
+  id: number;
+  requestedDriverId: number;
+  dateCreated: string;
+  imageId: number;
+  status: string;
+}
 
 // user.interface.ts (or add to existing file)
 export enum UserRole {
@@ -57,6 +64,7 @@ export interface DriverResponse extends UserProfile {
 export class UserService {
   private apiUrl = `${environment.apiHost}users`;
   private driverApiUrl = `${environment.apiHost}drivers`;
+  private driveChangeRequestUrl = `${environment.apiHost}driver-change-requests`;
 
   constructor(
     private http: HttpClient,
@@ -126,5 +134,17 @@ export class UserService {
   getCurrentDriver(): Observable<DriverResponse> {
     const driverId = this.authService.getUserId();
     return this.http.get<DriverResponse>(`${this.driverApiUrl}/${driverId}`);
+  }
+
+  // ========== Driver Change Request Methods ==========
+  getDriverChangeRequests(): Observable<ChangeInformationResponse[]> {
+    return this.http.get<ChangeInformationResponse[]>(this.driveChangeRequestUrl);
+  }
+
+  approveDriverChangeRequest(requestId: number): Observable<void> {
+    return this.http.post<void>(`${this.driveChangeRequestUrl}/${requestId}/review`, {"approve": true});
+  }
+  rejectDriverChangeRequest(requestId: number): Observable<void> {
+    return this.http.post<void>(`${this.driveChangeRequestUrl}/${requestId}/review`, {"approve": false});
   }
 }

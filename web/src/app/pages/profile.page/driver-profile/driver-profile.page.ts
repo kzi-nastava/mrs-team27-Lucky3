@@ -2,7 +2,6 @@ import { Component, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ChangeInformationRequest, DriverResponse, UserService, VehicleInformation } from '../../../infrastructure/rest/user.service';
-import { VehicleType } from '../../../account-control/create-driver/create-driver.component';
 
 @Component({
   selector: 'app-driver-profile.page',
