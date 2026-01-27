@@ -244,6 +244,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       next: (r) => {
         void this.applyRideResponse(r);
         this.startedAtMs = Date.now(); // Reset start time for metric calculation
+        this.distanceTraveledKm = 0; // Reset distance traveled
+        this.lastDriverLocation = this.driverLocation ? { ...this.driverLocation } : null; // Set initial location
       },
       error: (err) => console.error('Failed to start ride', err)
     });
@@ -501,17 +503,10 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     const activeStatuses = ['INPROGRESS', 'IN_PROGRESS', 'ACTIVE'];
     if (!activeStatuses.includes(this.rideStatus)) return;
 
-    // Calculate distance traveled from pickup to current location
-    if (this.driverLocation && this.rideMapData?.start) {
-      // Calculate total planned distance
-      const totalPlanned = this.totalPlannedDistanceKm ?? 0;
-      
-      // Calculate remaining distance from current position
+    // Calculate remaining distance from current position
+    if (this.driverLocation && this.rideMapData) {
       const remainingKm = this.computeRemainingKm(this.driverLocation);
       this.distanceLeftKm = remainingKm;
-      
-      // Distance traveled = total planned - remaining
-      this.distanceTraveledKm = Math.max(0, totalPlanned - remainingKm);
       
       // Calculate time left based on remaining distance
       const avgSpeedKmh = 32;
@@ -519,11 +514,10 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     // Calculate current cost: base price + (distance traveled * price per km)
+    // distanceTraveledKm is accumulated in pollDriverLocation based on actual vehicle movement
     const base = this.getBasePriceRsd(this.backendRide?.vehicleType ?? this.ride?.type);
     const computed = base + this.distanceTraveledKm * ActiveRidePage.PRICE_PER_KM;
 
-    const est = this.getEstimatedTotalRsd();
-    // Don't cap at estimated - let it reflect actual distance traveled
     this.currentCost = computed;
 
     this.updateCompletedStops();
@@ -636,10 +630,22 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
     this.distanceLeftKm = this.totalPlannedDistanceKm;
 
-    // Initialize current cost to base price (no distance traveled yet)
+    // Initialize current cost to base price (no distance traveled yet for new rides)
+    // For rides already in progress, we'll accumulate distance from this point forward
     const base = this.getBasePriceRsd(r.vehicleType ?? this.ride?.type);
-    this.currentCost = base;
-    this.distanceTraveledKm = 0;
+    
+    // If the ride is already in progress when page loads, start with base price
+    // Distance will be accumulated as vehicle moves
+    if (this.isRideInProgress && this.distanceTraveledKm === 0) {
+      this.currentCost = base;
+      // Initialize lastDriverLocation for distance tracking
+      if (this.driverLocation) {
+        this.lastDriverLocation = { ...this.driverLocation };
+      }
+    } else {
+      this.currentCost = base;
+      this.distanceTraveledKm = 0;
+    }
     
     this.cdr.detectChanges();
 
@@ -865,6 +871,20 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         const locationChanged = !this.driverLocation || 
           this.driverLocation.latitude !== newLocation.latitude || 
           this.driverLocation.longitude !== newLocation.longitude;
+        
+        // Track actual distance traveled during in-progress ride
+        if (locationChanged && this.isRideInProgress && this.lastDriverLocation) {
+          const segmentKm = this.haversineKm(this.lastDriverLocation, newLocation);
+          // Only add reasonable movements (< 2km per poll to filter GPS jumps)
+          if (segmentKm < 2) {
+            this.distanceTraveledKm += segmentKm;
+          }
+        }
+        
+        // Update last known location for next distance calculation
+        if (this.isRideInProgress) {
+          this.lastDriverLocation = newLocation;
+        }
         
         this.driverLocation = newLocation;
 
