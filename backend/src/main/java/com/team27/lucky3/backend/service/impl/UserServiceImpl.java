@@ -71,6 +71,24 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
         Image img = user.getProfileImage();
-        return (img == null) ? imageService.getDefaultAvatar() : img;
+        if (img == null) {
+            return imageService.getDefaultAvatar();
+        }
+
+        if (img.getData() == null || img.getData().length == 0) {
+            try {
+                byte[] data = imageService.loadImage(img.getFileName());
+                Image transientImage = new Image();
+                transientImage.setId(img.getId());
+                transientImage.setFileName(img.getFileName());
+                transientImage.setContentType(img.getContentType());
+                transientImage.setSize(img.getSize());
+                transientImage.setData(data);
+                return transientImage;
+            } catch (IOException e) {
+                return imageService.getDefaultAvatar();
+            }
+        }
+        return img;
     }
 }

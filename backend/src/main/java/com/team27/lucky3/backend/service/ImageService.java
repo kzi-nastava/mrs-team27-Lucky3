@@ -10,5 +10,6 @@ public interface ImageService {
     public Image store(MultipartFile file) throws IOException;
     public Optional<Image> findById(Long id);
     Image getDefaultAvatar();
+    byte[] loadImage(String filename) throws IOException;
 }
 
