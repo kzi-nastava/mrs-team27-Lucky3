@@ -38,7 +38,7 @@
     <div *ngIf="isOnline || isInactiveRequested" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <app-stat-card 
         title="Today's Earnings" 
-        [value]="stats.earnings + ' RSD'"
+        [value]="(stats.earnings | number:'1.2-2') + ' RSD'"
         iconBgColor="bg-yellow-500/20"
         iconColor="text-yellow-500">
         <svg icon xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EAB308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>

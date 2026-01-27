@@ -65,7 +65,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
       .subscribe({
         next: (page) => {
           // Filter to only past rides (FINISHED, CANCELLED)
-          const pastStatuses = ['FINISHED', 'CANCELLED'];
+          const pastStatuses = ['FINISHED', 'CANCELLED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_PASSENGER'];
           const relevant = (page.content ?? []).filter(r => pastStatuses.includes(r.status as string));
           
           this.backendRides = relevant.map(r => this.mapToRide(r));
@@ -85,6 +85,8 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
       completedAt: r.endTime,
       status: r.status === 'FINISHED' ? 'Finished' :
               r.status === 'CANCELLED' ? 'Cancelled' :
+              r.status === 'CANCELLED_BY_DRIVER' ? 'Cancelled' :
+              r.status === 'CANCELLED_BY_PASSENGER' ? 'Cancelled' :
               r.status === 'PENDING' ? 'Pending' :
               r.status === 'ACCEPTED' ? 'Accepted' :
               r.status === 'REJECTED' ? 'Rejected' : 'all',
@@ -94,7 +96,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
       destination: { address: r.destination?.address ?? r.endLocation?.address ?? '—' },
       hasPanic: r.panicPressed,
       passengerName: r.passengers?.[0]?.name ?? 'Unknown',
-      cancelledBy: 'driver', // simplified
+      cancelledBy: r.status === 'CANCELLED_BY_DRIVER' ? 'driver' : r.status === 'CANCELLED_BY_PASSENGER' ? 'passenger' : 'driver',
       cancellationReason: r.rejectionReason
     };
   }

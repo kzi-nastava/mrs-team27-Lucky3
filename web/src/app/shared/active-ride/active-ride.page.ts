@@ -79,6 +79,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   // Passenger cancel modal
   showPassengerCancelModal = false;
+  passengerCancelReason = '';
   isPassengerCancelling = false;
   passengerCancelError = '';
 
@@ -352,6 +353,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   openPassengerCancelModal(): void {
     this.passengerCancelError = '';
+    this.passengerCancelReason = '';
     this.showPassengerCancelModal = true;
   }
 
@@ -366,7 +368,10 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     this.isPassengerCancelling = true;
     this.passengerCancelError = '';
 
-    this.rideService.cancelRideAsPassenger(this.rideId).subscribe({
+    // Reason is optional for passengers
+    const reason = this.passengerCancelReason.trim() || undefined;
+    
+    this.rideService.cancelRideAsPassenger(this.rideId, reason).subscribe({
       next: () => {
         this.isPassengerCancelling = false;
         this.showPassengerCancelModal = false;
@@ -831,7 +836,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   private fetchApproachRoute(r: RideResponse): void {
       // Show approach route for any non-FINISHED ride
-      if (r.status === 'FINISHED' || r.status === 'CANCELLED') {
+      if (r.status === 'FINISHED' || r.status === 'CANCELLED' || r.status === 'CANCELLED_BY_DRIVER' || r.status === 'CANCELLED_BY_PASSENGER') {
           this.approachRoute = null;
           this.remainingRoute = null;
           return;
@@ -1047,14 +1052,14 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         
         this.driverLocation = newLocation;
 
-        // Always update routes when vehicle moves during an in-progress ride
+        // Always update routes when vehicle moves
         if (locationChanged && this.backendRide) {
           if (this.isRideInProgress) {
             // For in-progress rides, recalculate both routes
             this.fetchApproachRoute(this.backendRide);
             this.fetchRemainingRoute(this.backendRide);
-          } else if (!this.approachRoute) {
-            // For pending rides, fetch approach route if we don't have one yet
+          } else if (this.isRidePending) {
+            // For pending/scheduled rides, always update approach route (blue line from vehicle to pickup)
             this.fetchApproachRoute(this.backendRide);
           }
         }

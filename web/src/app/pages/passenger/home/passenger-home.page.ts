@@ -7,7 +7,7 @@ import { environment } from '../../../../env/environment';
 
 import { RideService, RideEstimationResponse, RoutePoint } from '../../../infrastructure/rest/ride.service';
 import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
-
+import { AuthService } from '../../../infrastructure/auth/auth.service';
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { VehicleLocationResponse } from '../../../infrastructure/rest/model/vehicle-location.model';
 import { LocationDto } from '../../../infrastructure/rest/model/location.model';
@@ -116,6 +116,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   constructor(
     private rideService: RideService,
     private vehicleService: VehicleService,
+    private authService: AuthService,
     private http: HttpClient,
     private router: Router,
     private cdr: ChangeDetectorRef
@@ -263,6 +264,22 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
     //this.orderingResult = null;
     this.cdr.detectChanges();
 
+    // Check if passenger already has an active ride
+    const userId = this.authService.getUserId();
+    if (userId) {
+      try {
+        const activeRide = await this.rideService.getActiveRide(userId).toPromise();
+        if (activeRide && activeRide.id) {
+          this.orderingError = 'You already have an active ride. Please complete or cancel it before ordering a new one.';
+          this.isOrdering = false;
+          this.cdr.detectChanges();
+          return;
+        }
+      } catch (err) {
+        // No active ride found (404 or other error), continue with ordering
+      }
+    }
+
     try {
       // Geocode pickup and destination
       const startCoords = await this.geocodeAddress(this.pickupAddress);
@@ -306,7 +323,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
         },
         stops: stops,
         passengerEmails: this.linkedPassengers,
-        scheduledTime: null,
+        scheduledTime: rideData.scheduledTime,
         requirements: {
           vehicleType: rideData.vehicleType,
           babyTransport: rideData.babyTransport,
