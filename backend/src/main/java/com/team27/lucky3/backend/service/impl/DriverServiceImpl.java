@@ -8,6 +8,7 @@ import com.team27.lucky3.backend.dto.response.DriverStatusResponse;
 import com.team27.lucky3.backend.entity.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
+import com.team27.lucky3.backend.entity.enums.VehicleStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.team27.lucky3.backend.exception.EmailAlreadyUsedException;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
@@ -27,11 +28,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -230,6 +233,26 @@ public class DriverServiceImpl implements DriverService {
         vehicle.setBabyTransport(vReq.getBabyTransport());
         vehicle.setPetTransport(vReq.getPetTransport());
         vehicle.setDriver(savedDriver);
+
+        // NEW: Assign random Novi Sad location to vehicle/driver
+        Random random = new SecureRandom();
+        Location[] noviSadLocations = {
+                new Location("Maksima Gorkog 5, Novi Sad", 45.24947, 19.84440),
+                new Location("Cika Stevina 10, Novi Sad", 45.26203, 19.81658),
+                new Location("Trg Slobode, Novi Sad", 45.25167, 19.83694),
+                new Location("Dunavski Park, Novi Sad", 45.26714, 19.83355),
+                new Location("SPENS Sports Center", 45.24000, 19.85000),
+                new Location("Srpsko Narodno Pozoriste", 45.25500, 19.83000 ),
+                new Location("Novi Sad Airport area", 45.27483, 19.83262 ),
+                new Location("Kovilj area", 45.23000, 19.82000 ),
+                new Location("Bulevar oslobodjenja", 45.26000, 19.84000),
+                new Location("Petrovaradin Fortress nearby", 45.24500, 19.86000)
+        };
+        int randomIndex = random.nextInt(noviSadLocations.length);
+        Location randomLoc = noviSadLocations[randomIndex];
+        // Assign to vehicle (if Vehicle has lat/lng/address fields)
+        vehicle.setCurrentLocation(randomLoc);
+        vehicle.setStatus(VehicleStatus.FREE);
 
         Vehicle savedVehicle = vehicleRepository.save(vehicle);
 

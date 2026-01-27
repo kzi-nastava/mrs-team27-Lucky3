@@ -180,6 +180,77 @@
               </div>
             </div>
 
+            <!-- Schedule Ride (NOW / IN / AT) -->
+            <div class="bg-gray-800/30 rounded-xl p-4 border border-gray-700">
+              <div class="flex items-center justify-between mb-3">
+                <label class="text-white text-sm font-medium">When</label>
+                <span class="text-xs text-gray-400">Up to 5h ahead</span>
+              </div>
+
+              <!-- Segmented buttons -->
+              <div class="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  type="button"
+                  (click)="setScheduleType('NOW')"
+                  class="py-2 rounded-lg text-sm border transition-colors"
+                  [class.bg-yellow-500]="scheduleType === 'NOW'"
+                  [class.text-black]="scheduleType === 'NOW'"
+                  [class.border-yellow-500]="scheduleType === 'NOW'"
+                  [class.bg-gray-800]="scheduleType !== 'NOW'"
+                  [class.text-gray-200]="scheduleType !== 'NOW'"
+                  [class.border-gray-700]="scheduleType !== 'NOW'"
+                >
+                  Now
+                </button>
+
+                <button
+                  type="button"
+                  (click)="setScheduleType('IN')"
+                  class="py-2 rounded-lg text-sm border transition-colors"
+                  [class.bg-yellow-500]="scheduleType === 'IN'"
+                  [class.text-black]="scheduleType === 'IN'"
+                  [class.border-yellow-500]="scheduleType === 'IN'"
+                  [class.bg-gray-800]="scheduleType !== 'IN'"
+                  [class.text-gray-200]="scheduleType !== 'IN'"
+                  [class.border-gray-700]="scheduleType !== 'IN'"
+                >
+                  In…
+                </button>
+              </div>
+
+              <!-- IN: Preset delays -->
+              <div *ngIf="scheduleType === 'IN'" class="space-y-2">
+                <div class="grid grid-cols-3 gap-2">
+                  <button
+                    *ngFor="let p of schedulePresets"
+                    type="button"
+                    (click)="selectDelay(p.minutes)"
+                    class="py-2 rounded-lg text-xs border transition-colors"
+                    [class.bg-yellow-500]="selectedDelayMinutes === p.minutes"
+                    [class.text-black]="selectedDelayMinutes === p.minutes"
+                    [class.border-yellow-500]="selectedDelayMinutes === p.minutes"
+                    [class.bg-gray-800]="selectedDelayMinutes !== p.minutes"
+                    [class.text-gray-200]="selectedDelayMinutes !== p.minutes"
+                    [class.border-gray-700]="selectedDelayMinutes !== p.minutes"
+                  >
+                    {{ p.label }}
+                  </button>
+                </div>
+
+                <p class="text-xs text-gray-400">
+                  Your ride will be scheduled <span class="text-gray-200 font-medium">in {{ selectedDelayMinutes }} minutes</span>.
+                </p>
+              </div>
+
+              <!-- Local schedule error (separate from parent orderingError) -->
+              <div *ngIf="scheduleError" class="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+                </svg>
+                {{ scheduleError }}
+              </div>
+            </div>
+            
             <!-- Error Message -->
             <div *ngIf="orderingError" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

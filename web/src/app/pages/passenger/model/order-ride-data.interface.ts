@@ -11,6 +11,7 @@ export interface RideOrderData {
   vehicleType: string;
   petTransport: boolean;
   babyTransport: boolean;
+  scheduledTime: string;
 }
 
 export interface RideEstimation {

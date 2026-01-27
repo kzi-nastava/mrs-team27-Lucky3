@@ -294,7 +294,7 @@ public class RideServiceImpl implements RideService {
         if (assignedVehicle != null) {
             // Driver found - assign and schedule the ride
             ride.setDriver(assignedVehicle.getDriver());
-            ride.setStatus(RideStatus.SCHEDULED);
+            ride.setStatus(RideStatus.PENDING); //TODO: ovde je pisalo sheduled. TO NE SME, RIDE JE PENDING DOK NE PRIHVATI DRIVER
             
             // Set timing
             LocalDateTime rideStartTime = request.getScheduledTime() != null 
@@ -306,7 +306,7 @@ public class RideServiceImpl implements RideService {
         } else {
             // No driver assigned - ride is pending
             ride.setDriver(null);
-            ride.setStatus(RideStatus.PENDING);
+            ride.setStatus(RideStatus.REJECTED);
             ride.setStartTime(null);
             ride.setEndTime(null);
         }
@@ -429,6 +429,9 @@ public class RideServiceImpl implements RideService {
     public RideResponse startRide(Long id) {
         Ride ride = findById(id);
 
+        if(ride.getStatus() == RideStatus.FINISHED){
+            throw new IllegalStateException("Ride is already finished");
+        }
         if (ride.getStatus() != RideStatus.ACCEPTED) {
             throw new IllegalStateException("Ride must be accepted before starting");
         }
