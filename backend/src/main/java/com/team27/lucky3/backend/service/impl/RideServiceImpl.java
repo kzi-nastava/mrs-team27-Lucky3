@@ -5,28 +5,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.*;
 import com.team27.lucky3.backend.dto.response.*;
-import com.team27.lucky3.backend.entity.Location;
-import com.team27.lucky3.backend.entity.Panic;
-import com.team27.lucky3.backend.entity.Ride;
-import com.team27.lucky3.backend.entity.User;
-import com.team27.lucky3.backend.entity.Vehicle;
+import com.team27.lucky3.backend.entity.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.VehicleStatus;
 import com.team27.lucky3.backend.entity.enums.VehicleType;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
-import com.team27.lucky3.backend.repository.PanicRepository;
-import com.team27.lucky3.backend.repository.RideRepository;
-import com.team27.lucky3.backend.repository.UserRepository;
-import com.team27.lucky3.backend.repository.VehicleRepository;
-import com.team27.lucky3.backend.repository.InconsistencyReportRepository;
-import com.team27.lucky3.backend.entity.InconsistencyReport;
+import com.team27.lucky3.backend.repository.*;
+import com.team27.lucky3.backend.service.EmailService;
 import com.team27.lucky3.backend.service.NotificationService;
 import com.team27.lucky3.backend.service.RideService;
+import com.team27.lucky3.backend.util.ReviewTokenUtils;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -49,10 +44,13 @@ public class RideServiceImpl implements RideService {
 
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
+    private final FavoriteRouteRepository favoriteRouteRepository;
     private final PanicRepository panicRepository;
     private final VehicleRepository vehicleRepository;
     private final InconsistencyReportRepository inconsistencyReportRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final ReviewTokenUtils reviewTokenUtils;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -114,12 +112,26 @@ public class RideServiceImpl implements RideService {
         } catch (Exception e) {
             // Fallback to Haversine if OSRM fails (or handle error appropriately)
             System.err.println("OSRM Routing failed: " + e.getMessage());
-            distanceKm = calculateHaversineDistance(mapLocation(start), mapLocation(end));
-            // Add stops to fallback distance calculation if needed, but simple for now
+
+            // Calculate distance through all stops: start -> stop1 -> stop2 -> ... -> end
+            distanceKm = 0.0;
+            Location currentPos = mapLocation(start);
+            int order = 0;
+            routePoints.add(new RoutePointResponse(start, order++));
+
+            if (request.getStops() != null) {
+                for (LocationDto stop : request.getStops()) {
+                    Location stopLoc = mapLocation(stop);
+                    distanceKm += calculateHaversineDistance(currentPos, stopLoc);
+                    currentPos = stopLoc;
+                    routePoints.add(new RoutePointResponse(stop, order++));
+                }
+            }
+
+            distanceKm += calculateHaversineDistance(currentPos, mapLocation(end));
+            routePoints.add(new RoutePointResponse(end, order));
+
             durationMinutes = (int) Math.ceil(distanceKm * 1.2); // Rough estimate
-            // Add at least start and end points
-            routePoints.add(new RoutePointResponse(start, 0));
-            routePoints.add(new RoutePointResponse(end, 1));
         }
 
         // Calculate Price
@@ -197,6 +209,7 @@ public class RideServiceImpl implements RideService {
         List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
         List<Vehicle> candidateVehicles = activeVehicles.stream()
                 .filter(v -> v.getVehicleType() == type || type == null)
+                .filter(v -> !v.getDriver().isInactiveRequested())
                 .toList();
 
         if (candidateVehicles.isEmpty()) return -1;
@@ -216,142 +229,183 @@ public class RideServiceImpl implements RideService {
         return (int) Math.ceil(minDistance / 0.83);
     }
 
-    /*
-    1. Ako ne postoji nijedan vozač prijavljen/aktivan, vožnja se odbija i korisniku stiže notifikacija da trenutno nema aktivnih vozača.
-
-    2. Ako su svi vozači trenutno zauzeti i ako imaju već zakazanu buduću vožnju,
-    takođe se vožnja odbija uz slanje notifikacije da trenutno nema aktivnih vozača.
-
-    3. Ako ima slobodnih vozača, sistem bira najbližeg, a ako su svi zauzeti, bira se onaj koji je najbliži polazištu
-    i najbliži zavšetku trenutne vožnje (preostalo mu je još 10 minuta prethodne vožnje).
-    Korisniku se šalje notifikacija o dodeljenoj vožnji.
-
-    4. Ako vozač ima više od 8 radnih sati u poslednja 24 časa, ne postoji mogućnost da mu sistem dodeli vožnju.
+    /**
+     * Creates a new ride with optional automatic driver assignment.
+     * 
+     * Driver Assignment Logic:
+     * 1. If skipDriverAssignment is true, create ride in PENDING status without driver
+     * 2. If no active drivers exist, create ride in PENDING status
+     * 3. If all drivers are busy (have overlapping rides), create ride in PENDING status
+     * 4. If free drivers exist, assign the closest one and set status to SCHEDULED
+     * 
+     * Note: Driver working hours validation (max 8h in 24h) can be added later.
      */
     @Override
     @Transactional
-    public RideCreated createRide(CreateRideRequest request) {
+    public RideResponse createRide(CreateRideRequest request) {
         User passenger = getCurrentUser();
-        RideCreated response = new RideCreated();
-
         if (passenger == null) {
             throw new IllegalStateException("User must be logged in to create a ride");
         }
-        // 1. Look for available drivers (in vehicle repository) - no available drivers
-        List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
-        if (activeVehicles.isEmpty()) { // no available drivers
-            response.setStatus(RideStatus.REJECTED);
-            response.setRejectionReason("No active drivers available at the moment.");
-            return response;
-        }
-        // estimate ride
+
+        // Calculate estimation first (needed for ride duration and route)
         RideEstimationResponse estimation = estimateRide(request);
 
-        // 3. Find available drivers
-        LocalDateTime rideStartTime = request.getScheduledTime() != null
-                ? request.getScheduledTime()
-                : LocalDateTime.now();
-        LocalDateTime rideEndTime = rideStartTime.plusMinutes(estimation.getEstimatedTimeInMinutes());
+        // Build the ride entity
+        Ride ride = new Ride();
+        ride.setScheduledTime(request.getScheduledTime());
+        ride.setStartLocation(mapLocation(request.getStart()));
+        ride.setEndLocation(mapLocation(request.getDestination()));
+        
+        // Set stops
+        if (request.getStops() != null && !request.getStops().isEmpty()) {
+            ride.setStops(request.getStops().stream()
+                    .map(this::mapLocation)
+                    .collect(Collectors.toList()));
+        }
 
-        // Get all driver IDs from active vehicles
-        List<Long> activeDriverIds = activeVehicles.stream()
+        // Set route points from estimation
+        if (estimation.getRoutePoints() != null) {
+            ride.setRoutePoints(estimation.getRoutePoints().stream()
+                    .map(rp -> new Location("", rp.getLocation().getLatitude(), rp.getLocation().getLongitude()))
+                    .collect(Collectors.toList()));
+        }
+
+        // Set costs and distance
+        ride.setEstimatedCost(estimation.getEstimatedCost());
+        ride.setDistance(estimation.getEstimatedDistance());
+
+        // Set ride requirements
+        ride.setRequestedVehicleType(request.getRequirements().getVehicleType());
+        ride.setBabyTransport(request.getRequirements().isBabyTransport());
+        ride.setPetTransport(request.getRequirements().isPetTransport());
+
+        // Set passenger info
+        ride.setPassengers(Set.of(passenger));
+        ride.setInvitedEmails(request.getPassengerEmails());
+
+        // Initialize payment flags
+        ride.setPaid(false);
+        ride.setPassengersExited(false);
+
+        // === DRIVER ASSIGNMENT LOGIC ===
+        Vehicle assignedVehicle = findBestAvailableDriver(request, estimation);
+
+        if (assignedVehicle != null) {
+            // Driver found - assign and schedule the ride
+            ride.setDriver(assignedVehicle.getDriver());
+            ride.setStatus(RideStatus.SCHEDULED);
+            
+            // Set timing
+            LocalDateTime rideStartTime = request.getScheduledTime() != null 
+                    ? request.getScheduledTime() 
+                    : LocalDateTime.now();
+            ride.setStartTime(rideStartTime);
+            ride.setEndTime(rideStartTime.plusMinutes(estimation.getEstimatedTimeInMinutes()));
+            ride.setTotalCost(estimation.getEstimatedCost());
+        } else {
+            // No driver assigned - ride is pending
+            ride.setDriver(null);
+            ride.setStatus(RideStatus.PENDING);
+            ride.setStartTime(null);
+            ride.setEndTime(null);
+        }
+
+        Ride savedRide = rideRepository.save(ride);
+        return mapToResponse(savedRide);
+    }
+
+    /**
+     * Finds the best available driver for a ride request.
+     * Returns null if no suitable driver is found.
+     */
+    private Vehicle findBestAvailableDriver(CreateRideRequest request, RideEstimationResponse estimation) {
+        // 1. Get all active vehicles (drivers who are online/active)
+        List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
+        System.out.println("[DEBUG] Active vehicles count: " + activeVehicles.size());
+        if (activeVehicles.isEmpty()) {
+            System.out.println("[DEBUG] No active vehicles found!");
+            return null; // No active drivers at all
+        }
+
+        // 2. Filter by vehicle type if specified
+        VehicleType requestedType = request.getRequirements() != null 
+                ? request.getRequirements().getVehicleType() 
+                : null;
+        System.out.println("[DEBUG] Requested vehicle type: " + requestedType);
+        System.out.println("[DEBUG] Baby transport required: " + request.getRequirements().isBabyTransport());
+        System.out.println("[DEBUG] Pet transport required: " + request.getRequirements().isPetTransport());
+        
+        for (Vehicle v : activeVehicles) {
+            System.out.println("[DEBUG] Vehicle ID=" + v.getId() + 
+                    ", type=" + v.getVehicleType() + 
+                    ", baby=" + v.isBabyTransport() + 
+                    ", pet=" + v.isPetTransport() +
+                    ", hasLocation=" + (v.getCurrentLocation() != null));
+        }
+        
+        List<Vehicle> compatibleVehicles = activeVehicles.stream()
+                .filter(v -> requestedType == null || v.getVehicleType() == requestedType)
+                .filter(v -> !request.getRequirements().isBabyTransport() || v.isBabyTransport())
+                .filter(v -> !request.getRequirements().isPetTransport() || v.isPetTransport())
+                .filter(v -> !v.getDriver().isInactiveRequested())
+                .collect(Collectors.toList());
+
+        System.out.println("[DEBUG] Compatible vehicles after filtering: " + compatibleVehicles.size());
+        if (compatibleVehicles.isEmpty()) {
+            System.out.println("[DEBUG] No compatible vehicles after type/baby/pet filter!");
+            return null; // No compatible vehicles
+        }
+
+        // 3. Calculate ride time window
+        LocalDateTime rideStartTime = request.getScheduledTime() != null 
+                ? request.getScheduledTime() 
+                : LocalDateTime.now();
+        LocalDateTime rideEndTime = rideStartTime.plusMinutes(
+                estimation.getEstimatedTimeInMinutes() > 0 ? estimation.getEstimatedTimeInMinutes() : 30
+        );
+
+        // 4. Get driver IDs and find which ones have overlapping rides
+        List<Long> driverIds = compatibleVehicles.stream()
                 .map(v -> v.getDriver().getId())
                 .collect(Collectors.toList());
 
-        // Find drivers with overlapping rides
         List<Long> busyDriverIds = rideRepository.findDriversWithRidesInTimeRange(
-                activeDriverIds,
-                rideStartTime,
-                rideEndTime
+                driverIds, rideStartTime, rideEndTime
         );
+        System.out.println("[DEBUG] Busy driver IDs: " + busyDriverIds);
 
-        // Filter out busy drivers
-        List<Vehicle> availableFreeVehicles = activeVehicles.stream()
+        // 5. Filter out busy drivers
+        List<Vehicle> availableVehicles = compatibleVehicles.stream()
                 .filter(v -> !busyDriverIds.contains(v.getDriver().getId()))
                 .collect(Collectors.toList());
 
-
-        // there exists free driver
-        if (!availableFreeVehicles.isEmpty()) {
-            //assign the closest free driver
-            Vehicle assignedVehicle = null;
-            double minDistance = Double.MAX_VALUE;
-            Location rideStartLocation = mapLocation(request.getStart());
-            for (Vehicle v : availableFreeVehicles) {
-                if (v.getCurrentLocation() != null) {
-                    double dist = calculateHaversineDistance(rideStartLocation, v.getCurrentLocation());
-                    if (dist < minDistance) {
-                        minDistance = dist;
-                        assignedVehicle = v;
-                    }
-                }
-            }
-            if (assignedVehicle == null) {
-                response.setStatus(RideStatus.REJECTED);
-                response.setRejectionReason("No drivers with valid location found.");
-                return response;
-            }
-
-            // Create and save the ride
-            Ride ride = new Ride();
-            ride.setStartTime(rideStartTime);
-            ride.setEndTime(rideEndTime);
-            ride.setScheduledTime(rideStartTime);   //same as start time for now
-            ride.setTotalCost(estimation.getEstimatedCost());
-            ride.setEstimatedCost(estimation.getEstimatedCost());
-            ride.setDistance(estimation.getEstimatedDistance());
-            ride.setStatus(RideStatus.SCHEDULED);
-            //ride.setPanicPressed(false);
-            //ride.setRejectionReason(null);
-            ride.setPetTransport(request.getRequirements().isPetTransport());
-            ride.setBabyTransport(request.getRequirements().isBabyTransport());
-            ride.setRequestedVehicleType(assignedVehicle.getVehicleType());
-            ride.setPaid(false); // ne znam sta bih stavio ovde?
-            ride.setPassengersExited(false);
-            ride.setStartLocation(new Location( request.getStart().getAddress(),
-                                                request.getStart().getLatitude(),
-                                                request.getStart().getLongitude()));
-            ride.setEndLocation(new Location( request.getDestination().getAddress(),
-                                              request.getDestination().getLatitude(),
-                                              request.getDestination().getLongitude()));
-            // Set stops
-            if (request.getStops() != null && !request.getStops().isEmpty()) {
-                List<Location> rideStops = request.getStops().stream()
-                        .map(stop -> new Location(stop.getAddress(),
-                                stop.getLatitude(),
-                                stop.getLongitude()))
-                        .collect(Collectors.toList());
-                ride.setStops(rideStops);
-            } else {
-                ride.setStops(new ArrayList<>());
-            }
-            ride.setDriver(assignedVehicle.getDriver());
-            ride.setPassengers(null);   //TODO: fix this, but for now no need
-            ride.setInvitedEmails(request.getPassengerEmails());
-            ride.setInconsistencyReports(null);
-            ride = rideRepository.save(ride);
-
-            //creating response
-            response = RideCreated.fromRide(ride);
-            response.setDriverProfilePictureUrl("/api/users/"+assignedVehicle.getDriver().getId()+"/profile-image");
-            response.setVehicleModel(assignedVehicle.getModel());
-            response.setVehicleLicensePlate(assignedVehicle.getLicensePlates());
-            response.setStops(request.getStops());
-            response.setRoutePoints(estimation.getRoutePoints());
-            response.setEstimatedTimeInMinutes(estimation.getEstimatedTimeInMinutes());
-
-            response.setBabyTransport(request.getRequirements().isBabyTransport());
-            response.setPetTransport(request.getRequirements().isPetTransport());
-            response.setRequestedVehicleType(assignedVehicle.getVehicleType());
-
-            return response;
+        System.out.println("[DEBUG] Available vehicles after busy filter: " + availableVehicles.size());
+        if (availableVehicles.isEmpty()) {
+            System.out.println("[DEBUG] All compatible drivers are busy!");
+            return null; // All compatible drivers are busy
         }
-        // Further filter based on working hours (max 8h in last 24h)
 
-        //TODO: finish this. It should find driver that is closest to finish his current ride
-        response.setStatus(RideStatus.REJECTED);
-        response.setRejectionReason("All drivers are currently busy.");
-        return response;
+        // 6. Find the closest available driver
+        Location rideStartLocation = mapLocation(request.getStart());
+        Vehicle closestVehicle = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (Vehicle v : availableVehicles) {
+            if (v.getCurrentLocation() != null) {
+                double dist = calculateHaversineDistance(rideStartLocation, v.getCurrentLocation());
+                System.out.println("[DEBUG] Vehicle ID=" + v.getId() + " distance=" + dist);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestVehicle = v;
+                }
+            } else {
+                System.out.println("[DEBUG] Vehicle ID=" + v.getId() + " has NO currentLocation!");
+            }
+        }
+
+        System.out.println("[DEBUG] Closest vehicle: " + (closestVehicle != null ? closestVehicle.getId() : "NONE"));
+        return closestVehicle;
     }
 
     @Override
@@ -426,6 +480,9 @@ public class RideServiceImpl implements RideService {
         // Trigger notification
         notificationService.sendRideFinishedNotification(savedRide);
 
+        // Send review request emails to passengers
+        sendReviewRequestEmails(savedRide);
+
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
@@ -450,7 +507,8 @@ public class RideServiceImpl implements RideService {
         }
 
         boolean isDriver = ride.getDriver() != null && ride.getDriver().getId().equals(currentUser.getId());
-        boolean isPassenger = ride.getPassengers() != null && ride.getPassengers().contains(currentUser);
+        boolean isPassenger = ride.getPassengers() != null && ride.getPassengers().stream()
+                .anyMatch(p -> p.getId().equals(currentUser.getId()));
 
         if (isDriver) {
             // Driver may cancel only before passengers enter the vehicle → before ride starts
@@ -562,6 +620,7 @@ public class RideServiceImpl implements RideService {
         res.setTotalCost(ride.getTotalCost());
         res.setEstimatedCost(ride.getEstimatedCost());
         res.setDistanceKm(ride.getDistance());
+        res.setDistanceTraveled(ride.getDistanceTraveled());
         res.setStatus(ride.getStatus());
         res.setPanicPressed(Boolean.TRUE.equals(ride.getPanicPressed()));
         res.setRejectionReason(ride.getRejectionReason());
@@ -581,25 +640,53 @@ public class RideServiceImpl implements RideService {
 
         if (ride.getDriver() != null) {
             // Minimal driver info
-            Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
+            Vehicle vehicle = ride.getDriver().getVehicle();
             VehicleInformation vInfo = null;
             String model = null;
             String plates = null;
+            LocationDto vehicleLocation = null;
             if(vehicle != null) {
                  vInfo = new VehicleInformation(vehicle.getModel(), vehicle.getVehicleType(), vehicle.getLicensePlates(), vehicle.getSeatCount(), vehicle.isBabyTransport(), vehicle.isPetTransport(), ride.getDriver().getId());
                  model = vehicle.getModel();
                  plates = vehicle.getLicensePlates();
+                 if (vehicle.getCurrentLocation() != null) {
+                     vehicleLocation = new LocationDto(
+                             vehicle.getCurrentLocation().getAddress(),
+                             vehicle.getCurrentLocation().getLatitude(),
+                             vehicle.getCurrentLocation().getLongitude()
+                     );
+                 }
             }
             // Logic to get driver status/time would be complex, simplifying here
             DriverResponse dr = new DriverResponse(ride.getDriver().getId(), ride.getDriver().getName(), ride.getDriver().getSurname(), ride.getDriver().getEmail(), "/api/users/"+ride.getDriver().getId()+"/profile-image", ride.getDriver().getRole(), ride.getDriver().getPhoneNumber(), ride.getDriver().getAddress(), vInfo, ride.getDriver().isActive(), ride.getDriver().isBlocked(), "0h 0m");
             res.setDriver(dr);
             res.setModel(model);
             res.setLicensePlates(plates);
+            res.setVehicleLocation(vehicleLocation);
         }
 
         if (ride.getPassengers() != null) {
              List<UserResponse> passengers = ride.getPassengers().stream().map(p -> new UserResponse(p.getId(), p.getName(), p.getSurname(), p.getEmail(), "/api/users/"+p.getId()+"/profile-image", p.getRole(), p.getPhoneNumber(), p.getAddress())).collect(Collectors.toList());
              res.setPassengers(passengers);
+        }
+
+        if (ride.getStops() != null) {
+            res.setStops(ride.getStops().stream()
+                    .map(s -> new LocationDto(s.getAddress(), s.getLatitude(), s.getLongitude()))
+                    .collect(Collectors.toList()));
+        }
+
+        if (ride.getCompletedStopIndexes() != null) {
+            res.setCompletedStopIndexes(ride.getCompletedStopIndexes());
+        }
+
+        if (ride.getRoutePoints() != null && !ride.getRoutePoints().isEmpty()) {
+            List<RoutePointResponse> routePoints = new ArrayList<>();
+            int order = 0;
+            for (Location loc : ride.getRoutePoints()) {
+                routePoints.add(new RoutePointResponse(new LocationDto(null, loc.getLatitude(), loc.getLongitude()), order++));
+            }
+            res.setRoutePoints(routePoints);
         }
 
         return res;
@@ -629,23 +716,34 @@ public class RideServiceImpl implements RideService {
         ride.setEndLocation(newEndLocation);
         ride.setEndTime(LocalDateTime.now());
         ride.setStatus(RideStatus.FINISHED);
+
+        // Pickup => All Stops => New End
+        double totalDistance = 0.0;
+        Location currentPos = ride.getStartLocation();
+
+        if (ride.getStops() != null) {
+            for (Location stop : ride.getStops()) {
+                totalDistance += calculateHaversineDistance(currentPos, stop);
+                currentPos = stop;
+            }
+        }
+
+        totalDistance += calculateHaversineDistance(currentPos, newEndLocation);
+        ride.setDistance(totalDistance);
+
+        double basePrice = getBasePriceForVehicle(ride.getRequestedVehicleType());
+        double newPrice = basePrice + (totalDistance * 120.0);
+        ride.setTotalCost(Math.round(newPrice * 100.0) / 100.0);
+
         ride.setPassengersExited(true);
         ride.setPaid(true);
 
-
-        double distanceKm = calculateHaversineDistance(
-                ride.getStartLocation(),
-                newEndLocation
-        );
-        ride.setDistance(distanceKm);
-
-        double basePrice = getBasePriceForVehicle(ride.getRequestedVehicleType());
-        double newPrice = basePrice + (distanceKm * 120.0);
-        ride.setTotalCost(Math.round(newPrice * 100.0) / 100.0); // Round to 2 decimals
-
         Ride savedRide = rideRepository.save(ride);
 
-        // Handle Driver Inactivity
+        // Send review request emails to passengers (same as endRide)
+        sendReviewRequestEmails(savedRide);
+
+        // Time-delayed Inactive Logic (same as endRide)
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
         return mapToResponse(savedRide);
@@ -710,10 +808,58 @@ public class RideServiceImpl implements RideService {
         return R * c;
     }
 
+    /**
+     * Sends review request emails to all passengers of a finished ride.
+     * Only sends to passengers whose email does not end with '@example.com'.
+     */
+    private void sendReviewRequestEmails(Ride ride) {
+        if (ride == null || ride.getPassengers() == null || ride.getPassengers().isEmpty()) {
+            return;
+        }
+        
+        if (ride.getDriver() == null) {
+            return;
+        }
+        
+        Long driverId = ride.getDriver().getId();
+        
+        for (User passenger : ride.getPassengers()) {
+            String email = passenger.getEmail();
+            
+            // Skip test emails ending with @example.com
+            if (email == null || email.toLowerCase().endsWith("@example.com")) {
+                continue;
+            }
+            
+            try {
+                // Generate a JWT token valid for 3 days
+                String reviewToken = reviewTokenUtils.generateReviewToken(
+                    ride.getId(), 
+                    passenger.getId(), 
+                    driverId
+                );
+                
+                // Get passenger name for personalization
+                String passengerName = passenger.getName();
+                if (passengerName == null || passengerName.trim().isEmpty()) {
+                    passengerName = "Valued Customer";
+                }
+                
+                // Send the review request email
+                emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
+                
+                System.out.println("Sent review request email to: " + email + " for ride: " + ride.getId());
+            } catch (Exception e) {
+                // Log error but don't fail the ride completion
+                System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
+            }
+        }
+    }
+
     private double getBasePriceForVehicle(VehicleType type) {
         if (type == null) return 120.0;
         return switch (type) {
-            case LUXURY -> 200.0;
+            case LUXURY -> 360.0;
             case VAN -> 180.0;
             default -> 120.0;
         };
@@ -763,6 +909,23 @@ public class RideServiceImpl implements RideService {
         Ride ride = findById(rideId);
         User reporter = getCurrentUser();
 
+        if (reporter == null) {
+            throw new IllegalStateException("User must be authenticated to report inconsistency.");
+        }
+
+        // Validate that the user is a passenger of this ride
+        boolean isPassenger = ride.getPassengers() != null && ride.getPassengers().stream()
+                .anyMatch(p -> p.getId().equals(reporter.getId()));
+
+        if (!isPassenger) {
+            throw new IllegalStateException("Only passengers can report inconsistencies.");
+        }
+
+        // Validate ride is in progress
+        if (ride.getStatus() != RideStatus.IN_PROGRESS && ride.getStatus() != RideStatus.ACTIVE) {
+            throw new IllegalStateException("Can only report inconsistency for rides in progress.");
+        }
+
         InconsistencyReport report = new InconsistencyReport();
         report.setRide(ride);
         report.setDescription(request.getRemark());
@@ -770,6 +933,53 @@ public class RideServiceImpl implements RideService {
         report.setReporter(reporter);
 
         inconsistencyReportRepository.save(report);
+    }
+
+    @Override
+    @Transactional
+    public RideResponse completeStop(Long rideId, Integer stopIndex) {
+        Ride ride = findById(rideId);
+        User currentUser = getCurrentUser();
+
+        if (currentUser == null) {
+            throw new IllegalStateException("User must be authenticated.");
+        }
+
+        // Validate that the user is the driver
+        if (ride.getDriver() == null || !ride.getDriver().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException("Only the assigned driver can complete stops.");
+        }
+
+        // Validate ride is in progress
+        if (ride.getStatus() != RideStatus.IN_PROGRESS && ride.getStatus() != RideStatus.ACTIVE) {
+            throw new IllegalStateException("Ride must be in progress to complete stops.");
+        }
+
+        // Validate stop index (-1 means start location)
+        if (stopIndex < -1 || (stopIndex >= 0 && (ride.getStops() == null || stopIndex >= ride.getStops().size()))) {
+            throw new IllegalArgumentException("Invalid stop index: " + stopIndex);
+        }
+
+        // Initialize completedStopIndexes if null
+        if (ride.getCompletedStopIndexes() == null) {
+            ride.setCompletedStopIndexes(new java.util.HashSet<>());
+        }
+
+        // Add the stop index to completed set
+        ride.getCompletedStopIndexes().add(stopIndex);
+
+        // Log the stop completion
+        String stopAddress = stopIndex == -1 
+                ? ride.getStartLocation().getAddress() 
+                : ride.getStops().get(stopIndex).getAddress();
+        System.out.println("[STOP COMPLETED] Ride ID: " + rideId + ", Stop Index: " + stopIndex + 
+                ", Stop Address: " + stopAddress +
+                ", Completed By Driver: " + currentUser.getId() + 
+                ", Timestamp: " + LocalDateTime.now());
+
+        // Save the ride with updated completedStopIndexes
+        Ride savedRide = rideRepository.save(ride);
+        return mapToResponse(savedRide);
     }
 
     @Override
@@ -781,7 +991,9 @@ public class RideServiceImpl implements RideService {
         }
 
         final Long finalUserId = userId;
-        Specification<Ride> spec = (root, query, cb) -> {
+        
+        // First, try to find IN_PROGRESS or ACTIVE rides (highest priority)
+        Specification<Ride> inProgressSpec = (root, query, cb) -> {
             Join<Ride, User> driver = root.join("driver", jakarta.persistence.criteria.JoinType.LEFT);
             Join<Ride, User> passengers = root.join("passengers", jakarta.persistence.criteria.JoinType.LEFT);
 
@@ -790,18 +1002,133 @@ public class RideServiceImpl implements RideService {
                     cb.equal(passengers.get("id"), finalUserId)
             );
 
-            Predicate isActive = cb.or(
+            Predicate isInProgress = cb.or(
                     cb.equal(root.get("status"), RideStatus.ACTIVE),
-                    cb.equal(root.get("status"), RideStatus.IN_PROGRESS),
-                    cb.equal(root.get("status"), RideStatus.ACCEPTED)
+                    cb.equal(root.get("status"), RideStatus.IN_PROGRESS)
             );
 
-            return cb.and(isUser, isActive);
+            return cb.and(isUser, isInProgress);
         };
 
-        return rideRepository.findAll(spec).stream()
+        // Check for in-progress rides first
+        var inProgressRides = rideRepository.findAll(inProgressSpec);
+        if (!inProgressRides.isEmpty()) {
+            return mapToResponse(inProgressRides.get(0));
+        }
+
+        // If no in-progress ride, find earliest PENDING/ACCEPTED/SCHEDULED ride
+        Specification<Ride> pendingSpec = (root, query, cb) -> {
+            Join<Ride, User> driver = root.join("driver", jakarta.persistence.criteria.JoinType.LEFT);
+            Join<Ride, User> passengers = root.join("passengers", jakarta.persistence.criteria.JoinType.LEFT);
+
+            Predicate isUser = cb.or(
+                    cb.equal(driver.get("id"), finalUserId),
+                    cb.equal(passengers.get("id"), finalUserId)
+            );
+
+            Predicate isPending = cb.or(
+                    cb.equal(root.get("status"), RideStatus.PENDING),
+                    cb.equal(root.get("status"), RideStatus.ACCEPTED),
+                    cb.equal(root.get("status"), RideStatus.SCHEDULED)
+            );
+
+            query.orderBy(cb.asc(root.get("scheduledTime")), cb.asc(root.get("id")));
+
+            return cb.and(isUser, isPending);
+        };
+
+        return rideRepository.findAll(pendingSpec).stream()
                 .findFirst()
                 .map(this::mapToResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("No active ride for user: " + finalUserId));
+    }
+
+    @Override
+    @Transactional
+    public void addToFavorite(Long userId, FavouriteRouteRequest request) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+        String startAddress = normalize(request.getStart());
+        String endAddress = normalize(request.getDestination());
+
+        // optional: guard against blank strings (since you used @NotNull, not @NotBlank)
+        if (!StringUtils.hasText(startAddress) || !StringUtils.hasText(endAddress)) {
+            throw new IllegalArgumentException("Start and destination must not be blank.");
+        }
+
+        boolean exists = favoriteRouteRepository
+                .existsByUserIdAndStartLocationAddressIgnoreCaseAndEndLocationAddressIgnoreCase(
+                        userId, startAddress, endAddress
+                );
+
+        if (exists) {
+            // idempotent behavior
+            return;
+        }
+
+        FavoriteRoute fav = new FavoriteRoute();
+        fav.setUser(user);
+
+        fav.setStartLocation(toLocation(startAddress));
+        fav.setEndLocation(toLocation(endAddress));
+
+        // Request doesn't have stops -> store empty list
+        fav.setStops(new ArrayList<>());
+
+        // routeName optional -> generate if missing
+        fav.setRouteName(resolveRouteName(request, startAddress, endAddress));
+
+        favoriteRouteRepository.save(fav);
+    }
+
+    private String normalize(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private Location toLocation(String address) {
+        Location loc = new Location();
+        loc.setAddress(address);
+        loc.setLatitude(0.0);
+        loc.setLongitude(0.0);
+        return loc;
+    }
+
+    private String resolveRouteName(FavouriteRouteRequest request, String start, String end) {
+        if (StringUtils.hasText(request.getRouteName())) {
+            return request.getRouteName().trim();
+        }
+        return start + " → " + end;
+    }
+
+    @Transactional
+    @Override
+    public void removeFromFavorite(Long userId, Long favouriteId) {
+
+        FavoriteRoute favorite = favoriteRouteRepository
+                .findByIdAndUserId(favouriteId, userId)   // <- safest (ownership check in DB)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Favorite route not found for userId=" + userId + ", favouriteId=" + favouriteId
+                ));
+
+        favoriteRouteRepository.delete(favorite);
+    }
+
+    @Override
+    public List<FavoriteRouteResponse> getFavoriteRoutes(Long userId){
+        return favoriteRouteRepository.findByUserId(userId).stream()
+                .map(fr -> new FavoriteRouteResponse(
+                        fr.getId(),
+                        fr.getRouteName(),
+                        new LocationDto(fr.getStartLocation().getAddress(), fr.getStartLocation().getLatitude(), fr.getStartLocation().getLongitude()),
+                        new LocationDto(fr.getEndLocation().getAddress(), fr.getEndLocation().getLatitude(), fr.getEndLocation().getLongitude()),
+                        fr.getStops().stream()
+                                .map(s -> new LocationDto(s.getAddress(), s.getLatitude(), s.getLongitude()))
+                                .collect(Collectors.toList()),
+                        0.0,
+                        0.0
+                ))
+                .collect(Collectors.toList());
     }
 }

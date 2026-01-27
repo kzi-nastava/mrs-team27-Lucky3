@@ -72,6 +72,9 @@ public class WebSecurityConfig {
                 .requestMatchers("/api/vehicles/active").permitAll() // 2.1.1 Public map
                 .requestMatchers("/api/rides/estimate").permitAll()  // 2.1.2 Public estimate
                 .requestMatchers("/api/users/*/profile-image").permitAll()
+                .requestMatchers("/api/reviews/validate-token").permitAll() // Public review token validation
+                .requestMatchers("/api/reviews/with-token").permitAll() // Public review submission with token
+                .requestMatchers("/ws/**").permitAll() // WebSocket endpoint
                 .anyRequest().authenticated()
         );
 

@@ -4,8 +4,7 @@ import { CanActivateFn, Router } from '@angular/router';
 export const activationGuard: CanActivateFn = (route) => {
   const router = inject(Router);
   
-  // Check for token in path parameters
-  const token = route.paramMap.get('token');
+  const token = route.paramMap.get('token') || route.queryParamMap.get('token');
 
   if (token && token.trim().length > 0) {
     return true;

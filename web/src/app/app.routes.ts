@@ -17,7 +17,7 @@ import { AdminDashboardPage } from './pages/admin/dashboard/admin-dashboard.page
 import { HomePage } from './pages/home.page/home.page';
 import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
-import { ActiveRidePage } from './pages/driver/active-ride/active-ride.page';
+import { ActiveRidePage } from './shared/active-ride/active-ride.page';
 import { AdminDriversPage } from './pages/admin/drivers/admin-drivers.page';
 import { CreateDriverComponent } from './account-control/create-driver/create-driver.component';
 import {DriverSetPasswordComponent} from "./account-control/driver-set-password/driver-set-password.component";
@@ -26,6 +26,11 @@ import { resetPasswordTokenGuard } from './infrastructure/auth/reset-password-to
 import { registerVerificationGuard, resetPasswordSentGuard, resetPasswordSuccessGuard } from './infrastructure/auth/flow.guards';
 import { activationGuard } from './infrastructure/auth/activation.guard';
 import { rideAccessGuard } from './infrastructure/auth/ride-access.guard';
+import { passengerRideAccessGuard } from './infrastructure/auth/passenger-ride-access.guard';
+import {RideHistoryComponent} from "./pages/passenger/ride-history/ride-history.component";
+import { FavoritePageComponent } from './pages/passenger/favorite-page/favorite-page.component';
+import { ReviewPage } from './pages/review/review.page';
+import { reviewGuard } from './infrastructure/auth/review.guard';
 
 export const routes: Routes = [
   {
@@ -89,6 +94,13 @@ export const routes: Routes = [
     canActivate: [activationGuard]
   },
 
+  // --- REVIEW PAGE (PUBLIC - TOKEN BASED) ---
+  {
+    path: 'review',
+    component: ReviewPage,
+    canActivate: [reviewGuard]
+  },
+
   // --- PASSENGER ROUTES ---
   {
     path: 'passenger/home',
@@ -101,6 +113,23 @@ export const routes: Routes = [
     component: UserProfilePage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['PASSENGER'] }
+  },
+  {
+    path: 'passenger/ride-history',
+    component: RideHistoryComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['PASSENGER'] }
+  },
+  {
+    path: 'passenger/favorites',
+    component: FavoritePageComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['PASSENGER'] }
+  },
+  {
+    path: 'passenger/ride/:id',
+    component: ActiveRidePage,
+    canActivate: [passengerRideAccessGuard]
   },
 
   // --- ADMIN ROUTES ---

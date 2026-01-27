@@ -3,6 +3,8 @@ package com.team27.lucky3.backend.service.impl;
 import com.team27.lucky3.backend.dto.request.CreateDriverRequest;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.DriverResponse;
+import com.team27.lucky3.backend.dto.response.DriverStatsResponse;
+import com.team27.lucky3.backend.dto.response.DriverStatusResponse;
 import com.team27.lucky3.backend.entity.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
@@ -10,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.team27.lucky3.backend.exception.EmailAlreadyUsedException;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.ActivationTokenRepository;
+import com.team27.lucky3.backend.repository.DriverActivitySessionRepository;
+import com.team27.lucky3.backend.repository.ReviewRepository;
 import com.team27.lucky3.backend.repository.RideRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
 import com.team27.lucky3.backend.repository.VehicleRepository;
@@ -35,8 +39,10 @@ public class DriverServiceImpl implements DriverService {
 
     private final UserRepository userRepository;
     private final RideRepository rideRepository;
+    private final ReviewRepository reviewRepository;
     private final VehicleRepository vehicleRepository;
     private final ActivationTokenRepository activationTokenRepository;
+    private final DriverActivitySessionRepository activitySessionRepository;
     private final EmailService emailService;
     private final ImageService imageService;
 
@@ -56,6 +62,12 @@ public class DriverServiceImpl implements DriverService {
             }
             driver.setActive(true);
             driver.setInactiveRequested(false);
+            
+            // Start a new activity session
+            DriverActivitySession session = new DriverActivitySession();
+            session.setDriver(driver);
+            session.setStartTime(LocalDateTime.now());
+            activitySessionRepository.save(session);
         } else {
             // Turning OFF
             boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
@@ -66,6 +78,13 @@ public class DriverServiceImpl implements DriverService {
                 driver.setInactiveRequested(true);
             } else {
                 driver.setActive(false);
+                
+                // End the current activity session
+                activitySessionRepository.findByDriverIdAndEndTimeIsNull(driverId)
+                        .ifPresent(session -> {
+                            session.setEndTime(LocalDateTime.now());
+                            activitySessionRepository.save(session);
+                        });
             }
         }
         return userRepository.save(driver);
@@ -74,20 +93,101 @@ public class DriverServiceImpl implements DriverService {
     @Override
     public boolean hasExceededWorkingHours(Long driverId) {
         // Spec 2.5: Driver becomes unavailable if working hours > 8h in the day
-        // We calculate this by summing the duration of rides finished in the last 24h
-        LocalDateTime startOfDay = LocalDateTime.now().minusHours(24);
-
-        List<Ride> recentRides = rideRepository.findFinishedRidesByDriverSince(driverId, startOfDay);
+        // Calculate from activity sessions (time driver was active/online)
+        LocalDateTime since = LocalDateTime.now().minusHours(24);
+        List<DriverActivitySession> sessions = activitySessionRepository.findSessionsSince(driverId, since);
 
         long totalSeconds = 0;
-        for (Ride ride : recentRides) {
-            if (ride.getStartTime() != null && ride.getEndTime() != null) {
-                totalSeconds += Duration.between(ride.getStartTime(), ride.getEndTime()).getSeconds();
-            }
+        LocalDateTime now = LocalDateTime.now();
+        for (DriverActivitySession session : sessions) {
+            LocalDateTime effectiveStart = session.getStartTime().isBefore(since) ? since : session.getStartTime();
+            LocalDateTime effectiveEnd = session.getEndTime() != null ? session.getEndTime() : now;
+            totalSeconds += Duration.between(effectiveStart, effectiveEnd).getSeconds();
         }
 
         // 8 hours = 8 * 60 * 60 = 28800 seconds
         return totalSeconds > 28800;
+    }
+
+    @Override
+    public boolean hasActiveRide(Long driverId) {
+        return rideRepository.existsByDriverIdAndStatusIn(
+                driverId, List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS));
+    }
+
+    @Override
+    public DriverStatusResponse getDriverStatus(Long driverId) {
+        User driver = userRepository.findById(driverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found"));
+
+        boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
+                driverId, List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS));
+
+        return new DriverStatusResponse(
+                driver.getId(),
+                driver.isActive(),
+                driver.isInactiveRequested(),
+                hasActiveRide
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DriverStatsResponse getDriverStats(Long driverId) {
+        // Verify driver exists
+        userRepository.findById(driverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found"));
+
+        // Get total earnings from completed rides
+        Double totalEarnings = rideRepository.sumTotalEarningsByDriverId(driverId);
+        if (totalEarnings == null) {
+            totalEarnings = 0.0;
+        }
+
+        // Get completed rides count
+        Integer completedRides = rideRepository.countCompletedRidesByDriverId(driverId);
+        if (completedRides == null) {
+            completedRides = 0;
+        }
+
+        // Get average rating and count
+        Double averageRating = reviewRepository.findAverageDriverRatingByDriverId(driverId);
+        Integer totalRatings = reviewRepository.countRatingsByDriverId(driverId);
+        if (averageRating == null) {
+            averageRating = 0.0;
+        }
+        if (totalRatings == null) {
+            totalRatings = 0;
+        }
+
+        // Calculate online hours today from activity sessions (last 24h)
+        LocalDateTime since = LocalDateTime.now().minusHours(24);
+        List<DriverActivitySession> sessions = activitySessionRepository.findSessionsSince(driverId, since);
+        
+        long totalSeconds = 0;
+        LocalDateTime now = LocalDateTime.now();
+        for (DriverActivitySession session : sessions) {
+            // Use the later of session start or 24h ago as the effective start
+            LocalDateTime effectiveStart = session.getStartTime().isBefore(since) ? since : session.getStartTime();
+            // Use endTime if session ended, otherwise use current time (still active)
+            LocalDateTime effectiveEnd = session.getEndTime() != null ? session.getEndTime() : now;
+            
+            totalSeconds += Duration.between(effectiveStart, effectiveEnd).getSeconds();
+        }
+        
+        // Format as "Xh Ym"
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        String onlineHoursToday = String.format("%dh %dm", hours, minutes);
+
+        return new DriverStatsResponse(
+                driverId,
+                totalEarnings,
+                completedRides,
+                averageRating,
+                totalRatings,
+                onlineHoursToday
+        );
     }
 
     // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)

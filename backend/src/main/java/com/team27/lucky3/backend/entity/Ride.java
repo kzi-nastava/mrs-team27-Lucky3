@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -43,6 +44,16 @@ public class Ride {
 
     private boolean paid;
     private boolean passengersExited;
+
+    // Fields for tracking vehicle location and calculating cost incrementally
+    @Column(name = "last_tracked_latitude")
+    private Double lastTrackedLatitude;
+    
+    @Column(name = "last_tracked_longitude")
+    private Double lastTrackedLongitude;
+    
+    @Column(name = "distance_traveled")
+    private Double distanceTraveled;
 
     @Embedded
     @AttributeOverrides({
@@ -95,6 +106,11 @@ public class Ride {
     @CollectionTable(name = "ride_invited_emails", joinColumns = @JoinColumn(name = "ride_id"))
     @Column(name = "email")
     private List<String> invitedEmails;
+
+    @ElementCollection
+    @CollectionTable(name = "ride_completed_stops", joinColumns = @JoinColumn(name = "ride_id"))
+    @Column(name = "stop_index")
+    private Set<Integer> completedStopIndexes;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "ride_id")

@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <div *ngIf="ride.status === 'cancelled'" class="relative flex gap-4">
+    <div *ngIf="ride.status === 'Cancelled'" class="relative flex gap-4">
       <div class="w-3 h-3 rounded-full bg-red-500 mt-1.5 z-10"></div>
       <div>
         <p class="text-value">Ride Cancelled</p>
@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <ng-container *ngIf="ride.status !== 'cancelled'">
+    <ng-container *ngIf="ride.status !== 'Cancelled'">
       <div class="relative flex gap-4">
         <div class="w-3 h-3 rounded-full bg-gray-700 mt-1.5 z-10"></div>
         <div>

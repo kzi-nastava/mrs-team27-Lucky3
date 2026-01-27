@@ -1,0 +1,140 @@
+<div class="min-h-screen bg-black text-white p-6">
+  <div class="max-w-7xl mx-auto">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 mb-6">
+      <h2 class="text-2xl font-bold">Ride History</h2>
+      
+      <!-- Filters -->
+      <div class="flex flex-wrap items-center gap-2">
+        
+        <!-- Date Filter -->
+        <div class="relative flex items-center gap-2">
+          <div class="relative">
+            <input
+              type="date"
+              [(ngModel)]="dateFilter"
+              (change)="updateView()"
+              class="pl-10 pr-3 py-2 bg-gray-900 border border-gray-800 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+              placeholder="mm/dd/yyyy"
+            />
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              stroke-width="2" 
+              stroke-linecap="round" 
+              stroke-linejoin="round" 
+              class="text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            >
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" x2="16" y1="2" y2="6"/>
+              <line x1="8" x2="8" y1="2" y2="6"/>
+              <line x1="3" x2="21" y1="10" y2="10"/>
+            </svg>
+          </div>
+          
+          <button
+            *ngIf="dateFilter"
+            (click)="dateFilter = ''; updateView()"
+            class="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            title="Reset date filter"
+          >
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              stroke-width="2" 
+              stroke-linecap="round" 
+              stroke-linejoin="round" 
+              class="text-gray-400"
+            >
+              <path d="M18 6 6 18"/>
+              <path d="m6 6 12 12"/>
+            </svg>
+          </button>
+        </div>
+        <!--- Possible Status Values:
+    PENDING, ACCEPTED, SCHEDULED, ACTIVE, IN_PROGRESS, FINISHED, REJECTED, PANIC, CANCELLED
+}-->
+        <!-- Status Filter Buttons -->
+        <div class="flex gap-2 bg-gray-900 p-1 rounded-lg">
+          <button
+            *ngFor="let status of ['all', 'Pending', 'Accepted', 'Finished', 'Rejected', 'Cancelled']"
+            (click)="setFilter($any(status))"
+            class="px-4 py-1.5 rounded-md text-sm font-medium transition-all capitalize"
+            [ngClass]="{
+              'bg-yellow-500 text-black': filter === status,
+              'text-gray-400 hover:text-white hover:bg-gray-800': filter !== status
+            }"
+          >
+            {{ status }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selected Ride Details -->
+    <div *ngIf="selectedRide" 
+        class="mb-6 bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between">
+      
+      <div class="flex items-center gap-6 text-sm">
+        <div class="flex items-center gap-2">
+          <span class="text-gray-400">Distance:</span>
+          <span class="font-medium text-white">{{ selectedRide.distance }} km</span>
+        </div>
+        <div class="flex flex-row gap-1 items-center">
+          <span class="text-gray-400">Route:</span>
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+              <span class="font-medium text-white truncate max-w-[200px]">{{ selectedRide.pickup.address }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-red-500"></div>
+              <span class="font-medium text-white truncate max-w-[200px]">{{ selectedRide.destination.address }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="w-px h-6 bg-gray-700"></div>
+        <div class="flex items-center gap-2">
+          <span class="text-gray-400">Start:</span>
+          <span class="font-medium text-white">{{ formatDate(selectedRide.startedAt) }}</span>
+        </div>
+        <div class="w-px h-6 bg-gray-700"></div>
+        
+        <div class="flex items-center gap-2">
+          <span class="text-gray-400">End:</span>
+          <span class="font-medium text-white">{{ formatDate(selectedRide.completedAt) }}</span>
+        </div>
+      </div>
+     
+      
+      <button 
+        (click)="addToFavorites(selectedRide)"
+        class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 2-2h10a2 2 0 0 2 2v16z"/>
+        </svg>
+        Add to Favorites
+      </button>
+    </div>
+
+
+          <!-- Table -->
+    <app-rides-table
+        [rides]="sortedRides"
+        [sortField]="sortField"
+        [sortDirection]="sortDirection"
+        (sortChange)="handleSort($event)"
+        (rideSelected)="onRideSelected($event)"
+      ></app-rides-table>
+
+  </div>
+</div>

@@ -2,10 +2,7 @@ package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.request.*;
-import com.team27.lucky3.backend.dto.response.RideCreated;
-import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
-import com.team27.lucky3.backend.dto.response.RideResponse;
-import com.team27.lucky3.backend.dto.response.RoutePointResponse;
+import com.team27.lucky3.backend.dto.response.*;
 import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.service.RideService;
@@ -46,8 +43,8 @@ public class RideController {
     // 2.4.1 Order a ride (logged-in user)
     @PreAuthorize("hasRole('PASSENGER')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<RideCreated> createRide(@Valid @RequestBody CreateRideRequest request) {
-        RideCreated response = rideService.createRide(request);
+    public ResponseEntity<RideResponse> createRide(@Valid @RequestBody CreateRideRequest request) {
+        RideResponse response = rideService.createRide(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -67,21 +64,25 @@ public class RideController {
 
     // 2.9.2 & 2.9.3 Admin ride history + detailed ride view (admin)
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RideResponse> getRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.getRideDetails(id));
     }
 
     @PutMapping("/{id}/accept")
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> acceptRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.acceptRide(id));
     }
 
     @PutMapping("/{id}/start")
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> startRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.startRide(id));
     }
 
     @PutMapping("/{id}/end")
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> endRide(
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody EndRideRequest request) {
@@ -108,6 +109,7 @@ public class RideController {
     }
 
     @PutMapping("/{id}/stop")
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> stopRide(
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody RideStopRequest request) {
@@ -116,12 +118,22 @@ public class RideController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{id}/stop/{stopIndex}/complete")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<RideResponse> completeStop(
+            @PathVariable @Min(1) Long id,
+            @PathVariable @Min(0) Integer stopIndex) {
+        RideResponse response = rideService.completeStop(id, stopIndex);
+        return ResponseEntity.ok(response);
+    }
+
     // 2.6.2 During ride: live tracking + inconsistency report (passengers)
     @PostMapping("/{id}/inconsistencies")
+    @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<Void> reportInconsistency(
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody InconsistencyRequest request) {
-        if (id == 404) throw new ResourceNotFoundException("Ride not found");
+        rideService.reportInconsistency(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -129,5 +141,34 @@ public class RideController {
     @GetMapping("/active")
     public ResponseEntity<RideResponse> getActiveRide(@RequestParam(required = false) @Min(1) Long userId) {
         return ResponseEntity.ok(rideService.getActiveRide(userId));
+    }
+
+    // 2.4.3 Adding route to favourite
+    // MARK as favourite (create)
+    @PreAuthorize("hasRole('PASSENGER')")
+    @PostMapping("/{id}/favourite-route")
+    public ResponseEntity<Void> addFavouriteRoute(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody FavouriteRouteRequest request
+    ) {
+        rideService.addToFavorite(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PreAuthorize("hasRole('PASSENGER')")
+    @DeleteMapping("/{passengerId}/favourite-routes/{favouriteRouteId}")
+    public ResponseEntity<Void> removeFavouriteRoute(
+            @PathVariable @Min(1) Long passengerId,
+            @PathVariable @Min(1) Long favouriteRouteId
+    ) {
+        rideService.removeFromFavorite(passengerId, favouriteRouteId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('PASSENGER')")
+    @GetMapping("/{id}/favourite-routes")
+    public ResponseEntity<List<FavoriteRouteResponse>> getFavoriteRoutes(@PathVariable @Min(1) Long id) {
+        List<FavoriteRouteResponse> favoriteRoutes = rideService.getFavoriteRoutes(id);
+        return ResponseEntity.ok(favoriteRoutes);
     }
 }

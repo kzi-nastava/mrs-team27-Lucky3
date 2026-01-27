@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service'; // Adjust path as needed
 import { environment } from '../../../env/environment';
-import { VehicleType } from '../../infrastructure/rest/model/order-ride.model';
 
 export interface UserProfile {
   name: string;

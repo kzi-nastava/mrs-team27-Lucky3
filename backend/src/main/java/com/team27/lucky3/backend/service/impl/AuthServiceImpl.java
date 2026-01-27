@@ -4,6 +4,7 @@ import com.team27.lucky3.backend.dto.request.LoginRequest;
 import com.team27.lucky3.backend.dto.request.PassengerRegistrationRequest;
 import com.team27.lucky3.backend.dto.response.TokenResponse;
 import com.team27.lucky3.backend.entity.ActivationToken;
+import com.team27.lucky3.backend.entity.DriverActivitySession;
 import com.team27.lucky3.backend.entity.Image;
 import com.team27.lucky3.backend.entity.PasswordResetToken;
 import com.team27.lucky3.backend.entity.User;
@@ -11,6 +12,7 @@ import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.exception.EmailAlreadyUsedException;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
+import com.team27.lucky3.backend.repository.DriverActivitySessionRepository;
 import com.team27.lucky3.backend.repository.PasswordResetTokenRepository;
 import com.team27.lucky3.backend.repository.RideRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
@@ -52,6 +54,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final ImageService imageService;
     private final ActivationTokenRepository activationTokenRepository;
+    private final DriverActivitySessionRepository activitySessionRepository;
 
     @Autowired
     @Lazy
@@ -77,9 +80,28 @@ public class AuthServiceImpl implements AuthService {
 
         // 4. Spec 2.2.1: Drivers automatically become available upon login
         if (user.getRole() == UserRole.DRIVER) {
-            user.setActive(!driverService.hasExceededWorkingHours(user.getId())); // Force inactive if over limit
-            user.setInactiveRequested(false);
-            userRepository.save(user);
+            if (!driverService.hasExceededWorkingHours(user.getId())) {
+                user.setActive(true);
+                user.setInactiveRequested(false);
+                userRepository.save(user);
+                
+                // Start a new activity session (close any orphaned one first)
+                activitySessionRepository.findByDriverIdAndEndTimeIsNull(user.getId())
+                        .ifPresent(session -> {
+                            session.setEndTime(LocalDateTime.now());
+                            activitySessionRepository.save(session);
+                        });
+                
+                DriverActivitySession session = new DriverActivitySession();
+                session.setDriver(user);
+                session.setStartTime(LocalDateTime.now());
+                activitySessionRepository.save(session);
+            } else {
+                // Force inactive if over limit
+                user.setActive(false);
+                user.setInactiveRequested(false);
+                userRepository.save(user);
+            }
         }
 
         // 5. Generate Token
@@ -93,19 +115,28 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
 
-        // Spec 2.2.1: Driver specific logout logic
+        // Spec 2.2.1
         if (user.getRole() == UserRole.DRIVER) {
+
             boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
                     user.getId(),
                     List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS)
             );
 
             if (hasActiveRide) {
-                throw new IllegalStateException("Cannot logout while having an active ride.");
+                throw new IllegalStateException("You cannot log out because you are currently on a ride.");
             }
 
             user.setActive(false);
+            user.setInactiveRequested(false);
             userRepository.save(user);
+            
+            // Close any open activity session
+            activitySessionRepository.findByDriverIdAndEndTimeIsNull(user.getId())
+                    .ifPresent(session -> {
+                        session.setEndTime(LocalDateTime.now());
+                        activitySessionRepository.save(session);
+                    });
         }
 
         SecurityContextHolder.clearContext();

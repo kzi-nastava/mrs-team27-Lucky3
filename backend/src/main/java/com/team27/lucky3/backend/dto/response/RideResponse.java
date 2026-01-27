@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -40,4 +41,6 @@ public class RideResponse {
     private Boolean paid;
     private Boolean passengersExited;
     private List<LocationDto> stops;
+    private Set<Integer> completedStopIndexes;
+    private Double distanceTraveled; // Distance traveled so far (for cost calculation)
 }

@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { RideCreated } from '../../../infrastructure/rest/model/order-ride.model';
+import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule]
 })
 export class RideInfoPopupComponent {
-  @Input() rideData!: RideCreated;
+  @Input() rideData!: RideResponse;
   @Output() close = new EventEmitter<void>();
 
   closePopup(): void {

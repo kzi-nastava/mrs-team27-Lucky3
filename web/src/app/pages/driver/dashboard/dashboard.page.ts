@@ -3,10 +3,12 @@ import { CommonModule } from '@angular/common';
 import { StatCardComponent } from '../../../shared/ui/stat-card/stat-card.component';
 import { ToggleSwitchComponent } from '../../../shared/ui/toggle-switch/toggle-switch.component';
 import { RideRequestCardComponent } from '../../../shared/rides/ride-request-card/ride-request-card.component';
-import { LiveMapComponent, MapPoint } from '../../../shared/ui/live-map/live-map.component';
+import { ActiveRideMapComponent, ActiveRideMapData, MapPoint } from '../../../shared/ui/active-ride-map/active-ride-map.component';
 import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
 import { RideService } from '../../../infrastructure/rest/ride.service';
+import { DriverService } from '../../../infrastructure/rest/driver.service';
+import { ToastComponent } from '../../../shared/ui/toast/toast.component';
 import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
@@ -31,30 +33,42 @@ type DashboardRide = {
     StatCardComponent,
     ToggleSwitchComponent,
     RideRequestCardComponent,
-    LiveMapComponent
+    ActiveRideMapComponent,
+    ToastComponent
   ],
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.css']
 })
 export class DashboardPage implements OnInit, OnDestroy {
-  isOnline: boolean = true;
+  isOnline: boolean = false;
+  isStatusLoading: boolean = false;
+  isInactiveRequested: boolean = false;  // Track when driver requested to go offline but has active ride
   driverName: string = 'James';
+
+  // Toast notification
+  toastMessage: string = '';
+  toastType: 'success' | 'error' | 'warning' | 'info' = 'info';
+  showToast: boolean = false;
 
   driverLocation: MapPoint | null = null;
   showAllFutureRides = false;
 
-  // Routes for map
-  rideRoute: MapPoint[] | null = null;
+  // Map data for ActiveRideMapComponent
+  rideMapData: ActiveRideMapData | null = null;
+  routePolyline: MapPoint[] | null = null;
   approachRoute: MapPoint[] | null = null;
+  remainingRoute: MapPoint[] | null = null;
+  completedStopIndexes: Set<number> = new Set();
+  isNextRideInProgress: boolean = false;
 
   private readonly destroy$ = new Subject<void>();
   private driverId: number | null = null;
   
   stats = {
-    earnings: 245.5,
-    ridesCompleted: 12,
-    rating: 4.9,
-    onlineHours: 6.5
+    earnings: 0,
+    ridesCompleted: 0,
+    rating: 0,
+    onlineHours: '0h 0m'
   };
 
   futureRides: DashboardRide[] = [];
@@ -72,16 +86,39 @@ export class DashboardPage implements OnInit, OnDestroy {
     private vehicleService: VehicleService,
     private authService: AuthService,
     private rideService: RideService,
+    private driverService: DriverService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.driverId = this.authService.getUserId();
 
+    // Load current driver status from backend
+    this.loadDriverStatus();
+    
+    // Load driver statistics
+    this.loadDriverStats();
+
+    // Listen for status refresh events (e.g., when a ride ends)
+    this.driverService.onStatusRefresh
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadDriverStatus();
+        this.loadFutureRides();
+        this.loadDriverStats();
+        // Clear the buffer so we don't re-process on next navigation
+        this.driverService.clearStatusRefresh();
+      });
+
     // Driver live location polling
     timer(0, 10000)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.fetchDriverLocation());
+
+    // Stats polling every 60 seconds (to update online hours in real-time)
+    timer(60000, 60000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.loadDriverStats());
 
     // Upcoming rides (backend)
     this.loadFutureRides();
@@ -92,8 +129,117 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  onStatusChange(status: boolean) {
-    this.isOnline = status;
+  private loadDriverStatus(): void {
+    if (!this.driverId) return;
+
+    this.driverService.getStatus(this.driverId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (status) => {
+          this.isOnline = status.active;
+          this.isInactiveRequested = status.inactiveRequested;
+          
+          // If driver is truly offline (not active and not inactive requested), clear ride data
+          if (!status.active && !status.inactiveRequested) {
+            this.clearRideData();
+          }
+          
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Default to offline on error
+          this.isOnline = false;
+          this.isInactiveRequested = false;
+          this.clearRideData();
+          this.cdr.markForCheck();
+        }
+      });
+  }
+  
+  private clearRideData(): void {
+    this.rideMapData = null;
+    this.routePolyline = null;
+    this.approachRoute = null;
+    this.remainingRoute = null;
+    this.completedStopIndexes = new Set();
+    this.isNextRideInProgress = false;
+    this.futureRides = [];
+    this.rawRides = [];
+  }
+
+  private loadDriverStats(): void {
+    if (!this.driverId) return;
+
+    this.driverService.getStats(this.driverId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (stats) => {
+          this.stats = {
+            earnings: stats.totalEarnings,
+            ridesCompleted: stats.completedRides,
+            rating: stats.averageRating,
+            onlineHours: stats.onlineHoursToday
+          };
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Keep default stats on error
+        }
+      });
+  }
+
+  onStatusChange(newStatus: boolean): void {
+    if (!this.driverId || this.isStatusLoading) {
+      // Revert if no driver ID
+      this.isOnline = !newStatus;
+      return;
+    }
+
+    this.isStatusLoading = true;
+    const previousStatus = this.isOnline;
+
+    this.driverService.toggleStatus(this.driverId, newStatus)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isOnline = response.active;
+          this.isInactiveRequested = response.inactiveRequested;
+          this.isStatusLoading = false;
+          
+          if (response.inactiveRequested) {
+            // Driver requested to go offline but has active ride
+            // Keep showing as online until ride completes
+            this.displayToast('You have an active ride. You will go offline once the ride is complete.', 'warning');
+          } else if (response.active) {
+            this.displayToast('You are now online and available for rides.', 'success');
+            // Reload rides when coming online
+            this.loadFutureRides();
+          } else {
+            this.displayToast('You are now offline.', 'info');
+            // Clear ride data when going offline
+            this.clearRideData();
+          }
+          
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          // Revert to previous status
+          this.isOnline = previousStatus;
+          this.isStatusLoading = false;
+          this.displayToast(err.message || 'Failed to change status. Please try again.', 'error');
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  displayToast(message: string, type: 'success' | 'error' | 'warning' | 'info'): void {
+    this.toastMessage = message;
+    this.toastType = type;
+    this.showToast = true;
+  }
+
+  onToastClose(): void {
+    this.showToast = false;
   }
 
   toggleAllFutureRides(): void {
@@ -155,8 +301,12 @@ export class DashboardPage implements OnInit, OnDestroy {
           if (activeRide) {
              this.fetchRoutesForRide(activeRide);
           } else {
-             this.rideRoute = null;
+             this.rideMapData = null;
+             this.routePolyline = null;
              this.approachRoute = null;
+             this.remainingRoute = null;
+             this.completedStopIndexes = new Set();
+             this.isNextRideInProgress = false;
           }
 
           this.cdr.detectChanges();
@@ -195,78 +345,206 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   private fetchRoutesForRide(ride: RideResponse): void {
-      // 1. Get Ride Route (Yellow)
-      // If backend gave detailed route points, use them. Else, estimate.
-      if (ride.routePoints && ride.routePoints.length > 2) {
-          this.rideRoute = ride.routePoints
-            .sort((a, b) => a.order - b.order)
-            .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+      const start = ride.departure ?? ride.start ?? ride.startLocation;
+      const end = ride.destination ?? ride.endLocation;
+      const stops = ride.stops ?? [];
+      
+      this.isNextRideInProgress = ride.status === 'IN_PROGRESS';
+      this.completedStopIndexes = new Set(ride.completedStopIndexes ?? []);
+
+      // Build rideMapData for the map component
+      if (start && end) {
+          this.rideMapData = {
+              start: { latitude: start.latitude, longitude: start.longitude },
+              stops: stops.map(s => ({ latitude: s.latitude, longitude: s.longitude })),
+              end: { latitude: end.latitude, longitude: end.longitude }
+          };
       } else {
-         // Fallback estimate ride itself if missing
-         const start = ride.departure ?? ride.start ?? ride.startLocation;
-         const end = ride.destination ?? ride.endLocation;
-         if (start && end) {
-             const req: CreateRideRequest = {
-                 start, destination: end, stops: ride.stops || [],
-                 passengerEmails: [], scheduledTime: null,
-                 requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
-             };
-             this.rideService.estimateRide(req).subscribe(res => {
-                if(res.routePoints?.length) {
-                    this.rideRoute = res.routePoints.map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
-                    this.cdr.detectChanges();
-                }
-             });
-         }
+          this.rideMapData = null;
       }
 
-      // 2. Approach Route (Light Blue) - Vehicle to Pickup
-      // Show approach route for any non-FINISHED ride
-      
-      const shouldShowApproach = ride.status !== 'FINISHED' && ride.status !== 'CANCELLED';
-      
-      // Prefer vehicleLocation from ride response (from backend), else use driver's polled location
+      // Get detailed route polyline
+      if (ride.routePoints && ride.routePoints.length > 2) {
+          this.routePolyline = ride.routePoints
+            .sort((a, b) => a.order - b.order)
+            .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+      } else if (start && end) {
+         const req: CreateRideRequest = {
+             start, destination: end, stops: stops,
+             passengerEmails: [], scheduledTime: null,
+             requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+         };
+         this.rideService.estimateRide(req).subscribe(res => {
+            if(res.routePoints?.length) {
+                this.routePolyline = res.routePoints
+                  .sort((a, b) => a.order - b.order)
+                  .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                this.cdr.detectChanges();
+            }
+         });
+      }
+
+      // Prefer vehicleLocation from ride response, else use driver's polled location
       const vehicleLoc = ride.vehicleLocation ?? 
-        (this.driverLocation ? { address: '', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude } : null);
+        (this.driverLocation ? { address: 'Current Location', latitude: this.driverLocation.latitude, longitude: this.driverLocation.longitude } : null);
       
       // Update driver marker position from vehicle location if available from ride
-      // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
       if (ride.vehicleLocation && !this.driverLocation) {
           setTimeout(() => {
               this.driverLocation = { latitude: ride.vehicleLocation!.latitude, longitude: ride.vehicleLocation!.longitude };
               this.cdr.detectChanges();
           }, 0);
       }
-      
-      const pickup = ride.departure ?? ride.start ?? ride.startLocation;
-      
-      if (shouldShowApproach && vehicleLoc && pickup) {
-          // Calculate approach route using API (same as yellow line)
-          const req: CreateRideRequest = {
-              start: { address: vehicleLoc.address || '', latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
-              destination: pickup,
-              stops: [],
-              passengerEmails: [], scheduledTime: null,
-              requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
-          };
-          
-          this.rideService.estimateRide(req).subscribe({
-              next: (res) => {
-                  if (res.routePoints?.length) {
-                      this.approachRoute = res.routePoints
-                        .sort((a, b) => a.order - b.order)
-                        .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
-                      this.cdr.detectChanges();
-                  }
-              },
-              error: () => {
-                this.approachRoute = null;
-                this.cdr.detectChanges();
-              }
-          });
+
+      if (this.isNextRideInProgress) {
+          // For in-progress rides: calculate approach (vehicle -> next stop) and remaining (next stop -> end)
+          this.fetchApproachRouteForInProgress(ride, vehicleLoc);
+          this.fetchRemainingRoute(ride);
       } else {
-          this.approachRoute = null;
+          // For pending rides: calculate approach (vehicle -> pickup), no remaining route
+          this.remainingRoute = null;
+          const pickup = ride.departure ?? ride.start ?? ride.startLocation;
+          
+          if (vehicleLoc && pickup) {
+              const req: CreateRideRequest = {
+                  start: { address: vehicleLoc.address || 'Current Location', latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
+                  destination: pickup,
+                  stops: [],
+                  passengerEmails: [], scheduledTime: null,
+                  requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+              };
+              
+              this.rideService.estimateRide(req).subscribe({
+                  next: (res) => {
+                      if (res.routePoints?.length) {
+                          this.approachRoute = res.routePoints
+                            .sort((a, b) => a.order - b.order)
+                            .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                          this.cdr.detectChanges();
+                      }
+                  },
+                  error: () => {
+                    this.approachRoute = null;
+                    this.cdr.detectChanges();
+                  }
+              });
+          } else {
+              this.approachRoute = null;
+          }
       }
+  }
+
+  private fetchApproachRouteForInProgress(ride: RideResponse, vehicleLoc: { address: string; latitude: number; longitude: number } | null): void {
+      if (!vehicleLoc) {
+          this.approachRoute = null;
+          return;
+      }
+
+      const stops = ride.stops ?? [];
+      const end = ride.destination ?? ride.endLocation;
+
+      // Find next uncompleted stop, or end if all stops completed
+      let nextDestination: { address: string; latitude: number; longitude: number } | null = null;
+      let nextStopIndex = -1;
+      
+      for (let i = 0; i < stops.length; i++) {
+          if (!this.completedStopIndexes.has(i)) {
+              nextStopIndex = i;
+              break;
+          }
+      }
+
+      if (nextStopIndex >= 0) {
+          nextDestination = stops[nextStopIndex];
+      } else if (end) {
+          nextDestination = end;
+      }
+
+      if (!nextDestination) {
+          this.approachRoute = null;
+          return;
+      }
+
+      const req: CreateRideRequest = {
+          start: { address: vehicleLoc.address || 'Current Location', latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
+          destination: nextDestination,
+          stops: [],
+          passengerEmails: [], scheduledTime: null,
+          requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+      };
+
+      this.rideService.estimateRide(req).subscribe({
+          next: (res) => {
+              if (res.routePoints?.length) {
+                  this.approachRoute = res.routePoints
+                    .sort((a, b) => a.order - b.order)
+                    .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                  this.cdr.detectChanges();
+              }
+          },
+          error: () => {
+              this.approachRoute = null;
+          }
+      });
+  }
+
+  private fetchRemainingRoute(ride: RideResponse): void {
+      const stops = ride.stops ?? [];
+      const end = ride.destination ?? ride.endLocation;
+
+      if (!end) {
+          this.remainingRoute = null;
+          return;
+      }
+
+      // Find the first uncompleted stop
+      let nextStopIndex = -1;
+      for (let i = 0; i < stops.length; i++) {
+          if (!this.completedStopIndexes.has(i)) {
+              nextStopIndex = i;
+              break;
+          }
+      }
+
+      // If all stops are completed, no remaining route needed (approach goes directly to end)
+      if (nextStopIndex === -1) {
+          this.remainingRoute = null;
+          return;
+      }
+
+      // Yellow line starts from the next uncompleted stop
+      const yellowStartPoint = stops[nextStopIndex];
+
+      // Gather remaining uncompleted stops (excluding the first one which is the start)
+      const remainingUncompletedStops: { address: string; latitude: number; longitude: number }[] = [];
+      for (let i = nextStopIndex + 1; i < stops.length; i++) {
+          if (!this.completedStopIndexes.has(i)) {
+              remainingUncompletedStops.push(stops[i]);
+          }
+      }
+
+      const req: CreateRideRequest = {
+          start: yellowStartPoint,
+          destination: end,
+          stops: remainingUncompletedStops,
+          passengerEmails: [],
+          scheduledTime: null,
+          requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+      };
+
+      this.rideService.estimateRide(req).subscribe({
+          next: (res) => {
+              if (res.routePoints?.length) {
+                  this.remainingRoute = res.routePoints
+                    .sort((a, b) => a.order - b.order)
+                    .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                  this.cdr.detectChanges();
+              }
+          },
+          error: () => {
+              this.remainingRoute = null;
+          }
+      });
   }
 
   private fetchDriverLocation(): void {

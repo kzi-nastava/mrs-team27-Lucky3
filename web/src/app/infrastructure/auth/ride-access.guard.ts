@@ -32,17 +32,28 @@ export const rideAccessGuard: CanActivateFn = (route, state) => {
     return false;
   }
 
-  // Fetch ride to check ownership
+  // Fetch ride to check ownership and status
   return rideService.getRide(rideId).pipe(
     map(ride => {
       // Check if driver matches
       const rideDriverId = ride.driver?.id ?? ride.driverId;
-      if (rideDriverId === userId) {
-        return true;
+      if (rideDriverId !== userId) {
+        // Not the assigned driver
+        router.navigate(['/driver/dashboard']);
+        return false;
       }
-      // Not the assigned driver
-      router.navigate(['/driver/dashboard']);
-      return false;
+
+      // Check ride status - only allow PENDING, ACCEPTED, SCHEDULED, or IN_PROGRESS
+      const allowedStatuses = ['PENDING', 'ACCEPTED', 'SCHEDULED', 'IN_PROGRESS', 'ACTIVE'];
+      const status = ride.status?.toUpperCase() || '';
+      
+      if (!allowedStatuses.includes(status)) {
+        // Ride is finished/cancelled - redirect to dashboard
+        router.navigate(['/driver/dashboard']);
+        return false;
+      }
+
+      return true;
     }),
     catchError((err) => {
       // If ride not found or error

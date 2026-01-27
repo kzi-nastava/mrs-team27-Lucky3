@@ -1,23 +1,23 @@
 package com.team27.lucky3.backend.service;
 
-import com.team27.lucky3.backend.dto.request.CreateRideRequest;
-import com.team27.lucky3.backend.dto.request.EndRideRequest;
-import com.team27.lucky3.backend.dto.request.RidePanicRequest;
-import com.team27.lucky3.backend.dto.request.RideStopRequest;
-import com.team27.lucky3.backend.dto.response.RideCreated;
+import com.team27.lucky3.backend.dto.request.*;
+import com.team27.lucky3.backend.dto.response.FavoriteRouteResponse;
 import com.team27.lucky3.backend.dto.response.RideResponse;
 import com.team27.lucky3.backend.entity.Ride;
 import com.team27.lucky3.backend.dto.response.RideEstimationResponse;
-import com.team27.lucky3.backend.dto.request.InconsistencyRequest;
+import org.springframework.http.ResponseEntity;
+
+import java.util.List;
 
 public interface RideService {
-    RideCreated createRide(CreateRideRequest request);
+    RideResponse createRide(CreateRideRequest request);
     RideResponse acceptRide(Long id);
     RideResponse startRide(Long id);
     RideResponse endRide(Long id, EndRideRequest request);
     RideResponse cancelRide(Long id, String reason);
     RideResponse stopRide(Long id, RideStopRequest request);
     RideResponse panicRide(Long id, RidePanicRequest request);
+    RideResponse completeStop(Long rideId, Integer stopIndex);
     Ride findById(Long id);
     RideResponse getRideDetails(Long id);
     org.springframework.data.domain.Page<RideResponse> getRidesHistory(
@@ -31,4 +31,7 @@ public interface RideService {
     RideEstimationResponse estimateRide(CreateRideRequest request);
     void reportInconsistency(Long rideId, InconsistencyRequest request);
     RideResponse getActiveRide(Long userId);
+    void addToFavorite(Long userId, FavouriteRouteRequest request);
+    void removeFromFavorite(Long userId, Long favouriteId);
+    List<FavoriteRouteResponse> getFavoriteRoutes(Long userId);
 }

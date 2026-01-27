@@ -5,7 +5,7 @@ import { environment } from '../../../env/environment';
 import { CreateRideRequest } from './model/create-ride.model';
 import { LocationDto } from './model/location.model';
 import { EndRideRequest, RideCancellationRequest, RideResponse } from './model/ride-response.model';
-import { RideCreated } from './model/order-ride.model';
+import { Ride } from '../../shared/data/mock-data';
 
 export interface PageResponse<T> {
   content: T[];
@@ -40,8 +40,8 @@ export class RideService {
     return this.http.post<RideEstimationResponse>(`${this.apiUrl}/estimate`, request);
   }
 
-  orderRide(request: CreateRideRequest): Observable<RideCreated> {
-    return this.http.post<RideCreated>(`${this.apiUrl}`, request);
+  orderRide(request: CreateRideRequest): Observable<RideResponse> {
+    return this.http.post<RideResponse>(`${this.apiUrl}`, request);
   }
 
   getRide(id: number): Observable<RideResponse> {
@@ -85,5 +85,49 @@ export class RideService {
 
   cancelRide(id: number, request: RideCancellationRequest): Observable<RideResponse> {
     return this.http.put<RideResponse>(`${this.apiUrl}/${id}/cancel`, request);
+  }
+
+  addRouteToFavorites(rideId: number, favoriteRoute: any): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${rideId}/favourite-route`, favoriteRoute);
+  }
+
+  getFavoriteRoutes(passengerId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${passengerId}/favourite-routes`);
+  }
+
+  removeFavoriteRoute(passengerId: number, routeId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${passengerId}/favourite-routes/${routeId}`);
+  }
+
+  stopRide(id: number, request: any): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/stop`, request);
+  }
+
+  /**
+   * Get the active ride for a user (IN_PROGRESS first, then earliest PENDING/SCHEDULED)
+   */
+  getActiveRideForUser(userId: number): Observable<RideResponse | null> {
+    return this.http.get<RideResponse>(`${this.apiUrl}/active?userId=${userId}`);
+  }
+
+  /**
+   * Complete a stop during an in-progress ride
+   */
+  completeStop(rideId: number, stopIndex: number): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${rideId}/stop/${stopIndex}/complete`, {});
+  }
+
+  /**
+   * Report an inconsistency during a ride (passenger only)
+   */
+  reportInconsistency(rideId: number, request: { remark: string }): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${rideId}/inconsistencies`, request);
+  }
+
+  /**
+   * Cancel ride as passenger (no reason required)
+   */
+  cancelRideAsPassenger(id: number): Observable<RideResponse> {
+    return this.http.put<RideResponse>(`${this.apiUrl}/${id}/cancel`, { reason: '' });
   }
 }

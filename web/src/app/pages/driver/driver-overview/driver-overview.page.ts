@@ -83,7 +83,11 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
       startedAt: r.startTime,
       requestedAt: r.startTime ?? '', // Fallback or add field to RideResponse if needed
       completedAt: r.endTime,
-      status: r.status === 'FINISHED' ? 'completed' : 'cancelled', // map enum
+      status: r.status === 'FINISHED' ? 'Finished' :
+              r.status === 'CANCELLED' ? 'Cancelled' :
+              r.status === 'PENDING' ? 'Pending' :
+              r.status === 'ACCEPTED' ? 'Accepted' :
+              r.status === 'REJECTED' ? 'Rejected' : 'all',
       fare: r.totalCost ?? 0,
       distance: r.distanceKm ?? 0,
       pickup: { address: r.departure?.address ?? r.start?.address ?? r.startLocation?.address ?? '—' },
@@ -105,7 +109,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
     statsRides = this.filterByTime(statsRides);
 
     // Only count completed rides for earnings and distance
-    const completedRides = statsRides.filter(r => r.status === 'completed');
+    const completedRides = statsRides.filter(r => r.status === 'Finished');
 
     this.stats = {
       totalEarnings: completedRides.reduce((sum, r) => sum + r.fare, 0),
