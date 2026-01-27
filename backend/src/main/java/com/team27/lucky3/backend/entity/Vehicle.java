@@ -5,7 +5,9 @@ import com.team27.lucky3.backend.entity.enums.VehicleType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Data
@@ -39,5 +41,7 @@ public class Vehicle {
 
     @OneToOne
     @JoinColumn(name = "driver_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User driver;
 }
