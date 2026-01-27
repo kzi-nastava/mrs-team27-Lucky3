@@ -32,7 +32,8 @@ export class App implements OnInit {
         '/reset-password-success',
         '/register-verification-sent',
         '/activate',
-        '/home'
+        '/home',
+        '/review'
       ];
       const url = event.urlAfterRedirects || event.url;
       // Hide layout for home page (root) and other auth routes

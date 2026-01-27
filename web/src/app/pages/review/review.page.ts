@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ReviewService, ReviewTokenData, ReviewRequest } from '../../infrastructure/rest/review.service';
+import { AuthService } from '../../infrastructure/auth/auth.service';
 
 @Component({
   selector: 'app-review-page',
@@ -35,7 +36,9 @@ export class ReviewPage implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private reviewService: ReviewService
+    private reviewService: ReviewService,
+    private cdr: ChangeDetectorRef,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -44,6 +47,7 @@ export class ReviewPage implements OnInit {
     if (!this.token) {
       this.tokenInvalid = true;
       this.isLoading = false;
+      this.cdr.detectChanges();
       return;
     }
 
@@ -57,6 +61,7 @@ export class ReviewPage implements OnInit {
       next: (data: ReviewTokenData) => {
         this.tokenData = data;
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isLoading = false;
@@ -65,6 +70,7 @@ export class ReviewPage implements OnInit {
         } else {
           this.tokenInvalid = true;
         }
+        this.cdr.detectChanges();
       }
     });
   }
@@ -98,6 +104,7 @@ export class ReviewPage implements OnInit {
       next: () => {
         this.isSubmitting = false;
         this.success = true;
+        this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isSubmitting = false;
@@ -108,11 +115,23 @@ export class ReviewPage implements OnInit {
         } else {
           this.error = err.error?.message || 'Failed to submit review. Please try again.';
         }
+        this.cdr.detectChanges();
       }
     });
   }
 
   goHome(): void {
-    this.router.navigate(['/']);
+    if (this.authService.isLoggedIn()) {
+      const role = this.authService.getRole();
+      if (role === 'DRIVER') {
+        this.router.navigate(['/driver/dashboard']);
+      } else if (role === 'PASSENGER') {
+        this.router.navigate(['/passenger/home']);
+      } else {
+        this.router.navigate(['/']);
+      }
+    } else {
+      this.router.navigate(['/']);
+    }
   }
 }
