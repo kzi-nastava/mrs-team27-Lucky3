@@ -16,4 +16,5 @@ public class VehicleLocationResponse {
     private double longitude;
     private Long driverId;
     private boolean available;
+    private boolean currentPanic;
 }

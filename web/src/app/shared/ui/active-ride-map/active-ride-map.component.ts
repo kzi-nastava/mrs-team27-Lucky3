@@ -37,6 +37,7 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Input() remainingRoute: MapPoint[] | null = null; // Yellow dotted (rest of route after next stop)
   @Input() completedStopIndexes: Set<number> = new Set();
   @Input() isRideInProgress: boolean = false;
+  @Input() panicActivated: boolean = false; // When true, show panic indicator on vehicle
 
   private map: L.Map | null = null;
   private driverMarker: L.Marker | null = null;
@@ -51,12 +52,21 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   private invalidateQueued = false;
   private onWindowResize = () => this.queueInvalidateSize();
 
-  // Blue circle icon for vehicle location
+  // Blue circle icon for vehicle location (normal)
   private driverIcon = L.divIcon({
     className: '',
     html: `<div style="width:16px;height:16px;border-radius:9999px;background:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,0.25);border:2px solid #fff;"></div>`,
     iconSize: [16, 16],
     iconAnchor: [8, 8]
+  });
+
+  // Red pulsing panic icon for vehicle location when panic is active
+  private panicDriverIcon = L.divIcon({
+    className: '',
+    html: `<div style="width:24px;height:24px;border-radius:9999px;background:#ef4444;box-shadow:0 0 0 8px rgba(239,68,68,0.4);border:3px solid #fff;animation:panic-pulse 1s ease-in-out infinite;"></div>
+           <style>@keyframes panic-pulse{0%,100%{box-shadow:0 0 0 8px rgba(239,68,68,0.4);transform:scale(1);}50%{box-shadow:0 0 0 16px rgba(239,68,68,0.2);transform:scale(1.1);}}</style>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
   });
 
   private startIcon = L.divIcon({
@@ -121,7 +131,7 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
       this.syncRide();
     }
     
-    if (changes['driverLocation']) this.syncDriver();
+    if (changes['driverLocation'] || changes['panicActivated']) this.syncDriver();
     
     // Always ensure approach line is on top after any sync
     if (this.approachLine) {
@@ -275,11 +285,13 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
     if (!this.map || !this.driverLocation) return;
 
     const pos: L.LatLngExpression = [this.driverLocation.latitude, this.driverLocation.longitude];
+    const icon = this.panicActivated ? this.panicDriverIcon : this.driverIcon;
 
     if (!this.driverMarker) {
-      this.driverMarker = L.marker(pos, { icon: this.driverIcon, zIndexOffset: 1000 }).addTo(this.map);
+      this.driverMarker = L.marker(pos, { icon, zIndexOffset: 1000 }).addTo(this.map);
     } else {
       this.driverMarker.setLatLng(pos);
+      this.driverMarker.setIcon(icon);
     }
   }
 }

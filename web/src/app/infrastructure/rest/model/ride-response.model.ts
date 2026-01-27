@@ -79,6 +79,7 @@ export interface RideResponse {
   
   // Additional status info
   panicPressed?: boolean;
+  panicReason?: string;
   rejectionReason?: string;
   
   // Distance tracking (updated by backend)

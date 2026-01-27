@@ -30,6 +30,7 @@ public class Vehicle {
     private int seatCount;
     private boolean babyTransport;
     private boolean petTransport;
+    private boolean currentPanic;
 
     @Embedded
     @AttributeOverrides({

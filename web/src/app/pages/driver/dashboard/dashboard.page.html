@@ -133,7 +133,8 @@
               [remainingRoute]="remainingRoute"
               [driverLocation]="driverLocation"
               [completedStopIndexes]="completedStopIndexes"
-              [isRideInProgress]="isNextRideInProgress">
+              [isRideInProgress]="isNextRideInProgress"
+              [panicActivated]="panicActivated">
             </app-active-ride-map>
             <!-- Offline overlay -->
             <div *ngIf="!isOnline && !isInactiveRequested" 

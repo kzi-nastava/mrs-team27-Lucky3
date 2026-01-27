@@ -60,6 +60,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   remainingRoute: MapPoint[] | null = null;
   completedStopIndexes: Set<number> = new Set();
   isNextRideInProgress: boolean = false;
+  panicActivated: boolean = false; // Track if current ride has panic activated
 
   private readonly destroy$ = new Subject<void>();
   private driverId: number | null = null;
@@ -163,6 +164,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.remainingRoute = null;
     this.completedStopIndexes = new Set();
     this.isNextRideInProgress = false;
+    this.panicActivated = false;
     this.futureRides = [];
     this.rawRides = [];
   }
@@ -351,6 +353,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       
       this.isNextRideInProgress = ride.status === 'IN_PROGRESS';
       this.completedStopIndexes = new Set(ride.completedStopIndexes ?? []);
+      this.panicActivated = ride.panicPressed === true;
 
       // Build rideMapData for the map component
       if (start && end) {

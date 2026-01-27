@@ -87,6 +87,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   panicReason = '';
   isPanicking = false;
   panicError = '';
+  panicActivated = false; // Track if panic is active for this ride
+  panicSuccess = false; // Track if panic was successfully triggered
 
   private driverId: number | null = null;
   private userId: number | null = null;
@@ -389,6 +391,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   closePanicModal(): void {
     if (this.isPanicking) return;
     this.showPanicModal = false;
+    this.panicSuccess = false;
   }
 
   confirmPanic(): void {
@@ -398,15 +401,20 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     this.panicError = '';
 
     this.rideService.panicRide(this.rideId, this.panicReason.trim()).subscribe({
-      next: () => {
+      next: (res) => {
         this.isPanicking = false;
-        this.showPanicModal = false;
-        // Redirect based on role
-        if (this.isDriver) {
-          this.router.navigate(['/driver/dashboard']);
-        } else {
-          this.router.navigate(['/passenger/home']);
+        this.panicActivated = true;
+        this.panicSuccess = true;
+        // Update backendRide with panic state
+        if (this.backendRide) {
+          this.backendRide.panicPressed = true;
+          this.backendRide.panicReason = this.panicReason.trim();
         }
+        // Keep modal open briefly to show success, then close
+        setTimeout(() => {
+          this.showPanicModal = false;
+          this.panicSuccess = false;
+        }, 2000);
       },
       error: (err) => {
         this.isPanicking = false;
@@ -674,6 +682,9 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     
     this.backendRide = r;
     this.rideStatus = r.status || '';
+    
+    // Update panic state from backend
+    this.panicActivated = r.panicPressed === true;
 
     // If 'departure' / 'destination' fields are null, check legacy fields or address strings
     // Backend RideResponse structure guarantees location objects have 'address' if not null.

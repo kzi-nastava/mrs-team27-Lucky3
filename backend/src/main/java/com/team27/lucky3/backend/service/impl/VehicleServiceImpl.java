@@ -39,7 +39,8 @@ public class VehicleServiceImpl implements VehicleService {
                 lat,
                 lon,
                 driverId,
-                isAvailable
+                isAvailable,
+                vehicle.isCurrentPanic()
         );
     }
 }
