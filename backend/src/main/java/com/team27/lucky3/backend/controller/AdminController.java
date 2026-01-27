@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.util.List;
 public class AdminController {
     // 2.14 Define ride price
     @PutMapping("/vehicle-prices")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> updateVehiclePrice(@Valid @RequestBody UpdateVehiclePriceRequest request) {
         // Logic to update price in DB
         return ResponseEntity.noContent().build();

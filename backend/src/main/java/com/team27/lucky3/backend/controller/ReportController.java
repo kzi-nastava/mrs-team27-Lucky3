@@ -23,6 +23,7 @@ public class ReportController {
     // 2.10 Generate reports (Admin, Driver, User)
     // Types: "RIDES", "KILOMETERS", "MONEY"
     @GetMapping("/{userId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ReportResponse> getReport(
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
@@ -40,6 +41,7 @@ public class ReportController {
 
     // Admin global report
     @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReportResponse> getGlobalReport(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,

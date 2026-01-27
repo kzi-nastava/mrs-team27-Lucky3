@@ -99,12 +99,14 @@ public class DriverController {
 
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<DriverResponse> getDriver(@PathVariable Long id) {
         DriverResponse response = driverService.getDriver(id);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<DriverChangeRequestCreated> createDriver(
             @PathVariable Long id,
             @Valid @RequestPart("request") CreateDriverRequest request,
@@ -125,6 +127,7 @@ public class DriverController {
 
     // 2.3 Profile page (registered user, driver, admin)
     @GetMapping("/{id}/vehicle")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<VehicleInformation> getDriverVehicle(@PathVariable @Min(1) Long id) {
         if (id == 404) throw new ResourceNotFoundException("Driver not found");
         VehicleInformation vehicle = new VehicleInformation();

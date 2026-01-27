@@ -23,6 +23,7 @@ public class DriverChangeRequestController {
 
     // Get all driver change requests (optionally filter by status=PENDING)
     @GetMapping()
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<com.team27.lucky3.backend.entity.DriverChangeRequest>> getDriverChangeRequests(@RequestParam(name = "status", required = false) DriverChangeStatus status) {
         List<com.team27.lucky3.backend.entity.DriverChangeRequest> requests = driverChangeRequestService.getChangeRequests(status);
 

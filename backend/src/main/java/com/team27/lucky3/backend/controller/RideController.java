@@ -51,6 +51,7 @@ public class RideController {
     // 2.9.2 Driver ride history (driver)
     // 2.9.3 Admin ride history + detailed ride view (admin)
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<RideResponse>> getRidesHistory(
             Pageable pageable,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
@@ -100,6 +101,7 @@ public class RideController {
     }
 
     @PutMapping("/{id}/panic")
+    @PreAuthorize("hasRole('DRIVER') or hasRole('PASSENGER')")
     public ResponseEntity<RideResponse> panicRide(
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody RidePanicRequest request) {
@@ -139,6 +141,7 @@ public class RideController {
 
     // 2.6.2 During ride: live tracking + inconsistency report (passengers)
     @GetMapping("/active")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RideResponse> getActiveRide(@RequestParam(required = false) @Min(1) Long userId) {
         return ResponseEntity.ok(rideService.getActiveRide(userId));
     }
