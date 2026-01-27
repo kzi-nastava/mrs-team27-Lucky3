@@ -177,4 +177,8 @@ export class DriverProfilePage {
   closeSuccessPopup() {
     this.showSuccessPopup = false;
   }
+
+  getUserImageUrl(driverId : number | undefined): string | null {
+    return driverId !== undefined ? "http://localhost:8081/api/users/" + driverId + "/profile-image" : null;
+  }
 }

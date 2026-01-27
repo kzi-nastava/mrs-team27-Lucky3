@@ -46,6 +46,7 @@
           </div>
         </div>
 
+        
         <div class="overflow-x-auto">
           <table class="min-w-[1400px] w-full text-sm">
             <thead class="bg-gray-900">
@@ -107,9 +108,7 @@
                 <td class="px-4 py-3 align-top">{{ fmtText(r.address) }}</td>
                 <!-- New image: you currently only have imageId -->
                 <td class="px-4 py-3 align-top">
-                  <span class="text-gray-300">Image ID:</span>
-                  <span class="text-gray-100 font-semibold">{{ r.imageId ?? '—' }}</span>
-                  <!-- If you have an endpoint to load by imageId, we can render <img [src]="..." /> -->
+                   <img [src]="getImageUrl(r.requestedDriverId)" alt="Avatar" class="w-10 h-10 rounded-full object-cover border-2 border-gray-700"/>
                 </td>
 
                 <!-- Vehicle fields are nested in r.vehicle -->

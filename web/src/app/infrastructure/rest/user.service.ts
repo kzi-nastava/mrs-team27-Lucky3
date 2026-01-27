@@ -141,9 +141,9 @@ export class UserService {
   }
 
   approveDriverChangeRequest(requestId: number): Observable<void> {
-    return this.http.post<void>(`${this.driveChangeRequestUrl}/${requestId}/review`, {"approve": true});
+    return this.http.put<void>(`${this.driveChangeRequestUrl}/${requestId}/review`, {"approve": true});
   }
   rejectDriverChangeRequest(requestId: number): Observable<void> {
-    return this.http.post<void>(`${this.driveChangeRequestUrl}/${requestId}/review`, {"approve": false});
+    return this.http.put<void>(`${this.driveChangeRequestUrl}/${requestId}/review`, {"approve": false});
   }
 }

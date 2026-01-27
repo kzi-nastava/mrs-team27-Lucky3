@@ -1,80 +1,56 @@
 // admin-dashboard.page.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
-import {
-  Subject,
-  of,
-  catchError,
-  finalize,
-  map,
-  shareReplay,
-  startWith,
-  switchMap,
-  tap,
-} from 'rxjs';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { finalize } from 'rxjs';
+import { FormsModule } from '@angular/forms';
 
 import { UserService, ChangeInformationResponse } from '../../../infrastructure/rest/user.service';
 
 @Component({
   selector: 'app-admin-dashboard-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './admin-dashboard.page.html',
 })
-export class AdminDashboardPage implements OnInit, OnDestroy {
+export class AdminDashboardPage implements OnInit {
   requests: ChangeInformationResponse[] = [];
   isLoading = false;
   errorMessage = '';
   name = "Admin";
-
-  private busyIds = new Set<number>();
-  private destroy$ = new Subject<void>();
-
-   private refresh$ = new Subject<void>();
-
-  requests$: Observable<ChangeInformationResponse[]> = this.refresh$.pipe(
-    startWith(void 0),
-    tap(() => { this.isLoading = true; this.errorMessage = ''; }),
-    switchMap(() =>
-      this.userService.getDriverChangeRequests().pipe(
-        // if backend ever returns Page<> etc, normalize:
-        map((res: any) => Array.isArray(res) ? res : (res?.content ?? [])),
-        catchError((err) => {
-          this.errorMessage = err?.error?.message || err?.message || 'Failed to load driver change requests.';
-          return of([]);
-        }),
-        finalize(() => { this.isLoading = false; })
-      )
-    ),
-    shareReplay(1)
-  );
-
-
-  loadRequests(): void {
-    this.refresh$.next();
-  }
+  busyIds: Set<number> = new Set<number>();
 
   constructor(private userService: UserService, 
               private cdr: ChangeDetectorRef) {}
-
+  
   ngOnInit(): void {
     this.loadRequests();
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  
-
-  isBusy(id: number): boolean {
-    return this.busyIds.has(id);
+  loadRequests(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+    
+    this.userService.getDriverChangeRequests().subscribe({
+      next: (requests) => {
+         this.requests = requests;
+         this.isLoading = false;
+         this.cdr.detectChanges();
+       },
+       error: (error) => {
+         this.errorMessage = 'Failed to load driver change requests';
+         this.isLoading = false;
+         console.error('Error loading driver change requests:', error);
+       }
+    });
   }
 
   getImageUrl(driverId : number | undefined): string | null {
+    //console.log("Getting image URL for driver ID:", driverId);
     return driverId !== undefined ? "http://localhost:8081/api/users/" + driverId + "/profile-image" : null;
+  }
+
+  isBusy(requestId: number): boolean {
+    return this.busyIds.has(requestId);
   }
 
   approve(requestId: number): void {
@@ -82,22 +58,19 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
 
     this.busyIds.add(requestId);
     this.errorMessage = '';
-
-    this.userService
-      .approveDriverChangeRequest(requestId)
-      .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => this.busyIds.delete(requestId))
-      )
-      .subscribe({
-        next: () => {
-          this.requests = this.requests.filter((r: ChangeInformationResponse) => r.id !== requestId);
-        },
-        error: (err) => {
-          this.errorMessage =
-            err?.error?.message || err?.message || 'Failed to approve request.';
-        },
-      });
+    this.userService.approveDriverChangeRequest(requestId).subscribe({
+      next: (requests) => {
+         this.isLoading = false;
+         this.cdr.detectChanges();
+          
+         this.loadRequests();
+       },
+       error: (error) => {
+         this.errorMessage = 'Failed to load driver change requests';
+         this.isLoading = false;
+         console.error('Error loading driver change requests:', error);
+       }
+    });
   }
 
   reject(requestId: number): void {
@@ -105,22 +78,19 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
 
     this.busyIds.add(requestId);
     this.errorMessage = '';
-
-    this.userService
-      .rejectDriverChangeRequest(requestId)
-      .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => this.busyIds.delete(requestId))
-      )
-      .subscribe({
-        next: () => {
-          this.requests = this.requests.filter((r: ChangeInformationResponse) => r.id !== requestId);
-        },
-        error: (err) => {
-          this.errorMessage =
-            err?.error?.message || err?.message || 'Failed to reject request.';
-        },
-      });
+    this.userService.rejectDriverChangeRequest(requestId).subscribe({
+      next: (requests) => {
+         this.isLoading = false;
+         this.cdr.detectChanges();
+          alert('Request rejected successfully.');
+         this.loadRequests();
+       },
+       error: (error) => {
+         this.errorMessage = 'Failed to load driver change requests';
+         this.isLoading = false;
+         console.error('Error loading driver change requests:', error);
+       }
+    });
   }
   // ===== Template helpers (safe even if some fields are missing) =====
   fmtBool(v: boolean | null | undefined): string {
