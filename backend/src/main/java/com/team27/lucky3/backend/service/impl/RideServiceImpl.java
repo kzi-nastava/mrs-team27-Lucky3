@@ -746,6 +746,25 @@ public class RideServiceImpl implements RideService {
         // Time-delayed Inactive Logic (same as endRide)
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
+        // Update Vehicle Status
+        if (ride.getDriver() != null) {
+            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(
+                    ride.getDriver().getId(),
+                    RideStatus.SCHEDULED,
+                    LocalDateTime.now()
+            );
+
+            Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
+            if (vehicle != null) {
+                if (!nextRides.isEmpty()) {
+                    vehicle.setStatus(VehicleStatus.BUSY);
+                } else {
+                    vehicle.setStatus(VehicleStatus.FREE);
+                }
+                vehicleRepository.save(vehicle);
+            }
+        }
+
         return mapToResponse(savedRide);
     }
 
