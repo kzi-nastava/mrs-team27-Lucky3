@@ -21,6 +21,13 @@
           <p class="text-sm mt-1" [ngClass]="workingHoursExceeded ? 'text-red-400' : 'text-gray-500'">
             Worked today: {{ workedHoursToday }} / 8h
           </p>
+          <!-- Status message when driver has scheduled rides or is inactive requested -->
+          <p *ngIf="isInactiveRequested && hasUpcomingRides" class="text-sm mt-1 text-orange-400">
+            ⚠️ You will go offline after all rides (including scheduled) are complete.
+          </p>
+          <p *ngIf="isInactiveRequested && !hasUpcomingRides" class="text-sm mt-1 text-yellow-400">
+            ⏳ You will go offline after your current ride is complete.
+          </p>
         </div>
         <div class="flex flex-col items-end gap-2">
           <div class="flex items-center gap-4">

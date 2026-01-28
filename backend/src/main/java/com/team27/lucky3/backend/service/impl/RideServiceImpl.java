@@ -48,6 +48,7 @@ public class RideServiceImpl implements RideService {
     private final PanicRepository panicRepository;
     private final VehicleRepository vehicleRepository;
     private final InconsistencyReportRepository inconsistencyReportRepository;
+    private final DriverActivitySessionRepository activitySessionRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final ReviewTokenUtils reviewTokenUtils;
@@ -601,9 +602,34 @@ public class RideServiceImpl implements RideService {
 
     private void checkAndHandleInactiveRequest(User driver) {
         if (driver != null && driver.isInactiveRequested()) {
-            driver.setActive(false);
-            driver.setInactiveRequested(false);
-            userRepository.save(driver);
+            // Check if driver has any active rides (still in progress)
+            boolean hasActiveRides = rideRepository.existsByDriverIdAndStatusIn(
+                    driver.getId(),
+                    List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS)
+            );
+            
+            // Check if driver has any upcoming rides (SCHEDULED or PENDING)
+            boolean hasUpcomingRides = rideRepository.existsByDriverIdAndStatusIn(
+                    driver.getId(),
+                    List.of(RideStatus.SCHEDULED, RideStatus.PENDING)
+            );
+            
+            if (hasActiveRides || hasUpcomingRides) {
+                // Driver still has rides to complete, keep them online with inactiveRequested
+                // Don't change anything - they stay active with inactiveRequested = true
+            } else {
+                // No more rides (active or scheduled), can go offline
+                driver.setActive(false);
+                driver.setInactiveRequested(false);
+                userRepository.save(driver);
+                
+                // End the current activity session
+                activitySessionRepository.findByDriverIdAndEndTimeIsNull(driver.getId())
+                        .ifPresent(session -> {
+                            session.setEndTime(LocalDateTime.now());
+                            activitySessionRepository.save(session);
+                        });
+            }
         }
     }
 

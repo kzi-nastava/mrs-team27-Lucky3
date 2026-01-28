@@ -122,9 +122,18 @@ public class AuthServiceImpl implements AuthService {
                     user.getId(),
                     List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS)
             );
+            
+            boolean hasUpcomingRides = rideRepository.existsByDriverIdAndStatusIn(
+                    user.getId(),
+                    List.of(RideStatus.SCHEDULED, RideStatus.PENDING)
+            );
 
             if (hasActiveRide) {
                 throw new IllegalStateException("You cannot log out because you are currently on a ride.");
+            }
+            
+            if (hasUpcomingRides) {
+                throw new IllegalStateException("You cannot log out because you have scheduled rides. Complete or cancel them first.");
             }
 
             user.setActive(false);

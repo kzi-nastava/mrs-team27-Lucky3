@@ -8,8 +8,10 @@ export interface DriverStatusResponse {
   active: boolean;
   inactiveRequested: boolean;
   hasActiveRide?: boolean;
+  hasUpcomingRides?: boolean; // SCHEDULED or PENDING rides
   workingHoursExceeded?: boolean;
   workedHoursToday?: string; // e.g. "6h 30m"
+  statusMessage?: string; // Message to display to the driver
 }
 
 export interface DriverStatsResponse {

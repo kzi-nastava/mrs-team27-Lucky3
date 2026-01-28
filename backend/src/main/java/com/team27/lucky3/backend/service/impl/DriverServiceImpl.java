@@ -72,15 +72,24 @@ public class DriverServiceImpl implements DriverService {
             session.setStartTime(LocalDateTime.now());
             activitySessionRepository.save(session);
         } else {
-            // Turning OFF
+            // Turning OFF - check for any rides that prevent going offline
             boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
                     driverId, List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS));
+            boolean hasUpcomingRides = rideRepository.existsByDriverIdAndStatusIn(
+                    driverId, List.of(RideStatus.SCHEDULED, RideStatus.PENDING));
 
             if (hasActiveRide) {
-                // Spec 2.2.1: If inactive requested during the ride, defer it
+                // Has active ride - set inactiveRequested so driver goes offline after ALL rides complete
                 driver.setInactiveRequested(true);
+                // Note: checkAndHandleInactiveRequest in RideServiceImpl will check for upcoming rides
+                // when the ride ends and keep driver online if there are more rides
+            } else if (hasUpcomingRides) {
+                // No active ride but has scheduled/pending rides - cannot go offline
+                throw new IllegalStateException("Cannot go offline: You have scheduled rides. Complete or cancel them first.");
             } else {
+                // No rides at all - can go offline
                 driver.setActive(false);
+                driver.setInactiveRequested(false);
                 
                 // End the current activity session
                 activitySessionRepository.findByDriverIdAndEndTimeIsNull(driverId)
@@ -125,6 +134,9 @@ public class DriverServiceImpl implements DriverService {
 
         boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
                 driverId, List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS));
+        
+        boolean hasUpcomingRides = rideRepository.existsByDriverIdAndStatusIn(
+                driverId, List.of(RideStatus.SCHEDULED, RideStatus.PENDING));
 
         // Calculate working hours in last 24h
         LocalDateTime since = LocalDateTime.now().minusHours(24);
@@ -142,14 +154,24 @@ public class DriverServiceImpl implements DriverService {
         long hours = totalSeconds / 3600;
         long minutes = (totalSeconds % 3600) / 60;
         String workedHoursToday = hours + "h " + minutes + "m";
+        
+        // Build status message
+        String statusMessage = null;
+        if (driver.isInactiveRequested() && hasUpcomingRides) {
+            statusMessage = "You cannot go offline because you have scheduled rides. Complete or cancel them first.";
+        } else if (driver.isInactiveRequested() && hasActiveRide) {
+            statusMessage = "You will go offline after your current ride is complete.";
+        }
 
         return new DriverStatusResponse(
                 driver.getId(),
                 driver.isActive(),
                 driver.isInactiveRequested(),
                 hasActiveRide,
+                hasUpcomingRides,
                 workingHoursExceeded,
-                workedHoursToday
+                workedHoursToday,
+                statusMessage
         );
     }
 

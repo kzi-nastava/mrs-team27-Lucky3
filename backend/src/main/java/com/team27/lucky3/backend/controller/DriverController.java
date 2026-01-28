@@ -45,13 +45,8 @@ public class DriverController {
             @PathVariable Long id,
             @RequestParam boolean active) {
         User driver = driverService.toggleActivity(id, active);
-        boolean hasActiveRide = driverService.hasActiveRide(id);
-        DriverStatusResponse response = new DriverStatusResponse(
-                driver.getId(),
-                driver.isActive(),
-                driver.isInactiveRequested(),
-                hasActiveRide
-        );
+        // Return full status after toggle
+        DriverStatusResponse response = driverService.getDriverStatus(id);
         return ResponseEntity.ok(response);
     }
 

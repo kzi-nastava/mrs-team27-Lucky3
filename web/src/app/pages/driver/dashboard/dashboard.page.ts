@@ -43,8 +43,10 @@ export class DashboardPage implements OnInit, OnDestroy {
   isOnline: boolean = false;
   isStatusLoading: boolean = false;
   isInactiveRequested: boolean = false;  // Track when driver requested to go offline but has active ride
+  hasUpcomingRides: boolean = false;  // Track if driver has scheduled/pending rides
   workingHoursExceeded: boolean = false;  // Track if 8h limit exceeded
   workedHoursToday: string = '0h 0m';      // Current worked hours
+  statusMessage: string | null = null;    // Status message from backend
   driverName: string = 'James';
 
   // Toast notification
@@ -141,8 +143,10 @@ export class DashboardPage implements OnInit, OnDestroy {
         next: (status) => {
           this.isOnline = status.active;
           this.isInactiveRequested = status.inactiveRequested;
+          this.hasUpcomingRides = status.hasUpcomingRides || false;
           this.workingHoursExceeded = status.workingHoursExceeded || false;
           this.workedHoursToday = status.workedHoursToday || '0h 0m';
+          this.statusMessage = status.statusMessage || null;
           
           // If driver is truly offline (not active and not inactive requested), clear ride data
           if (!status.active && !status.inactiveRequested) {
@@ -155,8 +159,10 @@ export class DashboardPage implements OnInit, OnDestroy {
           // Default to offline on error
           this.isOnline = false;
           this.isInactiveRequested = false;
+          this.hasUpcomingRides = false;
           this.workingHoursExceeded = false;
           this.workedHoursToday = '0h 0m';
+          this.statusMessage = null;
           this.clearRideData();
           this.cdr.markForCheck();
         }
@@ -218,13 +224,17 @@ export class DashboardPage implements OnInit, OnDestroy {
         next: (response) => {
           this.isOnline = response.active;
           this.isInactiveRequested = response.inactiveRequested;
+          this.hasUpcomingRides = response.hasUpcomingRides || false;
           this.workingHoursExceeded = response.workingHoursExceeded || false;
           this.workedHoursToday = response.workedHoursToday || '0h 0m';
+          this.statusMessage = response.statusMessage || null;
           this.isStatusLoading = false;
           
-          if (response.inactiveRequested) {
-            // Driver requested to go offline but has active ride
-            // Keep showing as online until ride completes
+          if (response.inactiveRequested && response.hasUpcomingRides) {
+            // Driver has active ride AND upcoming rides - will stay online until all rides complete
+            this.displayToast('You have an active ride and scheduled rides. You will go offline once all rides are complete.', 'warning');
+          } else if (response.inactiveRequested) {
+            // Driver requested to go offline but has active ride only
             this.displayToast('You have an active ride. You will go offline once the ride is complete.', 'warning');
           } else if (response.active) {
             this.displayToast('You are now online and available for rides.', 'success');
@@ -243,9 +253,14 @@ export class DashboardPage implements OnInit, OnDestroy {
           this.isOnline = previousStatus;
           this.isStatusLoading = false;
           
-          // Check for 8-hour limit error
           const errorMessage = err.message || '';
-          if (errorMessage.includes('8-hour') || errorMessage.includes('working limit')) {
+          
+          // Check for scheduled rides error
+          if (errorMessage.includes('scheduled rides') || errorMessage.includes('upcoming')) {
+            this.displayToast('Cannot go offline: You have scheduled rides. Complete or cancel them first.', 'error');
+          }
+          // Check for 8-hour limit error
+          else if (errorMessage.includes('8-hour') || errorMessage.includes('working limit')) {
             this.workingHoursExceeded = true;
             this.displayToast('Cannot go online: You have exceeded the 8-hour working limit. Please rest before continuing.', 'error');
           } else {
