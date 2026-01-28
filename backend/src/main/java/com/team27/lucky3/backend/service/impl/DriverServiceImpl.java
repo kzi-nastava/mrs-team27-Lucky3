@@ -126,11 +126,30 @@ public class DriverServiceImpl implements DriverService {
         boolean hasActiveRide = rideRepository.existsByDriverIdAndStatusIn(
                 driverId, List.of(RideStatus.ACCEPTED, RideStatus.ACTIVE, RideStatus.IN_PROGRESS));
 
+        // Calculate working hours in last 24h
+        LocalDateTime since = LocalDateTime.now().minusHours(24);
+        List<DriverActivitySession> sessions = activitySessionRepository.findSessionsSince(driverId, since);
+        
+        long totalSeconds = 0;
+        LocalDateTime now = LocalDateTime.now();
+        for (DriverActivitySession session : sessions) {
+            LocalDateTime effectiveStart = session.getStartTime().isBefore(since) ? since : session.getStartTime();
+            LocalDateTime effectiveEnd = session.getEndTime() != null ? session.getEndTime() : now;
+            totalSeconds += Duration.between(effectiveStart, effectiveEnd).getSeconds();
+        }
+        
+        boolean workingHoursExceeded = totalSeconds > 28800; // 8 hours
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        String workedHoursToday = hours + "h " + minutes + "m";
+
         return new DriverStatusResponse(
                 driver.getId(),
                 driver.isActive(),
                 driver.isInactiveRequested(),
-                hasActiveRide
+                hasActiveRide,
+                workingHoursExceeded,
+                workedHoursToday
         );
     }
 

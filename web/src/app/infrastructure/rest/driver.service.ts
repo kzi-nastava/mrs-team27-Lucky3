@@ -7,6 +7,9 @@ export interface DriverStatusResponse {
   driverId: number;
   active: boolean;
   inactiveRequested: boolean;
+  hasActiveRide?: boolean;
+  workingHoursExceeded?: boolean;
+  workedHoursToday?: string; // e.g. "6h 30m"
 }
 
 export interface DriverStatsResponse {

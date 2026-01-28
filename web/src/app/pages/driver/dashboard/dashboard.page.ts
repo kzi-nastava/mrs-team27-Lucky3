@@ -43,6 +43,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   isOnline: boolean = false;
   isStatusLoading: boolean = false;
   isInactiveRequested: boolean = false;  // Track when driver requested to go offline but has active ride
+  workingHoursExceeded: boolean = false;  // Track if 8h limit exceeded
+  workedHoursToday: string = '0h 0m';      // Current worked hours
   driverName: string = 'James';
 
   // Toast notification
@@ -139,6 +141,8 @@ export class DashboardPage implements OnInit, OnDestroy {
         next: (status) => {
           this.isOnline = status.active;
           this.isInactiveRequested = status.inactiveRequested;
+          this.workingHoursExceeded = status.workingHoursExceeded || false;
+          this.workedHoursToday = status.workedHoursToday || '0h 0m';
           
           // If driver is truly offline (not active and not inactive requested), clear ride data
           if (!status.active && !status.inactiveRequested) {
@@ -151,6 +155,8 @@ export class DashboardPage implements OnInit, OnDestroy {
           // Default to offline on error
           this.isOnline = false;
           this.isInactiveRequested = false;
+          this.workingHoursExceeded = false;
+          this.workedHoursToday = '0h 0m';
           this.clearRideData();
           this.cdr.markForCheck();
         }
@@ -197,6 +203,12 @@ export class DashboardPage implements OnInit, OnDestroy {
       return;
     }
 
+    // Prevent going online if working hours exceeded (extra frontend safeguard)
+    if (newStatus && this.workingHoursExceeded) {
+      this.displayToast('Cannot go online: You have exceeded the 8-hour working limit in the last 24 hours. Please rest before continuing.', 'error');
+      return;
+    }
+
     this.isStatusLoading = true;
     const previousStatus = this.isOnline;
 
@@ -206,6 +218,8 @@ export class DashboardPage implements OnInit, OnDestroy {
         next: (response) => {
           this.isOnline = response.active;
           this.isInactiveRequested = response.inactiveRequested;
+          this.workingHoursExceeded = response.workingHoursExceeded || false;
+          this.workedHoursToday = response.workedHoursToday || '0h 0m';
           this.isStatusLoading = false;
           
           if (response.inactiveRequested) {
@@ -228,7 +242,16 @@ export class DashboardPage implements OnInit, OnDestroy {
           // Revert to previous status
           this.isOnline = previousStatus;
           this.isStatusLoading = false;
-          this.displayToast(err.message || 'Failed to change status. Please try again.', 'error');
+          
+          // Check for 8-hour limit error
+          const errorMessage = err.message || '';
+          if (errorMessage.includes('8-hour') || errorMessage.includes('working limit')) {
+            this.workingHoursExceeded = true;
+            this.displayToast('Cannot go online: You have exceeded the 8-hour working limit. Please rest before continuing.', 'error');
+          } else {
+            this.displayToast(errorMessage || 'Failed to change status. Please try again.', 'error');
+          }
+          
           this.cdr.markForCheck();
         }
       });
