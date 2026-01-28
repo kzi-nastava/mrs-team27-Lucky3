@@ -13,6 +13,23 @@
         [panicActivated]="panicActivated">
       </app-active-ride-map>
 
+      <app-toast 
+        *ngIf="showSuccessToast"
+        [message]="successMessage"
+        type="success"
+        [show]="showSuccessToast"
+        (close)="onToastClose('success')">
+      </app-toast>
+
+      <!-- Error Toast -->
+      <app-toast 
+        *ngIf="showErrorToast"
+        [message]="errorMessage"
+        type="error"
+        [show]="showErrorToast"
+        (close)="onToastClose('error')">
+      </app-toast>
+
       <div class="absolute top-4 left-4 z-[2000] flex items-center gap-2 pointer-events-auto">
         <button (click)="goBack()" type="button" class="bg-gray-900/80 hover:bg-gray-900 text-gray-200 border border-gray-800 backdrop-blur px-3 py-2 rounded-lg text-sm">
           Back
