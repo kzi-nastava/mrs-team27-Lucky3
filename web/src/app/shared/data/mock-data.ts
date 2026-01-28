@@ -7,8 +7,9 @@ export interface Ride {
   status: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Cancelled';
   fare: number;
   distance: number;
-  pickup: { address: string };
-  destination: { address: string };
+  pickup: { address: string; latitude?: number; longitude?: number };
+  destination: { address: string; latitude?: number; longitude?: number };
+  stops?: { address: string; latitude?: number; longitude?: number }[];
   hasPanic?: boolean;
   passengerName?: string;
   passengerCount?: number;
