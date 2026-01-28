@@ -48,6 +48,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
   stats = {
     totalEarnings: 0,
     earnings: 0,
+    finishedRides: 0,
     totalRides: 0,
     avgRating: 0,
     avgVehicleRating: 0,
@@ -265,13 +266,14 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
   }
 
   calculateStats(rides: RideResponse[]) {
-    // Only count completed rides for earnings and distance
+    // Only count completed (FINISHED) rides for earnings and distance
     const completedRides = rides.filter(r => r.status === 'FINISHED');
 
     // Preserve ratings (loaded from getStats) while updating ride-based stats
     this.stats = {
       totalEarnings: completedRides.reduce((sum, r) => sum + (r.totalCost ?? 0), 0),
       earnings: 0,
+      finishedRides: completedRides.length,
       totalRides: rides.length,
       avgRating: this.stats.avgRating, // Preserve from getStats
       avgVehicleRating: this.stats.avgVehicleRating, // Preserve from getStats
