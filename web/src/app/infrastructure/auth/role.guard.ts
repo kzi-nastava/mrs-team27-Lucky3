@@ -14,6 +14,6 @@ export const roleGuard: CanActivateFn = (route, state): boolean | UrlTree => {
     return true;
   }
 
-  // If wrong role, redirect to home or forbidden
-  return router.createUrlTree(['/home']);
+  // If wrong role, redirect to 404 page
+  return router.createUrlTree(['/404']);
 };

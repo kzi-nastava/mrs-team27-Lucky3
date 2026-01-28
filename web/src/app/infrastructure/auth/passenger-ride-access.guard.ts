@@ -19,7 +19,8 @@ export const passengerRideAccessGuard: CanActivateFn = (route, state) => {
   }
 
   if (role !== 'PASSENGER') {
-    router.navigate(['/passenger/home']);
+    // Wrong role - redirect to 404
+    router.navigate(['/404']);
     return false;
   }
 

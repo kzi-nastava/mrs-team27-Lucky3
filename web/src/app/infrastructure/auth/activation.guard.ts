@@ -10,6 +10,6 @@ export const activationGuard: CanActivateFn = (route) => {
     return true;
   }
 
-  // If no token is provided (e.g. user went to /activate directly), redirect to login
-  return router.createUrlTree(['/login']);
+  // If no token is provided (e.g. user went to /activate directly), redirect to 404
+  return router.createUrlTree(['/404']);
 };

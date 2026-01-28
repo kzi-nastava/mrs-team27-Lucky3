@@ -489,40 +489,7 @@ public class DataInitializer implements CommandLineRunner {
         session1.setEndTime(null); // Still active
         driverActivitySessionRepository.save(session1);
 
-        // Driver 1: Yesterday's session (Ended more than 24h ago to not count towards today's limit)
-        DriverActivitySession session2 = new DriverActivitySession();
-        session2.setDriver(driver);
-        session2.setStartTime(LocalDateTime.now().minusDays(1).withHour(9).withMinute(0));
-        session2.setEndTime(LocalDateTime.now().minusDays(1).withHour(17).withMinute(0));
-        driverActivitySessionRepository.save(session2);
-
-        // Driver 1: 2 days ago session
-        DriverActivitySession session3 = new DriverActivitySession();
-        session3.setDriver(driver);
-        session3.setStartTime(LocalDateTime.now().minusDays(2).withHour(10).withMinute(0));
-        session3.setEndTime(LocalDateTime.now().minusDays(2).withHour(18).withMinute(0));
-        driverActivitySessionRepository.save(session3);
-
-        // Driver 2: Completed session today (Ended 1 hour ago, 6 hours total)
-        DriverActivitySession session4 = new DriverActivitySession();
-        session4.setDriver(driver2);
-        session4.setStartTime(LocalDateTime.now().minusHours(7));
-        session4.setEndTime(LocalDateTime.now().minusHours(1));
-        driverActivitySessionRepository.save(session4);
-
-        // Driver 2: 3 days ago session (for the rideFinished3)
-        DriverActivitySession session5 = new DriverActivitySession();
-        session5.setDriver(driver2);
-        session5.setStartTime(LocalDateTime.now().minusDays(3).withHour(8).withMinute(0));
-        session5.setEndTime(LocalDateTime.now().minusDays(3).withHour(16).withMinute(0));
-        driverActivitySessionRepository.save(session5);
-
-        // Driver 2: 5 days ago session (for panic ride)
-        DriverActivitySession session6 = new DriverActivitySession();
-        session6.setDriver(driver2);
-        session6.setStartTime(LocalDateTime.now().minusDays(5).withHour(7).withMinute(0));
-        session6.setEndTime(LocalDateTime.now().minusDays(5).withHour(15).withMinute(0));
-        driverActivitySessionRepository.save(session6);
+        
 
         // ==========================================
         // 9. Create Panic records (historical)

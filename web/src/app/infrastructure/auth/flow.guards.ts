@@ -12,8 +12,8 @@ export const registerVerificationGuard: CanActivateFn = () => {
     return true;
   }
 
-  // If accessed directly, redirect back to register
-  return router.createUrlTree(['/register']);
+  // If accessed directly, redirect to 404
+  return router.createUrlTree(['/404']);
 };
 
 // Ensures the user has just sent a reset link before seeing the confirmation page
@@ -25,7 +25,7 @@ export const resetPasswordSentGuard: CanActivateFn = () => {
     return true;
   }
 
-  return router.createUrlTree(['/forgot-password']);
+  return router.createUrlTree(['/404']);
 };
 
 // Ensures the user has just successfully reset their password before seeing the success page
@@ -37,5 +37,5 @@ export const resetPasswordSuccessGuard: CanActivateFn = () => {
     return true;
   }
 
-  return router.createUrlTree(['/login']);
+  return router.createUrlTree(['/404']);
 };

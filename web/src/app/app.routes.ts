@@ -17,6 +17,7 @@ import { AdminDashboardPage } from './pages/admin/dashboard/admin-dashboard.page
 import { HomePage } from './pages/home.page/home.page';
 import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
+import { noAuthGuard } from './infrastructure/auth/no-auth.guard';
 import { ActiveRidePage } from './shared/active-ride/active-ride.page';
 import { AdminDriversPage } from './pages/admin/drivers/admin-drivers.page';
 import { CreateDriverComponent } from './account-control/create-driver/create-driver.component';
@@ -32,67 +33,75 @@ import { FavoritePageComponent } from './pages/passenger/favorite-page/favorite-
 import { ReviewPage } from './pages/review/review.page';
 import { reviewGuard } from './infrastructure/auth/review.guard';
 import { AdminPanicPage } from './pages/admin/panic/admin-panic.page';
+import { NotFoundPage } from './pages/not-found/not-found.page';
 
 export const routes: Routes = [
+  // --- GUEST-ONLY ROUTES (redirect to dashboard if logged in) ---
   {
     path: '',
     component: HomePage,
-    pathMatch: 'full'
+    pathMatch: 'full',
+    canActivate: [noAuthGuard]
   },
   {
     path: 'home',
-    component: HomePage
+    component: HomePage,
+    canActivate: [noAuthGuard]
   },
   {
     path: 'login',
-    component: LoginComponent
+    component: LoginComponent,
+    canActivate: [noAuthGuard]
   },
   {
     path: 'register',
-    component: RegisterComponent
+    component: RegisterComponent,
+    canActivate: [noAuthGuard]
   },
   {
     path: 'forgot-password',
-    component: ForgotPasswordComponent
+    component: ForgotPasswordComponent,
+    canActivate: [noAuthGuard]
   },
   {
     path: 'reset-password-sent',
     component: ResetPasswordSentComponent,
-    canActivate: [resetPasswordSentGuard]
+    canActivate: [noAuthGuard, resetPasswordSentGuard]
   },
   {
     path: 'reset-password',
     component: ResetPasswordComponent,
-    canActivate: [resetPasswordTokenGuard]
+    canActivate: [noAuthGuard, resetPasswordTokenGuard]
   },
   {
     path: 'reset-password/:token',
     component: ResetPasswordComponent,
-    canActivate: [resetPasswordTokenGuard]
+    canActivate: [noAuthGuard, resetPasswordTokenGuard]
   },
   {
     path: 'reset-password-success',
     component: ResetPasswordSuccessComponent,
-    canActivate: [resetPasswordSuccessGuard]
+    canActivate: [noAuthGuard, resetPasswordSuccessGuard]
   },
   {
     path: 'register-verification-sent',
     component: RegisterVerificationSentComponent,
-    canActivate: [registerVerificationGuard]
+    canActivate: [noAuthGuard, registerVerificationGuard]
   },
   {
     path: 'driver/set-password',
-    component: DriverSetPasswordComponent
+    component: DriverSetPasswordComponent,
+    canActivate: [noAuthGuard]
   },
   {
     path: 'activate/:token',
     component: ActivationSuccessComponent,
-    canActivate: [activationGuard]
+    canActivate: [noAuthGuard, activationGuard]
   },
   {
     path: 'activate',
     component: ActivationSuccessComponent,
-    canActivate: [activationGuard]
+    canActivate: [noAuthGuard, activationGuard]
   },
 
   // --- REVIEW PAGE (PUBLIC - TOKEN BASED) ---
@@ -196,10 +205,14 @@ export const routes: Routes = [
     data: { roles: ['DRIVER'] }
   },
 
-  // --- DEFAULT ROUTE ---
+  // --- 404 NOT FOUND ROUTE ---
+  {
+    path: '404',
+    component: NotFoundPage
+  },
+  // --- WILDCARD ROUTE (must be last) ---
   {
     path: '**',
-    redirectTo: '',
-    pathMatch: 'full'
+    component: NotFoundPage
   }
 ];

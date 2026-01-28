@@ -14,15 +14,13 @@ export const rideAccessGuard: CanActivateFn = (route, state) => {
   const role = authService.getRole();
 
   if (!userId || role !== 'DRIVER') {
-    // If not a driver or not logged in, redirect to login or home
-    // But per requirements, "If the user is not the assigned driver, redirect them to /driver/dashboard."
-    // If not logged in at all, probably login.
+    // If not a driver or not logged in, redirect appropriately
     if (!userId) {
         router.navigate(['/login']);
         return false;
     }
-    // If logged in but not driver?
-    router.navigate(['/driver/dashboard']);
+    // If logged in but not driver - redirect to 404
+    router.navigate(['/404']);
     return false;
   }
 

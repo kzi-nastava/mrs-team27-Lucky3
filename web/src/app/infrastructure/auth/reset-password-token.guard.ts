@@ -9,9 +9,7 @@ export const resetPasswordTokenGuard: CanActivateFn = (route) => {
   const token = (tokenFromParam || tokenFromQuery || '').trim();
 
   if (!token) {
-    return router.createUrlTree(['/forgot-password'], {
-      queryParams: { reason: 'missing-token' }
-    });
+    return router.createUrlTree(['/404']);
   }
 
   // Let the component validate the token with the backend. This allows the reset-password
