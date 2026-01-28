@@ -79,13 +79,13 @@ public class ImageServiceImpl implements ImageService {
                 Files.copy(defaultAvatar.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            // Create and persist a new Image record for default avatar
+            // Return a transient Image object (not persisted) to avoid read-only transaction issues
             Image image = new Image();
             image.setFileName("default-avatar.png");
             image.setContentType(MediaType.IMAGE_PNG_VALUE);
             image.setSize(Files.size(targetLocation));
             image.setData(null); // No data stored in DB
-            return imageRepository.save(image);
+            return image; // Don't save - just return transient object
         } catch (IOException e) {
             throw new IllegalStateException("Cannot load default avatar image", e);
         }
