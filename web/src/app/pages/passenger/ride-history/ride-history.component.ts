@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RideResponse, RideStatus } from '../../../infrastructure/rest/model/ride-response.model';
-import { RidesTableComponent } from '../../../shared/rides/rides-table/rides-table.component';
+import { RidesTableComponent, RideSortField } from '../../../shared/rides/rides-table/rides-table.component';
 import { RouterModule } from '@angular/router';
 import { RideService } from '../../../infrastructure/rest/ride.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
@@ -23,7 +23,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
   
   dateFilter: string = '';
   filter: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Cancelled' = 'all';
-  sortField: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers' = 'startDate';
+  sortField: RideSortField = 'startTime';
   timeFilter: 'today' | 'week' | 'month' | 'all' = 'all';
   sortDirection: 'asc' | 'desc' = 'desc';
   
@@ -105,7 +105,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
     this.sortAndFilterRides();
   }
 
-  handleSort(field: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers') {
+  handleSort(field: RideSortField) {
     if (this.sortField === field) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
@@ -143,11 +143,11 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
       let bValue: any;
 
       switch (this.sortField) {
-        case 'startDate':
+        case 'startTime':
           aValue = new Date(a.startedAt || a.requestedAt).getTime();
           bValue = new Date(b.startedAt || b.requestedAt).getTime();
           break;
-        case 'endDate':
+        case 'endTime':
           aValue = a.completedAt ? new Date(a.completedAt).getTime() : 0;
           bValue = b.completedAt ? new Date(b.completedAt).getTime() : 0;
           break;
@@ -155,13 +155,17 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
           aValue = a.distance;
           bValue = b.distance;
           break;
-        case 'route':
+        case 'departure':
           aValue = a.pickup.address + a.destination.address;
           bValue = b.pickup.address + b.destination.address;
           break;
-        case 'passengers':
-          aValue = 1;
-          bValue = 1;
+        case 'passengerCount':
+          aValue = a.passengerCount ?? 1;
+          bValue = b.passengerCount ?? 1;
+          break;
+        case 'totalCost':
+          aValue = a.fare ?? 0;
+          bValue = b.fare ?? 0;
           break;
         default:
           return 0;
