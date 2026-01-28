@@ -482,14 +482,13 @@ public class DataInitializer implements CommandLineRunner {
         // 8. Create Driver Activity Sessions
         // ==========================================
 
-        // Driver 1: Currently active session (since 4 hours ago)
+        // Driver 1: Currently active session (since 2h 23m ago - keeps under 5h limit)
         DriverActivitySession session1 = new DriverActivitySession();
         session1.setDriver(driver);
-        session1.setStartTime(LocalDateTime.now().minusHours(4));
+        session1.setStartTime(LocalDateTime.now().minusHours(2).minusMinutes(23));
         session1.setEndTime(null); // Still active
         driverActivitySessionRepository.save(session1);
 
-        
 
         // ==========================================
         // 9. Create Panic records (historical)
