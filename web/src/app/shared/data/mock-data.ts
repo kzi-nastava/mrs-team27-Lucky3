@@ -1,3 +1,10 @@
+export interface RidePassenger {
+  id?: number;
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface Ride {
   id: string;
   driverId: string;
@@ -13,6 +20,7 @@ export interface Ride {
   hasPanic?: boolean;
   passengerName?: string;
   passengerCount?: number;
+  passengers?: RidePassenger[];
   cancelledBy?: 'passenger' | 'driver';
   cancellationReason?: string;
 }

@@ -65,6 +65,18 @@ export class RideDetails implements OnInit {
     const endLoc = r.destination ?? r.endLocation;
     const stops = r.stops ?? [];
 
+    // Map passengers from backend with full details
+    const passengers = (r.passengers ?? []).map(p => ({
+      id: p.id,
+      name: [p.name, p.surname].filter(Boolean).join(' ') || 'Unknown',
+      email: p.email,
+      phone: (p as any).phoneNumber || (p as any).phone
+    }));
+
+    // Cap distance to 2 decimal places
+    const rawDistance = r.distanceKm ?? r.distanceTraveled ?? 0;
+    const distance = Math.round(rawDistance * 100) / 100;
+
     return {
       id: String(r.id),
       driverId: String(r.driver?.id ?? r.driverId),
@@ -79,7 +91,7 @@ export class RideDetails implements OnInit {
               r.status === 'ACCEPTED' ? 'Accepted' :
               r.status === 'REJECTED' ? 'Rejected' : 'all',
       fare: r.totalCost ?? r.estimatedCost ?? 0,
-      distance: r.distanceKm ?? 0,
+      distance,
       pickup: { 
         address: startLoc?.address ?? '—',
         latitude: startLoc?.latitude,
@@ -96,8 +108,9 @@ export class RideDetails implements OnInit {
         longitude: s.longitude
       })),
       hasPanic: r.panicPressed,
-      passengerName: r.passengers?.[0]?.name ?? 'Unknown',
-      passengerCount: r.passengers?.length ?? 1,
+      passengerName: passengers[0]?.name ?? 'Unknown',
+      passengerCount: passengers.length || 1,
+      passengers,
       cancelledBy: r.status === 'CANCELLED_BY_DRIVER' ? 'driver' : 
                    r.status === 'CANCELLED_BY_PASSENGER' ? 'passenger' : 'driver',
       cancellationReason: r.rejectionReason

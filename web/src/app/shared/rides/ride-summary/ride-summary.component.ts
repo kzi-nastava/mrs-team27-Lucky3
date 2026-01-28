@@ -38,4 +38,10 @@ export class RideSummaryComponent {
       hour12: true
     });
   }
+
+  formatDistance(distance: number): string {
+    if (distance == null || !Number.isFinite(distance)) return '0';
+    // Cap to 0-2 decimal places (no trailing zeros)
+    return Number(distance.toFixed(2)).toString();
+  }
 }

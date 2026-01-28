@@ -21,15 +21,7 @@
 
     <ng-container *ngIf="ride.status !== 'Cancelled'">
       <div class="relative flex gap-4">
-        <div class="w-3 h-3 rounded-full bg-gray-700 mt-1.5 z-10"></div>
-        <div>
-          <p class="text-value">Driver Accepted</p>
-          <p class="text-label">{{ formatDate(ride.requestedAt) }}, {{ formatTime(ride.requestedAt) }}</p>
-        </div>
-      </div>
-
-      <div class="relative flex gap-4">
-        <div class="w-3 h-3 rounded-full bg-gray-700 mt-1.5 z-10"></div>
+        <div class="w-3 h-3 rounded-full bg-yellow-500 mt-1.5 z-10"></div>
         <div>
           <p class="text-value">Ride Started</p>
           <p class="text-label">{{ formatDate(ride.startedAt) }}, {{ formatTime(ride.startedAt) }}</p>
@@ -37,7 +29,7 @@
       </div>
 
       <div class="relative flex gap-4">
-        <div class="w-3 h-3 rounded-full bg-gray-700 mt-1.5 z-10"></div>
+        <div class="w-3 h-3 rounded-full bg-green-500 mt-1.5 z-10"></div>
         <div>
           <p class="text-value">Ride Completed</p>
           <p class="text-label">{{ formatDate(ride.completedAt) }}, {{ formatTime(ride.completedAt) }}</p>
