@@ -12,11 +12,13 @@ import { DriverService } from '../../infrastructure/rest/driver.service';
 import { CreateRideRequest } from '../../infrastructure/rest/model/create-ride.model';
 import { RideResponse } from '../../infrastructure/rest/model/ride-response.model';
 import { environment } from '../../../env/environment';
+import { joinAllInternals } from 'rxjs/internal/operators/joinAllInternals';
+import { ToastComponent } from '../ui/toast/toast.component';
 
 @Component({
   selector: 'app-active-ride-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ActiveRideMapComponent],
+  imports: [CommonModule, FormsModule, ActiveRideMapComponent, ToastComponent],
   templateUrl: './active-ride.page.html',
   styleUrl: './active-ride.page.css'
 })
@@ -36,6 +38,11 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   approachRoute: MapPoint[] | null = null; // Blue line (vehicle to next stop)
   remainingRoute: MapPoint[] | null = null; // Yellow dotted (rest of route)
   driverLocation: MapPoint | null = null;
+
+  showSuccessToast = false;
+  showErrorToast = false;
+  successMessage = '';
+  errorMessage = '';
 
   // Live metrics
   private startedAtMs = Date.now();
@@ -253,19 +260,32 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     return Math.max(0, this.getEstimatedTotalRsd() - this.currentCost);
   }
 
+  onToastClose(type: 'success' | 'error'): void {
+    if (type === 'success') this.showSuccessToast = false;
+    else this.showErrorToast = false;
+  }
 
   startRide(): void {
     if (!this.rideId) return;
     this.rideService.startRide(this.rideId).subscribe({
-      next: (r) => {
-        void this.applyRideResponse(r);
-        this.startedAtMs = Date.now(); // Reset start time for metric calculation
-        this.distanceTraveledKm = 0; // Reset distance traveled
-        this.lastDriverLocation = this.driverLocation ? { ...this.driverLocation } : null; // Set initial location
-      },
-      error: (err) => console.error('Failed to start ride', err)
+        next: (r) => {
+            void this.applyRideResponse(r);
+            this.startedAtMs = Date.now();
+            this.distanceTraveledKm = 0;
+            this.lastDriverLocation = this.driverLocation ? { ...this.driverLocation } : null;
+            
+            // Success confirmation
+            this.successMessage = 'Ride started successfully!';
+            this.showSuccessToast = true;
+        },
+        error: (err) => {
+            this.errorMessage = err.error?.message || err.message || 'Failed to start ride';
+            this.showErrorToast = true;
+            console.error('Failed to start ride', err);
+        }
     });
-  }
+}
+
 
   openCancelModal(): void {
     this.cancelRideError = '';
