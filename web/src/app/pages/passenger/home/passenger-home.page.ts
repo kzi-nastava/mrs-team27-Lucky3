@@ -331,6 +331,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
         }
       };
 
+      console.log("Created Ride Request:", request);
       // Call Backend
       this.rideService.orderRide(request).subscribe({
         next: (response) => {

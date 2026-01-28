@@ -433,10 +433,16 @@ public class RideServiceImpl implements RideService {
         if(ride.getStatus() == RideStatus.FINISHED){
             throw new IllegalStateException("Ride is already finished");
         }
-        if (ride.getStatus() != RideStatus.ACCEPTED) {
+        if (ride.getStatus() != RideStatus.ACCEPTED && ride.getStatus()!= RideStatus.SCHEDULED && ride.getStatus()!= RideStatus.PENDING) {
             throw new IllegalStateException("Ride must be accepted before starting");
         }
 
+        Vehicle closestVehicle = null;
+        if (ride.getDriver() != null) {
+            closestVehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
+            closestVehicle.setStatus(VehicleStatus.BUSY);
+            vehicleRepository.save(closestVehicle);
+        }
         ride.setStartTime(LocalDateTime.now());
         ride.setStatus(RideStatus.IN_PROGRESS); // or ACTIVE based on enum
         Ride savedRide = rideRepository.save(ride);
