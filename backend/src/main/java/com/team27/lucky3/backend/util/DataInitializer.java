@@ -482,31 +482,31 @@ public class DataInitializer implements CommandLineRunner {
         // 8. Create Driver Activity Sessions
         // ==========================================
 
-        // Driver 1: Currently active session (since 4 hours ago)
+        // Driver 1: Currently active session (since 2h 23m ago - keeps under 5h limit)
         DriverActivitySession session1 = new DriverActivitySession();
         session1.setDriver(driver);
-        session1.setStartTime(LocalDateTime.now().minusHours(4));
+        session1.setStartTime(LocalDateTime.now().minusHours(2).minusMinutes(23));
         session1.setEndTime(null); // Still active
         driverActivitySessionRepository.save(session1);
 
-        // Driver 1: Yesterday's session (Ended more than 24h ago to not count towards today's limit)
+        // Driver 1: Old session (2 days ago - outside 24h window, doesn't count towards limit)
         DriverActivitySession session2 = new DriverActivitySession();
         session2.setDriver(driver);
-        session2.setStartTime(LocalDateTime.now().minusDays(1).withHour(9).withMinute(0));
-        session2.setEndTime(LocalDateTime.now().minusDays(1).withHour(17).withMinute(0));
+        session2.setStartTime(LocalDateTime.now().minusDays(2).withHour(9).withMinute(0));
+        session2.setEndTime(LocalDateTime.now().minusDays(2).withHour(17).withMinute(0));
         driverActivitySessionRepository.save(session2);
 
-        // Driver 1: 2 days ago session
+        // Driver 1: 3 days ago session
         DriverActivitySession session3 = new DriverActivitySession();
         session3.setDriver(driver);
-        session3.setStartTime(LocalDateTime.now().minusDays(2).withHour(10).withMinute(0));
-        session3.setEndTime(LocalDateTime.now().minusDays(2).withHour(18).withMinute(0));
+        session3.setStartTime(LocalDateTime.now().minusDays(3).withHour(10).withMinute(0));
+        session3.setEndTime(LocalDateTime.now().minusDays(3).withHour(18).withMinute(0));
         driverActivitySessionRepository.save(session3);
 
-        // Driver 2: Completed session today (Ended 1 hour ago, 6 hours total)
+        // Driver 2: Completed session today (Ended 1 hour ago, 3 hours total - keeps under 5h limit)
         DriverActivitySession session4 = new DriverActivitySession();
         session4.setDriver(driver2);
-        session4.setStartTime(LocalDateTime.now().minusHours(7));
+        session4.setStartTime(LocalDateTime.now().minusHours(4));
         session4.setEndTime(LocalDateTime.now().minusHours(1));
         driverActivitySessionRepository.save(session4);
 
