@@ -20,6 +20,8 @@ export interface DriverStatsResponse {
   completedRides: number;
   averageRating: number;
   totalRatings: number;
+  averageVehicleRating: number;
+  totalVehicleRatings: number;
   onlineHoursToday: string;  // Formatted as "Xh Ym"
 }
 

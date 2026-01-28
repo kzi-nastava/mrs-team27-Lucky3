@@ -433,10 +433,16 @@ public class RideServiceImpl implements RideService {
         if(ride.getStatus() == RideStatus.FINISHED){
             throw new IllegalStateException("Ride is already finished");
         }
-        if (ride.getStatus() != RideStatus.ACCEPTED) {
+        if (ride.getStatus() != RideStatus.ACCEPTED && ride.getStatus()!= RideStatus.SCHEDULED && ride.getStatus()!= RideStatus.PENDING) {
             throw new IllegalStateException("Ride must be accepted before starting");
         }
 
+        Vehicle closestVehicle = null;
+        if (ride.getDriver() != null) {
+            closestVehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
+            closestVehicle.setStatus(VehicleStatus.BUSY);
+            vehicleRepository.save(closestVehicle);
+        }
         ride.setStartTime(LocalDateTime.now());
         ride.setStatus(RideStatus.IN_PROGRESS); // or ACTIVE based on enum
         Ride savedRide = rideRepository.save(ride);
@@ -954,10 +960,31 @@ public class RideServiceImpl implements RideService {
                 predicates.add(cb.equal(root.get("status"), RideStatus.valueOf(status)));
             }
             if (fromDate != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("startTime"), fromDate));
+                // Use COALESCE to compare against startTime OR scheduledTime for date filtering
+                // This ensures cancelled rides (with only scheduledTime) are included
+                predicates.add(cb.greaterThanOrEqualTo(
+                    cb.coalesce(root.get("startTime"), root.get("scheduledTime")), fromDate));
             }
             if (toDate != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("endTime"), toDate));
+                // Use COALESCE: endTime -> startTime -> scheduledTime for cancelled rides
+                predicates.add(cb.lessThanOrEqualTo(
+                    cb.coalesce(cb.coalesce(root.get("endTime"), root.get("startTime")), root.get("scheduledTime")), toDate));
+            }
+
+            // Apply custom ordering for startTime to handle nulls with scheduledTime fallback
+            if (query != null && query.getOrderList().isEmpty()) {
+                // Check if pageable has startTime sort
+                pageable.getSort().forEach(order -> {
+                    if ("startTime".equals(order.getProperty())) {
+                        // Use COALESCE(startTime, scheduledTime) for sorting
+                        var effectiveTime = cb.coalesce(root.get("startTime"), root.get("scheduledTime"));
+                        if (order.isAscending()) {
+                            query.orderBy(cb.asc(effectiveTime));
+                        } else {
+                            query.orderBy(cb.desc(effectiveTime));
+                        }
+                    }
+                });
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

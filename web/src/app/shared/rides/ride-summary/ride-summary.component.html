@@ -23,7 +23,7 @@
       <span class="text-white">$3.00</span>
     </div>
     <div class="flex justify-between text-sm">
-      <span class="text-gray-400">Distance ({{ ride.distance }}km)</span>
+      <span class="text-gray-400">Distance ({{ formatDistance(ride.distance) }}km)</span>
       <span class="text-white">${{ (ride.distance * 1.5).toFixed(2) }}</span>
     </div>
     <div class="flex justify-between text-sm">

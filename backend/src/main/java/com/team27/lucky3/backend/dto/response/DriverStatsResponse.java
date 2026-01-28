@@ -13,5 +13,7 @@ public class DriverStatsResponse {
     private Integer completedRides;    // Number of completed rides
     private Double averageRating;      // Average driver rating (1-5)
     private Integer totalRatings;      // Number of ratings received
+    private Double averageVehicleRating;  // Average vehicle rating (1-5)
+    private Integer totalVehicleRatings;  // Number of vehicle ratings received
     private String onlineHoursToday;   // Formatted as "Xh Ym" - time driver was active in last 24h
 }

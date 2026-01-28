@@ -56,6 +56,7 @@ export class RideService {
     toDate?: string;
     page?: number;
     size?: number;
+    sort?: string; // e.g., 'startTime,desc' or 'totalCost,asc'
   }): Observable<PageResponse<RideResponse>> {
     const query = new URLSearchParams();
     if (params?.driverId != null) query.set('driverId', String(params.driverId));
@@ -65,6 +66,7 @@ export class RideService {
     if (params?.toDate) query.set('toDate', params.toDate);
     if (params?.page != null) query.set('page', String(params.page));
     if (params?.size != null) query.set('size', String(params.size));
+    if (params?.sort) query.set('sort', params.sort);
 
     const qs = query.toString();
     return this.http.get<PageResponse<RideResponse>>(`${this.apiUrl}${qs ? `?${qs}` : ''}`);

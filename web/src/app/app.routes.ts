@@ -28,6 +28,7 @@ import { registerVerificationGuard, resetPasswordSentGuard, resetPasswordSuccess
 import { activationGuard } from './infrastructure/auth/activation.guard';
 import { rideAccessGuard } from './infrastructure/auth/ride-access.guard';
 import { passengerRideAccessGuard } from './infrastructure/auth/passenger-ride-access.guard';
+import { driverRideHistoryGuard } from './infrastructure/auth/driver-ride-history.guard';
 import {RideHistoryComponent} from "./pages/passenger/ride-history/ride-history.component";
 import { FavoritePageComponent } from './pages/passenger/favorite-page/favorite-page.component';
 import { ReviewPage } from './pages/review/review.page';
@@ -195,8 +196,7 @@ export const routes: Routes = [
   {
     path: 'driver/overview/ride/:id',
     component: RideDetails,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['DRIVER'] }
+    canActivate: [driverRideHistoryGuard]
   },
   {
     path: 'driver/profile',
