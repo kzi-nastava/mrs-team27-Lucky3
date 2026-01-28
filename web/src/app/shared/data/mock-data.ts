@@ -11,6 +11,7 @@ export interface Ride {
   destination: { address: string };
   hasPanic?: boolean;
   passengerName?: string;
+  passengerCount?: number;
   cancelledBy?: 'passenger' | 'driver';
   cancellationReason?: string;
 }

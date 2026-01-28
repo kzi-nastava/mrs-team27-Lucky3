@@ -204,6 +204,16 @@ public class DriverServiceImpl implements DriverService {
             totalRatings = 0;
         }
 
+        // Get average vehicle rating and count
+        Double averageVehicleRating = reviewRepository.findAverageVehicleRatingByDriverId(driverId);
+        Integer totalVehicleRatings = reviewRepository.countVehicleRatingsByDriverId(driverId);
+        if (averageVehicleRating == null) {
+            averageVehicleRating = 0.0;
+        }
+        if (totalVehicleRatings == null) {
+            totalVehicleRatings = 0;
+        }
+
         // Calculate online hours today from activity sessions (last 24h)
         LocalDateTime since = LocalDateTime.now().minusHours(24);
         List<DriverActivitySession> sessions = activitySessionRepository.findSessionsSince(driverId, since);
@@ -230,6 +240,8 @@ public class DriverServiceImpl implements DriverService {
                 completedRides,
                 averageRating,
                 totalRatings,
+                averageVehicleRating,
+                totalVehicleRatings,
                 onlineHoursToday
         );
     }
