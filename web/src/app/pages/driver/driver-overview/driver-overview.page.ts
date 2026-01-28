@@ -222,7 +222,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
       id: String(r.id),
       driverId: String(this.driverId),
       startedAt: r.startTime,
-      requestedAt: r.startTime ?? '',
+      requestedAt: r.startTime ?? r.scheduledTime ?? '',
       completedAt: r.endTime,
       status: r.status === 'FINISHED' ? 'Finished' :
               r.status === 'CANCELLED' ? 'Cancelled' :
