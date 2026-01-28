@@ -208,7 +208,11 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
             relevant = relevant.filter(r => r.status === 'FINISHED');
           }
           
-          this.sortedRides = relevant.map(r => this.mapToRide(r));
+          // Map and re-sort on frontend to handle null startTime correctly
+          let mappedRides = relevant.map(r => this.mapToRide(r));
+          mappedRides = this.sortRidesOnFrontend(mappedRides);
+          
+          this.sortedRides = mappedRides;
           this.totalElements = page.totalElements ?? 0;
           this.totalPages = page.totalPages ?? 0;
           
@@ -224,13 +228,71 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Re-sort rides on frontend to handle null values properly
+   */
+  private sortRidesOnFrontend(rides: Ride[]): Ride[] {
+    return rides.sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+      
+      switch (this.sortField) {
+        case 'startTime':
+          // Use startedAt, fallback to requestedAt for cancelled rides
+          aVal = a.startedAt || a.requestedAt || '';
+          bVal = b.startedAt || b.requestedAt || '';
+          break;
+        case 'endTime':
+          aVal = a.completedAt || '';
+          bVal = b.completedAt || '';
+          break;
+        case 'distance':
+          aVal = a.distance ?? 0;
+          bVal = b.distance ?? 0;
+          break;
+        case 'departure':
+          aVal = a.pickup?.address?.toLowerCase() || '';
+          bVal = b.pickup?.address?.toLowerCase() || '';
+          break;
+        case 'passengerCount':
+          aVal = a.passengerCount ?? 0;
+          bVal = b.passengerCount ?? 0;
+          break;
+        case 'totalCost':
+          aVal = a.fare ?? 0;
+          bVal = b.fare ?? 0;
+          break;
+        default:
+          aVal = a.startedAt || '';
+          bVal = b.startedAt || '';
+      }
+      
+      // Compare
+      let comparison = 0;
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        comparison = aVal.localeCompare(bVal);
+      } else {
+        comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      }
+      
+      return this.sortDirection === 'desc' ? -comparison : comparison;
+    });
+  }
+
   private mapToRide(r: RideResponse): Ride {
+    // Keep startedAt and requestedAt separate
+    // startedAt = when the ride actually started (null for cancelled rides that never started)
+    // requestedAt = when the ride was requested/scheduled
+    const startedAt = r.startTime ?? '';
+    const requestedAt = r.scheduledTime ?? r.startTime ?? '';
+    const completedAt = r.endTime ?? '';
+    
     return {
       id: String(r.id),
       driverId: String(this.driverId),
-      startedAt: r.startTime,
-      requestedAt: r.startTime ?? r.scheduledTime ?? '',
-      completedAt: r.endTime,
+      startedAt: startedAt,
+      requestedAt: requestedAt,
+      completedAt: completedAt,
       status: r.status === 'FINISHED' ? 'Finished' :
               r.status === 'CANCELLED' ? 'Cancelled' :
               r.status === 'CANCELLED_BY_DRIVER' ? 'Cancelled' :
