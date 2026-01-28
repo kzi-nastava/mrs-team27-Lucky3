@@ -62,6 +62,9 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
   private driverId: number | null = null;
+  
+  // LocalStorage key for persisting filters
+  private readonly STORAGE_KEY = 'driver_overview_filters';
 
   constructor(
     private router: Router,
@@ -73,8 +76,12 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.driverId = this.authService.getUserId();
-    // Set initial date range based on time filter
-    this.applyTimeFilterDates();
+    // Restore filters from localStorage
+    this.restoreFilters();
+    // Only apply time filter dates if no custom date range was restored
+    if (!this.dateFrom && !this.dateTo) {
+      this.applyTimeFilterDates();
+    }
     this.loadRides();
     this.loadDriverStats();
   }
@@ -292,6 +299,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
       this.sortDirection = 'desc';
     }
     this.currentPage = 0; // Reset to first page on sort change
+    this.saveFilters();
     this.loadRides();
   }
 
@@ -302,6 +310,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
     this.timeFilter = period;
     this.applyTimeFilterDates();
     this.currentPage = 0;
+    this.saveFilters();
     this.loadRides();
   }
 
@@ -311,6 +320,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
   setStatusFilter(status: 'all' | 'FINISHED' | 'CANCELLED') {
     this.statusFilter = status;
     this.currentPage = 0;
+    this.saveFilters();
     this.loadRides();
   }
 
@@ -321,6 +331,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
     // Clear time filter when manual date range is set
     this.timeFilter = 'all';
     this.currentPage = 0;
+    this.saveFilters();
     this.loadRides();
   }
 
@@ -332,6 +343,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
     this.dateTo = '';
     this.timeFilter = 'all';
     this.currentPage = 0;
+    this.saveFilters();
     this.loadRides();
   }
 
@@ -348,6 +360,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
   nextPage() {
     if (this.currentPage < this.totalPages - 1) {
       this.currentPage++;
+      this.saveFilters();
       this.loadRides();
     }
   }
@@ -358,6 +371,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
   prevPage() {
     if (this.currentPage > 0) {
       this.currentPage--;
+      this.saveFilters();
       this.loadRides();
     }
   }
@@ -368,7 +382,48 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
   goToPage(page: number) {
     if (page >= 0 && page < this.totalPages) {
       this.currentPage = page;
+      this.saveFilters();
       this.loadRides();
+    }
+  }
+
+  /**
+   * Save current filters to localStorage
+   */
+  private saveFilters(): void {
+    const filters = {
+      timeFilter: this.timeFilter,
+      statusFilter: this.statusFilter,
+      dateFrom: this.dateFrom,
+      dateTo: this.dateTo,
+      sortField: this.sortField,
+      sortDirection: this.sortDirection,
+      currentPage: this.currentPage,
+      pageSize: this.pageSize
+    };
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filters));
+  }
+
+  /**
+   * Restore filters from localStorage
+   */
+  private restoreFilters(): void {
+    const stored = localStorage.getItem(this.STORAGE_KEY);
+    if (!stored) return;
+
+    try {
+      const filters = JSON.parse(stored);
+      this.timeFilter = filters.timeFilter ?? 'week';
+      this.statusFilter = filters.statusFilter ?? 'all';
+      this.dateFrom = filters.dateFrom ?? '';
+      this.dateTo = filters.dateTo ?? '';
+      this.sortField = filters.sortField ?? 'startTime';
+      this.sortDirection = filters.sortDirection ?? 'desc';
+      this.currentPage = filters.currentPage ?? 0;
+      this.pageSize = filters.pageSize ?? 10;
+    } catch (e) {
+      // Invalid stored data, use defaults
+      console.warn('Failed to restore filters from localStorage', e);
     }
   }
 }
