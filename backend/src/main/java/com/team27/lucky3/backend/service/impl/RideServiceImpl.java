@@ -1226,4 +1226,51 @@ public class RideServiceImpl implements RideService {
                 ))
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public Page<RideResponse> getAllActiveRides(Pageable pageable, String search, String status, String vehicleType) {
+        // Active statuses: PENDING, ACCEPTED, SCHEDULED, IN_PROGRESS, ACTIVE
+        List<RideStatus> activeStatuses = List.of(
+                RideStatus.PENDING, RideStatus.ACCEPTED, RideStatus.SCHEDULED, 
+                RideStatus.IN_PROGRESS, RideStatus.ACTIVE
+        );
+
+        Specification<Ride> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Filter by active statuses
+            if (status != null && !status.isEmpty()) {
+                // If specific status is provided, use it
+                predicates.add(cb.equal(root.get("status"), RideStatus.valueOf(status)));
+            } else {
+                // Otherwise, show all active statuses
+                predicates.add(root.get("status").in(activeStatuses));
+            }
+
+            // Search by driver name (first or last name)
+            if (search != null && !search.trim().isEmpty()) {
+                String searchLower = "%" + search.trim().toLowerCase() + "%";
+                Join<Ride, User> driver = root.join("driver", jakarta.persistence.criteria.JoinType.LEFT);
+                Predicate namePredicate = cb.or(
+                        cb.like(cb.lower(driver.get("name")), searchLower),
+                        cb.like(cb.lower(driver.get("surname")), searchLower)
+                );
+                predicates.add(namePredicate);
+            }
+
+            // Filter by vehicle type
+            if (vehicleType != null && !vehicleType.isEmpty()) {
+                predicates.add(cb.equal(root.get("requestedVehicleType"), VehicleType.valueOf(vehicleType)));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Ride> ridesPage = rideRepository.findAll(spec, pageable);
+        List<RideResponse> dtos = ridesPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, ridesPage.getTotalElements());
+    }
 }

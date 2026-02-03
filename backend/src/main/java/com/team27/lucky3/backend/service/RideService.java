@@ -31,6 +31,12 @@ public interface RideService {
     RideEstimationResponse estimateRide(CreateRideRequest request);
     void reportInconsistency(Long rideId, InconsistencyRequest request);
     RideResponse getActiveRide(Long userId);
+    org.springframework.data.domain.Page<RideResponse> getAllActiveRides(
+            org.springframework.data.domain.Pageable pageable,
+            String search,
+            String status,
+            String vehicleType
+    );
     void addToFavorite(Long userId, FavouriteRouteRequest request);
     void removeFromFavorite(Long userId, Long favouriteId);
     List<FavoriteRouteResponse> getFavoriteRoutes(Long userId);

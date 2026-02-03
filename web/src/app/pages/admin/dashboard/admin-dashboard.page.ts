@@ -1,114 +1,196 @@
 // admin-dashboard.page.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { finalize } from 'rxjs';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
-import { UserService, ChangeInformationResponse } from '../../../infrastructure/rest/user.service';
+import { RideService, PageResponse, AdminStatsResponse } from '../../../infrastructure/rest/ride.service';
+import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
+import { ActiveRidesTableComponent, ActiveRideSortField } from './active-rides-table/active-rides-table.component';
 
 @Component({
   selector: 'app-admin-dashboard-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ActiveRidesTableComponent],
   templateUrl: './admin-dashboard.page.html',
 })
-export class AdminDashboardPage implements OnInit {
-  requests: ChangeInformationResponse[] = [];
+export class AdminDashboardPage implements OnInit, OnDestroy {
+  // Expose Math for template
+  Math = Math;
+
+  // Stats
+  stats: AdminStatsResponse = {
+    activeRidesCount: 0,
+    averageDriverRating: 0,
+    driversOnlineCount: 0,
+    totalPassengersInRides: 0
+  };
+
+  // Active rides
+  rides: RideResponse[] = [];
   isLoading = false;
   errorMessage = '';
-  name = "Admin";
-  busyIds: Set<number> = new Set<number>();
 
-  constructor(private userService: UserService, 
-              private cdr: ChangeDetectorRef) {}
-  
+  // Filters
+  searchQuery = '';
+  statusFilter: 'all' | 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'SCHEDULED' = 'all';
+  vehicleTypeFilter: 'all' | 'STANDARD' | 'LUXURY' | 'VAN' = 'all';
+
+  // Sorting
+  sortField: ActiveRideSortField = 'status';
+  sortDirection: 'asc' | 'desc' = 'desc';
+
+  // Pagination
+  currentPage = 0;
+  pageSize = 10;
+  totalElements = 0;
+  totalPages = 0;
+
+  // Debounce search
+  private searchSubject = new Subject<string>();
+  private destroy$ = new Subject<void>();
+
+  constructor(
+    private rideService: RideService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
   ngOnInit(): void {
-    this.loadRequests();
+    this.loadStats();
+    this.loadRides();
+
+    // Setup search debounce
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(query => {
+      this.searchQuery = query;
+      this.currentPage = 0;
+      this.loadRides();
+    });
   }
 
-  loadRequests(): void {
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadStats(): void {
+    this.rideService.getAdminStats().subscribe({
+      next: (stats) => {
+        this.stats = stats;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading admin stats:', error);
+      }
+    });
+  }
+
+  loadRides(): void {
     this.isLoading = true;
     this.errorMessage = '';
+
+    const params: any = {
+      page: this.currentPage,
+      size: this.pageSize,
+      sort: this.buildSortString()
+    };
+
+    if (this.searchQuery.trim()) {
+      params.search = this.searchQuery.trim();
+    }
+
+    if (this.statusFilter !== 'all') {
+      params.status = this.statusFilter;
+    }
+
+    if (this.vehicleTypeFilter !== 'all') {
+      params.vehicleType = this.vehicleTypeFilter;
+    }
+
+    this.rideService.getAllActiveRides(params).subscribe({
+      next: (page) => {
+        this.rides = page.content || [];
+        this.totalElements = page.totalElements || 0;
+        this.totalPages = page.totalPages || 0;
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.errorMessage = 'Failed to load active rides';
+        this.isLoading = false;
+        console.error('Error loading active rides:', error);
+      }
+    });
+  }
+
+  private buildSortString(): string {
+    // Map frontend field names to backend entity field names
+    const fieldMap: Record<ActiveRideSortField, string> = {
+      'driver': 'driver.name',
+      'vehicle': 'model',
+      'status': 'status',
+      'passengerCount': 'status', // Can't sort by collection size on backend
+      'rating': 'status', // Would need driver rating in ride entity
+      'timeActive': 'startTime',
+      'estimatedTime': 'estimatedTimeInMinutes'
+    };
     
-    this.userService.getDriverChangeRequests().subscribe({
-      next: (requests) => {
-         this.requests = requests;
-         this.isLoading = false;
-         this.cdr.detectChanges();
-       },
-       error: (error) => {
-         this.errorMessage = 'Failed to load driver change requests';
-         this.isLoading = false;
-         console.error('Error loading driver change requests:', error);
-       }
-    });
+    const backendField = fieldMap[this.sortField] || 'status';
+    return `${backendField},${this.sortDirection}`;
   }
 
-  getImageUrl(driverId : number | undefined): string | null {
-    //console.log("Getting image URL for driver ID:", driverId);
-    return driverId !== undefined ? "http://localhost:8081/api/users/" + driverId + "/profile-image" : null;
+  onSearchChange(event: Event): void {
+    const query = (event.target as HTMLInputElement).value;
+    this.searchSubject.next(query);
   }
 
-  isBusy(requestId: number): boolean {
-    return this.busyIds.has(requestId);
+  setStatusFilter(status: 'all' | 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'SCHEDULED'): void {
+    this.statusFilter = status;
+    this.currentPage = 0;
+    this.loadRides();
   }
 
-  approve(requestId: number): void {
-    if (this.isBusy(requestId)) return;
-
-    this.busyIds.add(requestId);
-    this.errorMessage = '';
-    this.userService.approveDriverChangeRequest(requestId).subscribe({
-      next: (requests) => {
-         this.isLoading = false;
-         this.cdr.detectChanges();
-          
-         this.loadRequests();
-       },
-       error: (error) => {
-         this.errorMessage = 'Failed to load driver change requests';
-         this.isLoading = false;
-         console.error('Error loading driver change requests:', error);
-       }
-    });
+  setVehicleTypeFilter(type: 'all' | 'STANDARD' | 'LUXURY' | 'VAN'): void {
+    this.vehicleTypeFilter = type;
+    this.currentPage = 0;
+    this.loadRides();
   }
 
-  reject(requestId: number): void {
-    if (this.isBusy(requestId)) return;
-
-    this.busyIds.add(requestId);
-    this.errorMessage = '';
-    this.userService.rejectDriverChangeRequest(requestId).subscribe({
-      next: (requests) => {
-         this.isLoading = false;
-         this.cdr.detectChanges();
-          alert('Request rejected successfully.');
-         this.loadRequests();
-       },
-       error: (error) => {
-         this.errorMessage = 'Failed to load driver change requests';
-         this.isLoading = false;
-         console.error('Error loading driver change requests:', error);
-       }
-    });
-  }
-  // ===== Template helpers (safe even if some fields are missing) =====
-  fmtBool(v: boolean | null | undefined): string {
-    if (v === true) return 'Yes';
-    if (v === false) return 'No';
-    return '—';
+  handleSort(field: ActiveRideSortField): void {
+    if (this.sortField === field) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortField = field;
+      this.sortDirection = 'desc';
+    }
+    this.loadRides();
   }
 
-  fmtText(v: string | null | undefined): string {
-    return v && String(v).trim().length ? String(v) : '—';
+  // Pagination
+  prevPage(): void {
+    if (this.currentPage > 0) {
+      this.currentPage--;
+      this.loadRides();
+    }
   }
 
-  fmtNum(v: number | null | undefined): string {
-    return typeof v === 'number' ? String(v) : '—';
+  nextPage(): void {
+    if (this.currentPage < this.totalPages - 1) {
+      this.currentPage++;
+      this.loadRides();
+    }
   }
 
-  // If your backend uses different field names, just map here:
-  getId(r: any): number {
-    return Number(r?.id);
+  goToPage(page: number): void {
+    this.currentPage = page;
+    this.loadRides();
+  }
+
+  refresh(): void {
+    this.loadStats();
+    this.loadRides();
   }
 }

@@ -22,5 +22,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("select u from User u left join fetch u.profileImage where u.id = :id")
     Optional<User> findByIdWithProfileImage(@Param("id") Long id);
+
+    // Count online drivers (active = true)
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role = 'DRIVER' AND u.isActive = true")
+    Integer countOnlineDrivers();
 }
 
