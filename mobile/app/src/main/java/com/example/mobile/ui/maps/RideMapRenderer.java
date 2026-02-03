@@ -81,7 +81,7 @@ public class RideMapRenderer {
 
         if (!points.isEmpty()) {
             // Start
-            addMarkerInternal(points.get(0), "Start", R.drawable.bg_dot_green);
+            addMarkerInternal(points.get(0), "Start", R.drawable.ic_map_pickup);
             // End
             if (points.size() > 1) {
                 addMarkerInternal(points.get(points.size() - 1), "Destination", R.drawable.ic_map_pin); // assuming red pin
@@ -112,10 +112,13 @@ public class RideMapRenderer {
         marker.setPosition(point);
         marker.setTitle(title);
         marker.setIcon(ContextCompat.getDrawable(context, iconRes));
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
+        
         if (iconRes == R.drawable.ic_map_pin) {
              marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+        } else {
+             marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
         }
+        
         map.getOverlays().add(marker);
         currentMarkers.add(marker);
     }

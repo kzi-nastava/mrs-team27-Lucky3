@@ -6,6 +6,13 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.text.Html;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
+import android.text.style.ForegroundColorSpan;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -92,14 +99,141 @@ public class GuestHomeFragment extends Fragment {
             Navigation.findNavController(v).navigate(R.id.nav_register);
         });
 
+        // Initialize estimation panel logic
+        initEstimationPanel(binding.getRoot());
+
         btnEstimateRide.setOnClickListener(v -> {
-            showEstimateRideDialog();
+             // Show panel, hide button
+             binding.estimationContainer.setVisibility(View.VISIBLE);
+             btnEstimateRide.setVisibility(View.GONE);
         });
 
         setupVehicleRefresh();
 
         return binding.getRoot();
     }
+
+    private void initEstimationPanel(View rootView) {
+        // Find views included in fragment layout now
+        LinearLayout panel = rootView.findViewById(R.id.estimation_container);
+        if(panel == null) return; 
+
+        ImageView btnClose = panel.findViewById(R.id.btn_close_estimation);
+        EditText etPickup = panel.findViewById(R.id.et_pickup_address);
+        EditText etDestination = panel.findViewById(R.id.et_destination_address);
+        MaterialButton btnEstimate = panel.findViewById(R.id.btn_confirm_estimate);
+        
+        LinearLayout llResults = panel.findViewById(R.id.ll_estimation_results);
+        TextView tvDistance = panel.findViewById(R.id.tv_distance_value);
+        TextView tvDuration = panel.findViewById(R.id.tv_duration_value);
+        TextView tvPrice = panel.findViewById(R.id.tv_price_value);
+        
+        LinearLayout llActions = panel.findViewById(R.id.ll_action_buttons);
+        MaterialButton btnClear = panel.findViewById(R.id.btn_clear);
+        MaterialButton btnRecalculate = panel.findViewById(R.id.btn_recalculate);
+        TextView tvLoginHint = panel.findViewById(R.id.tv_login_hint);
+
+        // Setup Login Hint clickable spans
+        setupLoginHint(tvLoginHint);
+
+        btnClose.setOnClickListener(v -> {
+             panel.setVisibility(View.GONE);
+             btnEstimateRide.setVisibility(View.VISIBLE);
+             if (mapRenderer != null) mapRenderer.clearMap();
+             
+             // Reset form
+             etPickup.setText("");
+             etDestination.setText("");
+             llResults.setVisibility(View.GONE);
+             llActions.setVisibility(View.GONE);
+             tvLoginHint.setVisibility(View.GONE);
+             btnEstimate.setVisibility(View.VISIBLE);
+        });
+
+        View.OnClickListener estimateAction = v -> {
+            String startAddress = etPickup.getText().toString().trim();
+            String destAddress = etDestination.getText().toString().trim();
+
+            if (!startAddress.isEmpty() && !destAddress.isEmpty()) {
+                performEstimation(startAddress, destAddress, 
+                    est -> {
+                        requireActivity().runOnUiThread(() -> {
+                             tvDistance.setText(String.format("%.2f km", est.getEstimatedDistance()));
+                             tvDuration.setText(String.format("%d min", est.getEstimatedTimeInMinutes()));
+                             tvPrice.setText(String.format("%.0f RSD", est.getEstimatedCost()));
+                             
+                             llResults.setVisibility(View.VISIBLE);
+                             llActions.setVisibility(View.VISIBLE);
+                             tvLoginHint.setVisibility(View.VISIBLE);
+                             btnEstimate.setVisibility(View.GONE);
+                             
+                             mapRenderer.showRoute(est.getRoutePoints());
+                        });
+                    },
+                    error -> {
+                        requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show());
+                    }
+                );
+            } else {
+                Toast.makeText(requireContext(), "Please enter both addresses", Toast.LENGTH_SHORT).show();
+            }
+        };
+
+        btnEstimate.setOnClickListener(estimateAction);
+        btnRecalculate.setOnClickListener(estimateAction);
+
+        btnClear.setOnClickListener(v -> {
+            etPickup.setText("");
+            etDestination.setText("");
+            llResults.setVisibility(View.GONE);
+            llActions.setVisibility(View.GONE);
+            tvLoginHint.setVisibility(View.GONE);
+            btnEstimate.setVisibility(View.VISIBLE);
+            if (mapRenderer != null) mapRenderer.clearMap();
+        });
+    }
+
+    private void setupLoginHint(TextView tv) {
+        String text = "Sign in or create an account to book this ride";
+        SpannableString ss = new SpannableString(text);
+
+        // "Sign in"
+        ClickableSpan signInSpan = new ClickableSpan() {
+            @Override
+            public void onClick(@NonNull View widget) {
+                Navigation.findNavController(widget).navigate(R.id.nav_login);
+            }
+            @Override
+            public void updateDrawState(@NonNull TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setUnderlineText(false);
+                ds.setColor(ContextCompat.getColor(requireContext(), R.color.yellow_500));
+            }
+        };
+        int signInStart = text.indexOf("Sign in");
+        ss.setSpan(signInSpan, signInStart, signInStart + 7, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        // "create an account"
+        ClickableSpan createAccountSpan = new ClickableSpan() {
+            @Override
+            public void onClick(@NonNull View widget) {
+                Navigation.findNavController(widget).navigate(R.id.nav_register);
+            }
+            @Override
+            public void updateDrawState(@NonNull TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setUnderlineText(false);
+                ds.setColor(ContextCompat.getColor(requireContext(), R.color.yellow_500));
+            }
+        };
+        int createAccountStart = text.indexOf("create an account");
+        ss.setSpan(createAccountSpan, createAccountStart, createAccountStart + 17, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        
+        tv.setText(ss);
+        tv.setMovementMethod(LinkMovementMethod.getInstance());
+        tv.setHighlightColor(Color.TRANSPARENT);
+    }
+
 
     private void setupVehicleRefresh() {
         refreshHandler = new Handler(Looper.getMainLooper());
@@ -210,81 +344,9 @@ public class GuestHomeFragment extends Fragment {
         }
         binding = null;
     }
+    
+    // showEstimateRideDialog removed as it is now integrated into the layout
 
-    private void showEstimateRideDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        
-        // Inflate custom layout
-        View dialogView =  LayoutInflater.from(requireContext()).inflate(R.layout.dialog_ride_estimation, null);
-        builder.setView(dialogView);
-        
-        AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT)); // Transparent background for rounded corners
-        }
-
-        EditText etPickup = dialogView.findViewById(R.id.et_pickup_address);
-        EditText etDestination = dialogView.findViewById(R.id.et_destination_address);
-        MaterialButton btnEstimate = dialogView.findViewById(R.id.btn_estimate_confirm);
-        ImageView btnClose = dialogView.findViewById(R.id.btn_close);
-
-        // New Views
-        LinearLayout llResults = dialogView.findViewById(R.id.ll_estimation_results);
-        TextView tvDistance = dialogView.findViewById(R.id.tv_distance_value);
-        TextView tvDuration = dialogView.findViewById(R.id.tv_duration_value);
-        TextView tvPrice = dialogView.findViewById(R.id.tv_price_value);
-        LinearLayout llActions = dialogView.findViewById(R.id.ll_action_buttons);
-        MaterialButton btnClear = dialogView.findViewById(R.id.btn_clear);
-        MaterialButton btnRecalculate = dialogView.findViewById(R.id.btn_recalculate);
-        TextView tvLoginHint = dialogView.findViewById(R.id.tv_login_hint);
-
-        btnClose.setOnClickListener(v -> dialog.dismiss());
-
-        View.OnClickListener estimateAction = v -> {
-            String startAddress = etPickup.getText().toString().trim();
-            String destAddress = etDestination.getText().toString().trim();
-
-            if (!startAddress.isEmpty() && !destAddress.isEmpty()) {
-                performEstimation(startAddress, destAddress, 
-                    est -> {
-                        // Success callback
-                        requireActivity().runOnUiThread(() -> {
-                             tvDistance.setText(String.format("%.2f km", est.getEstimatedDistance()));
-                             tvDuration.setText(String.format("%d min", est.getEstimatedTimeInMinutes()));
-                             tvPrice.setText(String.format("%.0f RSD", est.getEstimatedCost()));
-                             
-                             llResults.setVisibility(View.VISIBLE);
-                             llActions.setVisibility(View.VISIBLE);
-                             tvLoginHint.setVisibility(View.VISIBLE);
-                             btnEstimate.setVisibility(View.GONE);
-                             
-                             mapRenderer.showRoute(est.getRoutePoints());
-                        });
-                    },
-                    error -> {
-                        requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show());
-                    }
-                );
-            } else {
-                Toast.makeText(requireContext(), "Please enter both addresses", Toast.LENGTH_SHORT).show();
-            }
-        };
-
-        btnEstimate.setOnClickListener(estimateAction);
-        btnRecalculate.setOnClickListener(estimateAction);
-
-        btnClear.setOnClickListener(v -> {
-            etPickup.setText("");
-            etDestination.setText("");
-            llResults.setVisibility(View.GONE);
-            llActions.setVisibility(View.GONE);
-            tvLoginHint.setVisibility(View.GONE);
-            btnEstimate.setVisibility(View.VISIBLE);
-            if (mapRenderer != null) mapRenderer.clearMap();
-        });
-
-        dialog.show();
-    }
 
     private void performEstimation(String startAddress, String destAddress, 
                                    final Consumer<RideEstimationResponse> onSuccess, 
