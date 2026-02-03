@@ -86,9 +86,12 @@ export class Sidebar implements OnInit, OnDestroy {
       this.checkActiveRoute();
     });
 
-    // Start polling for active ride
-    this.pollActiveRide();
-    this.activeRidePoller = interval(10000).subscribe(() => this.pollActiveRide());
+    // Start polling for active ride (only for drivers and passengers, not admins)
+    const role = this.authService.getRole();
+    if (role === 'DRIVER' || role === 'PASSENGER') {
+      this.pollActiveRide();
+      this.activeRidePoller = interval(10000).subscribe(() => this.pollActiveRide());
+    }
   }
 
   ngOnDestroy() {
