@@ -260,10 +260,119 @@ export class AdminRidePage implements OnInit, OnDestroy {
         latitude: ride.vehicleLocation.latitude,
         longitude: ride.vehicleLocation.longitude
       };
+      
+      // Immediately calculate approach/remaining routes if ride is in progress
+      if (this.isRideInProgress) {
+        this.fetchInitialRoutes(ride, this.driverLocation);
+      } else if (this.isRideActive) {
+        // For pending/accepted rides, calculate approach from vehicle to pickup
+        this.fetchApproachToPickup(ride, this.driverLocation);
+      }
     }
 
-    // Fetch detailed route
+    // Fetch detailed route (full planned route)
     this.fetchDetailedRoute(ride);
+  }
+
+  private fetchApproachToPickup(ride: RideResponse, vehicleLoc: MapPoint): void {
+    const pickup = ride.departure ?? ride.start ?? ride.startLocation;
+    if (!pickup) return;
+
+    const request: CreateRideRequest = {
+      start: { latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude, address: '' },
+      destination: pickup,
+      stops: [],
+      passengerEmails: [],
+      scheduledTime: null,
+      requirements: {
+        vehicleType: ride.vehicleType || 'STANDARD',
+        babyTransport: ride.babyTransport ?? false,
+        petTransport: ride.petTransport ?? false
+      }
+    };
+
+    this.rideService.estimateRide(request).subscribe({
+      next: (est) => {
+        if (est.routePoints && est.routePoints.length > 0) {
+          const sorted = est.routePoints.sort((a, b) => a.order - b.order);
+          this.approachRoute = sorted
+            .filter(p => p.location && this.isValidCoordinate(p.location.latitude, p.location.longitude))
+            .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+          this.cdr.detectChanges();
+        }
+      }
+    });
+  }
+
+  private fetchInitialRoutes(ride: RideResponse, vehicleLoc: MapPoint): void {
+    const startLoc = ride.departure ?? ride.start ?? ride.startLocation;
+    const endLoc = ride.destination ?? ride.endLocation;
+    const stops = ride.stops ?? [];
+
+    if (!endLoc) return;
+
+    // Calculate route from vehicle to destination through remaining stops
+    const remainingStops = stops.slice(this.completedStopIndexes.size);
+
+    const request: CreateRideRequest = {
+      start: { latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude, address: '' },
+      destination: endLoc,
+      stops: remainingStops,
+      passengerEmails: [],
+      scheduledTime: null,
+      requirements: {
+        vehicleType: ride.vehicleType || 'STANDARD',
+        babyTransport: ride.babyTransport ?? false,
+        petTransport: ride.petTransport ?? false
+      }
+    };
+
+    this.rideService.estimateRide(request).subscribe({
+      next: (est) => {
+        if (!est.routePoints || est.routePoints.length < 2) return;
+
+        const sorted = est.routePoints.sort((a, b) => a.order - b.order);
+        const fullRoute = sorted
+          .filter(p => p.location && this.isValidCoordinate(p.location.latitude, p.location.longitude))
+          .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+
+        if (fullRoute.length < 2) return;
+
+        // Determine next destination
+        const allPoints = [startLoc, ...stops, endLoc];
+        const nextDestIdx = this.completedStopIndexes.size + 1;
+        
+        if (nextDestIdx >= allPoints.length) {
+          // Going to final destination
+          this.approachRoute = fullRoute;
+          this.remainingRoute = null;
+        } else {
+          const nextDest = allPoints[nextDestIdx];
+          if (!nextDest || !this.isValidCoordinate(nextDest.latitude, nextDest.longitude)) {
+            this.approachRoute = fullRoute;
+            this.remainingRoute = null;
+          } else {
+            // Find split point
+            let splitIdx = fullRoute.length;
+            for (let i = 0; i < fullRoute.length; i++) {
+              const dist = Math.sqrt(
+                Math.pow(fullRoute[i].latitude - nextDest.latitude, 2) +
+                Math.pow(fullRoute[i].longitude - nextDest.longitude, 2)
+              );
+              if (dist < 0.001) {
+                splitIdx = i;
+                break;
+              }
+            }
+
+            this.approachRoute = fullRoute.slice(0, splitIdx + 1);
+            this.remainingRoute = fullRoute.slice(splitIdx);
+          }
+        }
+
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   private fetchDetailedRoute(ride: RideResponse): void {
