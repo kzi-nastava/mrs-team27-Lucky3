@@ -27,7 +27,11 @@ export class SocketService implements OnDestroy {
     if (this.client?.connected) {
       return; // Already connected
     }
-
+    
+    // If client exists but not connected, check if it's activating
+    if (this.client?.active) {
+      return;
+    }
     this.client = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8081/ws'),
       reconnectDelay: 5000,
@@ -98,25 +102,16 @@ export class SocketService implements OnDestroy {
    */
   getVehicleLocationUpdates(vehicleId: number): Observable<any> {
     return new Observable(observer => {
-      const initSubscription = () => {
-        if (!this.client?.connected) {
-          const stateSub = this.socketState.subscribe(state => {
-            if (state.connected) {
-              stateSub.unsubscribe();
-              subscribeToStomp();
-            }
-          });
-          return { unsubscribe: () => stateSub.unsubscribe() };
-        } else {
-          return subscribeToStomp();
-        }
-      };
-
+      let stompSub: { unsubscribe: () => void } | null = null;
+      let stateSub: { unsubscribe: () => void } | null = null;
+      
       const subscribeToStomp = () => {
-        if (!this.client) return { unsubscribe: () => {} };
+        if (!this.client?.connected) {
+          return;
+        }
         
         try {
-          const stompSubscription = this.client.subscribe(`/topic/vehicle/${vehicleId}`, (message: IMessage) => {
+          stompSub = this.client.subscribe(`/topic/vehicle/${vehicleId}`, (message: IMessage) => {
             try {
               const location = JSON.parse(message.body);
               observer.next(location);
@@ -124,15 +119,37 @@ export class SocketService implements OnDestroy {
               console.error('Error parsing vehicle location:', e);
             }
           });
-          return stompSubscription;
         } catch (error) {
            console.error('Error subscribing to vehicle:', error);
-           return { unsubscribe: () => {} };
         }
       };
 
-      const sub = initSubscription();
-      return () => sub.unsubscribe();
+      // If already connected, subscribe immediately
+      if (this.client?.connected) {
+        subscribeToStomp();
+      } else {
+        // Auto-connect if not connected
+        this.connect();
+        
+        // Wait for connection then subscribe
+        stateSub = this.socketState.subscribe(state => {
+          if (state.connected && !stompSub) {
+            subscribeToStomp();
+          }
+        });
+      }
+
+      // Cleanup function
+      return () => {
+        if (stompSub) {
+          stompSub.unsubscribe();
+          stompSub = null;
+        }
+        if (stateSub) {
+          stateSub.unsubscribe();
+          stateSub = null;
+        }
+      };
     });
   }
 

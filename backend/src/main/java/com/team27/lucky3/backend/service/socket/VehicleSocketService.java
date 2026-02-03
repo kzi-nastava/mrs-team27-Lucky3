@@ -33,6 +33,14 @@ public class VehicleSocketService {
     public void broadcastVehicleUpdates() {
         List<VehicleLocationResponse> vehicles = vehicleService.getPublicMapVehicles();
         messagingTemplate.convertAndSend("/topic/vehicles", vehicles);
+        
+        // Also broadcast individual vehicle updates for subscribers tracking specific vehicles
+        for (VehicleLocationResponse vehicle : vehicles) {
+            Long vehicleId = vehicle.getId();
+            if (vehicleId != null) {
+                messagingTemplate.convertAndSend("/topic/vehicle/" + vehicleId, vehicle);
+            }
+        }
     }
 
     /**

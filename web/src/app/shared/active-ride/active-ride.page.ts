@@ -15,7 +15,7 @@ import { environment } from '../../../env/environment';
 import { joinAllInternals } from 'rxjs/internal/operators/joinAllInternals';
 import { ToastComponent } from '../ui/toast/toast.component';
 import { SocketService } from '../../infrastructure/rest/socket.service';
-import { Subscription, Subject, switchMap, of, catchError, Observable } from 'rxjs'; // Ensure Observable is imported
+import { Subscription, Subject, switchMap, of, catchError, Observable, debounceTime } from 'rxjs';
 
 @Component({
   selector: 'app-active-ride',
