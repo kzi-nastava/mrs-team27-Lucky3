@@ -18,7 +18,6 @@ import com.example.mobile.MainActivity;
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentLoginBinding;
 import com.example.mobile.viewmodels.LoginViewModel;
-import com.google.android.material.snackbar.Snackbar;
 
 /**
  * LoginFragment - Handles user authentication.
@@ -116,26 +115,30 @@ public class LoginFragment extends Fragment {
         // Observe loading state
         viewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
             binding.loginButton.setEnabled(!isLoading);
-            binding.loginButton.setText(isLoading ? "Signing in..." : "Sign In");
+            binding.loginButton.setText(isLoading ? "" : "Sign In");
+            binding.loadingProgress.setVisibility(isLoading ? View.VISIBLE : View.GONE);
             binding.emailEditText.setEnabled(!isLoading);
             binding.passwordEditText.setEnabled(!isLoading);
         });
 
-        // Observe email validation error
+        // Observe email validation error - set on TextInputLayout
         viewModel.getEmailError().observe(getViewLifecycleOwner(), error -> {
-            binding.emailEditText.setError(error);
+            binding.emailInputLayout.setError(error);
         });
 
-        // Observe password validation error
+        // Observe password validation error - set on TextInputLayout
         viewModel.getPasswordError().observe(getViewLifecycleOwner(), error -> {
-            binding.passwordEditText.setError(error);
+            binding.passwordInputLayout.setError(error);
         });
 
-        // Observe general error messages
+        // Observe general error messages - show in error container
         viewModel.getErrorMessage().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
-                showError(error);
+                binding.errorContainer.setVisibility(View.VISIBLE);
+                binding.errorText.setText(error);
                 viewModel.clearError();
+            } else {
+                binding.errorContainer.setVisibility(View.GONE);
             }
         });
 
@@ -178,19 +181,6 @@ public class LoginFragment extends Fragment {
                 activity.setupNavigationForRole("PASSENGER");
                 Navigation.findNavController(requireView()).navigate(R.id.nav_passenger_home);
                 break;
-        }
-    }
-
-    /**
-     * Shows error message using Snackbar.
-     */
-    private void showError(String message) {
-        if (getView() != null) {
-            Snackbar.make(getView(), message, Snackbar.LENGTH_LONG)
-                    .setBackgroundTint(getResources().getColor(android.R.color.holo_red_dark, null))
-                    .show();
-        } else {
-            Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
         }
     }
 

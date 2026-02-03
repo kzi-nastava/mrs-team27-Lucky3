@@ -39,6 +39,7 @@ public class RegisterViewModel extends AndroidViewModel {
     private final MutableLiveData<String> address = new MutableLiveData<>("");
     private final MutableLiveData<String> password = new MutableLiveData<>("");
     private final MutableLiveData<String> confirmPassword = new MutableLiveData<>("");
+    private final MutableLiveData<String> profilePhotoUri = new MutableLiveData<>(null);
 
     // UI state
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
@@ -166,6 +167,14 @@ public class RegisterViewModel extends AndroidViewModel {
         confirmPasswordError.setValue(null);
     }
 
+    public void setProfilePhotoUri(String value) {
+        profilePhotoUri.setValue(value);
+    }
+
+    public LiveData<String> getProfilePhotoUri() {
+        return profilePhotoUri;
+    }
+
     // ========================== Validation ==========================
 
     /**
@@ -226,7 +235,10 @@ public class RegisterViewModel extends AndroidViewModel {
         // Validate address (city)
         String addressValue = address.getValue();
         if (addressValue == null || addressValue.trim().isEmpty()) {
-            addressError.setValue("Address/City is required");
+            addressError.setValue("Address is required");
+            isValid = false;
+        } else if (addressValue.trim().length() < 5) {
+            addressError.setValue("Address must be at least 5 characters");
             isValid = false;
         } else {
             addressError.setValue(null);
@@ -237,8 +249,8 @@ public class RegisterViewModel extends AndroidViewModel {
         if (passwordValue == null || passwordValue.isEmpty()) {
             passwordError.setValue("Password is required");
             isValid = false;
-        } else if (passwordValue.length() < 6) {
-            passwordError.setValue("Password must be at least 6 characters");
+        } else if (passwordValue.length() < 8) {
+            passwordError.setValue("Password must be at least 8 characters");
             isValid = false;
         } else {
             passwordError.setValue(null);
@@ -260,13 +272,12 @@ public class RegisterViewModel extends AndroidViewModel {
     }
 
     /**
-     * Simple phone number validation.
+     * Phone number validation matching web pattern: /^\+?[\d\s-()]{10,}$/
+     * Allows optional + prefix, then at least 10 digits/spaces/hyphens/parentheses
      */
     private boolean isValidPhoneNumber(String phone) {
-        // Remove common formatting characters
-        String cleaned = phone.replaceAll("[\\s\\-\\(\\)\\+]", "");
-        // Check if it's all digits and reasonable length
-        return cleaned.matches("\\d{6,15}");
+        // Match web regex: ^\+?[\d\s\-()]{10,}$
+        return phone.matches("^\\+?[\\d\\s\\-()]{10,}$");
     }
 
     // ========================== Registration Logic ==========================

@@ -1,6 +1,9 @@
 package com.example.mobile.ui.register;
 
+import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -9,6 +12,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -18,7 +23,6 @@ import androidx.navigation.Navigation;
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentRegisterBinding;
 import com.example.mobile.viewmodels.RegisterViewModel;
-import com.google.android.material.snackbar.Snackbar;
 
 /**
  * RegisterFragment - Handles new user registration.
@@ -33,12 +37,29 @@ import com.google.android.material.snackbar.Snackbar;
  * - Password validation (must match)
  * - API call to UserService.register
  * - Success dialog for activation email notification
- * - Optional profile picture placeholder
+ * - Optional profile picture picker
  */
 public class RegisterFragment extends Fragment {
 
     private FragmentRegisterBinding binding;
     private RegisterViewModel viewModel;
+    private Uri selectedPhotoUri = null;
+
+    // Activity result launcher for photo picker
+    private final ActivityResultLauncher<Intent> photoPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    selectedPhotoUri = result.getData().getData();
+                    if (selectedPhotoUri != null) {
+                        binding.photoPreview.setImageURI(selectedPhotoUri);
+                        binding.photoPreview.setVisibility(View.VISIBLE);
+                        binding.photoPlaceholder.setVisibility(View.GONE);
+                        viewModel.setProfilePhotoUri(selectedPhotoUri.toString());
+                    }
+                }
+            }
+    );
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -67,6 +88,11 @@ public class RegisterFragment extends Fragment {
     private void setupListeners() {
         // Back to login link
         binding.backToLoginText.setOnClickListener(v -> {
+            Navigation.findNavController(v).navigateUp();
+        });
+
+        // Login link at bottom
+        binding.loginText.setOnClickListener(v -> {
             Navigation.findNavController(v).navigateUp();
         });
 
@@ -102,8 +128,8 @@ public class RegisterFragment extends Fragment {
             }
         });
 
-        // City/Address text change listener
-        binding.cityEditText.addTextChangedListener(new SimpleTextWatcher() {
+        // Address text change listener
+        binding.addressEditText.addTextChangedListener(new SimpleTextWatcher() {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 viewModel.setAddress(s.toString());
@@ -126,10 +152,24 @@ public class RegisterFragment extends Fragment {
             }
         });
 
+        // Photo picker click listener
+        binding.photoPickerContainer.setOnClickListener(v -> {
+            openPhotoPicker();
+        });
+
         // Register button click listener
         binding.registerButton.setOnClickListener(v -> {
             viewModel.register();
         });
+    }
+
+    /**
+     * Opens photo picker to select profile photo.
+     */
+    private void openPhotoPicker() {
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("image/*");
+        photoPickerLauncher.launch(intent);
     }
 
     /**
@@ -139,44 +179,48 @@ public class RegisterFragment extends Fragment {
         // Observe loading state
         viewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
             binding.registerButton.setEnabled(!isLoading);
-            binding.registerButton.setText(isLoading ? "Creating Account..." : "Create Account");
+            binding.registerButton.setText(isLoading ? "" : "Create Account");
+            binding.loadingProgress.setVisibility(isLoading ? View.VISIBLE : View.GONE);
             setFormEnabled(!isLoading);
         });
 
-        // Observe validation errors
+        // Observe validation errors - use new TextInputLayout IDs
         viewModel.getFirstNameError().observe(getViewLifecycleOwner(), error -> {
-            binding.firstNameInput.setError(error);
+            binding.firstNameInputLayout.setError(error);
         });
 
         viewModel.getLastNameError().observe(getViewLifecycleOwner(), error -> {
-            binding.lastNameInput.setError(error);
+            binding.lastNameInputLayout.setError(error);
         });
 
         viewModel.getEmailError().observe(getViewLifecycleOwner(), error -> {
-            binding.emailInput.setError(error);
+            binding.emailInputLayout.setError(error);
         });
 
         viewModel.getPhoneError().observe(getViewLifecycleOwner(), error -> {
-            binding.phoneInput.setError(error);
+            binding.phoneInputLayout.setError(error);
         });
 
         viewModel.getAddressError().observe(getViewLifecycleOwner(), error -> {
-            binding.cityInput.setError(error);
+            binding.addressInputLayout.setError(error);
         });
 
         viewModel.getPasswordError().observe(getViewLifecycleOwner(), error -> {
-            binding.passwordInput.setError(error);
+            binding.passwordInputLayout.setError(error);
         });
 
         viewModel.getConfirmPasswordError().observe(getViewLifecycleOwner(), error -> {
-            binding.confirmPasswordInput.setError(error);
+            binding.confirmPasswordInputLayout.setError(error);
         });
 
-        // Observe general error messages
+        // Observe general error messages - show in error container
         viewModel.getErrorMessage().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
-                showError(error);
+                binding.errorContainer.setVisibility(View.VISIBLE);
+                binding.errorText.setText(error);
                 viewModel.clearError();
+            } else {
+                binding.errorContainer.setVisibility(View.GONE);
             }
         });
 
@@ -197,9 +241,10 @@ public class RegisterFragment extends Fragment {
         binding.lastNameEditText.setEnabled(enabled);
         binding.emailEditText.setEnabled(enabled);
         binding.phoneEditText.setEnabled(enabled);
-        binding.cityEditText.setEnabled(enabled);
+        binding.addressEditText.setEnabled(enabled);
         binding.passwordEditText.setEnabled(enabled);
         binding.confirmPasswordEditText.setEnabled(enabled);
+        binding.photoPickerContainer.setEnabled(enabled);
     }
 
     /**
@@ -219,19 +264,6 @@ public class RegisterFragment extends Fragment {
                 })
                 .setCancelable(false)
                 .show();
-    }
-
-    /**
-     * Shows error message using Snackbar.
-     */
-    private void showError(String message) {
-        if (getView() != null) {
-            Snackbar.make(getView(), message, Snackbar.LENGTH_LONG)
-                    .setBackgroundTint(getResources().getColor(android.R.color.holo_red_dark, null))
-                    .show();
-        } else {
-            Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
-        }
     }
 
     @Override
