@@ -37,6 +37,8 @@ import { ReviewPage } from './pages/review/review.page';
 import { reviewGuard } from './infrastructure/auth/review.guard';
 import { AdminPanicPage } from './pages/admin/panic/admin-panic.page';
 import { NotFoundPage } from './pages/not-found/not-found.page';
+import { SupportPage } from './shared/support/support.page';
+import { AdminSupportPage } from './pages/admin/support/admin-support.page';
 
 export const routes: Routes = [
   // --- GUEST-ONLY ROUTES (redirect to dashboard if logged in) ---
@@ -144,6 +146,12 @@ export const routes: Routes = [
     component: ActiveRidePage,
     canActivate: [passengerRideAccessGuard]
   },
+  {
+    path: 'passenger/support',
+    component: SupportPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['PASSENGER'] }
+  },
 
   // --- ADMIN ROUTES ---
   {
@@ -188,6 +196,12 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },
+  {
+    path: 'admin/support',
+    component: AdminSupportPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
 
   // --- DRIVER ROUTES ---
   {
@@ -215,6 +229,12 @@ export const routes: Routes = [
   {
     path: 'driver/profile',
     component: DriverProfilePage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['DRIVER'] }
+  },
+  {
+    path: 'driver/support',
+    component: SupportPage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
