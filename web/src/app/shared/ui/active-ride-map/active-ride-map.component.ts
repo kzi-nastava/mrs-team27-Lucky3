@@ -47,6 +47,7 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   private startMarker: L.Marker | null = null;
   private stopMarkers: L.Marker[] = [];
   private endMarker: L.Marker | null = null;
+  private initialBoundsSet: boolean = false; // Only fit bounds once on initial load
 
   private resizeObserver: ResizeObserver | null = null;
   private invalidateQueued = false;
@@ -248,8 +249,12 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
 
     this.endMarker = L.marker(coarsePoints[coarsePoints.length - 1], { icon: this.endIcon, zIndexOffset: 900 }).addTo(this.map);
 
-    const bounds = L.latLngBounds(polyPoints as any);
-    this.map.fitBounds(bounds, { padding: [40, 40] });
+    // Only fit bounds once on initial load to prevent map zoom reset on every update
+    if (!this.initialBoundsSet) {
+      const bounds = L.latLngBounds(polyPoints as any);
+      this.map.fitBounds(bounds, { padding: [40, 40] });
+      this.initialBoundsSet = true;
+    }
   }
 
   private syncApproach(): void {

@@ -9,6 +9,7 @@ import { RideResponse } from '../../../infrastructure/rest/model/ride-response.m
 import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
 import { ActiveRideMapComponent, ActiveRideMapData, MapPoint } from '../../../shared/ui/active-ride-map/active-ride-map.component';
 import { SocketService } from '../../../infrastructure/rest/socket.service';
+import { VehicleService } from '../../../infrastructure/rest/vehicle.service';
 import { environment } from '../../../../env/environment';
 
 @Component({
@@ -45,6 +46,7 @@ export class AdminRidePage implements OnInit, OnDestroy {
     private router: Router,
     private rideService: RideService,
     private socketService: SocketService,
+    private vehicleService: VehicleService,
     private http: HttpClient,
     private cdr: ChangeDetectorRef
   ) {}
@@ -190,7 +192,7 @@ export class AdminRidePage implements OnInit, OnDestroy {
     const remainingStops = stops.slice(completedCount);
     
     const request: CreateRideRequest = {
-      start: { latitude: location.latitude, longitude: location.longitude, address: '' },
+      start: { latitude: location.latitude, longitude: location.longitude, address: 'Current Location' },
       destination: endLoc,
       stops: remainingStops,
       passengerEmails: [],
@@ -260,18 +262,45 @@ export class AdminRidePage implements OnInit, OnDestroy {
         latitude: ride.vehicleLocation.latitude,
         longitude: ride.vehicleLocation.longitude
       };
-      
-      // Immediately calculate approach/remaining routes if ride is in progress
-      if (this.isRideInProgress) {
-        this.fetchInitialRoutes(ride, this.driverLocation);
-      } else if (this.isRideActive) {
-        // For pending/accepted rides, calculate approach from vehicle to pickup
-        this.fetchApproachToPickup(ride, this.driverLocation);
-      }
+      this.calculateInitialRoutes(ride);
+    } else if (ride.driver?.id) {
+      // If vehicleLocation not in ride response, fetch from active vehicles endpoint
+      this.fetchVehicleLocationForDriver(ride);
     }
 
     // Fetch detailed route (full planned route)
     this.fetchDetailedRoute(ride);
+  }
+
+  private fetchVehicleLocationForDriver(ride: RideResponse): void {
+    const driverId = ride.driver?.id;
+    if (!driverId) return;
+
+    this.vehicleService.getActiveVehicles().subscribe({
+      next: (vehicles) => {
+        const vehicle = vehicles.find(v => v.driverId === driverId);
+        if (vehicle && this.isValidCoordinate(vehicle.latitude, vehicle.longitude)) {
+          this.driverLocation = {
+            latitude: vehicle.latitude,
+            longitude: vehicle.longitude
+          };
+          this.calculateInitialRoutes(ride);
+          this.cdr.detectChanges();
+        }
+      }
+    });
+  }
+
+  private calculateInitialRoutes(ride: RideResponse): void {
+    if (!this.driverLocation) return;
+    
+    // Immediately calculate approach/remaining routes if ride is in progress
+    if (this.isRideInProgress) {
+      this.fetchInitialRoutes(ride, this.driverLocation);
+    } else if (this.isRideActive) {
+      // For pending/accepted rides, calculate approach from vehicle to pickup
+      this.fetchApproachToPickup(ride, this.driverLocation);
+    }
   }
 
   private fetchApproachToPickup(ride: RideResponse, vehicleLoc: MapPoint): void {
@@ -279,7 +308,7 @@ export class AdminRidePage implements OnInit, OnDestroy {
     if (!pickup) return;
 
     const request: CreateRideRequest = {
-      start: { latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude, address: '' },
+      start: { latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude, address: 'Current Location' },
       destination: pickup,
       stops: [],
       passengerEmails: [],
@@ -300,6 +329,9 @@ export class AdminRidePage implements OnInit, OnDestroy {
             .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
           this.cdr.detectChanges();
         }
+      },
+      error: (err) => {
+        console.error('Failed to fetch approach route:', err);
       }
     });
   }
@@ -315,7 +347,7 @@ export class AdminRidePage implements OnInit, OnDestroy {
     const remainingStops = stops.slice(this.completedStopIndexes.size);
 
     const request: CreateRideRequest = {
-      start: { latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude, address: '' },
+      start: { latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude, address: 'Current Location' },
       destination: endLoc,
       stops: remainingStops,
       passengerEmails: [],
