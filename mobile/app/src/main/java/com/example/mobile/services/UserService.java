@@ -1,6 +1,8 @@
 package com.example.mobile.services;
 
+import com.example.mobile.models.EmailRequest;
 import com.example.mobile.models.LoginRequest;
+import com.example.mobile.models.PasswordResetRequest;
 import com.example.mobile.models.RegistrationRequest;
 import com.example.mobile.models.TokenResponse;
 import com.example.mobile.models.UserResponse;
@@ -136,58 +138,4 @@ public interface UserService {
      */
     @GET("api/users/{id}")
     Call<UserResponse> getUserById(@Path("id") Long userId);
-
-    // ========================== Helper DTOs ==========================
-
-    /**
-     * Simple email request DTO.
-     */
-    class EmailRequest {
-        private String email;
-
-        public EmailRequest() {}
-
-        public EmailRequest(String email) {
-            this.email = email;
-        }
-
-        public String getEmail() {
-            return email;
-        }
-
-        public void setEmail(String email) {
-            this.email = email;
-        }
-    }
-
-    /**
-     * Password reset request DTO.
-     */
-    class PasswordResetRequest {
-        private String token;
-        private String newPassword;
-
-        public PasswordResetRequest() {}
-
-        public PasswordResetRequest(String token, String newPassword) {
-            this.token = token;
-            this.newPassword = newPassword;
-        }
-
-        public String getToken() {
-            return token;
-        }
-
-        public void setToken(String token) {
-            this.token = token;
-        }
-
-        public String getNewPassword() {
-            return newPassword;
-        }
-
-        public void setNewPassword(String newPassword) {
-            this.newPassword = newPassword;
-        }
-    }
 }
