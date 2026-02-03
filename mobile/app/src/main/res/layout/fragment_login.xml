@@ -12,7 +12,6 @@
         android:layout_height="wrap_content"
         android:padding="24dp">
 
-        <!-- Back to Home Link -->
         <TextView
             android:id="@+id/back_to_home_text"
             android:layout_width="wrap_content"
@@ -20,18 +19,17 @@
             android:text="← Back to Home"
             android:textColor="@color/gray_400"
             android:textSize="14sp"
-            android:visibility="gone"
+            android:padding="8dp"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <!-- Logo Icon Box -->
         <FrameLayout
             android:id="@+id/logo_container"
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:layout_marginTop="48dp"
+            android:layout_marginTop="24dp"
             android:background="@drawable/bg_icon_box_yellow"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/back_to_home_text"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 

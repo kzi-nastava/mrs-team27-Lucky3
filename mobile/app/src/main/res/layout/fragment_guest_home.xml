@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black">
 
-    <!-- Full-screen Map -->
     <org.osmdroid.views.MapView
         android:id="@+id/map"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#1A1A2E" />
 
-    <!-- Top Bar with Logo -->
     <LinearLayout
         android:id="@+id/top_bar"
         android:layout_width="match_parent"
@@ -23,23 +20,9 @@
         android:padding="12dp"
         android:layout_gravity="top">
 
-        <!-- Menu Button -->
-        <ImageButton
-            android:id="@+id/btn_menu"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_icon_box"
-            android:src="@drawable/ic_menu_hamburger"
-            android:padding="10dp"
-            android:scaleType="centerInside"
-            app:tint="@color/yellow_500"
-            android:contentDescription="Menu" />
-
-        <!-- Logo & Brand -->
         <FrameLayout
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_marginStart="12dp"
             android:background="@drawable/bg_icon_box_yellow">
 
             <TextView
@@ -51,17 +34,38 @@
         </FrameLayout>
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:layout_marginStart="12dp"
             android:text="Lucky Ride"
             android:textColor="@color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <TextView
+            android:id="@+id/btn_sign_in"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="Sign In"
+            android:textColor="@color/white"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_create_account"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:text="Create Account"
+            android:textColor="@color/black"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            app:backgroundTint="@color/yellow_500"
+            app:cornerRadius="8dp" />
+
     </LinearLayout>
 
-    <!-- Vehicle Status Legend (Floating over map) -->
     <LinearLayout
         android:id="@+id/legend_container"
         android:layout_width="wrap_content"
@@ -82,7 +86,6 @@
             android:textStyle="bold"
             android:layout_marginBottom="12dp" />
 
-        <!-- Available vehicles -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -105,7 +108,6 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- Occupied vehicles -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -128,58 +130,26 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Bottom Action Buttons Container -->
-    <LinearLayout
-        android:id="@+id/bottom_actions"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:gravity="center_horizontal">
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_estimate_ride"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:text="Estimate Ride"
+        android:textColor="@color/black"
+        android:textSize="14sp"
+        android:textAllCaps="false"
+        android:textStyle="bold"
+        android:paddingHorizontal="32dp"
+        app:backgroundTint="@color/yellow_500"
+        app:cornerRadius="16dp"
+        app:icon="@drawable/ic_search"
+        app:iconTint="@color/black"
+        app:iconGravity="textStart"
+        app:iconPadding="8dp"
+        android:elevation="8dp" />
 
-        <!-- Link Passengers Button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_link_passengers"
-            android:layout_width="wrap_content"
-            android:layout_height="56dp"
-            android:text="Link Passengers"
-            android:textColor="@color/black"
-            android:textSize="14sp"
-            android:textAllCaps="false"
-            android:textStyle="bold"
-            android:paddingHorizontal="24dp"
-            app:backgroundTint="@color/yellow_500"
-            app:cornerRadius="16dp"
-            app:icon="@drawable/ic_person"
-            app:iconTint="@color/black"
-            app:iconGravity="textStart"
-            app:iconPadding="8dp"
-            android:elevation="8dp"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Order Ride Button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_request_ride"
-            android:layout_width="wrap_content"
-            android:layout_height="56dp"
-            android:text="Order Ride"
-            android:textColor="@color/black"
-            android:textSize="14sp"
-            android:textAllCaps="false"
-            android:textStyle="bold"
-            android:paddingHorizontal="32dp"
-            app:backgroundTint="@color/yellow_500"
-            app:cornerRadius="16dp"
-            app:icon="@drawable/ic_navigation_icon"
-            app:iconTint="@color/black"
-            app:iconGravity="textStart"
-            app:iconPadding="8dp"
-            android:elevation="8dp" />
-
-    </LinearLayout>
-
-    <!-- Attribution -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

@@ -3,13 +3,15 @@ import android.content.Context;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.widget.Toast;
 
 import org.osmdroid.api.IMapController;
 import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
 import org.osmdroid.bonuspack.routing.RoadManager;
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
+import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
@@ -70,12 +72,23 @@ public class RideMapRenderer {
             geocoder = new Geocoder(context, Locale.getDefault());
         }
 
-        // Tile source
-        map.setTileSource(TileSourceFactory.MAPNIK);
+        // Tile source - CartoDB Dark Matter
+        map.setTileSource(new XYTileSource(
+            "CartoDark",
+            0,
+            20,
+            256,
+            ".png",
+            new String[] {
+                "https://a.basemaps.cartocdn.com/dark_all/",
+                "https://b.basemaps.cartocdn.com/dark_all/",
+                "https://c.basemaps.cartocdn.com/dark_all/"
+            }
+        ));
 
         // Controls
         map.setMultiTouchControls(true);
-        map.setBuiltInZoomControls(true);
+        map.setBuiltInZoomControls(false);
 
         // Controller
         IMapController mapController = map.getController();
@@ -107,6 +120,20 @@ public class RideMapRenderer {
         currentMarkers.add(marker);
     }
 
+    public GeoPoint geocodeLocation(String addressStr) {
+        if (geocoder == null) return null;
+        try {
+            List<Address> list = geocoder.getFromLocationName(addressStr, 1);
+            if (list != null && !list.isEmpty()) {
+                Address a = list.get(0);
+                return new GeoPoint(a.getLatitude(), a.getLongitude());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private void clearMarkers() {
         for (Marker m : currentMarkers) {
             map.getOverlays().remove(m);      // remove each marker overlay [web:50]
@@ -132,8 +159,8 @@ public class RideMapRenderer {
                 }
 
                 Polyline roadOverlay = RoadManager.buildRoadOverlay(road);
-                roadOverlay.setColor(Color.RED);
-                roadOverlay.setWidth(10f);
+                roadOverlay.setColor(Color.parseColor("#eab308")); // Yellow like web
+                roadOverlay.setWidth(15f);
 
                 runOnUiThread(() -> {
                     // Remove previous road overlay if exists

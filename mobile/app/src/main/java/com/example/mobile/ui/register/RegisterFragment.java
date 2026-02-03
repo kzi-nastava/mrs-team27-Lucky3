@@ -86,14 +86,12 @@ public class RegisterFragment extends Fragment {
      * Sets up click listeners and text watchers using ViewBinding.
      */
     private void setupListeners() {
-        // Back to login link
         binding.backToLoginText.setOnClickListener(v -> {
-            Navigation.findNavController(v).navigateUp();
+            Navigation.findNavController(v).navigate(R.id.action_nav_register_to_nav_login);
         });
 
-        // Login link at bottom
         binding.loginText.setOnClickListener(v -> {
-            Navigation.findNavController(v).navigateUp();
+            Navigation.findNavController(v).navigate(R.id.action_nav_register_to_nav_login);
         });
 
         // First name text change listener

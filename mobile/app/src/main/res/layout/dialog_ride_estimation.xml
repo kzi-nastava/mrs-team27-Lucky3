@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog_dark"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ride Estimation"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/btn_close"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentEnd="true"
+            android:src="@drawable/ic_close"
+            app:tint="@color/gray_300"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1F1F1F"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp">
+
+        <ImageView
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:src="@drawable/bg_dot_green"
+            android:layout_marginEnd="12dp" />
+
+        <EditText
+            android:id="@+id/et_pickup_address"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:hint="Pickup address"
+            android:textColor="@android:color/white"
+            android:textColorHint="#888888"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1F1F1F"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:layout_marginBottom="24dp">
+
+        <ImageView
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:src="@drawable/bg_dot_red"
+            android:layout_marginEnd="12dp" />
+
+        <EditText
+            android:id="@+id/et_destination_address"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:hint="Destination address"
+            android:textColor="@android:color/white"
+            android:textColorHint="#888888"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_estimate_confirm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Estimate"
+        android:textColor="@android:color/black"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        app:backgroundTint="@color/yellow_500"
+        app:cornerRadius="8dp"
+        xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+</LinearLayout>
