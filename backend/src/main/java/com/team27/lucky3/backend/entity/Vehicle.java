@@ -30,6 +30,8 @@ public class Vehicle {
     private int seatCount;
     private boolean babyTransport;
     private boolean petTransport;
+
+    @Column(columnDefinition = "boolean default false")
     private boolean currentPanic;
 
     @Embedded

@@ -10,8 +10,9 @@ import { RideService } from '../../../infrastructure/rest/ride.service';
 import { DriverService } from '../../../infrastructure/rest/driver.service';
 import { ToastComponent } from '../../../shared/ui/toast/toast.component';
 import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
-import { Subject, takeUntil, timer } from 'rxjs';
+import { Subject, Subscription, takeUntil, timer } from 'rxjs';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
+import { SocketService } from '../../../infrastructure/rest/socket.service';
 
 type DashboardRide = {
   id: number;
@@ -68,6 +69,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
   private driverId: number | null = null;
+  private locationSubscription: Subscription | null = null;
   
   stats = {
     earnings: 0,
@@ -92,7 +94,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     private authService: AuthService,
     private rideService: RideService,
     private driverService: DriverService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private socketService: SocketService
   ) {}
 
   ngOnInit(): void {
@@ -130,6 +133,9 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.locationSubscription) {
+        this.locationSubscription.unsubscribe();
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -589,6 +595,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   private fetchDriverLocation(): void {
+    if (this.locationSubscription) return;
     if (!this.driverId) return;
 
     this.vehicleService
@@ -598,12 +605,8 @@ export class DashboardPage implements OnInit, OnDestroy {
       next: (vehicles) => {
         const mine = vehicles.find(v => v.driverId === this.driverId);
         if (mine) {
-           this.driverLocation = { latitude: mine.latitude, longitude: mine.longitude };
-           
-           if (this.nextRide && !this.approachRoute) {
-               this.reloadRoutesIfMissing();
-           }
-           this.cdr.detectChanges();
+           this.subscribeToVehicle(mine.id);
+           this.updateLocation(mine);
         } else {
            this.driverLocation = null;
            this.cdr.detectChanges();
@@ -613,6 +616,22 @@ export class DashboardPage implements OnInit, OnDestroy {
         // Keep last known location if the request fails.
       }
     });
+  }
+
+  private subscribeToVehicle(vehicleId: number): void {
+      if (this.locationSubscription) return;
+      this.locationSubscription = this.socketService.getVehicleLocationUpdates(vehicleId).subscribe({
+          next: (loc) => this.updateLocation(loc),
+          error: (err) => console.error(err)
+      });
+  }
+
+  private updateLocation(loc: any): void {
+       this.driverLocation = { latitude: loc.latitude, longitude: loc.longitude };
+       if (this.nextRide && !this.approachRoute) {
+           this.reloadRoutesIfMissing();
+       }
+       this.cdr.detectChanges();
   }
 
   // Cache of raw ride objects

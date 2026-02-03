@@ -14,11 +14,16 @@ import java.util.List;
  * Broadcasts to /topic/vehicles when vehicle data changes.
  */
 @Service
-@RequiredArgsConstructor
 public class VehicleSocketService {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final VehicleService vehicleService;
+
+    public VehicleSocketService(SimpMessagingTemplate messagingTemplate, 
+                                @org.springframework.context.annotation.Lazy VehicleService vehicleService) {
+        this.messagingTemplate = messagingTemplate;
+        this.vehicleService = vehicleService;
+    }
 
     /**
      * Broadcast current vehicle locations to all subscribed clients.
@@ -36,5 +41,14 @@ public class VehicleSocketService {
      */
     public void notifyVehicleUpdate() {
         broadcastVehicleUpdates();
+    }
+
+    /**
+     * Broadcast location update for a specific vehicle.
+     * @param vehicleId ID of the vehicle
+     * @param locationResponse The updated location data
+     */
+    public void sendVehicleLocationUpdate(Long vehicleId, VehicleLocationResponse locationResponse) {
+        messagingTemplate.convertAndSend("/topic/vehicle/" + vehicleId, locationResponse);
     }
 }

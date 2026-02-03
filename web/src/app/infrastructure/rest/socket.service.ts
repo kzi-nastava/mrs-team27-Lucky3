@@ -93,6 +93,50 @@ export class SocketService implements OnDestroy {
   }
 
   /**
+   * Subscribe to location updates for a specific vehicle
+   * @param vehicleId The ID of the vehicle to track
+   */
+  getVehicleLocationUpdates(vehicleId: number): Observable<any> {
+    return new Observable(observer => {
+      const initSubscription = () => {
+        if (!this.client?.connected) {
+          const stateSub = this.socketState.subscribe(state => {
+            if (state.connected) {
+              stateSub.unsubscribe();
+              subscribeToStomp();
+            }
+          });
+          return { unsubscribe: () => stateSub.unsubscribe() };
+        } else {
+          return subscribeToStomp();
+        }
+      };
+
+      const subscribeToStomp = () => {
+        if (!this.client) return { unsubscribe: () => {} };
+        
+        try {
+          const stompSubscription = this.client.subscribe(`/topic/vehicle/${vehicleId}`, (message: IMessage) => {
+            try {
+              const location = JSON.parse(message.body);
+              observer.next(location);
+            } catch (e) {
+              console.error('Error parsing vehicle location:', e);
+            }
+          });
+          return stompSubscription;
+        } catch (error) {
+           console.error('Error subscribing to vehicle:', error);
+           return { unsubscribe: () => {} };
+        }
+      };
+
+      const sub = initSubscription();
+      return () => sub.unsubscribe();
+    });
+  }
+
+  /**
    * Get connection state observable
    */
   getConnectionState(): Observable<SocketState> {
