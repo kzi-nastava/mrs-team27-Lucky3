@@ -1,14 +1,14 @@
 package com.team27.lucky3.backend.controller;
 
+import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.response.VehicleLocationResponse;
 import com.team27.lucky3.backend.service.VehicleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -26,5 +26,11 @@ public class VehicleController {
     public ResponseEntity<List<VehicleLocationResponse>> getActiveVehicles() {
         List<VehicleLocationResponse> vehicles = vehicleService.getPublicMapVehicles();
         return ResponseEntity.ok(vehicles);
+    }
+
+    @PutMapping("/{id}/location")
+    public ResponseEntity<Void> updateLocation(@PathVariable Long id, @Valid @RequestBody LocationDto locationDto) {
+        vehicleService.updateVehicleLocation(id, locationDto);
+        return ResponseEntity.ok().build();
     }
 }
