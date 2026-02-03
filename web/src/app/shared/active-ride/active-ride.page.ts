@@ -88,7 +88,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   userRole: string = '';
 
   // stop completion tracking
-  private stopCompletionThresholdMeters = 30; // 30m as per requirement
+  private stopCompletionThresholdMeters = 50; // 50m
   completedStopIndexes = new Set<number>();
   private pendingStopCompletions = new Set<number>(); // Track stops being sent to backend
 
