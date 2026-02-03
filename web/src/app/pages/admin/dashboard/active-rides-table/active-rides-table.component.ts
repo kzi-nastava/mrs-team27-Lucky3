@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { RideResponse } from '../../../../infrastructure/rest/model/ride-response.model';
 
 export type ActiveRideSortField = 'driver' | 'vehicle' | 'status' | 'passengerCount' | 'rating' | 'timeActive' | 'estimatedTime';
@@ -17,8 +18,14 @@ export class ActiveRidesTableComponent {
   
   @Output() sortChange = new EventEmitter<ActiveRideSortField>();
 
+  constructor(private router: Router) {}
+
   handleSort(field: ActiveRideSortField) {
     this.sortChange.emit(field);
+  }
+
+  onRowClick(ride: RideResponse): void {
+    this.router.navigate(['/admin/ride', ride.id]);
   }
 
   getDriverName(ride: RideResponse): string {

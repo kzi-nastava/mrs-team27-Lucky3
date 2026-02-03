@@ -65,7 +65,8 @@
         </tr>
         <tr 
           *ngFor="let ride of rides"
-          class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+          (click)="onRowClick(ride)"
+          class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors cursor-pointer"
           [ngClass]="{'outline outline-2 outline-red-500 z-10': ride.panicPressed}"
         >
           <!-- Driver -->
