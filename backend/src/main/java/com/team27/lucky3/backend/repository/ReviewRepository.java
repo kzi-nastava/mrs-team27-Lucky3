@@ -27,4 +27,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     
     // Check if a passenger has already reviewed a specific ride
     boolean existsByRideIdAndPassengerId(Long rideId, Long passengerId);
+
+    // Get average driver rating across all drivers
+    @Query("SELECT AVG(r.driverRating) FROM Review r WHERE r.driverRating > 0")
+    Double getOverallAverageDriverRating();
 }

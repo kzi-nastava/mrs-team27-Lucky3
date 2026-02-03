@@ -14,6 +14,7 @@ import { ResetPasswordComponent } from './account-control/reset-password/reset-p
 import { ResetPasswordSuccessComponent } from './account-control/reset-password-success/reset-password-success.component';
 import { PassengerHomePage } from './pages/passenger/home/passenger-home.page';
 import { AdminDashboardPage } from './pages/admin/dashboard/admin-dashboard.page';
+import { AdminRequestsPage } from './pages/admin/requests/admin-requests.page';
 import { HomePage } from './pages/home.page/home.page';
 import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
@@ -153,6 +154,12 @@ export const routes: Routes = [
   {
     path: 'admin/dashboard',
     component: AdminDashboardPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/requests',
+    component: AdminRequestsPage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },

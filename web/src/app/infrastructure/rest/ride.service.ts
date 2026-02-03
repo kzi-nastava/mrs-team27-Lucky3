@@ -28,6 +28,13 @@ export interface RideEstimationResponse {
   routePoints: RoutePoint[];
 }
 
+export interface AdminStatsResponse {
+  activeRidesCount: number;
+  averageDriverRating: number;
+  driversOnlineCount: number;
+  totalPassengersInRides: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -138,5 +145,35 @@ export class RideService {
    */
   panicRide(id: number, reason?: string): Observable<RideResponse> {
     return this.http.put<RideResponse>(`${this.apiUrl}/${id}/panic`, { reason: reason || null });
+  }
+
+  /**
+   * Admin: Get all active rides (PENDING, ACCEPTED, SCHEDULED, IN_PROGRESS)
+   */
+  getAllActiveRides(params?: {
+    page?: number;
+    size?: number;
+    sort?: string;
+    search?: string;
+    status?: string;
+    vehicleType?: string;
+  }): Observable<PageResponse<RideResponse>> {
+    const query = new URLSearchParams();
+    if (params?.page != null) query.set('page', String(params.page));
+    if (params?.size != null) query.set('size', String(params.size));
+    if (params?.sort) query.set('sort', params.sort);
+    if (params?.search) query.set('search', params.search);
+    if (params?.status) query.set('status', params.status);
+    if (params?.vehicleType) query.set('vehicleType', params.vehicleType);
+
+    const qs = query.toString();
+    return this.http.get<PageResponse<RideResponse>>(`${this.apiUrl}/active/all${qs ? `?${qs}` : ''}`);
+  }
+
+  /**
+   * Admin: Get dashboard statistics
+   */
+  getAdminStats(): Observable<AdminStatsResponse> {
+    return this.http.get<AdminStatsResponse>(`${environment.apiHost}admin/stats`);
   }
 }
