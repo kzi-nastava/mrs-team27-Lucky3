@@ -912,6 +912,13 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
           return;
       }
       
+      // IMMEDIATE FALLBACK: Set a simple straight-line route for instant visual feedback
+      this.approachRoute = [
+          { latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
+          { latitude: nextDestination.latitude, longitude: nextDestination.longitude }
+      ];
+      this.cdr.detectChanges();
+      
       // Calculate approach route (blue line) from vehicle to next destination
       const req: CreateRideRequest = {
           start: { address: vehicleLoc.address || 'Current Location', latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
@@ -930,7 +937,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
               }
           },
           error: () => {
-              this.approachRoute = null;
+              // Keep fallback route on error
           }
       });
   }
@@ -1356,6 +1363,22 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     // and goes through remaining uncompleted stops to the destination
     const yellowStartPoint = stops[nextStopIndex];
     
+    // IMMEDIATE FALLBACK: Use a simple straight-line route while API loads
+    // This provides instant visual feedback
+    const fallbackRoute: MapPoint[] = [
+      { latitude: yellowStartPoint.latitude, longitude: yellowStartPoint.longitude }
+    ];
+    for (let i = nextStopIndex + 1; i < stops.length; i++) {
+      if (!this.completedStopIndexes.has(i)) {
+        fallbackRoute.push({ latitude: stops[i].latitude, longitude: stops[i].longitude });
+      }
+    }
+    fallbackRoute.push({ latitude: end.latitude, longitude: end.longitude });
+    
+    // Set fallback immediately for instant feedback
+    this.remainingRoute = fallbackRoute;
+    this.cdr.detectChanges();
+    
     // Collect remaining uncompleted stops AFTER the next one
     const remainingUncompletedStops: typeof stops = [];
     for (let i = nextStopIndex + 1; i < stops.length; i++) {
@@ -1384,7 +1407,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         }
       },
       error: () => {
-        this.remainingRoute = null;
+        // Keep fallback route on error
       }
     });
   }
