@@ -1,6 +1,9 @@
 package com.example.mobile.ui.maps;
+import androidx.core.content.ContextCompat;
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
+import android.graphics.Paint;
 import android.location.Address;
 import android.location.Geocoder;
 import android.graphics.ColorMatrix;
@@ -18,6 +21,7 @@ import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.ScaleBarOverlay;
 import com.example.mobile.R;
+import com.example.mobile.models.RoutePointResponse;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -64,6 +68,56 @@ public class RideMapRenderer {
 
         drawRoadAlongRoute(routePoints);
         map.invalidate();
+    }
+
+    public void showRoute(List<RoutePointResponse> routePoints) {
+        if (routePoints == null || routePoints.isEmpty()) return;
+
+        clearMarkers();
+        List<GeoPoint> points = new ArrayList<>();
+        for (RoutePointResponse rp : routePoints) {
+            points.add(new GeoPoint(rp.getLocation().getLatitude(), rp.getLocation().getLongitude()));
+        }
+
+        if (!points.isEmpty()) {
+            // Start
+            addMarkerInternal(points.get(0), "Start", R.drawable.bg_dot_green);
+            // End
+            if (points.size() > 1) {
+                addMarkerInternal(points.get(points.size() - 1), "Destination", R.drawable.ic_map_pin); // assuming red pin
+            }
+        }
+
+        drawRoadAlongRoute(points);
+        
+        // Zoom to route
+        if (!points.isEmpty()) {
+             // Simple bounding box logic or just center on first point for now
+             map.getController().animateTo(points.get(0));
+             map.getController().setZoom(14.0);
+        }
+    }
+    
+    public void clearMap() {
+        clearMarkers();
+        if (currentRoadOverlay != null) {
+            map.getOverlays().remove(currentRoadOverlay);
+            currentRoadOverlay = null;
+        }
+        map.invalidate();
+    }
+    
+    private void addMarkerInternal(GeoPoint point, String title, int iconRes) {
+        Marker marker = new Marker(map);
+        marker.setPosition(point);
+        marker.setTitle(title);
+        marker.setIcon(ContextCompat.getDrawable(context, iconRes));
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
+        if (iconRes == R.drawable.ic_map_pin) {
+             marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+        }
+        map.getOverlays().add(marker);
+        currentMarkers.add(marker);
     }
 
     public void initMap() {
@@ -161,6 +215,11 @@ public class RideMapRenderer {
                 Polyline roadOverlay = RoadManager.buildRoadOverlay(road);
                 roadOverlay.setColor(Color.parseColor("#eab308")); // Yellow like web
                 roadOverlay.setWidth(15f);
+                
+                // Make it dashed
+                Paint paint = roadOverlay.getOutlinePaint();
+                paint.setPathEffect(new DashPathEffect(new float[]{30, 20}, 0));
+                roadOverlay.setPoints(roadOverlay.getPoints()); // Refresh points to apply paint? paint is ref
 
                 runOnUiThread(() -> {
                     // Remove previous road overlay if exists

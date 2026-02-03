@@ -6,6 +6,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Header -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -29,6 +30,7 @@
             xmlns:app="http://schemas.android.com/apk/res-auto" />
     </RelativeLayout>
 
+    <!-- Inputs -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -79,6 +81,93 @@
             android:textSize="14sp" />
     </LinearLayout>
 
+    <!-- Results (Initially Gone) -->
+    <LinearLayout
+        android:id="@+id/ll_estimation_results"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="3"
+        android:padding="12dp"
+        android:background="@drawable/bg_card"
+        android:visibility="gone"
+        android:layout_marginBottom="24dp">
+
+        <!-- Distance -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Distance"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/tv_distance_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0 km"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <!-- Duration -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Duration"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/tv_duration_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 min"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <!-- Price -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Est. Price"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/tv_price_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 RSD"
+                android:textColor="@color/yellow_500"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+
+    <!-- Initial Estimate Button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_estimate_confirm"
         android:layout_width="match_parent"
@@ -90,5 +179,53 @@
         app:backgroundTint="@color/yellow_500"
         app:cornerRadius="8dp"
         xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+    <!-- Action Buttons (Clear / Recalculate) - Initially Gone -->
+    <LinearLayout
+        android:id="@+id/ll_action_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2"
+        android:visibility="gone">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_clear"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Clear"
+            android:textColor="@android:color/white"
+            android:textAllCaps="false"
+            app:backgroundTint="#333333"
+            app:cornerRadius="8dp"
+            android:layout_marginEnd="8dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_recalculate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Recalculate"
+            android:textColor="@android:color/black"
+            android:textStyle="bold"
+            android:textAllCaps="false"
+            app:backgroundTint="@color/yellow_500"
+            app:cornerRadius="8dp"
+            android:layout_marginStart="8dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_login_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sign in or create an account to book this ride"
+        android:textColor="#AAAAAA"
+        android:gravity="center"
+        android:textSize="12sp"
+        android:layout_marginTop="16dp"
+        android:visibility="gone" />
 
 </LinearLayout>

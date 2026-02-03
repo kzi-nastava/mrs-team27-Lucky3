@@ -43,6 +43,7 @@ import org.osmdroid.views.overlay.Marker;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -225,50 +226,70 @@ public class GuestHomeFragment extends Fragment {
         EditText etPickup = dialogView.findViewById(R.id.et_pickup_address);
         EditText etDestination = dialogView.findViewById(R.id.et_destination_address);
         MaterialButton btnEstimate = dialogView.findViewById(R.id.btn_estimate_confirm);
-        MaterialButton btnClear = dialogView.findViewById(R.id.btn_estimate_clear);
-        MaterialButton btnRecalculate = dialogView.findViewById(R.id.btn_estimate_recalculate);
         ImageView btnClose = dialogView.findViewById(R.id.btn_close);
-        View layoutResult = dialogView.findViewById(R.id.layout_estimation_result);
-        TextView tvDistance = dialogView.findViewById(R.id.tv_distance);
-        TextView tvDuration = dialogView.findViewById(R.id.tv_duration);
-        TextView tvPrice = dialogView.findViewById(R.id.tv_price);
+
+        // New Views
+        LinearLayout llResults = dialogView.findViewById(R.id.ll_estimation_results);
+        TextView tvDistance = dialogView.findViewById(R.id.tv_distance_value);
+        TextView tvDuration = dialogView.findViewById(R.id.tv_duration_value);
+        TextView tvPrice = dialogView.findViewById(R.id.tv_price_value);
+        LinearLayout llActions = dialogView.findViewById(R.id.ll_action_buttons);
+        MaterialButton btnClear = dialogView.findViewById(R.id.btn_clear);
+        MaterialButton btnRecalculate = dialogView.findViewById(R.id.btn_recalculate);
+        TextView tvLoginHint = dialogView.findViewById(R.id.tv_login_hint);
 
         btnClose.setOnClickListener(v -> dialog.dismiss());
-        
-        btnClear.setOnClickListener(v -> {
-            etPickup.setText("");
-            etDestination.setText("");
-            layoutResult.setVisibility(View.GONE);
-            btnEstimate.setVisibility(View.VISIBLE);
-            mapRenderer.clearRoute();
-        });
-        
-        btnRecalculate.setOnClickListener(v -> {
-             String startAddress = etPickup.getText().toString().trim();
-            String destAddress = etDestination.getText().toString().trim();
 
-            if (!startAddress.isEmpty() && !destAddress.isEmpty()) {
-                performEstimation(startAddress, destAddress, dialog, layoutResult, tvDistance, tvDuration, tvPrice, btnEstimate);
-            }
-        });
-
-        btnEstimate.setOnClickListener(v -> {
+        View.OnClickListener estimateAction = v -> {
             String startAddress = etPickup.getText().toString().trim();
             String destAddress = etDestination.getText().toString().trim();
 
             if (!startAddress.isEmpty() && !destAddress.isEmpty()) {
-                performEstimation(startAddress, destAddress, dialog, layoutResult, tvDistance, tvDuration, tvPrice, btnEstimate);
+                performEstimation(startAddress, destAddress, 
+                    est -> {
+                        // Success callback
+                        requireActivity().runOnUiThread(() -> {
+                             tvDistance.setText(String.format("%.2f km", est.getEstimatedDistance()));
+                             tvDuration.setText(String.format("%d min", est.getEstimatedTimeInMinutes()));
+                             tvPrice.setText(String.format("%.0f RSD", est.getEstimatedCost()));
+                             
+                             llResults.setVisibility(View.VISIBLE);
+                             llActions.setVisibility(View.VISIBLE);
+                             tvLoginHint.setVisibility(View.VISIBLE);
+                             btnEstimate.setVisibility(View.GONE);
+                             
+                             mapRenderer.showRoute(est.getRoutePoints());
+                        });
+                    },
+                    error -> {
+                        requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show());
+                    }
+                );
             } else {
                 Toast.makeText(requireContext(), "Please enter both addresses", Toast.LENGTH_SHORT).show();
             }
+        };
+
+        btnEstimate.setOnClickListener(estimateAction);
+        btnRecalculate.setOnClickListener(estimateAction);
+
+        btnClear.setOnClickListener(v -> {
+            etPickup.setText("");
+            etDestination.setText("");
+            llResults.setVisibility(View.GONE);
+            llActions.setVisibility(View.GONE);
+            tvLoginHint.setVisibility(View.GONE);
+            btnEstimate.setVisibility(View.VISIBLE);
+            if (mapRenderer != null) mapRenderer.clearMap();
         });
 
         dialog.show();
     }
 
-    private void performEstimation(String startAddress, String destAddress, AlertDialog dialog, View layoutResult, TextView tvDist, TextView tvDur, TextView tvPrice, View btnEst) {
+    private void performEstimation(String startAddress, String destAddress, 
+                                   final Consumer<RideEstimationResponse> onSuccess, 
+                                   final Consumer<String> onError) {
         new Thread(() -> {
-            // ... existing geocoding logic ...
             GeoPoint startPoint = mapRenderer.geocodeLocation(startAddress);
             GeoPoint destPoint = mapRenderer.geocodeLocation(destAddress);
 
@@ -283,62 +304,28 @@ public class GuestHomeFragment extends Fragment {
                     @Override
                     public void onResponse(@NonNull Call<RideEstimationResponse> call, @NonNull Response<RideEstimationResponse> response) {
                          if (response.isSuccessful() && response.body() != null) {
-                             RideEstimationResponse est = response.body();
-                             requireActivity().runOnUiThread(() -> {
-                                 // Update UI in dialog
-                                 layoutResult.setVisibility(View.VISIBLE);
-                                 btnEst.setVisibility(View.GONE);
-                                 
-                                 tvDist.setText(String.format("%.2f km", est.getEstimatedDistance()));
-                                 tvDur.setText(String.format("%d min", est.getEstimatedTimeInMinutes()));
-                                 tvPrice.setText(String.format("%.0f RSD", est.getEstimatedCost()));
-                                 
-                                 // Draw route
-                                 mapRenderer.drawRoute(est.getRoutePoints());
-                             });
+                             if (onSuccess != null) onSuccess.accept(response.body());
                          } else {
                              Log.e(TAG, "Estimation failed: " + response.code() + " " + response.message());
+                             String errMsg = "Estimation failed";
                              try {
                                  if (response.errorBody() != null) {
-                                    Log.e(TAG, "Error body: " + response.errorBody().string());
+                                    errMsg += ": " + response.errorBody().string();
                                  }
                              } catch (Exception e) {}
-                             requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), "Estimation failed", Toast.LENGTH_SHORT).show());
+                             if (onError != null) onError.accept(errMsg);
                          }
                     }
 
                     @Override
                     public void onFailure(@NonNull Call<RideEstimationResponse> call, @NonNull Throwable t) {
                          Log.e(TAG, "Error estimating ride", t);
-                         requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), "Error connecting to server", Toast.LENGTH_SHORT).show());
+                         if (onError != null) onError.accept("Error connecting to server");
                     }
                 });
             } else {
-                 requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), "Could not find address locations", Toast.LENGTH_SHORT).show());
+                 if (onError != null) onError.accept("Could not find address locations");
             }
         }).start();
-    }
-                                 if (response.errorBody() != null) {
-                                    Log.e(TAG, "Error body: " + response.errorBody().string());
-                                 }
-                             } catch (Exception e) {}
-                             requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), "Estimation failed", Toast.LENGTH_SHORT).show());
-                         }
-                    }
-
-                    @Override
-                    public void onFailure(@NonNull Call<RideEstimationResponse> call, @NonNull Throwable t) {
-                         Log.e(TAG, "Error estimating ride", t);
-                         requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), "Error connecting to server", Toast.LENGTH_SHORT).show());
-                    }
-                });
-            } else {
-                 requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), "Could not find address locations", Toast.LENGTH_SHORT).show());
-            }
-        }).start();
-    }
-
-    private void showEstimationResult(RideEstimationResponse est) {
-        // Obsolete
     }
 }
