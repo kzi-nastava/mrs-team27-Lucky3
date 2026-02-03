@@ -19,7 +19,7 @@ import retrofit2.http.Query;
 /**
  * Retrofit service interface for user authentication and management endpoints.
  * 
- * Base URL: http://<IP_ADDR>:8080/api/
+ * Base URL: http://<IP_ADDR>:8080/
  */
 public interface UserService {
 
@@ -32,7 +32,7 @@ public interface UserService {
      * @param loginRequest Contains email and password
      * @return TokenResponse with access and refresh tokens
      */
-    @POST("auth/login")
+    @POST("api/auth/login")
     Call<TokenResponse> login(@Body LoginRequest loginRequest);
 
     /**
@@ -45,7 +45,7 @@ public interface UserService {
      * @return UserResponse with registered user data
      */
     @Multipart
-    @POST("auth/register")
+    @POST("api/auth/register")
     Call<UserResponse> register(
             @Part("data") RequestBody data,
             @Part MultipartBody.Part profileImage
@@ -59,7 +59,7 @@ public interface UserService {
      * @return UserResponse with registered user data
      */
     @Multipart
-    @POST("auth/register")
+    @POST("api/auth/register")
     Call<UserResponse> registerWithoutImage(@Part("data") RequestBody data);
 
     /**
@@ -67,7 +67,7 @@ public interface UserService {
      * POST /api/auth/logout
      * Requires authentication header.
      */
-    @POST("auth/logout")
+    @POST("api/auth/logout")
     Call<Void> logout();
 
     /**
@@ -76,7 +76,7 @@ public interface UserService {
      * 
      * @param emailRequest Contains the email address
      */
-    @POST("auth/forgot-password")
+    @POST("api/auth/forgot-password")
     Call<Void> forgotPassword(@Body EmailRequest emailRequest);
 
     /**
@@ -85,7 +85,7 @@ public interface UserService {
      * 
      * @param resetRequest Contains token and new password
      */
-    @POST("auth/reset-password")
+    @POST("api/auth/reset-password")
     Call<Void> resetPassword(@Body PasswordResetRequest resetRequest);
 
     /**
@@ -94,7 +94,7 @@ public interface UserService {
      * 
      * @param token The reset token to validate
      */
-    @GET("auth/reset-password/validate")
+    @GET("api/auth/reset-password/validate")
     Call<Void> validateResetToken(@Query("token") String token);
 
     /**
@@ -103,7 +103,7 @@ public interface UserService {
      * 
      * @param token Activation token from email
      */
-    @GET("auth/activate")
+    @GET("api/auth/activate")
     Call<Void> activateAccount(@Query("token") String token);
 
     /**
@@ -112,7 +112,7 @@ public interface UserService {
      * 
      * @param emailRequest Contains the email address
      */
-    @POST("auth/resend-activation")
+    @POST("api/auth/resend-activation")
     Call<Void> resendActivation(@Body EmailRequest emailRequest);
 
     // ========================== User Profile Endpoints ==========================
@@ -124,7 +124,7 @@ public interface UserService {
      * 
      * @return UserResponse with current user data
      */
-    @GET("users/me")
+    @GET("api/users/me")
     Call<UserResponse> getCurrentUser();
 
     /**
@@ -134,7 +134,7 @@ public interface UserService {
      * @param userId The user ID
      * @return UserResponse
      */
-    @GET("users/{id}")
+    @GET("api/users/{id}")
     Call<UserResponse> getUserById(@Path("id") Long userId);
 
     // ========================== Helper DTOs ==========================

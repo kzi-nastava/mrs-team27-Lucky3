@@ -22,9 +22,10 @@ public class ClientUtils {
 
     /**
      * Base API path using BuildConfig for IP configuration.
-     * Format: http://<IP_ADDR>:8080/api/
+     * Format: http://<IP_ADDR>:8081/
+     * Note: Do not include trailing path segments - Retrofit endpoints handle the rest
      */
-    public static final String SERVICE_API_PATH = "http://" + BuildConfig.IP_ADDR + ":8080/api/";
+    public static final String SERVICE_API_PATH = "http://" + BuildConfig.IP_ADDR + ":8081/";
 
     /**
      * Connection timeout in seconds.
