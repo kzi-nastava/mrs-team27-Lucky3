@@ -1,7 +1,9 @@
 package com.example.mobile.utils;
 
 import com.example.mobile.BuildConfig;
+import com.example.mobile.services.RideService;
 import com.example.mobile.services.UserService;
+import com.example.mobile.services.VehicleService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -91,9 +93,24 @@ public class ClientUtils {
     public static final UserService userService = retrofit.create(UserService.class);
 
     /**
+     * VehicleService instance (without auth - for public vehicle data).
+     */
+    public static final VehicleService vehicleService = retrofit.create(VehicleService.class);
+
+    /**
+     * RideService instance (without auth - for estimation).
+     */
+    public static final RideService rideService = retrofit.create(RideService.class);
+
+    /**
      * Authenticated UserService instance (lazy initialized).
      */
     private static UserService authenticatedUserService = null;
+
+    /**
+     * Authenticated VehicleService instance (lazy initialized).
+     */
+    private static VehicleService authenticatedVehicleService = null;
 
     /**
      * Creates and returns an OkHttpClient with the AuthInterceptor.
@@ -145,12 +162,26 @@ public class ClientUtils {
     }
 
     /**
+     * Gets the authenticated VehicleService.
+     * 
+     * @param preferencesManager SharedPreferencesManager to retrieve JWT token
+     * @return VehicleService with authentication headers
+     */
+    public static VehicleService getAuthenticatedVehicleService(SharedPreferencesManager preferencesManager) {
+        if (authenticatedVehicleService == null) {
+            authenticatedVehicleService = getAuthenticatedRetrofit(preferencesManager).create(VehicleService.class);
+        }
+        return authenticatedVehicleService;
+    }
+
+    /**
      * Resets authenticated clients (call on logout).
      */
     public static void resetAuthenticatedClients() {
         authHttpClient = null;
         authRetrofit = null;
         authenticatedUserService = null;
+        authenticatedVehicleService = null;
     }
 
     /**

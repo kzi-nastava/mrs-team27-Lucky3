@@ -106,6 +106,10 @@ public class LoginFragment extends Fragment {
         binding.forgotPasswordText.setOnClickListener(v -> {
             Navigation.findNavController(v).navigate(R.id.action_nav_login_to_nav_forgot_password);
         });
+
+        binding.backToHomeText.setOnClickListener(v -> {
+            Navigation.findNavController(v).navigate(R.id.nav_guest_home);
+        });
     }
 
     /**

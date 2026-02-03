@@ -3,6 +3,7 @@ package com.example.mobile;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.Menu;
+import android.preference.PreferenceManager;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
@@ -17,6 +18,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobile.databinding.ActivityMainBinding;
 
+import org.osmdroid.config.Configuration;
+
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration mAppBarConfiguration;
@@ -24,6 +27,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Initialize osmdroid configuration - MUST be done before any MapView usage
+        Configuration.getInstance().load(getApplicationContext(), 
+                PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
+        Configuration.getInstance().setUserAgentValue(getPackageName());
 
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -35,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
         NavigationView navigationView = binding.navView;
         if (navigationView != null) {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow, R.id.nav_settings,
+                    R.id.nav_guest_home, R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow, R.id.nav_settings,
                     R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support,
                     R.id.nav_passenger_home, R.id.nav_passenger_history, R.id.nav_passenger_profile, R.id.nav_passenger_support,
                     R.id.nav_driver_dashboard, R.id.nav_driver_profile, R.id.nav_driver_support)
@@ -110,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
             navigationView.setNavigationItemSelectedListener(item -> {
                 if (item.getItemId() == R.id.nav_logout) {
                     NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-                    navController.navigate(R.id.nav_login);
+                    navController.navigate(R.id.nav_guest_home);
                     androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
                     if (drawer != null) {
                         drawer.close();

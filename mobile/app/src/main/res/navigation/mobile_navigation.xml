@@ -3,7 +3,20 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/nav_login">
+    app:startDestination="@+id/nav_guest_home">
+
+    <fragment
+        android:id="@+id/nav_guest_home"
+        android:name="com.example.mobile.ui.guest.GuestHomeFragment"
+        android:label="Home"
+        tools:layout="@layout/fragment_guest_home">
+        <action
+            android:id="@+id/action_nav_guest_home_to_nav_login"
+            app:destination="@id/nav_login" />
+        <action
+            android:id="@+id/action_nav_guest_home_to_nav_register"
+            app:destination="@id/nav_register" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_login"
@@ -26,6 +39,10 @@
         <action
             android:id="@+id/action_nav_register_to_nav_register_verification"
             app:destination="@id/nav_register_verification" />
+        <action
+            android:id="@+id/action_nav_register_to_nav_login"
+            app:destination="@id/nav_login"
+            app:popUpTo="@id/nav_guest_home" />
     </fragment>
 
     <fragment
