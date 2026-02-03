@@ -74,11 +74,13 @@
             android:textColorHint="@color/gray_400"
             app:boxStrokeColor="@color/yellow_500"
             app:hintTextColor="@color/yellow_500"
+            app:errorEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/personal_info_header"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/last_name_input">
 
             <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/first_name_edit_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
@@ -96,11 +98,13 @@
             android:textColorHint="@color/gray_400"
             app:boxStrokeColor="@color/yellow_500"
             app:hintTextColor="@color/yellow_500"
+            app:errorEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/personal_info_header"
             app:layout_constraintStart_toEndOf="@id/first_name_input"
             app:layout_constraintEnd_toEndOf="parent">
 
             <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/last_name_edit_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
@@ -117,9 +121,11 @@
             android:textColorHint="@color/gray_400"
             app:boxStrokeColor="@color/yellow_500"
             app:hintTextColor="@color/yellow_500"
+            app:errorEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/first_name_input">
 
             <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/email_edit_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
@@ -136,9 +142,11 @@
             android:textColorHint="@color/gray_400"
             app:boxStrokeColor="@color/yellow_500"
             app:hintTextColor="@color/yellow_500"
+            app:errorEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/email_input">
 
             <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/phone_edit_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
@@ -155,9 +163,11 @@
             android:textColorHint="@color/gray_400"
             app:boxStrokeColor="@color/yellow_500"
             app:hintTextColor="@color/yellow_500"
+            app:errorEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/phone_input">
 
             <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/city_edit_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
@@ -192,9 +202,11 @@
             app:hintTextColor="@color/yellow_500"
             app:endIconMode="password_toggle"
             app:endIconTint="@color/gray_400"
+            app:errorEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/security_header">
 
             <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/password_edit_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
@@ -213,9 +225,11 @@
             app:hintTextColor="@color/yellow_500"
             app:endIconMode="password_toggle"
             app:endIconTint="@color/gray_400"
+            app:errorEnabled="true"
             app:layout_constraintTop_toBottomOf="@id/password_input">
 
             <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/confirm_password_edit_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
