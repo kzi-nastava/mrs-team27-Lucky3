@@ -38,6 +38,13 @@ public class RideMapRenderer {
     public RideMapRenderer(Context context, MapView map) {
         this.context = context.getApplicationContext();
         this.map = map;
+        this.geocoder = new Geocoder(this.context, Locale.getDefault());
+        initializeMap();
+    }
+
+    private void initializeMap() {
+        map.setMultiTouchControls(true);
+        // Add specific init logic here if needed
     }
 
     public void showRideByAddresses(List<String> locations) {
