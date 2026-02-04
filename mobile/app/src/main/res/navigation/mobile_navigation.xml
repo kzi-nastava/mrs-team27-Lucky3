@@ -111,7 +111,12 @@
         android:id="@+id/nav_ride_details"
         android:name="com.example.mobile.ui.driver.RideDetailsFragment"
         android:label="Ride Details"
-        tools:layout="@layout/fragment_ride_details" />
+        tools:layout="@layout/fragment_ride_details">
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_admin_dashboard"

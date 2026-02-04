@@ -170,20 +170,21 @@ public class LoginViewModel extends AndroidViewModel {
                     preferencesManager.saveToken(tokenResponse.getAccessToken());
                     preferencesManager.saveRefreshToken(tokenResponse.getRefreshToken());
 
-                    // Decode JWT to get user role
+                    // Decode JWT to get user role and ID
                     String role = decodeRoleFromToken(tokenResponse.getAccessToken());
+                    Long userId = decodeUserIdFromToken(tokenResponse.getAccessToken());
                     userRole.postValue(role);
 
                     // Save basic user info
                     preferencesManager.saveUserData(
-                            -1L, // We don't have user ID in token response
+                            userId,
                             email.getValue().trim(),
                             "", "",
                             role,
                             "", "", ""
                     );
 
-                    Log.d(TAG, "Login successful. Role: " + role);
+                    Log.d(TAG, "Login successful. Role: " + role + ", User ID: " + userId);
                     loginSuccess.postValue(true);
                 } else {
                     // Handle error responses
@@ -244,6 +245,44 @@ public class LoginViewModel extends AndroidViewModel {
         
         // Default to PASSENGER if unable to determine
         return "PASSENGER";
+    }
+
+    /**
+     * Decodes the JWT token to extract the user ID.
+     * @param token The JWT token string
+     * @return The user ID from the token, or -1L if not found
+     */
+    private Long decodeUserIdFromToken(String token) {
+        try {
+            // JWT format: header.payload.signature
+            String[] parts = token.split("\\.");
+            if (parts.length >= 2) {
+                String payload = parts[1];
+                // Decode Base64
+                byte[] decodedBytes = android.util.Base64.decode(payload, android.util.Base64.URL_SAFE);
+                String decodedPayload = new String(decodedBytes);
+                
+                Log.d(TAG, "JWT Payload: " + decodedPayload);
+                
+                // Simple JSON parsing for id
+                // Expected format: {"id":1,...}
+                if (decodedPayload.contains("\"id\"")) {
+                    int idStart = decodedPayload.indexOf("\"id\"");
+                    int valueStart = decodedPayload.indexOf(":", idStart) + 1;
+                    int valueEnd = decodedPayload.indexOf(",", valueStart);
+                    if (valueEnd == -1) valueEnd = decodedPayload.indexOf("}", valueStart);
+                    String idStr = decodedPayload.substring(valueStart, valueEnd).trim();
+                    Long userId = Long.parseLong(idStr);
+                    Log.d(TAG, "Extracted user ID from JWT: " + userId);
+                    return userId;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error decoding user ID from JWT token", e);
+        }
+        
+        Log.w(TAG, "Could not extract user ID from JWT token, returning -1");
+        return -1L;
     }
 
     /**

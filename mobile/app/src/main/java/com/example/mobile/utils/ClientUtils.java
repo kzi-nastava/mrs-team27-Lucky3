@@ -1,6 +1,7 @@
 package com.example.mobile.utils;
 
 import com.example.mobile.BuildConfig;
+import com.example.mobile.services.DriverService;
 import com.example.mobile.services.RideService;
 import com.example.mobile.services.UserService;
 import com.example.mobile.services.VehicleService;
@@ -111,6 +112,16 @@ public class ClientUtils {
      * Authenticated VehicleService instance (lazy initialized).
      */
     private static VehicleService authenticatedVehicleService = null;
+    
+    /**
+     * Authenticated RideService instance (lazy initialized).
+     */
+    private static RideService authenticatedRideService = null;
+    
+    /**
+     * Authenticated DriverService instance (lazy initialized).
+     */
+    private static DriverService authenticatedDriverService = null;
 
     /**
      * Creates and returns an OkHttpClient with the AuthInterceptor.
@@ -173,6 +184,32 @@ public class ClientUtils {
         }
         return authenticatedVehicleService;
     }
+    
+    /**
+     * Gets the authenticated RideService.
+     * 
+     * @param preferencesManager SharedPreferencesManager to retrieve JWT token
+     * @return RideService with authentication headers
+     */
+    public static RideService getAuthenticatedRideService(SharedPreferencesManager preferencesManager) {
+        if (authenticatedRideService == null) {
+            authenticatedRideService = getAuthenticatedRetrofit(preferencesManager).create(RideService.class);
+        }
+        return authenticatedRideService;
+    }
+    
+    /**
+     * Gets the authenticated DriverService.
+     * 
+     * @param preferencesManager SharedPreferencesManager to retrieve JWT token
+     * @return DriverService with authentication headers
+     */
+    public static DriverService getAuthenticatedDriverService(SharedPreferencesManager preferencesManager) {
+        if (authenticatedDriverService == null) {
+            authenticatedDriverService = getAuthenticatedRetrofit(preferencesManager).create(DriverService.class);
+        }
+        return authenticatedDriverService;
+    }
 
     /**
      * Resets authenticated clients (call on logout).
@@ -182,6 +219,8 @@ public class ClientUtils {
         authRetrofit = null;
         authenticatedUserService = null;
         authenticatedVehicleService = null;
+        authenticatedRideService = null;
+        authenticatedDriverService = null;
     }
 
     /**
