@@ -1,5 +1,6 @@
 package com.example.mobile.ui.driver;
 
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,6 +10,7 @@ import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.mobile.R;
 import java.util.List;
+import java.util.Locale;
 
 public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.ViewHolder> {
 
@@ -38,9 +40,16 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
         holder.passengerCount.setText(String.valueOf(item.passengerCount));
         holder.distance.setText(item.distance);
         holder.duration.setText(item.duration);
+        
+        // Set price
+        if (holder.price != null) {
+            holder.price.setText(String.format(Locale.US, "%.2f RSD", item.price));
+        }
 
         holder.itemView.setOnClickListener(v -> {
-            Navigation.findNavController(v).navigate(R.id.action_nav_driver_dashboard_to_nav_ride_details);
+            Bundle args = new Bundle();
+            args.putLong("rideId", item.rideId);
+            Navigation.findNavController(v).navigate(R.id.action_nav_driver_dashboard_to_nav_ride_details, args);
         });
     }
 
@@ -59,6 +68,7 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
         public final TextView passengerCount;
         public final TextView distance;
         public final TextView duration;
+        public final TextView price;
 
         public ViewHolder(View view) {
             super(view);
@@ -71,10 +81,12 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
             passengerCount = view.findViewById(R.id.passenger_count);
             distance = view.findViewById(R.id.distance);
             duration = view.findViewById(R.id.duration);
+            price = view.findViewById(R.id.price);
         }
     }
 
     public static class RideHistoryItem {
+        public long rideId;
         public String startDate;
         public String startTime;
         public String endDate;
@@ -84,10 +96,19 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
         public int passengerCount;
         public String distance;
         public String duration;
+        public double price;
 
         public RideHistoryItem(String startDate, String startTime, String endDate, String endTime,
                                String pickupAddress, String dropoffAddress, int passengerCount,
                                String distance, String duration) {
+            this(0, startDate, startTime, endDate, endTime, pickupAddress, dropoffAddress, 
+                 passengerCount, distance, duration, 0);
+        }
+        
+        public RideHistoryItem(long rideId, String startDate, String startTime, String endDate, String endTime,
+                               String pickupAddress, String dropoffAddress, int passengerCount,
+                               String distance, String duration, double price) {
+            this.rideId = rideId;
             this.startDate = startDate;
             this.startTime = startTime;
             this.endDate = endDate;
@@ -97,6 +118,7 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
             this.passengerCount = passengerCount;
             this.distance = distance;
             this.duration = duration;
+            this.price = price;
         }
     }
 }

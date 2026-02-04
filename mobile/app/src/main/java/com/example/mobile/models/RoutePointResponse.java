@@ -4,6 +4,9 @@ public class RoutePointResponse {
     private LocationDto location;
     private int order;
 
+    public RoutePointResponse() {
+    }
+
     public RoutePointResponse(LocationDto location, int order) {
         this.location = location;
         this.order = order;
