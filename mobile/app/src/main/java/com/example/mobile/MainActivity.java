@@ -17,16 +17,22 @@ import androidx.navigation.ui.NavigationUI;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobile.databinding.ActivityMainBinding;
+import com.example.mobile.utils.SharedPreferencesManager;
 
 import org.osmdroid.config.Configuration;
 
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration mAppBarConfiguration;
+    // Helper to check session
+    private SharedPreferencesManager sharedPreferencesManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Initialize SharedPrefs
+        sharedPreferencesManager = new SharedPreferencesManager(this);
 
         // Initialize osmdroid configuration - MUST be done before any MapView usage
         Configuration.getInstance().load(getApplicationContext(), 
@@ -50,6 +56,21 @@ public class MainActivity extends AppCompatActivity {
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupWithNavController(navigationView, navController);
+            
+            // Restore session
+            checkSession(navController);
+        }
+    }
+
+    private void checkSession(NavController navController) {
+        String token = sharedPreferencesManager.getToken();
+        if (token != null && !token.isEmpty()) {
+            String role = sharedPreferencesManager.getUserRole();
+            if (role != null) {
+                setupNavigationForRole(role);
+                // Optionally navigate to dashboard if on start destination
+                // For now, we just setup the menu so the user can navigate.
+            }
         }
     }
 

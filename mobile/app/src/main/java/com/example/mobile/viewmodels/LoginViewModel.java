@@ -205,84 +205,60 @@ public class LoginViewModel extends AndroidViewModel {
     }
 
     /**
-     * Decodes the JWT token to extract the user role.
-     * Note: This is a simplified implementation. In production, use a proper JWT library.
+     * Decodes the JWT token to extract the user role using Gson.
      */
     private String decodeRoleFromToken(String token) {
         try {
-            // JWT format: header.payload.signature
-            String[] parts = token.split("\\.");
-            if (parts.length >= 2) {
-                String payload = parts[1];
-                // Decode Base64
-                byte[] decodedBytes = android.util.Base64.decode(payload, android.util.Base64.URL_SAFE);
-                String decodedPayload = new String(decodedBytes);
-                
-                // Simple JSON parsing for role
-                // Expected format: {"role":"DRIVER",...} or {"authorities":[{"authority":"ROLE_DRIVER"}]}
-                if (decodedPayload.contains("\"role\"")) {
-                    int roleStart = decodedPayload.indexOf("\"role\"");
-                    int valueStart = decodedPayload.indexOf(":", roleStart) + 1;
-                    int valueEnd = decodedPayload.indexOf(",", valueStart);
-                    if (valueEnd == -1) valueEnd = decodedPayload.indexOf("}", valueStart);
-                    String role = decodedPayload.substring(valueStart, valueEnd).trim()
-                            .replace("\"", "").replace("}", "");
-                    return role.toUpperCase();
-                }
-                
-                // Check for authorities array
-                if (decodedPayload.contains("ROLE_DRIVER") || decodedPayload.contains("\"DRIVER\"")) {
-                    return "DRIVER";
-                } else if (decodedPayload.contains("ROLE_ADMIN") || decodedPayload.contains("\"ADMIN\"")) {
-                    return "ADMIN";
-                } else if (decodedPayload.contains("ROLE_PASSENGER") || decodedPayload.contains("\"PASSENGER\"")) {
-                    return "PASSENGER";
-                }
+            String payloadJson = decodeTokenPayload(token);
+            if (payloadJson == null) return "PASSENGER";
+
+            JwtPayload payload = ClientUtils.getGson().fromJson(payloadJson, JwtPayload.class);
+            
+            if (payload.role != null) return payload.role.toUpperCase();
+            
+            // Fallback for authorities array
+            if (payloadJson.contains("ROLE_DRIVER") || payloadJson.contains("\"DRIVER\"")) {
+                return "DRIVER";
+            } else if (payloadJson.contains("ROLE_ADMIN") || payloadJson.contains("\"ADMIN\"")) {
+                return "ADMIN";
             }
         } catch (Exception e) {
             Log.e(TAG, "Error decoding JWT token", e);
         }
-        
-        // Default to PASSENGER if unable to determine
         return "PASSENGER";
     }
 
     /**
-     * Decodes the JWT token to extract the user ID.
-     * @param token The JWT token string
-     * @return The user ID from the token, or -1L if not found
+     * Decodes the JWT token to extract the user ID using Gson.
      */
     private Long decodeUserIdFromToken(String token) {
         try {
-            // JWT format: header.payload.signature
-            String[] parts = token.split("\\.");
-            if (parts.length >= 2) {
-                String payload = parts[1];
-                // Decode Base64
-                byte[] decodedBytes = android.util.Base64.decode(payload, android.util.Base64.URL_SAFE);
-                String decodedPayload = new String(decodedBytes);
-                
-                Log.d(TAG, "JWT Payload: " + decodedPayload);
-                
-                // Simple JSON parsing for id
-                // Expected format: {"id":1,...}
-                if (decodedPayload.contains("\"id\"")) {
-                    int idStart = decodedPayload.indexOf("\"id\"");
-                    int valueStart = decodedPayload.indexOf(":", idStart) + 1;
-                    int valueEnd = decodedPayload.indexOf(",", valueStart);
-                    if (valueEnd == -1) valueEnd = decodedPayload.indexOf("}", valueStart);
-                    String idStr = decodedPayload.substring(valueStart, valueEnd).trim();
-                    Long userId = Long.parseLong(idStr);
-                    Log.d(TAG, "Extracted user ID from JWT: " + userId);
-                    return userId;
-                }
-            }
+            String payloadJson = decodeTokenPayload(token);
+            if (payloadJson == null) return -1L;
+            
+            JwtPayload payload = ClientUtils.getGson().fromJson(payloadJson, JwtPayload.class);
+            return payload.id != null ? payload.id : -1L;
+
         } catch (Exception e) {
             Log.e(TAG, "Error decoding user ID from JWT token", e);
         }
-        
-        Log.w(TAG, "Could not extract user ID from JWT token, returning -1");
         return -1L;
+    }
+
+    private String decodeTokenPayload(String token) {
+        String[] parts = token.split("\\.");
+        if (parts.length >= 2) {
+            byte[] decodedBytes = android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE);
+            return new String(decodedBytes);
+        }
+        return null;
+    }
+
+    // Helper class for Gson parsing
+    private static class JwtPayload {
+        Long id;
+        String role;
+        String sub; // email
     }
 
     /**
