@@ -1,7 +1,8 @@
-import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { RideResponse, RideStatus } from '../../../infrastructure/rest/model/ride-response.model';
 import { RidesTableComponent, RideSortField } from '../../../shared/rides/rides-table/rides-table.component';
 import { RouterModule } from '@angular/router';
@@ -9,17 +10,26 @@ import { RideService } from '../../../infrastructure/rest/ride.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
 import { Subject, takeUntil } from 'rxjs';
 import { Ride } from '../../../shared/data/mock-data';
+import * as L from 'leaflet';
 
 @Component({
   selector: 'app-ride-history',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, RidesTableComponent],
-  templateUrl: './ride-history.component.html'
+  templateUrl: './ride-history.component.html',
+  styles: [`
+    .leaflet-div-icon {
+      background: transparent;
+      border: none;
+    }
+  `]
 })
-export class RideHistoryComponent implements OnInit, OnDestroy  {
+export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
   sortedRides: Ride[] = [];
   selectedRide: Ride | null = null;
+  selectedRideDetails: RideResponse | null = null;
   private backendRides: Ride[] = [];
+  private fullRideResponses: RideResponse[] = [];
   
   dateFilter: string = '';
   filter: 'all' | 'Pending' | 'Accepted' | 'Finished' | 'Rejected' | 'Cancelled' = 'all';
@@ -29,11 +39,13 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
   
   private passengerId: number | null = null;
   private destroy$ = new Subject<void>();
+  private map: L.Map | undefined;
 
   constructor(
     private router: Router,
     private rideService: RideService,
     private authService: AuthService,
+    private http: HttpClient,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -46,24 +58,80 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
     this.destroy$.complete();
   }
 
+  ngAfterViewInit(): void {
+      // Map init handled when details are shown
+  }
+
   loadRides(): void {
     if (!this.passengerId) return;
 
-    this.rideService.getRidesHistory({ passengerId: this.passengerId, page: 0, size: 100 }).pipe(takeUntil(this.destroy$))
+    let fromDate: string | undefined;
+    let toDate: string | undefined;
+
+    // Date Filter (Specific Date) takes precedence
+    if (this.dateFilter) {
+      const start = new Date(this.dateFilter);
+      start.setHours(0,0,0,0);
+      fromDate = start.toISOString();
+      const end = new Date(this.dateFilter);
+      end.setHours(23,59,59,999);
+      toDate = end.toISOString();
+    } 
+    // Time Filter (Ranges)
+    else if (this.timeFilter !== 'all') {
+       const today = new Date();
+       const to = new Date(); // now
+       let from = new Date();
+       
+       if (this.timeFilter === 'today') {
+         from.setHours(0,0,0,0);
+       } else if (this.timeFilter === 'week') {
+         from.setDate(today.getDate() - 7);
+         from.setHours(0,0,0,0);
+       } else if (this.timeFilter === 'month') {
+         from.setMonth(today.getMonth() - 1);
+         from.setHours(0,0,0,0);
+       }
+       fromDate = from.toISOString();
+       toDate = to.toISOString();
+    }
+
+    const backendSort = this.mapSortFieldToBackend(this.sortField);
+
+    // Backend expects uppercase status (PENDING, ACCEPTED, etc.)
+    const statusParam = this.filter === 'all' ? undefined : this.filter.toUpperCase();
+
+    this.rideService.getRidesHistory({
+        page: 0,
+        size: 100,
+        sort: `${backendSort},${this.sortDirection}`,
+        fromDate: fromDate,
+        toDate: toDate,
+        passengerId: this.passengerId,
+        status: statusParam
+    }).pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {
-          // Filter to only past rides (FINISHED, CANCELLED)
-          const pastStatuses = ['FINISHED', 'CANCELLED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_PASSENGER', 'PENDING', 'SCHEDULED', 'ACCEPTED', 'ACTIVE', 'IN_PROGRESS', 'REJECTED', 'PANIC']; //TODO: adjust later if needed
-          const relevant = (page.content ?? []).filter(r => pastStatuses.includes(r.status as string));
-          console.log('Fetched rides from backend:', page.content);
+          this.fullRideResponses = page.content || [];
           
-          this.backendRides = relevant.map(r => this.mapToRide(r));
-          console.log('Loaded rides:', this.backendRides);
-          this.updateView();
+          // Since we are filtering on backend, we just map what we got
+          this.sortedRides = this.fullRideResponses.map(r => this.mapToRide(r));
           this.cdr.detectChanges();
         },
         error: (err) => console.error('Failed to load history', err)
       });
+  }
+
+  private mapSortFieldToBackend(field: RideSortField): string {
+      switch(field) {
+          case 'startTime': return 'startTime';
+          case 'endTime': return 'endTime';
+          case 'distance': return 'distance';
+          case 'totalCost': return 'totalCost';
+          case 'departure': return 'startLocation.address';
+          case 'passengerCount': return 'passengers'; 
+          default: return 'startTime';
+      }
   }
 
   private mapToRide(r: RideResponse): Ride {
@@ -71,7 +139,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
       id: String(r.id),
       driverId: String(r.driverId),
       startedAt: r.startTime,
-      requestedAt: r.startTime ?? '', // Fallback or add field to RideResponse if needed
+      requestedAt: r.startTime ?? '', 
       completedAt: r.endTime,
       status: r.status === 'FINISHED' ? 'Finished' :
               r.status === 'CANCELLED' ? 'Cancelled' :
@@ -79,7 +147,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
               r.status === 'CANCELLED_BY_PASSENGER' ? 'Cancelled' :
               r.status === 'PENDING' ? 'Pending' :
               r.status === 'ACCEPTED' ? 'Accepted' :
-              r.status === 'REJECTED' ? 'Rejected' : 'all',
+              r.status === 'REJECTED' ? 'Rejected' : (r.status as any), // Use raw status or map nicely
       fare: r.totalCost ?? 0,
       distance: r.distanceKm ?? 0,
       pickup: { address: r.departure?.address ?? r.start?.address ?? r.startLocation?.address ?? '—' },
@@ -102,7 +170,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
   }
 
   updateView() {
-    this.sortAndFilterRides();
+    this.loadRides();
   }
 
   handleSort(field: RideSortField) {
@@ -112,97 +180,10 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
       this.sortField = field;
       this.sortDirection = 'desc';
     }
-    this.sortAndFilterRides();
+    this.loadRides();
   }
 
-  sortAndFilterRides() {
-    let filtered = this.backendRides;
-    
-    // Apply Time Filter
-    filtered = this.filterByTime(filtered);
-
-    // Apply Status Filter
-    if (this.filter !== 'all') {
-      console.log('Applying status filter:', this.filter);
-      console.log('Rides before status filter:', filtered);
-      filtered = filtered.filter(ride => ride.status === this.filter);
-    }
-
-    // Apply Specific Date Filter
-    if (this.dateFilter) {
-      const date = new Date(this.dateFilter);
-      filtered = filtered.filter(ride => {
-        const rideDate = new Date(ride.startedAt || ride.requestedAt);
-        return rideDate.toDateString() === date.toDateString();
-      });
-    }
-
-    console.log('Filtered rides:', filtered);
-    this.sortedRides = filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (this.sortField) {
-        case 'startTime':
-          aValue = new Date(a.startedAt || a.requestedAt).getTime();
-          bValue = new Date(b.startedAt || b.requestedAt).getTime();
-          break;
-        case 'endTime':
-          aValue = a.completedAt ? new Date(a.completedAt).getTime() : 0;
-          bValue = b.completedAt ? new Date(b.completedAt).getTime() : 0;
-          break;
-        case 'distance':
-          aValue = a.distance;
-          bValue = b.distance;
-          break;
-        case 'departure':
-          aValue = a.pickup.address + a.destination.address;
-          bValue = b.pickup.address + b.destination.address;
-          break;
-        case 'passengerCount':
-          aValue = a.passengerCount ?? 1;
-          bValue = b.passengerCount ?? 1;
-          break;
-        case 'totalCost':
-          aValue = a.fare ?? 0;
-          bValue = b.fare ?? 0;
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) return this.sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return this.sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }
-
-  filterByTime(rides: Ride[]): Ride[] {
-    if (this.timeFilter === 'all') return rides;
-
-    const today = new Date();
-    
-    return rides.filter(ride => {
-      const rideDate = new Date(ride.startedAt || ride.requestedAt);
-      
-      if (this.timeFilter === 'today') {
-        return rideDate.toDateString() === today.toDateString();
-      }
-      
-      if (this.timeFilter === 'week') {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        weekAgo.setHours(0, 0, 0, 0);
-        return rideDate >= weekAgo && rideDate <= today;
-      }
-      
-      if (this.timeFilter === 'month') {
-        return rideDate.getMonth() === today.getMonth() && rideDate.getFullYear() === today.getFullYear();
-      }
-      
-      return true;
-    });
-  }
+  // Removed sortAndFilterRides and filterByTime as they are now handled by backend params in loadRides
 
   onViewDetails(ride: RideResponse): void {
     console.log('View ride details:', ride);
@@ -272,6 +253,150 @@ export class RideHistoryComponent implements OnInit, OnDestroy  {
 
   onRideSelected(ride: Ride) {
     this.selectedRide = ride;
+    this.selectedRideDetails = null;
+    
+    // Fetch full details from backend to ensure we have route points and reviews
+    this.rideService.getRide(Number(ride.id)).subscribe({
+      next: (details) => {
+        this.selectedRideDetails = details;
+        this.cdr.detectChanges();
+        setTimeout(() => this.initMap(), 100);
+      },
+      error: (err) => console.error('Failed to load ride details', err)
+    });
+  }
+
+  initMap() {
+    if (!this.selectedRideDetails || !document.getElementById('history-map')) return;
+
+    if (this.map) {
+      this.map.remove();
+      this.map = undefined;
+    }
+
+    const start = this.selectedRideDetails.departure || this.selectedRideDetails.startLocation;
+    
+    if (!start) return; 
+
+    const startCoords: [number, number] = [start.latitude, start.longitude];
+    
+    this.map = L.map('history-map', { zoomControl: false }).setView(startCoords, 13);
+    
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(this.map);
+
+    // Markers
+    const pickupIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:12px;height:12px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px #22c55e;"></div>`,
+        iconSize: [12, 12]
+    });
+    
+    const destIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:12px;height:12px;border-radius:50%;background:#ef4444;box-shadow:0 0 10px #ef4444;"></div>`,
+        iconSize: [12, 12]
+    });
+
+    L.marker(startCoords, { icon: pickupIcon }).addTo(this.map);
+    const end = this.selectedRideDetails.destination || this.selectedRideDetails.endLocation;
+    if (end) {
+        L.marker([end.latitude, end.longitude], { icon: destIcon }).addTo(this.map);
+    }
+    
+    // Always fetch fresh route from OSRM for accurate road-following display
+    if (end) {
+        this.fetchAndDrawRoute(start, end, startCoords);
+    }
+  }
+
+  private fetchAndDrawRoute(start: any, end: any, startCoords: [number, number]) {
+    // Build waypoints - only include valid stops with coordinates
+    const validStops = (this.selectedRideDetails?.stops || [])
+        .filter((s: any) => s && s.latitude && s.longitude);
+    
+    const waypoints = [
+        { longitude: start.longitude, latitude: start.latitude },
+        ...validStops.map((s: any) => ({ longitude: s.longitude, latitude: s.latitude })),
+        { longitude: end.longitude, latitude: end.latitude }
+    ];
+
+    const coordinatesString = waypoints
+        .map((p: any) => `${p.longitude},${p.latitude}`)
+        .join(';');
+
+    // Use OSRM via Angular proxy to avoid CORS issues
+    const osrmUrl = `/osrm/route/v1/driving/${coordinatesString}?overview=full&geometries=geojson`;
+
+    console.log('Fetching route from OSRM:', osrmUrl);
+    
+    this.http.get(osrmUrl).subscribe({
+        next: (response: any) => {
+            console.log('OSRM response:', response);
+            const coordinates = response?.routes?.[0]?.geometry?.coordinates;
+            if (coordinates && coordinates.length > 0 && this.map) {
+               const latlngs: [number, number][] = coordinates.map((coord: number[]) => [coord[1], coord[0]] as [number, number]);
+               L.polyline(latlngs, { color: '#fbbf24', weight: 4, opacity: 0.8, dashArray: '10, 6' }).addTo(this.map);
+               this.map.fitBounds(latlngs, { padding: [30, 30] });
+            } else {
+               console.warn('No route coordinates in OSRM response');
+               this.drawFromBackendOrFallback(startCoords, [end.latitude, end.longitude]);
+            }
+        },
+        error: (err) => {
+            console.error('OSRM request failed:', err);
+            this.drawFromBackendOrFallback(startCoords, [end.latitude, end.longitude]);
+        }
+    });
+  }
+
+  private drawFromBackendOrFallback(startCoords: [number, number], endCoords: [number, number]) {
+      if (!this.map) return;
+      
+      // Try to use backend routePoints first
+      if (this.selectedRideDetails?.routePoints && this.selectedRideDetails.routePoints.length > 1) {
+          const latlngs: [number, number][] = this.selectedRideDetails.routePoints
+              .sort((a,b) => a.order - b.order)
+              .map(rp => [rp.location.latitude, rp.location.longitude]);
+          L.polyline(latlngs, { color: '#fbbf24', weight: 4, opacity: 0.7, dashArray: '10, 6' }).addTo(this.map);
+          this.map.fitBounds(latlngs, { padding: [20, 20] });
+      } else {
+          // Last resort: straight dashed line
+          const simpleRoute: [number, number][] = [startCoords, endCoords];
+          L.polyline(simpleRoute, { color: '#fbbf24', weight: 3, opacity: 0.6, dashArray: '8, 8' }).addTo(this.map);
+          const bounds = L.latLngBounds([startCoords, endCoords]);
+          this.map.fitBounds(bounds, { padding: [50, 50] });
+      }
+  }
+
+  closeDetails() {
+    this.selectedRide = null;
+    this.selectedRideDetails = null;
+    if (this.map) {
+      this.map.remove();
+      this.map = undefined;
+    }
+  }
+
+  orderAgain() {
+    if (!this.selectedRideDetails) return;
+    const start = this.selectedRideDetails.departure || this.selectedRideDetails.startLocation;
+    const end = this.selectedRideDetails.destination || this.selectedRideDetails.endLocation;
+    
+    if (start && end) {
+      this.router.navigate(['/passenger/home'], { 
+        state: { 
+          fromFavorites: true, 
+          startLocation: start,
+          endLocation: end
+        } 
+      });
+    }
+  }
+
+  scheduleLater() {
+     this.orderAgain();
   }
 
   addToFavorites(ride: Ride) {
