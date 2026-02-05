@@ -27,14 +27,16 @@ export interface RideResponse {
     name?: string;
     surname?: string;
     email?: string;
-    profilePicture?: string;
+    profilePictureUrl?: string;
     phoneNumber?: string;
     address?: string;
+    active?: boolean;
+    blocked?: boolean;
     vehicle?: {
       model?: string;
       vehicleType?: string;
-      licensePlates?: string;
-      seatCount?: number;
+      licenseNumber?: string;
+      passengerSeats?: number;
       babyTransport?: boolean;
       petTransport?: boolean;
     };

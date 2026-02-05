@@ -50,7 +50,7 @@ export class ActiveRidesTableComponent {
   }
 
   getVehiclePlates(ride: RideResponse): string {
-    return ride.licensePlates || ride.driver?.vehicle?.licensePlates || '—';
+    return ride.licensePlates || ride.driver?.vehicle?.licenseNumber || '—';
   }
 
   getVehicleType(ride: RideResponse): string {

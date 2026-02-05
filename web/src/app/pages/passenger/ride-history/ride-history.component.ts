@@ -289,7 +289,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
     // Markers
     const pickupIcon = L.divIcon({
         className: '',
-        html: `<div style="width:12px;height:12px;border-radius:50%;background:#eab308;box-shadow:0 0 10px #eab308;"></div>`,
+        html: `<div style="width:12px;height:12px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px #22c55e;"></div>`,
         iconSize: [12, 12]
     });
     

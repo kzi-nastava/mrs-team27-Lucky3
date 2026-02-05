@@ -519,7 +519,7 @@ export class AdminRidePage implements OnInit, OnDestroy {
 
   getVehicleInfo(): string {
     const model = this.ride?.model || this.ride?.driver?.vehicle?.model || '—';
-    const plates = this.ride?.licensePlates || this.ride?.driver?.vehicle?.licensePlates || '';
+    const plates = this.ride?.licensePlates || this.ride?.driver?.vehicle?.licenseNumber || '';
     return plates ? `${model} • ${plates}` : model;
   }
 
