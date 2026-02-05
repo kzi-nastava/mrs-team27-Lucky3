@@ -1,7 +1,8 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { Client, IMessage } from '@stomp/stompjs';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { SupportMessageResponse } from './support-chat.service';
 
 export interface SocketState {
   connected: boolean;
@@ -18,10 +19,36 @@ export class SocketService implements OnDestroy {
   // Observable streams for different topics
   private vehiclesSubject = new BehaviorSubject<any[]>([]);
 
+  // Support chat subjects
+  private supportChatMessageSubject = new BehaviorSubject<SupportMessageResponse | null>(null);
+  private adminChatListUpdateSubject = new BehaviorSubject<any | null>(null);
+  private adminNewMessageSubject = new BehaviorSubject<SupportMessageResponse | null>(null);
+
+  // Active subscriptions for cleanup
+  private supportChatSubscription: StompSubscription | null = null;
+  private adminChatsSubscription: StompSubscription | null = null;
+  private adminMessagesSubscription: StompSubscription | null = null;
+
   constructor() {}
 
   /**
-   * Connect to the WebSocket server
+   * Get JWT token from localStorage
+   */
+  private getToken(): string | null {
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        return user.accessToken || null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Connect to the WebSocket server with JWT authentication
    */
   connect(): void {
     if (this.client?.connected) {
@@ -32,8 +59,12 @@ export class SocketService implements OnDestroy {
     if (this.client?.active) {
       return;
     }
+
+    const token = this.getToken();
+
     this.client = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8081/ws'),
+      connectHeaders: token ? { 'Authorization': `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -165,6 +196,178 @@ export class SocketService implements OnDestroy {
    */
   isConnected(): boolean {
     return this.client?.connected ?? false;
+  }
+
+  // ==================== Support Chat Methods ====================
+
+  /**
+   * Subscribe to messages for a specific support chat (for users).
+   * @param chatId The support chat ID
+   */
+  subscribeToSupportChat(chatId: number): Observable<SupportMessageResponse> {
+    return new Observable(observer => {
+      let stompSub: StompSubscription | null = null;
+      let stateSub: Subscription | null = null;
+
+      const subscribeToStomp = () => {
+        if (!this.client?.connected) return;
+
+        try {
+          // Unsubscribe from previous chat if any
+          if (this.supportChatSubscription) {
+            this.supportChatSubscription.unsubscribe();
+          }
+
+          stompSub = this.client.subscribe(`/topic/support/chat/${chatId}`, (message: IMessage) => {
+            try {
+              const msg: SupportMessageResponse = JSON.parse(message.body);
+              observer.next(msg);
+            } catch (e) {
+              console.error('Error parsing support message:', e);
+            }
+          });
+          this.supportChatSubscription = stompSub;
+        } catch (error) {
+          console.error('Error subscribing to support chat:', error);
+        }
+      };
+
+      // If already connected, subscribe immediately
+      if (this.client?.connected) {
+        subscribeToStomp();
+      } else {
+        // Auto-connect if not connected
+        this.connect();
+        
+        // Wait for connection then subscribe
+        stateSub = this.socketState.subscribe(state => {
+          if (state.connected && !stompSub) {
+            subscribeToStomp();
+          }
+        });
+      }
+
+      // Cleanup function
+      return () => {
+        if (stompSub) {
+          stompSub.unsubscribe();
+          this.supportChatSubscription = null;
+        }
+        if (stateSub) {
+          stateSub.unsubscribe();
+        }
+      };
+    });
+  }
+
+  /**
+   * Subscribe to admin chat list updates.
+   * Receives updates when new messages arrive or unread counts change.
+   */
+  subscribeToAdminChatUpdates(): Observable<any> {
+    return new Observable(observer => {
+      let stompSub: StompSubscription | null = null;
+      let stateSub: Subscription | null = null;
+
+      const subscribeToStomp = () => {
+        if (!this.client?.connected) return;
+
+        try {
+          // Unsubscribe from previous subscription if any
+          if (this.adminChatsSubscription) {
+            this.adminChatsSubscription.unsubscribe();
+          }
+
+          stompSub = this.client.subscribe('/topic/support/admin/chats', (message: IMessage) => {
+            try {
+              const update = JSON.parse(message.body);
+              observer.next(update);
+            } catch (e) {
+              console.error('Error parsing admin chat update:', e);
+            }
+          });
+          this.adminChatsSubscription = stompSub;
+        } catch (error) {
+          console.error('Error subscribing to admin chat updates:', error);
+        }
+      };
+
+      // If already connected, subscribe immediately
+      if (this.client?.connected) {
+        subscribeToStomp();
+      } else {
+        this.connect();
+        stateSub = this.socketState.subscribe(state => {
+          if (state.connected && !stompSub) {
+            subscribeToStomp();
+          }
+        });
+      }
+
+      return () => {
+        if (stompSub) {
+          stompSub.unsubscribe();
+          this.adminChatsSubscription = null;
+        }
+        if (stateSub) {
+          stateSub.unsubscribe();
+        }
+      };
+    });
+  }
+
+  /**
+   * Subscribe to admin new message notifications.
+   * Receives all new messages across all chats for real-time updates.
+   */
+  subscribeToAdminMessages(): Observable<SupportMessageResponse> {
+    return new Observable(observer => {
+      let stompSub: StompSubscription | null = null;
+      let stateSub: Subscription | null = null;
+
+      const subscribeToStomp = () => {
+        if (!this.client?.connected) return;
+
+        try {
+          if (this.adminMessagesSubscription) {
+            this.adminMessagesSubscription.unsubscribe();
+          }
+
+          stompSub = this.client.subscribe('/topic/support/admin/messages', (message: IMessage) => {
+            try {
+              const msg: SupportMessageResponse = JSON.parse(message.body);
+              observer.next(msg);
+            } catch (e) {
+              console.error('Error parsing admin message notification:', e);
+            }
+          });
+          this.adminMessagesSubscription = stompSub;
+        } catch (error) {
+          console.error('Error subscribing to admin messages:', error);
+        }
+      };
+
+      if (this.client?.connected) {
+        subscribeToStomp();
+      } else {
+        this.connect();
+        stateSub = this.socketState.subscribe(state => {
+          if (state.connected && !stompSub) {
+            subscribeToStomp();
+          }
+        });
+      }
+
+      return () => {
+        if (stompSub) {
+          stompSub.unsubscribe();
+          this.adminMessagesSubscription = null;
+        }
+        if (stateSub) {
+          stateSub.unsubscribe();
+        }
+      };
+    });
   }
 
   ngOnDestroy(): void {

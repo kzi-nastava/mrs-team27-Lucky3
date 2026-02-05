@@ -44,4 +44,5 @@ public class RideResponse {
     private List<LocationDto> stops;
     private Set<Integer> completedStopIndexes;
     private Double distanceTraveled; // Distance traveled so far (for cost calculation)
+    private List<ReviewResponse> reviews;
 }

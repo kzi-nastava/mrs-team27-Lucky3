@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { environment } from '../../../env/environment';
 import { CreateRideRequest } from './model/create-ride.model';
 import { LocationDto } from './model/location.model';
@@ -47,6 +48,31 @@ export class RideService {
     return this.http.post<RideEstimationResponse>(`${this.apiUrl}/estimate`, request);
   }
 
+  getRidesHistory(params: {
+    page: number;
+    size: number;
+    sort?: string;
+    fromDate?: string; 
+    toDate?: string;
+    driverId?: number;
+    passengerId?: number;
+    status?: string;
+  }): Observable<PageResponse<RideResponse>> {
+    let queryParams: any = {
+      page: params.page.toString(),
+      size: params.size.toString(),
+    };
+
+    if (params.sort) queryParams.sort = params.sort;
+    if (params.fromDate) queryParams.fromDate = params.fromDate;
+    if (params.toDate) queryParams.toDate = params.toDate;
+    if (params.driverId) queryParams.driverId = params.driverId.toString();
+    if (params.passengerId) queryParams.passengerId = params.passengerId.toString();
+    if (params.status && params.status !== 'all') queryParams.status = params.status;
+
+    return this.http.get<PageResponse<RideResponse>>(this.apiUrl, { params: queryParams });
+  }
+
   orderRide(request: CreateRideRequest): Observable<RideResponse> {
     return this.http.post<RideResponse>(`${this.apiUrl}`, request);
   }
@@ -55,33 +81,11 @@ export class RideService {
     return this.http.get<RideResponse>(`${this.apiUrl}/${id}`);
   }
 
-  getRidesHistory(params?: {
-    driverId?: number;
-    passengerId?: number;
-    status?: string;
-    fromDate?: string;
-    toDate?: string;
-    page?: number;
-    size?: number;
-    sort?: string; // e.g., 'startTime,desc' or 'totalCost,asc'
-  }): Observable<PageResponse<RideResponse>> {
-    const query = new URLSearchParams();
-    if (params?.driverId != null) query.set('driverId', String(params.driverId));
-    if (params?.passengerId != null) query.set('passengerId', String(params.passengerId));
-    if (params?.status) query.set('status', params.status);
-    if (params?.fromDate) query.set('fromDate', params.fromDate);
-    if (params?.toDate) query.set('toDate', params.toDate);
-    if (params?.page != null) query.set('page', String(params.page));
-    if (params?.size != null) query.set('size', String(params.size));
-    if (params?.sort) query.set('sort', params.sort);
-
-    const qs = query.toString();
-    return this.http.get<PageResponse<RideResponse>>(`${this.apiUrl}${qs ? `?${qs}` : ''}`);
-  }
-
-  getActiveRide(userId?: number): Observable<RideResponse> {
+  getActiveRide(userId?: number): Observable<RideResponse | null> {
     const query = userId ? `?userId=${encodeURIComponent(String(userId))}` : '';
-    return this.http.get<RideResponse>(`${this.apiUrl}/active${query}`);
+    return this.http.get<RideResponse>(`${this.apiUrl}/active${query}`).pipe(
+      catchError(() => of(null))
+    );
   }
 
   startRide(id: number): Observable<RideResponse> {

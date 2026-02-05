@@ -84,7 +84,7 @@ public class Ride {
     })
     private List<Location> stops;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "ride_route_points", joinColumns = @JoinColumn(name = "ride_id"))
     @AttributeOverrides({
             @AttributeOverride(name = "address", column = @Column(name = "rp_address")),
@@ -118,5 +118,8 @@ public class Ride {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "ride_id")
     private List<InconsistencyReport> inconsistencyReports;
+
+    @OneToMany(mappedBy = "ride", fetch = FetchType.LAZY)
+    private List<Review> reviews;
 }
 

@@ -1,6 +1,14 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { 
+  SupportChatService, 
+  SupportChatListItemResponse, 
+  SupportChatResponse, 
+  SupportMessageResponse 
+} from '../../../infrastructure/rest/support-chat.service';
+import { SocketService } from '../../../infrastructure/rest/socket.service';
 
 interface ChatMessage {
   id: number;
@@ -15,8 +23,6 @@ interface SupportChat {
   userName: string;
   userEmail: string;
   userType: 'passenger' | 'driver';
-  status: 'pending' | 'active' | 'resolved';
-  subject: string;
   lastMessage: string;
   lastMessageTime: Date;
   unreadCount: number;
@@ -29,162 +35,194 @@ interface SupportChat {
   imports: [CommonModule, FormsModule],
   templateUrl: './admin-support.page.html',
 })
-export class AdminSupportPage {
+export class AdminSupportPage implements OnInit, OnDestroy, AfterViewChecked {
+  @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
+
   searchQuery = '';
-  activeFilter: 'all' | 'pending' | 'active' | 'resolved' = 'all';
   selectedChat: SupportChat | null = null;
   newMessage = '';
+  chats: SupportChat[] = [];
+  isLoading = true;
+  isLoadingChat = false;
+  error: string | null = null;
+  private shouldScrollToBottom = false;
 
-  chats: SupportChat[] = [
-    {
-      id: 1,
-      userName: 'Sarah Johnson',
-      userEmail: 'sarah.j@email.com',
-      userType: 'passenger',
-      status: 'pending',
-      subject: 'Refund request for overcharged ride',
-      lastMessage: 'TextTextTextTextTextText',
-      lastMessageTime: new Date(Date.now() - 2 * 60 * 1000), // 2 min ago
-      unreadCount: 2,
-      messages: [
-        {
-          id: 1,
-          sender: 'support',
-          senderName: 'Support Agent',
-          message: 'TextTextTextTextTextTextTextTextTextTextTextTextTextText TextTextTextText',
-          timestamp: new Date(2026, 1, 4, 11, 31)
-        },
-        {
-          id: 2,
-          sender: 'support',
-          senderName: 'Support Agent',
-          message: 'TextTextTextTextTextTextTextTextTextTextTextTextTextText TextTextTextText',
-          timestamp: new Date(2026, 1, 4, 11, 33)
-        },
-        {
-          id: 3,
-          sender: 'user',
-          senderName: 'Sarah Johnson',
-          message: 'TextTextTextTextTextTextTextTextTextTextTextText',
-          timestamp: new Date(2026, 1, 4, 11, 35)
-        },
-        {
-          id: 4,
-          sender: 'user',
-          senderName: 'Sarah Johnson',
-          message: 'TextTextTextTextText',
-          timestamp: new Date(2026, 1, 4, 11, 48)
-        }
-      ]
-    },
-    {
-      id: 2,
-      userName: 'James Wilson',
-      userEmail: 'james.w@email.com',
-      userType: 'driver',
-      status: 'active',
-      subject: 'Payment not received',
-      lastMessage: 'TextTextTextTextTextText',
-      lastMessageTime: new Date(Date.now() - 15 * 60 * 1000), // 15 min ago
-      unreadCount: 1,
-      messages: [
-        {
-          id: 1,
-          sender: 'user',
-          senderName: 'James Wilson',
-          message: 'I haven\'t received my payment for last week\'s rides.',
-          timestamp: new Date(2026, 1, 4, 10, 15)
-        },
-        {
-          id: 2,
-          sender: 'support',
-          senderName: 'Support Agent',
-          message: 'Let me check your account. Can you provide your driver ID?',
-          timestamp: new Date(2026, 1, 4, 10, 20)
-        }
-      ]
-    },
-    {
-      id: 3,
-      userName: 'Michael Chen',
-      userEmail: 'michael.c@email.com',
-      userType: 'passenger',
-      status: 'resolved',
-      subject: 'Lost item in vehicle',
-      lastMessage: 'TextTextTextTextTextText',
-      lastMessageTime: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
-      unreadCount: 0,
-      messages: [
-        {
-          id: 1,
-          sender: 'user',
-          senderName: 'Michael Chen',
-          message: 'I left my bag in the car during my last ride.',
-          timestamp: new Date(2026, 1, 4, 9, 0)
-        },
-        {
-          id: 2,
-          sender: 'support',
-          senderName: 'Support Agent',
-          message: 'We\'ve contacted the driver and arranged for the return of your item.',
-          timestamp: new Date(2026, 1, 4, 9, 30)
-        }
-      ]
-    },
-    {
-      id: 4,
-      userName: 'Emily Rodriguez',
-      userEmail: 'emily.r@email.com',
-      userType: 'passenger',
-      status: 'pending',
-      subject: 'App not working properly',
-      lastMessage: 'The app keeps crashing when I try to book',
-      lastMessageTime: new Date(Date.now() - 5 * 60 * 1000), // 5 min ago
-      unreadCount: 1,
-      messages: [
-        {
-          id: 1,
-          sender: 'user',
-          senderName: 'Emily Rodriguez',
-          message: 'The app keeps crashing when I try to book a ride.',
-          timestamp: new Date(2026, 1, 4, 11, 55)
-        }
-      ]
-    }
-  ];
+  private subscriptions: Subscription[] = [];
+  private chatUpdateSubscription: Subscription | null = null;
+  private messageSubscription: Subscription | null = null;
 
-  get filteredChats(): SupportChat[] {
-    let filtered = this.chats;
-    
-    if (this.activeFilter !== 'all') {
-      filtered = filtered.filter(chat => chat.status === this.activeFilter);
-    }
-    
-    if (this.searchQuery.trim()) {
-      const query = this.searchQuery.toLowerCase();
-      filtered = filtered.filter(chat => 
-        chat.userName.toLowerCase().includes(query) ||
-        chat.userEmail.toLowerCase().includes(query) ||
-        chat.subject.toLowerCase().includes(query)
-      );
-    }
-    
-    return filtered;
+  constructor(
+    private supportChatService: SupportChatService,
+    private socketService: SocketService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit(): void {
+    this.loadChats();
+    this.subscribeToUpdates();
   }
 
-  get filterCounts(): { all: number; pending: number; active: number; resolved: number } {
+  ngAfterViewChecked(): void {
+    if (this.shouldScrollToBottom) {
+      this.scrollToBottom();
+      this.shouldScrollToBottom = false;
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.chatUpdateSubscription?.unsubscribe();
+    this.messageSubscription?.unsubscribe();
+  }
+
+  private loadChats(): void {
+    this.isLoading = true;
+    this.error = null;
+
+    const sub = this.supportChatService.getAllChats().subscribe({
+      next: (chats: SupportChatListItemResponse[]) => {
+        this.chats = chats.map(c => this.mapChatListItem(c));
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading chats:', err);
+        this.error = 'Failed to load support chats. Please try again.';
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  private subscribeToUpdates(): void {
+    // Subscribe to chat list updates
+    this.chatUpdateSubscription = this.socketService.subscribeToAdminChatUpdates().subscribe({
+      next: (update: any) => {
+        this.handleChatListUpdate(update);
+      },
+      error: (err) => console.error('Chat update subscription error:', err)
+    });
+
+    // Subscribe to new messages
+    this.messageSubscription = this.socketService.subscribeToAdminMessages().subscribe({
+      next: (message: SupportMessageResponse) => {
+        this.handleNewMessage(message);
+      },
+      error: (err) => console.error('Message subscription error:', err)
+    });
+  }
+
+  private handleChatListUpdate(update: SupportChatListItemResponse): void {
+    const index = this.chats.findIndex(c => c.id === update.id);
+    const updatedChat = this.mapChatListItem(update);
+
+    if (index >= 0) {
+      // Preserve existing messages if this is the selected chat
+      if (this.selectedChat?.id === update.id) {
+        updatedChat.messages = this.selectedChat.messages;
+        this.selectedChat = updatedChat;
+      }
+      this.chats[index] = updatedChat;
+    } else {
+      // New chat - add to beginning
+      this.chats.unshift(updatedChat);
+    }
+
+    // Re-sort by last message time
+    this.chats.sort((a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime());
+    this.cdr.detectChanges();
+  }
+
+  private handleNewMessage(message: SupportMessageResponse): void {
+    // If this message is for the selected chat, add it
+    if (this.selectedChat && message.chatId === this.selectedChat.id) {
+      if (!this.selectedChat.messages.some(m => m.id === message.id)) {
+        this.selectedChat.messages.push(this.mapMessage(message));
+        this.shouldScrollToBottom = true;
+        this.cdr.detectChanges();
+      }
+    }
+  }
+
+  private mapChatListItem(item: SupportChatListItemResponse): SupportChat {
     return {
-      all: this.chats.length,
-      pending: this.chats.filter(c => c.status === 'pending').length,
-      active: this.chats.filter(c => c.status === 'active').length,
-      resolved: this.chats.filter(c => c.status === 'resolved').length
+      id: item.id,
+      userName: item.userName,
+      userEmail: item.userEmail,
+      userType: item.userRole === 'DRIVER' ? 'driver' : 'passenger',
+      lastMessage: item.lastMessage || '',
+      lastMessageTime: new Date(item.lastMessageTime),
+      unreadCount: item.unreadCount,
+      messages: []
     };
   }
 
+  private mapMessage(m: SupportMessageResponse): ChatMessage {
+    return {
+      id: m.id,
+      sender: m.fromAdmin ? 'support' : 'user',
+      senderName: m.senderName,
+      message: m.content,
+      timestamp: new Date(m.timestamp)
+    };
+  }
+
+  private scrollToBottom(): void {
+    try {
+      if (this.messagesContainer) {
+        const el = this.messagesContainer.nativeElement;
+        el.scrollTop = el.scrollHeight;
+      }
+    } catch (err) {
+      console.error('Error scrolling to bottom:', err);
+    }
+  }
+
+  get filteredChats(): SupportChat[] {
+    if (!this.searchQuery.trim()) {
+      return this.chats;
+    }
+    
+    const query = this.searchQuery.toLowerCase();
+    return this.chats.filter(chat => 
+      chat.userName.toLowerCase().includes(query) ||
+      chat.userEmail.toLowerCase().includes(query)
+    );
+  }
+
+  get totalUnreadCount(): number {
+    return this.chats.reduce((sum, chat) => sum + chat.unreadCount, 0);
+  }
+
   selectChat(chat: SupportChat): void {
-    this.selectedChat = chat;
-    // Mark as read
-    chat.unreadCount = 0;
+    if (this.selectedChat?.id === chat.id) return;
+
+    this.isLoadingChat = true;
+    
+    const sub = this.supportChatService.getChatById(chat.id).subscribe({
+      next: (fullChat: SupportChatResponse) => {
+        this.selectedChat = {
+          ...chat,
+          messages: (fullChat.messages || []).map(m => this.mapMessage(m))
+        };
+        this.isLoadingChat = false;
+        this.shouldScrollToBottom = true;
+        this.cdr.detectChanges();
+
+        // Mark as read
+        if (chat.unreadCount > 0) {
+          this.supportChatService.markChatAsRead(chat.id).subscribe();
+          chat.unreadCount = 0;
+        }
+      },
+      error: (err) => {
+        console.error('Error loading chat:', err);
+        this.isLoadingChat = false;
+        this.cdr.detectChanges();
+      }
+    });
+    this.subscriptions.push(sub);
   }
 
   formatTime(date: Date): string {
@@ -204,32 +242,37 @@ export class AdminSupportPage {
     return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
   }
 
-  markResolved(): void {
-    if (this.selectedChat) {
-      this.selectedChat.status = 'resolved';
-    }
-  }
-
   sendMessage(): void {
     if (!this.newMessage.trim() || !this.selectedChat) return;
-    
-    this.selectedChat.messages.push({
-      id: this.selectedChat.messages.length + 1,
-      sender: 'support',
-      senderName: 'Support Agent',
-      message: this.newMessage.trim(),
-      timestamp: new Date()
-    });
-    
-    this.selectedChat.lastMessage = this.newMessage.trim();
-    this.selectedChat.lastMessageTime = new Date();
-    
-    // Change status to active if pending
-    if (this.selectedChat.status === 'pending') {
-      this.selectedChat.status = 'active';
-    }
-    
+
+    const messageContent = this.newMessage.trim();
+    const chatId = this.selectedChat.id;
     this.newMessage = '';
+
+    const sub = this.supportChatService.sendAdminMessage(chatId, messageContent).subscribe({
+      next: (response: SupportMessageResponse) => {
+        // Message will be added via WebSocket subscription
+        // But add immediately for responsiveness if not already present
+        if (this.selectedChat && !this.selectedChat.messages.some(m => m.id === response.id)) {
+          this.selectedChat.messages.push(this.mapMessage(response));
+          this.shouldScrollToBottom = true;
+          this.cdr.detectChanges();
+        }
+
+        // Update chat list item
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex >= 0) {
+          this.chats[chatIndex].lastMessage = messageContent;
+          this.chats[chatIndex].lastMessageTime = new Date();
+        }
+      },
+      error: (err) => {
+        console.error('Error sending message:', err);
+        // Restore message on error
+        this.newMessage = messageContent;
+      }
+    });
+    this.subscriptions.push(sub);
   }
 
   onKeyDown(event: KeyboardEvent): void {
