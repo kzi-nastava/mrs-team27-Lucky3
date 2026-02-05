@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentResultListener;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.mobile.R;
@@ -54,10 +55,28 @@ public class UserProfileFragment extends Fragment {
     }
 
     private void setupListeners(){
-        // Setup listeners if needed
         binding.btnEditPersonal.setOnClickListener(v -> {
-            new ChangePersonalInfoDialog().show(getParentFragmentManager(), "ChangePersonalInfoDialog");
+            // Get token from your TokenManager or wherever you store it
+            SharedPreferencesManager prefsManager = viewModel.getPrefsManager();
+            String token = prefsManager.getToken();
+            Long currentUserId = prefsManager.getUserId();
+
+            ChangePersonalInfoDialog dialog = ChangePersonalInfoDialog.newInstance(currentUserId, token);
+            dialog.show(getParentFragmentManager(), "ChangePersonalInfoDialog");
         });
+
+        // Set up listener for dialog results
+        getParentFragmentManager().setFragmentResultListener("updatePersonalInfo", this,
+                new FragmentResultListener() {
+                    @Override
+                    public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result) {
+                        boolean success = result.getBoolean("success");
+                        if (success) {
+                            observeViewModel();
+                        }
+                    }
+                }
+        );
     }
 
     private void observeViewModel(){
@@ -115,11 +134,6 @@ public class UserProfileFragment extends Fragment {
                 TextView toolbarTitle = navbar.findViewById(R.id.toolbar_title);
                 toolbarTitle.setText("Admin Profile");
             }
-
-            // Also update the main title if you have it
-            // Assuming you have a TextView with id for the "User Profile" text
-            // If not in your binding, you'll need to add an ID to your XML first
-
         } else {
             // Hide administrator badge for regular users
             binding.tvHeaderRating.setVisibility(View.GONE);

@@ -16,6 +16,7 @@ import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.Multipart;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Part;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
@@ -131,6 +132,16 @@ public interface UserService {
     @GET("api/users/{id}")
     Call<ProfileUserResponse> getUserById(
             @Path("id") Long userId,
-            @Header("Authorization") String token  // ✅ Add this
+            @Header("Authorization") String token
+    );
+
+    //2.3 update user information
+    @Multipart
+    @PUT("api/users/{id}")
+    Call<ProfileUserResponse> updatePersonalInfo(
+            @Path("id") Long userId,
+            @Part("user") RequestBody userData,  // ✅ JSON as RequestBody
+            @Part MultipartBody.Part profileImage,  // ✅ Optional image
+            @Header("Authorization") String token
     );
 }
