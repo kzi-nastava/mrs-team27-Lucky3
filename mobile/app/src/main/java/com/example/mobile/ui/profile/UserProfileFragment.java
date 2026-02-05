@@ -24,9 +24,6 @@ public class UserProfileFragment extends Fragment {
 
     private FragmentUserProfileBinding binding;
     private UserProfileViewModel viewModel;
-    private TextView nameTextView, surnameTextView, emailTextView, phoneTextView, addressTextView;
-    private Button editButton;
-    private ProfileUserResponse currentProfile;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -67,7 +64,6 @@ public class UserProfileFragment extends Fragment {
         // Observe profile data
         viewModel.getUserProfileLiveData().observe(getViewLifecycleOwner(), profile -> {
             if (profile != null) {
-                currentProfile = profile;
                 displayUserData(profile);
                 updateUIBasedOnRole();  //to make slight changes based on role (passenger/admin)
             }

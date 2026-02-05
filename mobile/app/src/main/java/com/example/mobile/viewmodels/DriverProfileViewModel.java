@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.MutableLiveData;
 
+import com.example.mobile.models.DriverProfileResponse;
 import com.example.mobile.models.ProfileUserResponse;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
@@ -16,11 +17,11 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class DriverProfileViewModel extends AndroidViewModel {
-    private static final String TAG = "ProfileViewModel";
+    private static final String TAG = "DriverProfileViewModel";
     private final SharedPreferencesManager prefsManager;
 
     // LiveData for observing profile data
-    private MutableLiveData<ProfileUserResponse> userProfileLiveData;
+    private MutableLiveData<DriverProfileResponse> driverProfileLiveData;
     private MutableLiveData<Boolean> loadingLiveData;
     private MutableLiveData<String> errorLiveData;
 
@@ -28,14 +29,14 @@ public class DriverProfileViewModel extends AndroidViewModel {
         super(application);
         prefsManager = new SharedPreferencesManager(application.getApplicationContext());
 
-        userProfileLiveData = new MutableLiveData<>();
+        driverProfileLiveData = new MutableLiveData<>();
         loadingLiveData = new MutableLiveData<>();
         errorLiveData = new MutableLiveData<>();
     }
 
     // Getters for LiveData
-    public MutableLiveData<ProfileUserResponse> getUserProfileLiveData() {
-        return userProfileLiveData;
+    public MutableLiveData<DriverProfileResponse> getDriverProfileLiveData() {
+        return driverProfileLiveData;
     }
 
     public MutableLiveData<Boolean> getLoadingLiveData() {
@@ -49,13 +50,13 @@ public class DriverProfileViewModel extends AndroidViewModel {
     /**
      * Fetches user profile from backend
      */
-    public void loadUserProfile() {
+    public void loadDriverProfile() {
         loadingLiveData.setValue(true);
 
-        Long userId = prefsManager.getUserId();
+        Long driverId = prefsManager.getUserId();
         String token = prefsManager.getToken();  // Get token
 
-        if (userId == null || userId == -1) {
+        if (driverId == null || driverId == -1) {
             errorLiveData.setValue("User ID not found");
             loadingLiveData.setValue(false);
             return;
@@ -69,16 +70,16 @@ public class DriverProfileViewModel extends AndroidViewModel {
 
         String authHeader = "Bearer " + token;  // Format token
 
-        ClientUtils.userService.getUserById(userId, authHeader).enqueue(new Callback<ProfileUserResponse>() {
+        ClientUtils.driverService.getDriverById(driverId, authHeader).enqueue(new Callback<DriverProfileResponse>() {
             @Override
-            public void onResponse(Call<ProfileUserResponse> call, Response<ProfileUserResponse> response) {
+            public void onResponse(Call<DriverProfileResponse> call, Response<DriverProfileResponse> response) {
                 loadingLiveData.postValue(false);
 
                 if (response.isSuccessful() && response.body() != null) {
-                    ProfileUserResponse profile = response.body();
-                    userProfileLiveData.postValue(profile);
+                    DriverProfileResponse profile = response.body();
+                    driverProfileLiveData.postValue(profile);
                     saveToPreferences(profile);
-                    Log.d(TAG, "Profile loaded successfully for user: " + userId);
+                    Log.d(TAG, "Driver Profile loaded successfully for user: " + driverId);
                 } else {
                     String errorMsg = "Failed to load profile. Code: " + response.code();
                     errorLiveData.postValue(errorMsg);
@@ -87,7 +88,7 @@ public class DriverProfileViewModel extends AndroidViewModel {
             }
 
             @Override
-            public void onFailure(Call<ProfileUserResponse> call, Throwable t) {
+            public void onFailure(Call<DriverProfileResponse> call, Throwable t) {
                 loadingLiveData.postValue(false);
                 String errorMsg = "Network error: " + t.getMessage();
                 errorLiveData.postValue(errorMsg);
@@ -99,20 +100,20 @@ public class DriverProfileViewModel extends AndroidViewModel {
     /**
      * Updates user profile on backend
      */
-    public void updateUserProfile(ProfileUserResponse updatedProfile) {
+    public void updateDriverProfile(DriverProfileResponse updatedProfile) {
         /*loadingLiveData.setValue(true);
 
         String token = prefsManager.getToken();
         String authHeader = "Bearer " + token;
 
-        apiService.updateUserProfile(authHeader, updatedProfile).enqueue(new Callback<ProfileUserResponse>() {
+        apiService.updateUserProfile(authHeader, updatedProfile).enqueue(new Callback<DriverProfileResponse>() {
             @Override
-            public void onResponse(Call<ProfileUserResponse> call, Response<ProfileUserResponse> response) {
+            public void onResponse(Call<DriverProfileResponse> call, Response<DriverProfileResponse> response) {
                 loadingLiveData.postValue(false);
 
                 if (response.isSuccessful() && response.body() != null) {
-                    ProfileUserResponse profile = response.body();
-                    userProfileLiveData.postValue(profile);
+                    DriverProfileResponse profile = response.body();
+                    driverProfileLiveData.postValue(profile);
                     saveToPreferences(profile);
                 } else {
                     errorLiveData.postValue("Failed to update profile: " + response.code());
@@ -120,14 +121,14 @@ public class DriverProfileViewModel extends AndroidViewModel {
             }
 
             @Override
-            public void onFailure(Call<ProfileUserResponse> call, Throwable t) {
+            public void onFailure(Call<DriverProfileResponse> call, Throwable t) {
                 loadingLiveData.postValue(false);
                 errorLiveData.postValue("Update failed: " + t.getMessage());
             }
         });*/
     }
 
-    private void saveToPreferences(ProfileUserResponse profile) {
+    private void saveToPreferences(DriverProfileResponse profile) {
         prefsManager.saveUserData(
                 prefsManager.getUserId(), // Keep existing ID
                 profile.getEmail(),
@@ -136,7 +137,7 @@ public class DriverProfileViewModel extends AndroidViewModel {
                 prefsManager.getUserRole(), // Keep existing role
                 profile.getPhoneNumber(),
                 profile.getAddress(),
-                profile.getImageUrl()
+                profile.getProfilePictureUrl()
         );
     }
 

@@ -277,6 +277,92 @@
                     app:layout_constraintTop_toBottomOf="@id/label_year"
                     app:layout_constraintStart_toStartOf="parent"/>
 
+                <TextView
+                    android:id="@+id/label_seats"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Passenger Seats"
+                    android:textColor="@color/gray_400"
+                    android:layout_marginTop="12dp"
+                    app:layout_constraintTop_toBottomOf="@id/text_year"
+                    app:layout_constraintStart_toStartOf="parent"/>
+
+                <TextView
+                    android:id="@+id/text_seats"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    app:layout_constraintTop_toBottomOf="@id/label_seats"
+                    app:layout_constraintStart_toStartOf="parent"/>
+
+                <TextView
+                    android:id="@+id/label_features"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Features"
+                    android:textColor="@color/gray_400"
+                    android:layout_marginTop="16dp"
+                    app:layout_constraintTop_toBottomOf="@id/text_seats"
+                    app:layout_constraintStart_toStartOf="parent"/>
+
+                <!-- Baby Transport -->
+                <LinearLayout
+                    android:id="@+id/layout_baby_transport"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp"
+                    app:layout_constraintTop_toBottomOf="@id/label_features"
+                    app:layout_constraintStart_toStartOf="parent">
+
+                    <ImageView
+                        android:id="@+id/icon_baby_transport"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        android:tint="@color/red_500"/>
+
+                    <TextView
+                        android:id="@+id/text_baby_transport"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Baby Transport Unavailable"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:layout_marginStart="8dp"/>
+                </LinearLayout>
+
+                <!-- Pet Transport -->
+                <LinearLayout
+                    android:id="@+id/layout_pet_transport"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp"
+                    app:layout_constraintTop_toBottomOf="@id/layout_baby_transport"
+                    app:layout_constraintStart_toStartOf="parent">
+
+                    <ImageView
+                        android:id="@+id/icon_pet_transport"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        android:tint="@color/red_500"/>
+
+                    <TextView
+                        android:id="@+id/text_pet_transport"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pet Transport Unavailable"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:layout_marginStart="8dp"/>
+                </LinearLayout>
+
             </androidx.constraintlayout.widget.ConstraintLayout>
 
         </LinearLayout>
