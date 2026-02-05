@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { environment } from '../../../env/environment';
 import { CreateRideRequest } from './model/create-ride.model';
 import { LocationDto } from './model/location.model';
@@ -79,9 +80,11 @@ export class RideService {
     return this.http.get<PageResponse<RideResponse>>(`${this.apiUrl}${qs ? `?${qs}` : ''}`);
   }
 
-  getActiveRide(userId?: number): Observable<RideResponse> {
+  getActiveRide(userId?: number): Observable<RideResponse | null> {
     const query = userId ? `?userId=${encodeURIComponent(String(userId))}` : '';
-    return this.http.get<RideResponse>(`${this.apiUrl}/active${query}`);
+    return this.http.get<RideResponse>(`${this.apiUrl}/active${query}`).pipe(
+      catchError(() => of(null))
+    );
   }
 
   startRide(id: number): Observable<RideResponse> {
