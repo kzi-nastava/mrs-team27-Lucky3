@@ -3,6 +3,7 @@ package com.example.mobile.services;
 import com.example.mobile.models.EmailRequest;
 import com.example.mobile.models.LoginRequest;
 import com.example.mobile.models.PasswordResetRequest;
+import com.example.mobile.models.ProfileUserResponse;
 import com.example.mobile.models.RegistrationRequest;
 import com.example.mobile.models.TokenResponse;
 import com.example.mobile.models.UserResponse;
@@ -120,16 +121,6 @@ public interface UserService {
     // ========================== User Profile Endpoints ==========================
 
     /**
-     * Get current user profile.
-     * GET /api/users/me
-     * Requires authentication header.
-     * 
-     * @return UserResponse with current user data
-     */
-    @GET("api/users/me")
-    Call<UserResponse> getCurrentUser();
-
-    /**
      * Get user by ID.
      * GET /api/users/{id}
      * 
@@ -137,5 +128,5 @@ public interface UserService {
      * @return UserResponse
      */
     @GET("api/users/{id}")
-    Call<UserResponse> getUserById(@Path("id") Long userId);
+    Call<ProfileUserResponse> getUserById(@Path("id") Long userId);
 }
