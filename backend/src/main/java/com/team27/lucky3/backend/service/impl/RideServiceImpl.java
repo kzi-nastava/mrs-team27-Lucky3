@@ -733,6 +733,27 @@ public class RideServiceImpl implements RideService {
             res.setRoutePoints(routePoints);
         }
 
+        if (ride.getInconsistencyReports() != null) {
+            res.setInconsistencyReports(ride.getInconsistencyReports().stream()
+                    .map(ir -> new InconsistencyResponse(ir.getDescription(), ir.getTimestamp()))
+                    .collect(Collectors.toList()));
+        }
+
+        if (ride.getReviews() != null) {
+            List<ReviewResponse> reviews = ride.getReviews().stream()
+                    .map(r -> new ReviewResponse(
+                            r.getId(),
+                            r.getRide().getId(),
+                            r.getPassenger() != null ? r.getPassenger().getId() : null,
+                            r.getDriverRating(),
+                            r.getVehicleRating(),
+                            r.getComment(),
+                            r.getTimestamp()
+                    ))
+                    .collect(Collectors.toList());
+            res.setReviews(reviews);
+        }
+
         return res;
     }
 
@@ -940,11 +961,13 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public RideResponse getRideDetails(Long id) {
         return mapToResponse(findById(id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<RideResponse> getRidesHistory(Pageable pageable, LocalDateTime fromDate, LocalDateTime toDate, Long driverId, Long passengerId, String status) {
         Specification<Ride> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();

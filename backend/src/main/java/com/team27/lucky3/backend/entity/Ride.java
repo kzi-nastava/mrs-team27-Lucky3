@@ -118,5 +118,8 @@ public class Ride {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "ride_id")
     private List<InconsistencyReport> inconsistencyReports;
+
+    @OneToMany(mappedBy = "ride", fetch = FetchType.LAZY)
+    private List<Review> reviews;
 }
 
