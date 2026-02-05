@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef, OnDestroy, AfterViewInit } from '
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { RideResponse, RideStatus } from '../../../infrastructure/rest/model/ride-response.model';
 import { RidesTableComponent, RideSortField } from '../../../shared/rides/rides-table/rides-table.component';
 import { RouterModule } from '@angular/router';
@@ -44,6 +45,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
     private router: Router,
     private rideService: RideService,
     private authService: AuthService,
+    private http: HttpClient,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -251,9 +253,17 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onRideSelected(ride: Ride) {
     this.selectedRide = ride;
-    this.selectedRideDetails = this.fullRideResponses.find(r => String(r.id) === ride.id) || null;
-    this.cdr.detectChanges();
-    setTimeout(() => this.initMap(), 100);
+    this.selectedRideDetails = null;
+    
+    // Fetch full details from backend to ensure we have route points and reviews
+    this.rideService.getRide(Number(ride.id)).subscribe({
+      next: (details) => {
+        this.selectedRideDetails = details;
+        this.cdr.detectChanges();
+        setTimeout(() => this.initMap(), 100);
+      },
+      error: (err) => console.error('Failed to load ride details', err)
+    });
   }
 
   initMap() {
@@ -295,17 +305,77 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
         L.marker([end.latitude, end.longitude], { icon: destIcon }).addTo(this.map);
     }
     
-    // Draw Route
-    if (this.selectedRideDetails.routePoints && this.selectedRideDetails.routePoints.length > 0) {
-        const latlngs: [number, number][] = this.selectedRideDetails.routePoints
-            .sort((a,b) => a.order - b.order)
-            .map(rp => [rp.location.latitude, rp.location.longitude]);
-            
-        L.polyline(latlngs, { color: '#fbbf24', weight: 4, opacity: 0.7 }).addTo(this.map);
-        this.map.fitBounds(latlngs, { padding: [20, 20] });
-    } else if (end) {
-        const bounds = L.latLngBounds([startCoords, [end.latitude, end.longitude]]);
-        this.map.fitBounds(bounds, { padding: [50, 50] });
+    // Always fetch fresh route from OSRM for accurate road-following display
+    if (end) {
+        this.fetchAndDrawRoute(start, end, startCoords);
+    }
+  }
+
+  private fetchAndDrawRoute(start: any, end: any, startCoords: [number, number]) {
+    // Build waypoints - only include valid stops with coordinates
+    const validStops = (this.selectedRideDetails?.stops || [])
+        .filter((s: any) => s && s.latitude && s.longitude);
+    
+    const waypoints = [
+        { longitude: start.longitude, latitude: start.latitude },
+        ...validStops.map((s: any) => ({ longitude: s.longitude, latitude: s.latitude })),
+        { longitude: end.longitude, latitude: end.latitude }
+    ];
+
+    const coordinatesString = waypoints
+        .map((p: any) => `${p.longitude},${p.latitude}`)
+        .join(';');
+
+    // Use OSRM via Angular proxy to avoid CORS issues
+    const osrmUrl = `/osrm/route/v1/driving/${coordinatesString}?overview=full&geometries=geojson`;
+
+    console.log('Fetching route from OSRM:', osrmUrl);
+    
+    this.http.get(osrmUrl).subscribe({
+        next: (response: any) => {
+            console.log('OSRM response:', response);
+            const coordinates = response?.routes?.[0]?.geometry?.coordinates;
+            if (coordinates && coordinates.length > 0 && this.map) {
+               const latlngs: [number, number][] = coordinates.map((coord: number[]) => [coord[1], coord[0]] as [number, number]);
+               L.polyline(latlngs, { color: '#fbbf24', weight: 4, opacity: 0.8, dashArray: '10, 6' }).addTo(this.map);
+               this.map.fitBounds(latlngs, { padding: [30, 30] });
+            } else {
+               console.warn('No route coordinates in OSRM response');
+               this.drawFromBackendOrFallback(startCoords, [end.latitude, end.longitude]);
+            }
+        },
+        error: (err) => {
+            console.error('OSRM request failed:', err);
+            this.drawFromBackendOrFallback(startCoords, [end.latitude, end.longitude]);
+        }
+    });
+  }
+
+  private drawFromBackendOrFallback(startCoords: [number, number], endCoords: [number, number]) {
+      if (!this.map) return;
+      
+      // Try to use backend routePoints first
+      if (this.selectedRideDetails?.routePoints && this.selectedRideDetails.routePoints.length > 1) {
+          const latlngs: [number, number][] = this.selectedRideDetails.routePoints
+              .sort((a,b) => a.order - b.order)
+              .map(rp => [rp.location.latitude, rp.location.longitude]);
+          L.polyline(latlngs, { color: '#fbbf24', weight: 4, opacity: 0.7, dashArray: '10, 6' }).addTo(this.map);
+          this.map.fitBounds(latlngs, { padding: [20, 20] });
+      } else {
+          // Last resort: straight dashed line
+          const simpleRoute: [number, number][] = [startCoords, endCoords];
+          L.polyline(simpleRoute, { color: '#fbbf24', weight: 3, opacity: 0.6, dashArray: '8, 8' }).addTo(this.map);
+          const bounds = L.latLngBounds([startCoords, endCoords]);
+          this.map.fitBounds(bounds, { padding: [50, 50] });
+      }
+  }
+
+  closeDetails() {
+    this.selectedRide = null;
+    this.selectedRideDetails = null;
+    if (this.map) {
+      this.map.remove();
+      this.map = undefined;
     }
   }
 
