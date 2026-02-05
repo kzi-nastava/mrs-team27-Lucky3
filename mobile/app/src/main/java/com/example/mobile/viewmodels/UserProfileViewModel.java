@@ -139,4 +139,8 @@ public class UserProfileViewModel extends AndroidViewModel {
                 profile.getImageUrl()
         );
     }
+
+    public SharedPreferencesManager getPrefsManager(){
+        return prefsManager;
+    }
 }

@@ -17,6 +17,7 @@ import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentUserProfileBinding;
 import com.example.mobile.models.ProfileUserResponse;
 import com.example.mobile.models.User;
+import com.example.mobile.utils.SharedPreferencesManager;
 import com.example.mobile.viewmodels.UserProfileViewModel;
 
 public class UserProfileFragment extends Fragment {
@@ -60,14 +61,6 @@ public class UserProfileFragment extends Fragment {
         binding.btnEditPersonal.setOnClickListener(v -> {
             new ChangePersonalInfoDialog().show(getParentFragmentManager(), "ChangePersonalInfoDialog");
         });
-
-        /*// Edit button click - open dialog
-        editButton.setOnClickListener(v -> {
-            if (currentProfile != null) {
-                //EditProfileDialog dialog = EditProfileDialog.newInstance(currentProfile);
-                //dialog.show(getChildFragmentManager(), "EditProfileDialog");
-            }
-        });*/
     }
 
     private void observeViewModel(){
@@ -76,15 +69,9 @@ public class UserProfileFragment extends Fragment {
             if (profile != null) {
                 currentProfile = profile;
                 displayUserData(profile);
+                updateUIBasedOnRole();  //to make slight changes based on role (passenger/admin)
             }
         });
-
-        /*
-        // Observe loading state
-        viewModel.getLoadingLiveData().observe(getViewLifecycleOwner(), isLoading -> {
-            progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-            editButton.setEnabled(!isLoading);
-        });*/
 
         // Observe errors
         viewModel.getErrorLiveData().observe(getViewLifecycleOwner(), error -> {
@@ -111,6 +98,36 @@ public class UserProfileFragment extends Fragment {
         // Update header section too
         binding.tvHeaderFullName.setText(profile.getName() + " " + profile.getSurname());
         binding.tvHeaderEmail.setText(profile.getEmail());
+    }
+
+    private void updateUIBasedOnRole() {
+        SharedPreferencesManager prefsManager = viewModel.getPrefsManager();
+        String userRole = prefsManager.getUserRole();
+
+        // Check if user is administrator
+        boolean isAdmin = "ADMIN".equalsIgnoreCase(userRole);
+
+        if (isAdmin) {
+            // Show administrator badge
+            binding.tvHeaderRating.setText("Administrator");
+            binding.tvHeaderRating.setTextColor(getResources().getColor(R.color.yellow_400, null));
+            binding.tvHeaderRating.setVisibility(View.VISIBLE);
+
+            // Change page title
+            View navbar = binding.getRoot().findViewById(R.id.navbar);
+            if (navbar != null) {
+                TextView toolbarTitle = navbar.findViewById(R.id.toolbar_title);
+                toolbarTitle.setText("Admin Profile");
+            }
+
+            // Also update the main title if you have it
+            // Assuming you have a TextView with id for the "User Profile" text
+            // If not in your binding, you'll need to add an ID to your XML first
+
+        } else {
+            // Hide administrator badge for regular users
+            binding.tvHeaderRating.setVisibility(View.GONE);
+        }
     }
 }
 
