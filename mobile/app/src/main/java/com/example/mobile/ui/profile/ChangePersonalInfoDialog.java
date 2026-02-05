@@ -35,17 +35,17 @@ public class ChangePersonalInfoDialog extends BottomSheetDialogFragment {
 
     private void handleSubmit() {
         String name = text(binding.inputName);
+        String surname = text(binding.inputSurname);
         String email = text(binding.inputEmail);
         String phone = text(binding.inputPhone);
         String address = text(binding.inputAddress);
-        String reason = text(binding.inputReason);
 
         boolean hasEmpty =
                 TextUtils.isEmpty(name) ||
+                        TextUtils.isEmpty(surname) ||
                         TextUtils.isEmpty(email) ||
                         TextUtils.isEmpty(phone) ||
-                        TextUtils.isEmpty(address) ||
-                        TextUtils.isEmpty(reason);
+                        TextUtils.isEmpty(address);
 
         // Always show ONE popup based on situation
         if (hasEmpty) {
@@ -80,10 +80,10 @@ public class ChangePersonalInfoDialog extends BottomSheetDialogFragment {
 
     private void clearInputs() {
         binding.inputName.setText("");
+        binding.inputSurname.setText("");
         binding.inputEmail.setText("");
         binding.inputPhone.setText("");
         binding.inputAddress.setText("");
-        binding.inputReason.setText("");
     }
 
     private String text(@NonNull android.widget.EditText et) {

@@ -21,10 +21,18 @@
         android:id="@+id/input_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Full Name"
+        android:hint="Name"
         style="@style/Style.App.AuthInput"
         android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/title"/>
+    <EditText
+        android:id="@+id/input_surname"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Surname"
+        style="@style/Style.App.AuthInput"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/input_name"/>
 
     <EditText
         android:id="@+id/input_email"
@@ -34,7 +42,7 @@
         android:inputType="textEmailAddress"
         style="@style/Style.App.AuthInput"
         android:layout_marginTop="12dp"
-        app:layout_constraintTop_toBottomOf="@id/input_name"/>
+        app:layout_constraintTop_toBottomOf="@id/input_surname"/>
 
     <EditText
         android:id="@+id/input_phone"
@@ -55,16 +63,6 @@
         android:layout_marginTop="12dp"
         app:layout_constraintTop_toBottomOf="@id/input_phone"/>
 
-    <EditText
-        android:id="@+id/input_reason"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Reason for change"
-        style="@style/Style.App.AuthInput"
-        android:layout_marginTop="12dp"
-        android:minLines="3"
-        android:gravity="top"
-        app:layout_constraintTop_toBottomOf="@id/input_address"/>
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btn_submit"
@@ -73,6 +71,6 @@
         android:text="Submit Request"
         style="@style/Style.App.AuthButton"
         android:layout_marginTop="24dp"
-        app:layout_constraintTop_toBottomOf="@id/input_reason"/>
+        app:layout_constraintTop_toBottomOf="@id/input_address"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
