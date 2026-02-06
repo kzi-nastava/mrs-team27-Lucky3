@@ -59,6 +59,7 @@ export class Sidebar implements OnInit, OnDestroy {
 
   adminItems: SidebarItem[] = [
     { icon: 'dashboard', label: 'Dashboard', route: '/admin/dashboard', active: false },
+    { icon: 'history', label: 'Ride History', route: '/admin/ride-history', active: false },
     { icon: 'requests', label: 'Requests', route: '/admin/requests', active: false },
     { icon: 'reports', label: 'Reports', route: '/admin/reports', active: false },
     { icon: 'drivers', label: 'Drivers', route: '/admin/drivers', active: false },
