@@ -4,6 +4,7 @@ import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { SupportMessageResponse } from './support-chat.service';
 import { PanicResponse } from './panic.service';
+import { BackendNotificationResponse } from '../../model/notification.model';
 
 export interface SocketState {
   connected: boolean;
@@ -30,6 +31,7 @@ export class SocketService implements OnDestroy {
   private adminChatsSubscription: StompSubscription | null = null;
   private adminMessagesSubscription: StompSubscription | null = null;
   private panicSubscription: StompSubscription | null = null;
+  private userNotificationSubscription: StompSubscription | null = null;
 
   constructor() {}
 
@@ -426,6 +428,63 @@ export class SocketService implements OnDestroy {
         if (stompSub) {
           stompSub.unsubscribe();
           this.panicSubscription = null;
+        }
+        if (stateSub) {
+          stateSub.unsubscribe();
+        }
+      };
+    });
+  }
+
+  /**
+   * Subscribe to the per-user notification queue.
+   * Backend pushes to /user/{userId}/queue/notifications after persisting.
+   */
+  subscribeToUserNotifications(userId: number): Observable<BackendNotificationResponse> {
+    return new Observable(observer => {
+      let stompSub: StompSubscription | null = null;
+      let stateSub: Subscription | null = null;
+
+      const subscribeToStomp = () => {
+        if (!this.client?.connected) return;
+
+        try {
+          if (this.userNotificationSubscription) {
+            this.userNotificationSubscription.unsubscribe();
+          }
+
+          stompSub = this.client.subscribe(
+            `/user/${userId}/queue/notifications`,
+            (message: IMessage) => {
+              try {
+                const notification: BackendNotificationResponse = JSON.parse(message.body);
+                observer.next(notification);
+              } catch (e) {
+                console.error('Error parsing user notification:', e);
+              }
+            }
+          );
+          this.userNotificationSubscription = stompSub;
+        } catch (error) {
+          console.error('Error subscribing to user notifications:', error);
+        }
+      };
+
+      if (this.client?.connected) {
+        subscribeToStomp();
+      } else {
+        this.connect();
+        stateSub = this.socketState.subscribe(state => {
+          if (state.connected && !stompSub) {
+            subscribeToStomp();
+          }
+        });
+      }
+
+      return () => {
+        if (stompSub) {
+          stompSub.unsubscribe();
+          this.userNotificationSubscription = null;
         }
         if (stateSub) {
           stateSub.unsubscribe();

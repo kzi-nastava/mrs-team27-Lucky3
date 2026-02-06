@@ -151,7 +151,12 @@ export class Navbar implements OnInit, OnDestroy {
       case 'panic':
         return '🚨';
       case 'ride':
+      case 'ride_finished':
         return '🚗';
+      case 'ride_invite':
+        return '✉️';
+      case 'driver_assignment':
+        return '📍';
       case 'support':
         return '💬';
       default:

@@ -316,6 +316,21 @@ public class RideServiceImpl implements RideService {
         }
 
         Ride savedRide = rideRepository.save(ride);
+
+        // ── Notification integration ──
+        if (savedRide.getDriver() != null && savedRide.getStatus() != RideStatus.REJECTED) {
+            notificationService.sendDriverAssignmentNotification(savedRide);
+        }
+
+        // Send linked-passenger invites if additional emails were provided
+        if (request.getPassengerEmails() != null && !request.getPassengerEmails().isEmpty()) {
+            for (String email : request.getPassengerEmails()) {
+                userRepository.findByEmail(email).ifPresent(invitee ->
+                        notificationService.sendLinkedPassengerInvite(savedRide, invitee)
+                );
+            }
+        }
+
         return mapToResponse(savedRide);
     }
 
@@ -425,6 +440,11 @@ public class RideServiceImpl implements RideService {
         ride.setDriver(driver);
         ride.setStatus(RideStatus.ACCEPTED);
         Ride savedRide = rideRepository.save(ride);
+
+        // Notify all passengers that the ride has been accepted
+        notificationService.sendRideStatusNotification(savedRide,
+                "Your ride has been accepted by driver " + driver.getName() + " " + driver.getSurname() + ".");
+
         return mapToResponse(savedRide);
     }
 
@@ -449,6 +469,11 @@ public class RideServiceImpl implements RideService {
         ride.setStartTime(LocalDateTime.now());
         ride.setStatus(RideStatus.IN_PROGRESS); // or ACTIVE based on enum
         Ride savedRide = rideRepository.save(ride);
+
+        // Notify all passengers that the ride has started
+        notificationService.sendRideStatusNotification(savedRide,
+                "Your ride has started. Driver is on the way!");
+
         return mapToResponse(savedRide);
     }
 
@@ -891,8 +916,11 @@ public class RideServiceImpl implements RideService {
         // Save Ride
         Ride savedRide = rideRepository.save(ride);
 
-        // Broadcast panic alert to admins via WebSocket
+        // Broadcast panic alert to admins via WebSocket (existing channel)
         panicService.broadcastPanicAlert(panic);
+
+        // Persist PANIC notifications for ALL admins (notification history + CRITICAL priority)
+        notificationService.sendPanicNotification(savedRide, currentUser, request.getReason());
 
         // Trigger immediate vehicle broadcast so admin map updates in real-time
         vehicleSocketService.notifyVehicleUpdate();
