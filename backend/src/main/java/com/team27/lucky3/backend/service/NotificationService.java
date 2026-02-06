@@ -59,6 +59,21 @@ public interface NotificationService {
     /** Driver-assignment notification. */
     void sendDriverAssignmentNotification(Ride ride);
 
+    /** SUPPORT CHAT — User sent a message → notify all admins. */
+    void sendSupportMessageToAdmins(User sender, Long chatId, String messagePreview);
+
+    /** SUPPORT CHAT — Admin replied → notify the user who owns the chat. */
+    void sendSupportReplyToUser(User chatOwner, Long chatId);
+
+    /** RIDE CREATED — Notify passengers when ride is created. */
+    void sendRideCreatedNotification(Ride ride);
+
+    /** RIDE CANCELLED — Notify the other party when ride is cancelled. */
+    void sendRideCancelledNotification(Ride ride, User cancelledBy);
+
+    /** SCHEDULED RIDE REMINDER — 15 min before scheduled start. */
+    void sendScheduledRideReminder(Ride ride);
+
     // ─── history / read-state endpoints ────────────────────────────────
 
     /** Paginated notification history for a user. */

@@ -1,4 +1,4 @@
-export type NotificationType = 'panic' | 'ride' | 'support' | 'system' | 'driver_assignment' | 'ride_invite' | 'ride_finished';
+export type NotificationType = 'panic' | 'ride' | 'support' | 'system' | 'driver_assignment' | 'ride_invite' | 'ride_finished' | 'ride_created' | 'ride_cancelled' | 'ride_scheduled_reminder';
 
 export interface AppNotification {
   id: string;
@@ -18,7 +18,7 @@ export interface BackendNotificationResponse {
   id: number;
   text: string;
   timestamp: string;
-  type: 'RIDE_STATUS' | 'RIDE_INVITE' | 'PANIC' | 'SUPPORT' | 'DRIVER_ASSIGNMENT' | 'RIDE_FINISHED';
+  type: 'RIDE_STATUS' | 'RIDE_INVITE' | 'PANIC' | 'SUPPORT' | 'DRIVER_ASSIGNMENT' | 'RIDE_FINISHED' | 'RIDE_CREATED' | 'RIDE_CANCELLED' | 'RIDE_SCHEDULED_REMINDER';
   recipientId: number;
   recipientName: string;
   read: boolean;

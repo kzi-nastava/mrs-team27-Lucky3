@@ -312,6 +312,9 @@ export class NotificationService implements OnDestroy {
       case 'RIDE_STATUS':     return 'ride';
       case 'RIDE_INVITE':     return 'ride_invite';
       case 'RIDE_FINISHED':   return 'ride_finished';
+      case 'RIDE_CREATED':    return 'ride_created';
+      case 'RIDE_CANCELLED':  return 'ride_cancelled';
+      case 'RIDE_SCHEDULED_REMINDER': return 'ride_scheduled_reminder';
       case 'SUPPORT':         return 'support';
       case 'DRIVER_ASSIGNMENT': return 'driver_assignment';
       default:                return 'system';
@@ -324,6 +327,9 @@ export class NotificationService implements OnDestroy {
       case 'RIDE_STATUS':       return 'Ride Update';
       case 'RIDE_INVITE':       return 'Ride Invitation';
       case 'RIDE_FINISHED':     return 'Ride Completed';
+      case 'RIDE_CREATED':      return 'Ride Created';
+      case 'RIDE_CANCELLED':    return 'Ride Cancelled';
+      case 'RIDE_SCHEDULED_REMINDER': return 'Ride Reminder';
       case 'SUPPORT':           return 'Support Message';
       case 'DRIVER_ASSIGNMENT': return 'New Ride Assignment';
       default:                  return 'Notification';
@@ -336,8 +342,19 @@ export class NotificationService implements OnDestroy {
       case 'PANIC':             return '/admin/panic';
       case 'RIDE_STATUS':
       case 'RIDE_INVITE':
-      case 'RIDE_FINISHED':     return `/passenger/ride/${relatedEntityId}`;
+      case 'RIDE_FINISHED':
+      case 'RIDE_CREATED':
+      case 'RIDE_CANCELLED':
+      case 'RIDE_SCHEDULED_REMINDER': return `/passenger/ride/${relatedEntityId}`;
       case 'DRIVER_ASSIGNMENT': return `/driver/dashboard`;
+      case 'SUPPORT': {
+        // Admins go to admin support page, users go to regular support
+        const role = this.authService.getRole();
+        if (role === 'ADMIN') {
+          return `/admin/support?chatId=${relatedEntityId}`;
+        }
+        return `/support`;
+      }
       default:                  return undefined;
     }
   }

@@ -322,6 +322,9 @@ public class RideServiceImpl implements RideService {
             notificationService.sendDriverAssignmentNotification(savedRide);
         }
 
+        // Notify passengers that their ride has been created
+        notificationService.sendRideCreatedNotification(savedRide);
+
         // Send linked-passenger invites if additional emails were provided
         if (request.getPassengerEmails() != null && !request.getPassengerEmails().isEmpty()) {
             for (String email : request.getPassengerEmails()) {
@@ -595,6 +598,9 @@ public class RideServiceImpl implements RideService {
                 vehicleRepository.save(vehicle);
             }
         }
+
+        // Notify the other party about the cancellation
+        notificationService.sendRideCancelledNotification(savedRide, currentUser);
 
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());

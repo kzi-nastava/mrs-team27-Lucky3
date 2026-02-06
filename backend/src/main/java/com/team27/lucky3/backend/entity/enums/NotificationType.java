@@ -18,5 +18,8 @@ public enum NotificationType {
     PANIC,
     SUPPORT,
     DRIVER_ASSIGNMENT,
-    RIDE_FINISHED
+    RIDE_FINISHED,
+    RIDE_CREATED,
+    RIDE_CANCELLED,
+    RIDE_SCHEDULED_REMINDER
 }

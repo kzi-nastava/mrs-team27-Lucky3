@@ -117,7 +117,18 @@ export class Navbar implements OnInit, OnDestroy {
     this.notificationService.markAsRead(notification.id);
     this.isNotificationsOpen = false;
     if (notification.route) {
-      this.router.navigate([notification.route]);
+      // Parse route and query params if present
+      const [path, queryString] = notification.route.split('?');
+      if (queryString) {
+        const queryParams: { [key: string]: string } = {};
+        queryString.split('&').forEach(param => {
+          const [key, value] = param.split('=');
+          if (key) queryParams[key] = value || '';
+        });
+        this.router.navigate([path], { queryParams });
+      } else {
+        this.router.navigate([path]);
+      }
     }
   }
 
