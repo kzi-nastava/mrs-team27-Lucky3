@@ -2,6 +2,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { RideService, PageResponse, AdminStatsResponse } from '../../../infrastructure/rest/ride.service';
@@ -11,7 +12,7 @@ import { ActiveRidesTableComponent, ActiveRideSortField } from './active-rides-t
 @Component({
   selector: 'app-admin-dashboard-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ActiveRidesTableComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ActiveRidesTableComponent],
   templateUrl: './admin-dashboard.page.html',
 })
 export class AdminDashboardPage implements OnInit, OnDestroy {
