@@ -96,37 +96,6 @@ public class UserProfileViewModel extends AndroidViewModel {
         });
     }
 
-    /**
-     * Updates user profile on backend
-     */
-    public void updateUserProfile(ProfileUserResponse updatedProfile) {
-        /*loadingLiveData.setValue(true);
-
-        String token = prefsManager.getToken();
-        String authHeader = "Bearer " + token;
-
-        apiService.updateUserProfile(authHeader, updatedProfile).enqueue(new Callback<ProfileUserResponse>() {
-            @Override
-            public void onResponse(Call<ProfileUserResponse> call, Response<ProfileUserResponse> response) {
-                loadingLiveData.postValue(false);
-
-                if (response.isSuccessful() && response.body() != null) {
-                    ProfileUserResponse profile = response.body();
-                    userProfileLiveData.postValue(profile);
-                    saveToPreferences(profile);
-                } else {
-                    errorLiveData.postValue("Failed to update profile: " + response.code());
-                }
-            }
-
-            @Override
-            public void onFailure(Call<ProfileUserResponse> call, Throwable t) {
-                loadingLiveData.postValue(false);
-                errorLiveData.postValue("Update failed: " + t.getMessage());
-            }
-        });*/
-    }
-
     private void saveToPreferences(ProfileUserResponse profile) {
         prefsManager.saveUserData(
                 prefsManager.getUserId(), // Keep existing ID

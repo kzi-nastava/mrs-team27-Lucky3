@@ -88,9 +88,6 @@ public class ChangePersonalInfoDialog extends BottomSheetDialogFragment {
         } else {
             // Disable button and show loading
             binding.btnSubmit.setEnabled(false);
-            // Optional: show progress indicator
-            // binding.progressBar.setVisibility(View.VISIBLE);
-
             // Call API to update personal info
             updatePersonalInfo(name, surname, email, phone, address);
         }
