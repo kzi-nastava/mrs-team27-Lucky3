@@ -17,6 +17,7 @@ import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentDriverProfileBinding;
 import com.example.mobile.models.DriverProfileResponse;
 import com.example.mobile.models.ProfileUserResponse;
+import com.example.mobile.utils.SharedPreferencesManager;
 import com.example.mobile.viewmodels.DriverProfileViewModel;
 import com.example.mobile.viewmodels.UserProfileViewModel;
 
@@ -56,8 +57,15 @@ public class DriverProfileFragment extends Fragment {
 
     private void setupListeners(){
         binding.btnEditPersonal.setOnClickListener(v -> {
-            new ChangePersonalInfoDialog().show(getParentFragmentManager(), "ChangePersonalInfoDialog");
+            // Get token from your TokenManager or wherever you store it
+            SharedPreferencesManager prefsManager = viewModel.getPrefsManager();
+            String token = prefsManager.getToken();
+            Long currentUserId = prefsManager.getUserId();
+
+            ChangeDriverInfoDialog dialog = ChangeDriverInfoDialog.newInstance(currentUserId, token);
+            dialog.show(getParentFragmentManager(), "ChangeDriverInfoDialog");
         });
+
     }
 
     private void observeViewModel(){

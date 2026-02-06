@@ -1,11 +1,17 @@
 package com.example.mobile.services;
 
+import com.example.mobile.models.DriverChangeRequestCreated;
 import com.example.mobile.models.DriverProfileResponse;
 import com.example.mobile.models.DriverStatsResponse;
+import com.example.mobile.models.ProfileUserResponse;
 
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
+import retrofit2.http.Multipart;
+import retrofit2.http.Part;
 import retrofit2.http.Path;
 import retrofit2.http.PUT;
 import retrofit2.http.Query;
@@ -27,6 +33,16 @@ public interface DriverService {
     @GET("api/drivers/{id}")
     Call<DriverProfileResponse> getDriverById(
             @Path("id") Long driverId,
+            @Header("Authorization") String token
+    );
+
+    //2.3 update user information
+    @Multipart
+    @PUT("api/drivers/{id}")
+    Call<DriverChangeRequestCreated> updateDriverInfo(
+            @Path("id") Long driverId,
+            @Part("request") RequestBody driverData,  // JSON as RequestBody
+            @Part MultipartBody.Part profileImage,  // Optional image
             @Header("Authorization") String token
     );
 }

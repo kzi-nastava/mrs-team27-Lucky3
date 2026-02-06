@@ -140,8 +140,8 @@ public interface UserService {
     @PUT("api/users/{id}")
     Call<ProfileUserResponse> updatePersonalInfo(
             @Path("id") Long userId,
-            @Part("user") RequestBody userData,  // ✅ JSON as RequestBody
-            @Part MultipartBody.Part profileImage,  // ✅ Optional image
+            @Part("user") RequestBody userData,  // JSON as RequestBody
+            @Part MultipartBody.Part profileImage,  // Optional image
             @Header("Authorization") String token
     );
 }
