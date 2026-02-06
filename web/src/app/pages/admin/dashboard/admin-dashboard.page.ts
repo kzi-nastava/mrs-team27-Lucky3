@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, Subscription, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { RideService, PageResponse, AdminStatsResponse } from '../../../infrastructure/rest/ride.service';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
 import { ActiveRidesTableComponent, ActiveRideSortField } from './active-rides-table/active-rides-table.component';
+import { SocketService } from '../../../infrastructure/rest/socket.service';
+import { PanicResponse } from '../../../infrastructure/rest/panic.service';
 
 @Component({
   selector: 'app-admin-dashboard-page',
@@ -51,14 +53,22 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
   private searchSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
 
+  // Panic alert
+  panicAlert: string | null = null;
+  private panicSub: Subscription | null = null;
+  private panicAudioContext: AudioContext | null = null;
+  private panicAlertTimer: any;
+
   constructor(
     private rideService: RideService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private socketService: SocketService
   ) {}
 
   ngOnInit(): void {
     this.loadStats();
     this.loadRides();
+    this.subscribeToPanicAlerts();
 
     // Setup search debounce
     this.searchSubject.pipe(
@@ -75,6 +85,52 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.panicSub?.unsubscribe();
+    if (this.panicAlertTimer) clearTimeout(this.panicAlertTimer);
+  }
+
+  private subscribeToPanicAlerts(): void {
+    this.panicSub = this.socketService.subscribeToPanicAlerts().subscribe({
+      next: (panic: PanicResponse) => {
+        const who = panic.user ? `${panic.user.name} ${panic.user.surname}` : 'Unknown';
+        const rideId = panic.ride?.id || '?';
+        this.panicAlert = `PANIC on Ride #${rideId} by ${who} — ${panic.reason || 'No reason given'}`;
+        this.playPanicSound();
+        // Also refresh the rides list to show updated panic state
+        this.loadRides();
+        this.cdr.detectChanges();
+        // Auto-dismiss after 15s
+        if (this.panicAlertTimer) clearTimeout(this.panicAlertTimer);
+        this.panicAlertTimer = setTimeout(() => {
+          this.panicAlert = null;
+          this.cdr.detectChanges();
+        }, 15000);
+      }
+    });
+  }
+
+  dismissPanicAlert(): void {
+    this.panicAlert = null;
+    if (this.panicAlertTimer) clearTimeout(this.panicAlertTimer);
+  }
+
+  private playPanicSound(): void {
+    try {
+      if (!this.panicAudioContext) {
+        this.panicAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const osc = this.panicAudioContext.createOscillator();
+      const gain = this.panicAudioContext.createGain();
+      osc.connect(gain);
+      gain.connect(this.panicAudioContext.destination);
+      osc.frequency.value = 800;
+      osc.type = 'sine';
+      gain.gain.value = 0.3;
+      osc.start();
+      setTimeout(() => { gain.gain.value = 0; setTimeout(() => { gain.gain.value = 0.3; setTimeout(() => { gain.gain.value = 0; setTimeout(() => { gain.gain.value = 0.3; setTimeout(() => { osc.stop(); }, 150); }, 100); }, 150); }, 100); }, 150);
+    } catch (e) {
+      console.warn('Could not play panic sound', e);
+    }
   }
 
   loadStats(): void {

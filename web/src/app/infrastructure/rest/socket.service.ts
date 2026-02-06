@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { SupportMessageResponse } from './support-chat.service';
+import { PanicResponse } from './panic.service';
 
 export interface SocketState {
   connected: boolean;
@@ -28,6 +29,7 @@ export class SocketService implements OnDestroy {
   private supportChatSubscription: StompSubscription | null = null;
   private adminChatsSubscription: StompSubscription | null = null;
   private adminMessagesSubscription: StompSubscription | null = null;
+  private panicSubscription: StompSubscription | null = null;
 
   constructor() {}
 
@@ -372,5 +374,63 @@ export class SocketService implements OnDestroy {
 
   ngOnDestroy(): void {
     this.disconnect();
+  }
+
+  // ==================== Panic Alert Methods ====================
+
+  /**
+   * Subscribe to real-time panic alerts (for admin pages).
+   * Receives new panic events as they happen.
+   */
+  subscribeToPanicAlerts(): Observable<PanicResponse> {
+    return new Observable(observer => {
+      let stompSub: StompSubscription | null = null;
+      let stateSub: Subscription | null = null;
+
+      const subscribeToStomp = () => {
+        if (!this.client?.connected) return;
+
+        try {
+          // Unsubscribe from previous subscription if any
+          if (this.panicSubscription) {
+            this.panicSubscription.unsubscribe();
+          }
+
+          stompSub = this.client.subscribe('/topic/panic', (message: IMessage) => {
+            try {
+              const panic: PanicResponse = JSON.parse(message.body);
+              observer.next(panic);
+            } catch (e) {
+              console.error('Error parsing panic alert:', e);
+            }
+          });
+          this.panicSubscription = stompSub;
+        } catch (error) {
+          console.error('Error subscribing to panic alerts:', error);
+        }
+      };
+
+      // If already connected, subscribe immediately
+      if (this.client?.connected) {
+        subscribeToStomp();
+      } else {
+        this.connect();
+        stateSub = this.socketState.subscribe(state => {
+          if (state.connected && !stompSub) {
+            subscribeToStomp();
+          }
+        });
+      }
+
+      return () => {
+        if (stompSub) {
+          stompSub.unsubscribe();
+          this.panicSubscription = null;
+        }
+        if (stateSub) {
+          stateSub.unsubscribe();
+        }
+      };
+    });
   }
 }

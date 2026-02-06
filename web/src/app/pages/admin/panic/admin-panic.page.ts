@@ -2,49 +2,62 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { PanicService, PanicResponse } from '../../../infrastructure/rest/panic.service';
-import { Subscription, interval } from 'rxjs';
+import { SocketService } from '../../../infrastructure/rest/socket.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-admin-panic',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  templateUrl: './admin-panic.page.html'
+  templateUrl: './admin-panic.page.html',
+  styles: [`
+    @keyframes slide-down {
+      from { opacity: 0; transform: translate(-50%, -100%); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    :host ::ng-deep .animate-slide-down {
+      animation: slide-down 0.3s ease-out;
+    }
+  `]
 })
 export class AdminPanicPage implements OnInit, OnDestroy {
   panics: PanicResponse[] = [];
   isLoading = true;
   errorMessage = '';
   
-  private poller: Subscription | null = null;
+  private panicSocketSub: Subscription | null = null;
   private audioContext: AudioContext | null = null;
-  private lastPanicCount = 0;
+
+  /** Tracks IDs of panics that just arrived via WebSocket for the flash animation */
+  newPanicIds = new Set<number>();
+
+  /** Toast notification state */
+  showToast = false;
+  toastMessage = '';
+  private toastTimer: any;
 
   constructor(
     private panicService: PanicService,
+    private socketService: SocketService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadPanics();
-    // Poll every 10 seconds for new panic notifications
-    this.poller = interval(10000).subscribe(() => this.loadPanics());
+    this.subscribeToPanicAlerts();
   }
 
   ngOnDestroy(): void {
-    this.poller?.unsubscribe();
+    this.panicSocketSub?.unsubscribe();
+    if (this.toastTimer) clearTimeout(this.toastTimer);
   }
 
+  /**
+   * Load full panic list from REST API (initial load + manual refresh).
+   */
   loadPanics(): void {
     this.panicService.getPanics(0, 50).subscribe({
       next: (response) => {
-        const newCount = response.content?.length || 0;
-        
-        // Play sound if there are new panics
-        if (newCount > this.lastPanicCount && this.lastPanicCount > 0) {
-          this.playAlertSound();
-        }
-        
-        this.lastPanicCount = newCount;
         this.panics = response.content || [];
         this.isLoading = false;
         this.errorMessage = '';
@@ -57,6 +70,62 @@ export class AdminPanicPage implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  /**
+   * Subscribe to real-time panic alerts via WebSocket.
+   * When a new panic arrives: play sound, show toast, prepend to list.
+   */
+  private subscribeToPanicAlerts(): void {
+    this.panicSocketSub = this.socketService.subscribeToPanicAlerts().subscribe({
+      next: (panic: PanicResponse) => {
+        // Avoid duplicates
+        if (this.panics.some(p => p.id === panic.id)) return;
+
+        // Prepend new panic to the list
+        this.panics = [panic, ...this.panics];
+
+        // Mark as new for flash animation
+        this.newPanicIds.add(panic.id);
+        setTimeout(() => {
+          this.newPanicIds.delete(panic.id);
+          this.cdr.detectChanges();
+        }, 5000);
+
+        // Play urgent alert sound
+        this.playAlertSound();
+
+        // Show toast notification
+        const who = panic.user ? `${panic.user.name} ${panic.user.surname}` : 'Unknown';
+        const rideId = panic.ride?.id || '?';
+        this.showToastNotification(`🚨 PANIC on Ride #${rideId} by ${who}`);
+
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Panic WebSocket subscription error:', err);
+      }
+    });
+  }
+
+  /**
+   * Show a temporary toast notification at the top of the page.
+   */
+  private showToastNotification(message: string): void {
+    this.toastMessage = message;
+    this.showToast = true;
+    this.cdr.detectChanges();
+
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => {
+      this.showToast = false;
+      this.cdr.detectChanges();
+    }, 8000);
+  }
+
+  dismissToast(): void {
+    this.showToast = false;
+    if (this.toastTimer) clearTimeout(this.toastTimer);
   }
 
   playAlertSound(): void {
@@ -96,6 +165,10 @@ export class AdminPanicPage implements OnInit, OnDestroy {
     } catch (e) {
       console.warn('Could not play alert sound', e);
     }
+  }
+
+  isNewPanic(panicId: number): boolean {
+    return this.newPanicIds.has(panicId);
   }
 
   formatTime(dateStr: string): string {

@@ -13,6 +13,7 @@ import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.*;
 import com.team27.lucky3.backend.service.EmailService;
 import com.team27.lucky3.backend.service.NotificationService;
+import com.team27.lucky3.backend.service.PanicService;
 import com.team27.lucky3.backend.service.RideService;
 import com.team27.lucky3.backend.util.ReviewTokenUtils;
 import jakarta.persistence.EntityNotFoundException;
@@ -52,6 +53,8 @@ public class RideServiceImpl implements RideService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final ReviewTokenUtils reviewTokenUtils;
+    private final PanicService panicService;
+    private final com.team27.lucky3.backend.service.socket.VehicleSocketService vehicleSocketService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -887,6 +890,12 @@ public class RideServiceImpl implements RideService {
 
         // Save Ride
         Ride savedRide = rideRepository.save(ride);
+
+        // Broadcast panic alert to admins via WebSocket
+        panicService.broadcastPanicAlert(panic);
+
+        // Trigger immediate vehicle broadcast so admin map updates in real-time
+        vehicleSocketService.notifyVehicleUpdate();
 
         return mapToResponse(savedRide);
     }
