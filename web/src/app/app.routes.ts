@@ -39,6 +39,7 @@ import { AdminPanicPage } from './pages/admin/panic/admin-panic.page';
 import { NotFoundPage } from './pages/not-found/not-found.page';
 import { SupportPage } from './shared/support/support.page';
 import { AdminSupportPage } from './pages/admin/support/admin-support.page';
+import { AdminRideHistoryPage } from './pages/admin/ride-history/admin-ride-history.page';
 
 export const routes: Routes = [
   // --- GUEST-ONLY ROUTES (redirect to dashboard if logged in) ---
@@ -199,6 +200,12 @@ export const routes: Routes = [
   {
     path: 'admin/support',
     component: AdminSupportPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/ride-history',
+    component: AdminRideHistoryPage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },
