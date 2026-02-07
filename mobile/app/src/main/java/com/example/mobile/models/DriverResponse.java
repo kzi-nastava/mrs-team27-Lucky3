@@ -1,10 +1,14 @@
 package com.example.mobile.models;
 
 import com.example.mobile.services.DriverService;
+import com.google.gson.annotations.SerializedName;
 
 public class DriverResponse extends UserResponse {
     private VehicleInformation vehicle;
+    @SerializedName("active")  // Maps JSON "active" to Java "isActive"
     private boolean isActive;
+
+    @SerializedName("blocked")  // Maps JSON "blocked" to Java "isBlocked"
     private boolean isBlocked;
     private String active24h;
 

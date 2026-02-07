@@ -10,12 +10,16 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.example.mobile.models.CreateDriverRequest;
 import com.example.mobile.models.DriverResponse;
+import com.example.mobile.models.DriverStatsResponse;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
@@ -29,6 +33,7 @@ public class AdminDriversViewModel extends AndroidViewModel {
 
     // Source of truth
     private List<DriverResponse> allDrivers = new ArrayList<>();
+    private Map<Long, DriverStatsResponse> driverStatsMap = new HashMap<>();
 
     // What the UI observes
     private MutableLiveData<List<DriverResponse>> displayedDrivers = new MutableLiveData<>();
@@ -70,16 +75,17 @@ public class AdminDriversViewModel extends AndroidViewModel {
     public void loadAllDrivers() {
         loadingLiveData.setValue(true);
 
-        String token = prefsManager.getToken();
-        ClientUtils.driverService.getAllDrivers("Bearer " + token).enqueue(new Callback<List<DriverResponse>>() {
+        String token = "Bearer " + prefsManager.getToken();
+        ClientUtils.driverService.getAllDrivers(token).enqueue(new Callback<List<DriverResponse>>() {
             @Override
             public void onResponse(Call<List<DriverResponse>> call, Response<List<DriverResponse>> response) {
-                loadingLiveData.setValue(false);
-
                 if (response.isSuccessful() && response.body() != null) {
                     allDrivers = response.body();
-                    applyFiltersAndSearch(); // Apply current filters after loading
+
+                    Log.d(TAG, "Loaded " + allDrivers.size() + " drivers");
+                    loadAllDriverStats();
                 } else {
+                    loadingLiveData.setValue(false);
                     errorLiveData.setValue("Failed to load drivers: " + response.code());
                 }
             }
@@ -91,6 +97,66 @@ public class AdminDriversViewModel extends AndroidViewModel {
                 Log.e(TAG, "loadAllDrivers failed", t);
             }
         });
+    }
+
+    // NEW: Load statistics for all drivers
+    private void loadAllDriverStats() {
+        if (allDrivers.isEmpty()) {
+            loadingLiveData.setValue(false);
+            applyFiltersAndSearch();
+            return;
+        }
+
+        final AtomicInteger completedRequests = new AtomicInteger(0);
+        final int totalDrivers = allDrivers.size();
+
+        for (DriverResponse driver : allDrivers) {
+            Long driverId = driver.getId(); // Assuming DriverResponse has getId()
+
+            if (driverId == null) {
+                completedRequests.incrementAndGet();
+                continue;
+            }
+
+            Log.d(TAG, "Loading driver stats for driver " + driverId);
+            String token = "Bearer " + prefsManager.getToken();
+            ClientUtils.driverService.getStats(driverId, token).enqueue(new Callback<DriverStatsResponse>() {
+                @Override
+                public void onResponse(Call<DriverStatsResponse> call, Response<DriverStatsResponse> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        DriverStatsResponse stats = response.body();
+                        driverStatsMap.put(driverId, stats);
+                        Log.d(TAG, "Driver stats loaded: driverId=" + driverId +
+                                " rating=" + stats.getAverageRating() +
+                                " rides=" + stats.getCompletedRides());
+                    } else {
+                        Log.e(TAG, "Failed to load driver stats for " + driverId + ": HTTP " + response.code());
+                    }
+
+                    // Check if all requests completed
+                    if (completedRequests.incrementAndGet() == totalDrivers) {
+                        loadingLiveData.postValue(false);
+                        applyFiltersAndSearch(); // Now apply filters with stats loaded
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<DriverStatsResponse> call, Throwable t) {
+                    Log.e(TAG, "Failed to load driver stats for " + driverId, t);
+
+                    // Still count as completed even on failure
+                    if (completedRequests.incrementAndGet() == totalDrivers) {
+                        loadingLiveData.postValue(false);
+                        applyFiltersAndSearch();
+                    }
+                }
+            });
+        }
+    }
+
+    // ✅ NEW: Get stats for a specific driver
+    public DriverStatsResponse getDriverStats(Long driverId) {
+        return driverStatsMap.get(driverId);
     }
 
     // 2. Filter by status
@@ -114,7 +180,7 @@ public class AdminDriversViewModel extends AndroidViewModel {
             if (!"All".equals(currentFilter)) {
                 boolean matchesStatus = false;
 
-                if ("Active".equals(currentFilter) && driver.isActive() && !driver.isBlocked()) {
+                if ("Active".equals(currentFilter) && driver.isActive()) {
                     matchesStatus = true;
                 } else if ("Inactive".equals(currentFilter) && !driver.isActive()) {
                     matchesStatus = true;

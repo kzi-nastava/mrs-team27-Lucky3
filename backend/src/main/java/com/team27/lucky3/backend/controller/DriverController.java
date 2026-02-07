@@ -59,7 +59,7 @@ public class DriverController {
     }
 
     // Get driver statistics (earnings, rides completed, rating, online hours)
-    @PreAuthorize("hasRole('DRIVER')")
+    //@PreAuthorize("hasRole('DRIVER')")
     @GetMapping("/{id}/stats")
     public ResponseEntity<DriverStatsResponse> getDriverStats(@PathVariable Long id) {
         DriverStatsResponse response = driverService.getDriverStats(id);

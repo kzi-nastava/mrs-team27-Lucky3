@@ -178,8 +178,9 @@ public class DriverRideHistoryFragment extends Fragment {
     private void loadDriverStats() {
         Long userId = preferencesManager.getUserId();
         if (userId == null) return;
-        
-        driverService.getStats(userId).enqueue(new Callback<DriverStatsResponse>() {
+
+        String token = "Bearer " + preferencesManager.getToken();
+        driverService.getStats(userId, token).enqueue(new Callback<DriverStatsResponse>() {
             @Override
             public void onResponse(Call<DriverStatsResponse> call, Response<DriverStatsResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {

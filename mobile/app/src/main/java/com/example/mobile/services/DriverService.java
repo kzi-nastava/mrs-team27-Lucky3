@@ -23,14 +23,15 @@ import retrofit2.http.Query;
  * Service for driver-related API calls.
  */
 public interface DriverService {
-    
+
     /**
      * Get driver statistics (earnings, rides completed, rating, online hours)
      */
     @GET("api/drivers/{driverId}/stats")
-    Call<DriverStatsResponse> getStats(@Path("driverId") long driverId);
-
-    /**
+    Call<DriverStatsResponse> getStats(
+            @Path("driverId") long driverId,
+            @Header("Authorization") String token
+    );   /**
      * Get all drivers
      */
     @GET("api/drivers")

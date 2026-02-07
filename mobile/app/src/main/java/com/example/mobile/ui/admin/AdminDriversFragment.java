@@ -4,6 +4,7 @@ import com.example.mobile.Domain.DriverInfoCard;
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentAdminDriversBinding;
 import com.example.mobile.models.DriverResponse;
+import com.example.mobile.models.DriverStatsResponse;
 import com.example.mobile.viewmodels.AdminDriversViewModel;
 
 import androidx.annotation.Nullable;
@@ -129,6 +130,7 @@ public class AdminDriversFragment extends Fragment {
     }
 
     // Add this helper method to your Fragment
+    // UPDATED: Map with statistics data
     private DriverInfoCard mapToDriverInfoCard(DriverResponse driver) {
         // Determine status string based on driver state
         String status = "";
@@ -136,7 +138,6 @@ public class AdminDriversFragment extends Fragment {
             status = "Suspended";
         } else if (driver.isActive()) {
             status = "Active";
-            // If driver has active24h field, you can add it
             if (driver.getActive24h() != null && !driver.getActive24h().isEmpty()) {
                 status += ",Online";
             }
@@ -144,17 +145,32 @@ public class AdminDriversFragment extends Fragment {
             status = "Inactive";
         }
 
-        return new DriverInfoCard(  //TODO: fetch rating, totalrides, earnings
-                driver.getName() != null ? driver.getName() : "",           // Assuming UserResponse has getName()
-                driver.getSurname() != null ? driver.getSurname() : "",     // Assuming UserResponse has getSurname()
-                driver.getEmail() != null ? driver.getEmail() : "",         // Assuming UserResponse has getEmail()
-                driver.getProfilePictureUrl() != null ? driver.getProfilePictureUrl() : "",   // Assuming UserResponse has getImageUrl()
-                driver.getVehicle().getLicenseNumber() != null ? driver.getVehicle().getLicenseNumber() : "", // Adjust field name
-                driver.getVehicle().getModel() != null ? driver.getVehicle().getModel() : "",               // Adjust field name
-                4,
+        // GET STATS FROM VIEWMODEL
+        DriverStatsResponse stats = viewModel.getDriverStats(driver.getId());
+
+        float rating = 0.0f;
+        int totalRides = 0;
+        double earnings = 0.0;
+
+        if (stats != null) {
+            rating = stats.getAverageRating() != null ? stats.getAverageRating().floatValue() : 0.0f;
+            totalRides = stats.getCompletedRides() != null ? stats.getCompletedRides() : 0;
+            earnings = stats.getTotalEarnings() != null ? stats.getTotalEarnings() : 0.0;
+        }
+
+        return new DriverInfoCard(
+                driver.getName() != null ? driver.getName() : "",
+                driver.getSurname() != null ? driver.getSurname() : "",
+                driver.getEmail() != null ? driver.getEmail() : "",
+                driver.getProfilePictureUrl() != null ? driver.getProfilePictureUrl() : "",
+                driver.getVehicle() != null && driver.getVehicle().getLicenseNumber() != null
+                        ? driver.getVehicle().getLicenseNumber() : "",
+                driver.getVehicle() != null && driver.getVehicle().getModel() != null
+                        ? driver.getVehicle().getModel() : "",
+                rating,           // ✅ Real rating from stats
                 status,
-                3,
-                123
+                totalRides,       // ✅ Real total rides from stats
+                earnings          // ✅ Real earnings from stats
         );
     }
 
