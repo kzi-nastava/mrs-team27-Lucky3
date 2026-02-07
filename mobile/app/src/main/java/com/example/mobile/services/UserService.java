@@ -3,6 +3,7 @@ package com.example.mobile.services;
 import com.example.mobile.models.EmailRequest;
 import com.example.mobile.models.LoginRequest;
 import com.example.mobile.models.PasswordResetRequest;
+import com.example.mobile.models.ProfileUserResponse;
 import com.example.mobile.models.RegistrationRequest;
 import com.example.mobile.models.TokenResponse;
 import com.example.mobile.models.UserResponse;
@@ -12,8 +13,10 @@ import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
+import retrofit2.http.Header;
 import retrofit2.http.Multipart;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Part;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
@@ -120,16 +123,6 @@ public interface UserService {
     // ========================== User Profile Endpoints ==========================
 
     /**
-     * Get current user profile.
-     * GET /api/users/me
-     * Requires authentication header.
-     * 
-     * @return UserResponse with current user data
-     */
-    @GET("api/users/me")
-    Call<UserResponse> getCurrentUser();
-
-    /**
      * Get user by ID.
      * GET /api/users/{id}
      * 
@@ -137,5 +130,18 @@ public interface UserService {
      * @return UserResponse
      */
     @GET("api/users/{id}")
-    Call<UserResponse> getUserById(@Path("id") Long userId);
+    Call<ProfileUserResponse> getUserById(
+            @Path("id") Long userId,
+            @Header("Authorization") String token
+    );
+
+    //2.3 update user information
+    @Multipart
+    @PUT("api/users/{id}")
+    Call<ProfileUserResponse> updatePersonalInfo(
+            @Path("id") Long userId,
+            @Part("user") RequestBody userData,  // JSON as RequestBody
+            @Part MultipartBody.Part profileImage,  // Optional image
+            @Header("Authorization") String token
+    );
 }

@@ -94,6 +94,11 @@ public class ClientUtils {
     public static final UserService userService = retrofit.create(UserService.class);
 
     /**
+     * Driver service instance
+     */
+
+    public static final DriverService driverService = retrofit.create(DriverService.class);
+    /**
      * VehicleService instance (without auth - for public vehicle data).
      */
     public static final VehicleService vehicleService = retrofit.create(VehicleService.class);

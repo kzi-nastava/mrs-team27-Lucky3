@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { 
   SupportChatService, 
@@ -54,7 +55,8 @@ export class AdminSupportPage implements OnInit, OnDestroy, AfterViewChecked {
   constructor(
     private supportChatService: SupportChatService,
     private socketService: SocketService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -84,6 +86,17 @@ export class AdminSupportPage implements OnInit, OnDestroy, AfterViewChecked {
         this.chats = chats.map(c => this.mapChatListItem(c));
         this.isLoading = false;
         this.cdr.detectChanges();
+        
+        // Check for chatId query param to auto-select chat
+        this.route.queryParams.subscribe(params => {
+          const chatId = params['chatId'];
+          if (chatId) {
+            const targetChat = this.chats.find(c => c.id === +chatId);
+            if (targetChat) {
+              this.selectChat(targetChat);
+            }
+          }
+        });
       },
       error: (err) => {
         console.error('Error loading chats:', err);

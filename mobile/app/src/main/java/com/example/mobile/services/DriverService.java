@@ -1,9 +1,6 @@
 package com.example.mobile.services;
 
-import com.example.mobile.models.DriverResponse;
 import com.example.mobile.models.DriverStatsResponse;
-
-import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
@@ -27,4 +24,23 @@ public interface DriverService {
      */
     @GET("api/drivers")
     Call<List<DriverResponse>> getAllDrivers();
+
+    /*
+     * Get driver by id for profile managment
+     */
+    @GET("api/drivers/{id}")
+    Call<DriverProfileResponse> getDriverById(
+            @Path("id") Long driverId,
+            @Header("Authorization") String token
+    );
+
+    //2.3 update user information
+    @Multipart
+    @PUT("api/drivers/{id}")
+    Call<DriverChangeRequestCreated> updateDriverInfo(
+            @Path("id") Long driverId,
+            @Part("request") RequestBody driverData,  // JSON as RequestBody
+            @Part MultipartBody.Part profileImage,  // Optional image
+            @Header("Authorization") String token
+    );
 }

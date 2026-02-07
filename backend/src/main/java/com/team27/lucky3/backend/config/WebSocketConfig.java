@@ -22,7 +22,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         // Prefix for messages FROM client TO server (e.g., /app/some-endpoint)
         registry.setApplicationDestinationPrefixes("/app");
-        // Prefix for messages FROM server TO client (topics clients subscribe to)
-        registry.enableSimpleBroker("/topic");
+
+        // Enable both /topic (broadcast) and /user (per-user queues) prefixes.
+        // Per-user notifications are sent to: /user/{userId}/queue/notifications
+        registry.enableSimpleBroker("/topic", "/user");
     }
 }
