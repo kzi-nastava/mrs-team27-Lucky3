@@ -223,8 +223,8 @@ public class DriverDashboardFragment extends Fragment {
         }
         
         Log.d(TAG, "Loading driver stats for driver " + userId);
-        
-        driverService.getStats(userId).enqueue(new Callback<DriverStatsResponse>() {
+        String token = "Bearer " + preferencesManager.getToken();
+        driverService.getStats(userId, token).enqueue(new Callback<DriverStatsResponse>() {
             @Override
             public void onResponse(Call<DriverStatsResponse> call, Response<DriverStatsResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {

@@ -16,6 +16,7 @@ import com.example.mobile.R;
 import com.example.mobile.Domain.DriverInfoCard;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class AdminDriverAdapter extends ArrayAdapter<DriverInfoCard> {
 
@@ -151,5 +152,13 @@ public class AdminDriverAdapter extends ArrayAdapter<DriverInfoCard> {
         RatingBar ratingBar;
         TextView tvTotalRides;
         TextView tvEarnings;
+    }
+
+    public void setDrivers(List<DriverInfoCard> newDrivers) {
+        drivers.clear();
+        if (newDrivers != null) {
+            drivers.addAll(newDrivers);
+        }
+        notifyDataSetChanged();
     }
 }

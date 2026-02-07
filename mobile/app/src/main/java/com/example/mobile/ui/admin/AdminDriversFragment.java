@@ -1,39 +1,37 @@
 package com.example.mobile.ui.admin;
 
-import com.example.mobile.R;
 import com.example.mobile.Domain.DriverInfoCard;
-import com.google.android.material.button.MaterialButton;
+import com.example.mobile.R;
+import com.example.mobile.databinding.FragmentAdminDriversBinding;
+import com.example.mobile.models.DriverResponse;
+import com.example.mobile.models.DriverStatsResponse;
+import com.example.mobile.viewmodels.AdminDriversViewModel;
 
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.annotation.NonNull;
+import androidx.lifecycle.ViewModelProvider;
 
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.view.ViewGroup;
 import android.view.View;
 import android.view.LayoutInflater;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
 public class AdminDriversFragment extends Fragment {
-    private ListView lvDrivers;
+    private FragmentAdminDriversBinding binding;
+    private AdminDriversViewModel viewModel;
     private AdminDriverAdapter adapter;
-    private TextView tvFilterAll, tvFilterActive, tvFilterInactive, tvFilterSuspended;
-    private ArrayList<DriverInfoCard> allDrivers;
-    private ArrayList<DriverInfoCard> displayedDrivers;
-    private String currentFilter = "All";
-    private String searchQuery = "";
 
-    @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        View root = inflater.inflate(R.layout.fragment_admin_drivers, container, false);
+        binding = FragmentAdminDriversBinding.inflate(inflater, container, false);
 
         // Navbar setup
-        View navbar = root.findViewById(R.id.navbar);
+        View navbar = binding.getRoot().findViewById(R.id.navbar);
         if (navbar != null) {
             navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
                 ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
@@ -41,101 +39,172 @@ public class AdminDriversFragment extends Fragment {
             ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Drivers");
         }
 
+        return binding.getRoot();
+    }
 
-        lvDrivers = root.findViewById(R.id.listDrivers);
-        EditText etSearch = root.findViewById(R.id.etSearch);
-        ImageView ivSearch = root.findViewById(R.id.ivSearch);
-        MaterialButton btnAddNew = root.findViewById(R.id.btnAddNewDriver);
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
-        // 1) Prepare data (mock for now)
-        allDrivers = createMockDrivers();
-        displayedDrivers = new ArrayList<>(allDrivers);   // copy all initially
+        viewModel = new ViewModelProvider(this).get(AdminDriversViewModel.class);
 
-        // 2) Create adapter, pass context + list
-        adapter = new AdminDriverAdapter(requireContext(), displayedDrivers);
+        // Initialize adapter with empty list
+        adapter = new AdminDriverAdapter(requireContext(), new ArrayList<>());
+        binding.listDrivers.setAdapter(adapter);
 
-        // 3) Attach adapter to ListView
-        lvDrivers.setAdapter(adapter);
+        setupListeners();
+        observeViewModel();
 
+        // Load data from API
+        viewModel.loadAllDrivers();
+    }
 
-        // Find filter views
-        tvFilterAll = root.findViewById(R.id.filter_all);
-        tvFilterActive = root.findViewById(R.id.filter_active);
-        tvFilterInactive = root.findViewById(R.id.filter_inactive);
-        tvFilterSuspended = root.findViewById(R.id.filter_suspended);
+    private void setupListeners() {
+        // Add new driver button
+        binding.btnAddNewDriver.setOnClickListener(v -> openAddDriverDialog());
 
-        applyFilter();
-
-        setupFilterClicks();
-
-        btnAddNew.setOnClickListener(v -> openAddDriverDialog());
-
-        // setup searching
-        ivSearch.setOnClickListener(v -> {
-            String query = etSearch.getText().toString();
-            applySearch(query);
+        // Search button
+        binding.ivSearch.setOnClickListener(v -> {
+            String query = binding.etSearch.getText().toString();
+            viewModel.search(query); // Pass to ViewModel
         });
-        return root;
+
+        // Filter buttons
+        binding.filterAll.setOnClickListener(v -> {
+            viewModel.filterByStatus("All");
+            updateFilterStyles("All");
+        });
+
+        binding.filterActive.setOnClickListener(v -> {
+            viewModel.filterByStatus("Active");
+            updateFilterStyles("Active");
+        });
+
+        binding.filterInactive.setOnClickListener(v -> {
+            viewModel.filterByStatus("Inactive");
+            updateFilterStyles("Inactive");
+        });
+
+        binding.filterSuspended.setOnClickListener(v -> {
+            viewModel.filterByStatus("Suspended");
+            updateFilterStyles("Suspended");
+        });
+    }
+
+    private void observeViewModel() {
+        // Observe displayed drivers and UPDATE ADAPTER HERE
+        viewModel.getDisplayedDrivers().observe(getViewLifecycleOwner(), drivers -> {
+            if (drivers != null) {
+                // Map DriverResponse to DriverInfoCard
+                ArrayList<DriverInfoCard> driverCards = new ArrayList<>();
+                for (DriverResponse driver : drivers) {
+                    driverCards.add(mapToDriverInfoCard(driver));
+                }
+                adapter.setDrivers(driverCards);
+            }
+        });
+
+        // Observe loading state
+        viewModel.getLoadingLiveData().observe(getViewLifecycleOwner(), isLoading -> {
+            if (isLoading != null && isLoading) {
+                // Show progress bar if you have one
+                // binding.progressBar.setVisibility(View.VISIBLE);
+            } else {
+                // binding.progressBar.setVisibility(View.GONE);
+            }
+        });
+
+        // Observe errors
+        viewModel.getErrorLiveData().observe(getViewLifecycleOwner(), error -> {
+            if (error != null) {
+                Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Observe toast messages
+        viewModel.getToastMessage().observe(getViewLifecycleOwner(), message -> {
+            if (message != null) {
+                Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // Add this helper method to your Fragment
+    // UPDATED: Map with statistics data
+    private DriverInfoCard mapToDriverInfoCard(DriverResponse driver) {
+        // Determine status string based on driver state
+        String status = "";
+        if (driver.isBlocked()) {
+            status = "Suspended";
+        } else if (driver.isActive()) {
+            status = "Active";
+            if (driver.getActive24h() != null && !driver.getActive24h().isEmpty()) {
+                status += ",Online";
+            }
+        } else {
+            status = "Inactive";
+        }
+
+        // GET STATS FROM VIEWMODEL
+        DriverStatsResponse stats = viewModel.getDriverStats(driver.getId());
+
+        float rating = 0.0f;
+        int totalRides = 0;
+        double earnings = 0.0;
+
+        if (stats != null) {
+            rating = stats.getAverageRating() != null ? stats.getAverageRating().floatValue() : 0.0f;
+            totalRides = stats.getCompletedRides() != null ? stats.getCompletedRides() : 0;
+            earnings = stats.getTotalEarnings() != null ? stats.getTotalEarnings() : 0.0;
+        }
+
+        return new DriverInfoCard(
+                driver.getName() != null ? driver.getName() : "",
+                driver.getSurname() != null ? driver.getSurname() : "",
+                driver.getEmail() != null ? driver.getEmail() : "",
+                driver.getProfilePictureUrl() != null ? driver.getProfilePictureUrl() : "",
+                driver.getVehicle() != null && driver.getVehicle().getLicenseNumber() != null
+                        ? driver.getVehicle().getLicenseNumber() : "",
+                driver.getVehicle() != null && driver.getVehicle().getModel() != null
+                        ? driver.getVehicle().getModel() : "",
+                rating,           // ✅ Real rating from stats
+                status,
+                totalRides,       // ✅ Real total rides from stats
+                earnings          // ✅ Real earnings from stats
+        );
     }
 
 
     private void openAddDriverDialog() {
-        AdminAddsDriverDialog dialog = new AdminAddsDriverDialog(newDriver -> {
-            allDrivers.add(newDriver);
-            displayedDrivers.add(newDriver); // or re-run applySearchAndFilter(...)
-            adapter.notifyDataSetChanged();
-
-            // Optional extra toast in host fragment (in addition to dialog toast)
-            // Toast.makeText(requireContext(),
-            //        "Email to driver sent. Driver account is pending.",
-            //        Toast.LENGTH_LONG).show();
+        // Update dialog to pass CreateDriverRequest instead of DriverResponse
+        AdminAddsDriverDialog dialog = new AdminAddsDriverDialog((request, imageFile) -> {
+            // Call ViewModel to make API call
+            viewModel.createDriver(request, imageFile);
         });
 
         dialog.show(getParentFragmentManager(), "AddDriverDialog");
     }
 
-    private void setupFilterClicks() {
-        View.OnClickListener listener = v -> {
-            if (v.getId() == R.id.filter_all) {
-                currentFilter = "All";
-            } else if (v.getId() == R.id.filter_active) {
-                currentFilter = "Active";
-            } else if (v.getId() == R.id.filter_inactive) {
-                currentFilter = "Inactive";
-            } else if (v.getId() == R.id.filter_suspended) {
-                currentFilter = "Suspended";
-            }
-
-            updateFilterStyles();
-            applyFilter();
-        };
-
-        tvFilterAll.setOnClickListener(listener);
-        tvFilterActive.setOnClickListener(listener);
-        tvFilterInactive.setOnClickListener(listener);
-        tvFilterSuspended.setOnClickListener(listener);
-    }
-
-    private void updateFilterStyles() {
+    private void updateFilterStyles(String selectedFilter) {
         // Reset all to gray
-        resetFilterStyle(tvFilterAll);
-        resetFilterStyle(tvFilterActive);
-        resetFilterStyle(tvFilterInactive);
-        resetFilterStyle(tvFilterSuspended);
+        resetFilterStyle(binding.filterAll);
+        resetFilterStyle(binding.filterActive);
+        resetFilterStyle(binding.filterInactive);
+        resetFilterStyle(binding.filterSuspended);
 
         // Highlight selected
-        switch (currentFilter) {
+        switch (selectedFilter) {
             case "All":
-                setSelectedFilterStyle(tvFilterAll);
+                setSelectedFilterStyle(binding.filterAll);
                 break;
             case "Active":
-                setSelectedFilterStyle(tvFilterActive);
+                setSelectedFilterStyle(binding.filterActive);
                 break;
             case "Inactive":
-                setSelectedFilterStyle(tvFilterInactive);
+                setSelectedFilterStyle(binding.filterInactive);
                 break;
             case "Suspended":
-                setSelectedFilterStyle(tvFilterSuspended);
+                setSelectedFilterStyle(binding.filterSuspended);
                 break;
         }
     }
@@ -150,115 +219,9 @@ public class AdminDriversFragment extends Fragment {
         tv.setTextColor(getResources().getColor(R.color.black));
     }
 
-    private void applyFilter() {
-        displayedDrivers.clear();
-
-        if ("All".equals(currentFilter)) {
-            displayedDrivers.addAll(allDrivers);
-        } else {
-            for (DriverInfoCard d : allDrivers) {
-                String status = d.getStatus();
-                if (status != null && status.toLowerCase().contains(currentFilter.toLowerCase())) {
-                    displayedDrivers.add(d);
-                }
-            }
-        }
-
-        adapter.notifyDataSetChanged();
-    }
-
-    private void applySearch(String query) {
-        searchQuery = query.toLowerCase().trim();
-        displayedDrivers.clear();
-
-        for (DriverInfoCard d : allDrivers) {
-            // 1) status filter
-            if (!"All".equals(currentFilter)) {
-                String status = d.getStatus();
-                if (status == null ||
-                        !status.toLowerCase().contains(currentFilter.toLowerCase())) {
-                    continue; // skip drivers not in current status filter
-                }
-            }
-
-            // 2) search by name OR email
-            if (!searchQuery.isEmpty()) {
-                String fullName = (d.getName() + " " + d.getSurname()).toLowerCase();
-                String email = d.getEmail() != null ? d.getEmail().toLowerCase() : "";
-                if (!fullName.contains(searchQuery) && !email.contains(searchQuery)) {
-                    continue;
-                }
-            }
-
-            displayedDrivers.add(d);
-        }
-
-        adapter.notifyDataSetChanged(); // update ListView
-    }
-    private ArrayList<DriverInfoCard> createMockDrivers() {
-        ArrayList<DriverInfoCard> list = new ArrayList<>();
-
-        list.add(new DriverInfoCard(
-                "Đura", "Ristić",
-                "djura.ristic@kg-taxi.com",
-                "",                        // imageUrl
-                "KG-123-AB",               // Kragujevac
-                "Toyota Prius",
-                1.2f,
-                "Active,Online",
-                120,
-                45120.0
-        ));
-
-        list.add(new DriverInfoCard(
-                "Milica", "Jovanović",
-                "milica.jovanovic@bg-taxi.com",
-                "",
-                "BG-987-CD",               // Beograd
-                "Škoda Octavia",
-                4.0f,
-                "Active",
-                95,
-                31250.0
-        ));
-
-        list.add(new DriverInfoCard(
-                "Marko", "Petrović",
-                "marko.petrovic@ns-taxi.com",
-                "",
-                "NS-456-EF",               // Novi Sad
-                "VW Golf",
-                4.8f,
-                "Active,Online",
-                210,
-                68210.0
-        ));
-
-        list.add(new DriverInfoCard(
-                "Jelena", "Nikolić",
-                "jelena.nikolic@su-taxi.com",
-                "",
-                "SU-789-GH",               // Subotica
-                "Hyundai i30",
-                3.5f,
-                "Suspended",
-                40,
-                11200.0
-        ));
-
-        list.add(new DriverInfoCard(
-                "Stefan", "Stanković",
-                "stefan.stankovic@so-taxi.com",
-                "",
-                "SO-321-IJ",               // Sombor
-                "Renault Clio",
-                4.2f,
-                "Active,Online",
-                150,
-                42780.0
-        ));
-
-        // add more mock drivers...
-        return list;
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 }
