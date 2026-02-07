@@ -1,6 +1,9 @@
 package com.example.mobile.services;
 
+import com.example.mobile.models.DriverResponse;
 import com.example.mobile.models.DriverStatsResponse;
+
+import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
@@ -18,4 +21,10 @@ public interface DriverService {
      */
     @GET("api/drivers/{driverId}/stats")
     Call<DriverStatsResponse> getStats(@Path("driverId") long driverId);
+
+    /**
+     * Get all drivers
+     */
+    @GET("api/drivers")
+    Call<List<DriverResponse>> getAllDrivers();
 }

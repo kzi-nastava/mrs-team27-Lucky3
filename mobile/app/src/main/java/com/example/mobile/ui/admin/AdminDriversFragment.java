@@ -2,6 +2,8 @@ package com.example.mobile.ui.admin;
 
 import com.example.mobile.R;
 import com.example.mobile.Domain.DriverInfoCard;
+import com.example.mobile.databinding.FragmentAdminDriversBinding;
+import com.example.mobile.viewmodels.AdminDriversViewModel;
 import com.google.android.material.button.MaterialButton;
 
 import androidx.fragment.app.Fragment;
@@ -19,6 +21,9 @@ import android.os.Bundle;
 import java.util.ArrayList;
 
 public class AdminDriversFragment extends Fragment {
+    FragmentAdminDriversBinding binding;
+    AdminDriversViewModel model;
+
     private ListView lvDrivers;
     private AdminDriverAdapter adapter;
     private TextView tvFilterAll, tvFilterActive, tvFilterInactive, tvFilterSuspended;
