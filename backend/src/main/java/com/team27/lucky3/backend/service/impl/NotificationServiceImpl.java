@@ -241,6 +241,148 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     // ════════════════════════════════════════════════════════════════════
+    //  SUPPORT CHAT — User message → Notify all Admins
+    // ════════════════════════════════════════════════════════════════════
+
+    @Override
+    @Transactional
+    public void sendSupportMessageToAdmins(User sender, Long chatId, String messagePreview) {
+        String preview = messagePreview.length() > 50 
+                ? messagePreview.substring(0, 50) + "..." 
+                : messagePreview;
+        
+        String text = String.format(
+                "New support message from %s %s: \"%s\"",
+                sender.getName(),
+                sender.getSurname(),
+                preview
+        );
+
+        List<User> admins = userRepository.findAllByRole(UserRole.ADMIN);
+        for (User admin : admins) {
+            sendNotification(admin, text, NotificationType.SUPPORT, chatId);
+        }
+
+        log.info("Support message notification sent to {} admins for chat #{}", admins.size(), chatId);
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  SUPPORT CHAT — Admin reply → Notify the user
+    // ════════════════════════════════════════════════════════════════════
+
+    @Override
+    @Transactional
+    public void sendSupportReplyToUser(User chatOwner, Long chatId) {
+        String text = "Support team has replied to your message. Click to view.";
+        sendNotification(chatOwner, text, NotificationType.SUPPORT, chatId);
+        log.info("Support reply notification sent to user {} for chat #{}", chatOwner.getEmail(), chatId);
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  RIDE CREATED — Notify passengers
+    // ════════════════════════════════════════════════════════════════════
+
+    @Override
+    @Transactional
+    public void sendRideCreatedNotification(Ride ride) {
+        String departure = ride.getStartLocation() != null
+                ? ride.getStartLocation().getAddress() : "Unknown";
+        String destination = ride.getEndLocation() != null
+                ? ride.getEndLocation().getAddress() : "Unknown";
+
+        String text = String.format(
+                "Ride #%d has been created. From %s to %s. Estimated cost: %.2f RSD.",
+                ride.getId(), departure, destination, ride.getEstimatedCost()
+        );
+
+        // Notify all passengers
+        if (ride.getPassengers() != null) {
+            for (User passenger : ride.getPassengers()) {
+                sendNotification(passenger, text, NotificationType.RIDE_CREATED, ride.getId());
+            }
+        }
+
+        log.info("Ride created notification sent for ride #{}", ride.getId());
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  RIDE CANCELLED — Notify the other party
+    // ════════════════════════════════════════════════════════════════════
+
+    @Override
+    @Transactional
+    public void sendRideCancelledNotification(Ride ride, User cancelledBy) {
+        String cancellerName = cancelledBy.getName() + " " + cancelledBy.getSurname();
+        boolean cancelledByDriver = ride.getDriver() != null 
+                && ride.getDriver().getId().equals(cancelledBy.getId());
+
+        String reason = ride.getRejectionReason() != null && !ride.getRejectionReason().isEmpty()
+                ? " Reason: " + ride.getRejectionReason()
+                : "";
+
+        if (cancelledByDriver) {
+            // Driver cancelled → notify all passengers
+            String text = String.format(
+                    "Ride #%d has been cancelled by driver %s.%s",
+                    ride.getId(), cancellerName, reason
+            );
+
+            if (ride.getPassengers() != null) {
+                for (User passenger : ride.getPassengers()) {
+                    sendNotification(passenger, text, NotificationType.RIDE_CANCELLED, ride.getId());
+                }
+            }
+            log.info("Ride cancelled notification sent to passengers for ride #{}", ride.getId());
+        } else {
+            // Passenger cancelled → notify driver
+            if (ride.getDriver() != null) {
+                String text = String.format(
+                        "Ride #%d has been cancelled by passenger %s.%s",
+                        ride.getId(), cancellerName, reason
+                );
+                sendNotification(ride.getDriver(), text, NotificationType.RIDE_CANCELLED, ride.getId());
+                log.info("Ride cancelled notification sent to driver for ride #{}", ride.getId());
+            }
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  SCHEDULED RIDE REMINDER — 15 min before start
+    // ════════════════════════════════════════════════════════════════════
+
+    @Override
+    @Transactional
+    public void sendScheduledRideReminder(Ride ride) {
+        String departure = ride.getStartLocation() != null
+                ? ride.getStartLocation().getAddress() : "Unknown";
+        String destination = ride.getEndLocation() != null
+                ? ride.getEndLocation().getAddress() : "Unknown";
+
+        String text = String.format(
+                "Reminder: Your ride #%d from %s to %s starts in 15 minutes!",
+                ride.getId(), departure, destination
+        );
+
+        // Notify all passengers
+        if (ride.getPassengers() != null) {
+            for (User passenger : ride.getPassengers()) {
+                sendNotification(passenger, text, NotificationType.RIDE_SCHEDULED_REMINDER, ride.getId());
+            }
+        }
+
+        // Notify driver
+        if (ride.getDriver() != null) {
+            String driverText = String.format(
+                    "Reminder: Ride #%d pickup at %s starts in 15 minutes!",
+                    ride.getId(), departure
+            );
+            sendNotification(ride.getDriver(), driverText, NotificationType.RIDE_SCHEDULED_REMINDER, ride.getId());
+        }
+
+        log.info("Scheduled ride reminder sent for ride #{}", ride.getId());
+    }
+
+    // ════════════════════════════════════════════════════════════════════
     //  HISTORY / READ-STATE
     // ════════════════════════════════════════════════════════════════════
 

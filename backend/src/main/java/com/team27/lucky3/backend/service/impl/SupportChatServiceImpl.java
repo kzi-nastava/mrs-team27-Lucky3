@@ -11,6 +11,7 @@ import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.MessageRepository;
 import com.team27.lucky3.backend.repository.SupportChatRepository;
+import com.team27.lucky3.backend.service.NotificationService;
 import com.team27.lucky3.backend.service.SupportChatService;
 import com.team27.lucky3.backend.service.socket.SupportChatSocketService;
 import lombok.RequiredArgsConstructor;
@@ -31,14 +32,17 @@ public class SupportChatServiceImpl implements SupportChatService {
     private final SupportChatRepository supportChatRepository;
     private final MessageRepository messageRepository;
     private final SupportChatSocketService socketService;
+    private final NotificationService notificationService;
 
     public SupportChatServiceImpl(
             SupportChatRepository supportChatRepository,
             MessageRepository messageRepository,
-            @Lazy SupportChatSocketService socketService) {
+            @Lazy SupportChatSocketService socketService,
+            @Lazy NotificationService notificationService) {
         this.supportChatRepository = supportChatRepository;
         this.messageRepository = messageRepository;
         this.socketService = socketService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -86,6 +90,9 @@ public class SupportChatServiceImpl implements SupportChatService {
         // Notify admins about updated chat list
         socketService.broadcastChatListUpdate(mapToListItemResponse(chat));
 
+        // Send notification to all admins about the new support message
+        notificationService.sendSupportMessageToAdmins(user, chat.getId(), request.getContent());
+
         log.info("User {} sent support message in chat {}", user.getEmail(), chat.getId());
         return response;
     }
@@ -111,6 +118,9 @@ public class SupportChatServiceImpl implements SupportChatService {
         socketService.broadcastToAdmins(chat.getId(), response);
         // Notify about chat list update
         socketService.broadcastChatListUpdate(mapToListItemResponse(chat));
+
+        // Send notification to the user about the admin reply
+        notificationService.sendSupportReplyToUser(chat.getUser(), chat.getId());
 
         log.info("Admin {} sent support message to chat {}", admin.getEmail(), chatId);
         return response;

@@ -69,4 +69,12 @@ public interface RideRepository extends JpaRepository<Ride, Long>, JpaSpecificat
     // Get all rides with active statuses for passenger counting
     @Query("SELECT r FROM Ride r WHERE r.status IN ('IN_PROGRESS', 'ACTIVE')")
     List<Ride> findAllActiveRidesForPassengerCount();
+
+    // Find rides scheduled to start within a time window (for reminder notifications)
+    @Query("SELECT r FROM Ride r WHERE r.scheduledTime BETWEEN :start AND :end AND r.status IN :statuses")
+    List<Ride> findByScheduledTimeBetweenAndStatusIn(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("statuses") List<RideStatus> statuses
+    );
 }
