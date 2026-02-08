@@ -94,12 +94,12 @@
         tools:layout="@layout/fragment_register_verification" />
 
     <fragment
-        android:id="@+id/nav_driver_dashboard"
-        android:name="com.example.mobile.ui.driver.DriverDashboardFragment"
-        android:label="Driver Dashboard"
-        tools:layout="@layout/fragment_driver_dashboard">
+        android:id="@+id/nav_driver_overview"
+        android:name="com.example.mobile.ui.driver.DriverOverviewFragment"
+        android:label="Driver Overview"
+        tools:layout="@layout/fragment_driver_overview">
         <action
-            android:id="@+id/action_nav_driver_dashboard_to_nav_ride_details"
+            android:id="@+id/action_nav_driver_overview_to_nav_ride_details"
             app:destination="@id/nav_ride_details" />
     </fragment>
 

@@ -5,6 +5,7 @@ import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentAdminDriversBinding;
 import com.example.mobile.models.DriverResponse;
 import com.example.mobile.models.DriverStatsResponse;
+import com.example.mobile.utils.ListViewHelper;
 import com.example.mobile.viewmodels.AdminDriversViewModel;
 
 import androidx.annotation.Nullable;
@@ -101,6 +102,7 @@ public class AdminDriversFragment extends Fragment {
                     driverCards.add(mapToDriverInfoCard(driver));
                 }
                 adapter.setDrivers(driverCards);
+                ListViewHelper.setListViewHeightBasedOnChildren(binding.listDrivers);
             }
         });
 

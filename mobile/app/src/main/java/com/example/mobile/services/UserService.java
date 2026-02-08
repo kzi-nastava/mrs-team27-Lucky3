@@ -73,7 +73,7 @@ public interface UserService {
      * Requires authentication header.
      */
     @POST("api/auth/logout")
-    Call<Void> logout();
+    Call<Void> logout(@Header("Authorization") String token);
 
     /**
      * Forgot password endpoint.

@@ -1,5 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { environment } from '../../../env/environment';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { SupportMessageResponse } from './support-chat.service';
@@ -67,7 +68,7 @@ export class SocketService implements OnDestroy {
     const token = this.getToken();
 
     this.client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8081/ws'),
+      webSocketFactory: () => new SockJS(environment.wsHost),
       connectHeaders: token ? { 'Authorization': `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
