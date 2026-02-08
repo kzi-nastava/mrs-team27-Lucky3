@@ -351,7 +351,12 @@ export class NotificationService implements OnDestroy {
       case 'RIDE_STATUS':
       case 'RIDE_INVITE':
       case 'RIDE_CREATED':
-      case 'RIDE_SCHEDULED_REMINDER': return `/passenger/ride/${relatedEntityId}`;
+      case 'RIDE_SCHEDULED_REMINDER': {
+        if (role === 'DRIVER') {
+          return `/driver/ride/${relatedEntityId}`;
+        }
+        return `/passenger/ride/${relatedEntityId}`;
+      }
       case 'DRIVER_ASSIGNMENT': return `/driver/dashboard`;
       case 'SUPPORT': {
         if (role === 'ADMIN') {
