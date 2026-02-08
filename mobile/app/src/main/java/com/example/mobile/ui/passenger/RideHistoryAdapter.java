@@ -20,31 +20,10 @@ import java.util.Locale;
 
 public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.RideViewHolder> {
 
-    private List<RideResponse> allRides = new ArrayList<>();
-    private List<RideResponse> filteredRides = new ArrayList<>();
-    private String currentFilter = null;
+    private List<RideResponse> rides = new ArrayList<>();
 
     public void setRides(List<RideResponse> rides) {
-        this.allRides = rides;
-        applyFilter();
-    }
-
-    public void filter(String status) {
-        this.currentFilter = status;
-        applyFilter();
-    }
-
-    private void applyFilter() {
-        filteredRides.clear();
-        if (currentFilter == null || currentFilter.isEmpty()) {
-            filteredRides.addAll(allRides);
-        } else {
-            for (RideResponse ride : allRides) {
-                if (ride.getStatus() != null && ride.getStatus().name().equalsIgnoreCase(currentFilter)) {
-                    filteredRides.add(ride);
-                }
-            }
-        }
+        this.rides = rides != null ? rides : new ArrayList<>();
         notifyDataSetChanged();
     }
 
@@ -58,13 +37,13 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull RideViewHolder holder, int position) {
-        RideResponse ride = filteredRides.get(position);
+        RideResponse ride = rides.get(position);
         holder.bind(ride);
     }
 
     @Override
     public int getItemCount() {
-        return filteredRides.size();
+        return rides.size();
     }
 
     static class RideViewHolder extends RecyclerView.ViewHolder {
@@ -92,16 +71,16 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
         public void bind(RideResponse ride) {
             // Status
             if (ride.getStatus() != null) {
-                tvStatus.setText(ride.getStatus().name());
-                int statusColor = getStatusColor(ride.getStatus().name());
+                tvStatus.setText(ride.getStatus());
+                int statusColor = getStatusColor(ride.getStatus());
                 tvStatus.setTextColor(statusColor);
             }
 
             // Date
             if (ride.getStartTime() != null) {
-                tvDate.setText(formatDate(ride.getStartTime()));
+                tvDate.setText(ride.getStartTime());
             } else if (ride.getScheduledTime() != null) {
-                tvDate.setText(formatDate(ride.getScheduledTime()));
+                tvDate.setText(ride.getScheduledTime());
             }
 
             // Locations
@@ -116,7 +95,7 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
             if (ride.getModel() != null && ride.getLicensePlates() != null) {
                 tvVehicleInfo.setText(ride.getModel() + " • " + ride.getLicensePlates());
             } else if (ride.getVehicleType() != null) {
-                tvVehicleInfo.setText(ride.getVehicleType().name());
+                tvVehicleInfo.setText(ride.getVehicleType());
             }
 
             // Cost
@@ -128,7 +107,7 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
 
             // Driver
             if (ride.getDriver() != null) {
-                tvDriverName.setText("Driver: " + ride.getDriver().getFullName());
+                tvDriverName.setText("Driver: " + ride.getDriver().getName());
             } else {
                 tvDriverName.setText("Driver: Not assigned");
             }
@@ -165,4 +144,3 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
         }
     }
 }
-

@@ -8,13 +8,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentPassengerHistoryBinding;
-import com.example.mobile.ui.driver.RideHistoryAdapter;
 import com.google.android.material.button.MaterialButton;
 
 public class PassengerHistoryFragment extends Fragment {
@@ -47,7 +47,7 @@ public class PassengerHistoryFragment extends Fragment {
         // Observe LiveData
         observeViewModel();
 
-        // Load rides
+        // Load rides (initially all rides, no status filter)
         viewModel.loadRides();
 
         return root;
@@ -60,14 +60,33 @@ public class PassengerHistoryFragment extends Fragment {
     }
 
     private void setupFilterButtons() {
-        binding.btnFilterAll.setOnClickListener(v -> updateFilter(binding.btnFilterAll, null));
-        binding.btnFilterPending.setOnClickListener(v -> updateFilter(binding.btnFilterPending, "PENDING"));
-        binding.btnFilterFinished.setOnClickListener(v -> updateFilter(binding.btnFilterFinished, "FINISHED"));
-        binding.btnFilterRejected.setOnClickListener(v -> updateFilter(binding.btnFilterRejected, "REJECTED"));
-        binding.btnFilterCanceled.setOnClickListener(v -> updateFilter(binding.btnFilterCanceled, "CANCELED"));
+        binding.btnFilterAll.setOnClickListener(v -> {
+            updateFilterUI(binding.btnFilterAll);
+            viewModel.loadRides(null, null, null); // Load all rides
+        });
+
+        binding.btnFilterPending.setOnClickListener(v -> {
+            updateFilterUI(binding.btnFilterPending);
+            viewModel.loadRides("PENDING", null, null);
+        });
+
+        binding.btnFilterFinished.setOnClickListener(v -> {
+            updateFilterUI(binding.btnFilterFinished);
+            viewModel.loadRides("FINISHED", null, null);
+        });
+
+        binding.btnFilterRejected.setOnClickListener(v -> {
+            updateFilterUI(binding.btnFilterRejected);
+            viewModel.loadRides("REJECTED", null, null);
+        });
+
+        binding.btnFilterCanceled.setOnClickListener(v -> {
+            updateFilterUI(binding.btnFilterCanceled);
+            viewModel.loadRides("CANCELED", null, null);
+        });
     }
 
-    private void updateFilter(MaterialButton selectedButton, String status) {
+    private void updateFilterUI(MaterialButton selectedButton) {
         // Reset all buttons to inactive state
         resetFilterButton(binding.btnFilterAll);
         resetFilterButton(binding.btnFilterPending);
@@ -75,17 +94,15 @@ public class PassengerHistoryFragment extends Fragment {
         resetFilterButton(binding.btnFilterRejected);
         resetFilterButton(binding.btnFilterCanceled);
 
-        // Set selected button to active state
-        selectedButton.setBackgroundTintList(getResources().getColorStateList(R.color.yellow, null));
-        selectedButton.setTextColor(getResources().getColor(R.color.black, null));
-
-        // Apply filter
-        adapter.filter(status);
+        // Set selected button to active state (Yellow background, Black text)
+        selectedButton.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.yellow_500));
+        selectedButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray_900));
     }
 
     private void resetFilterButton(MaterialButton button) {
-        button.setBackgroundTintList(getResources().getColorStateList(R.color.light_gray, null));
-        button.setTextColor(getResources().getColor(R.color.gray, null));
+        // Inactive state (Light gray background, Gray text)
+        button.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.gray_200));
+        button.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray_400));
     }
 
     private void observeViewModel() {

@@ -1,11 +1,15 @@
 package com.example.mobile.ui.passenger;
 
+import android.app.Application;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.RideResponse;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
@@ -16,14 +20,20 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class PassengerHistoryViewModel extends ViewModel {
 
+public class PassengerHistoryViewModel extends AndroidViewModel {
     private static final String TAG = "PassengerHistoryVM";
+    private final SharedPreferencesManager prefsManager;
+    private static final int DEFAULT_PAGE_SIZE = 100;
 
     private final MutableLiveData<List<RideResponse>> rides = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>();
 
+    public PassengerHistoryViewModel(@NonNull Application application) {
+        super(application);
+        prefsManager = new SharedPreferencesManager(application.getApplicationContext());
+    }
     public LiveData<List<RideResponse>> getRides() {
         return rides;
     }
@@ -37,11 +47,15 @@ public class PassengerHistoryViewModel extends ViewModel {
     }
 
     public void loadRides() {
+        loadRides(null, null, null);
+    }
+
+    public void loadRides(String status, String fromDate, String toDate) {
         isLoading.setValue(true);
         error.setValue(null);
 
-        String token = SharedPreferencesManager.getInstance().getToken();
-        Long passengerId = SharedPreferencesManager.getInstance().getUserId();
+        String token = prefsManager.getToken();
+        Long passengerId = prefsManager.getUserId();
 
         if (token == null || passengerId == null) {
             error.setValue("Authentication required");
@@ -49,17 +63,26 @@ public class PassengerHistoryViewModel extends ViewModel {
             return;
         }
 
-        Call<List<RideResponse>> call = ClientUtils.rideService.getRidesForPassenger(
-                "Bearer " + token,
-                passengerId
+        Call<PageResponse<RideResponse>> call = ClientUtils.rideService.getRidesHistory(
+                null,                           // driverId - null for passenger
+                passengerId,                    // passengerId
+                status,                         // status filter (can be null for all)
+                fromDate,                       // fromDate (can be null)
+                toDate,                         // toDate (can be null)
+                0,                              // page - start from first page
+                DEFAULT_PAGE_SIZE,              // size - get up to 100 rides
+                "startTime,desc",               // sort - newest first
+                "Bearer " + token               // Authorization header
         );
 
-        call.enqueue(new Callback<List<RideResponse>>() {
+        call.enqueue(new Callback<PageResponse<RideResponse>>() {
             @Override
-            public void onResponse(Call<List<RideResponse>> call, Response<List<RideResponse>> response) {
+            public void onResponse(Call<PageResponse<RideResponse>> call, Response<PageResponse<RideResponse>> response) {
                 isLoading.setValue(false);
                 if (response.isSuccessful() && response.body() != null) {
-                    rides.setValue(response.body());
+                    PageResponse<RideResponse> pageResponse = response.body();
+                    rides.setValue(pageResponse.getContent());
+                    Log.d(TAG, "Loaded " + pageResponse.getContent().size() + " rides out of " + pageResponse.getTotalElements() + " total");
                 } else {
                     error.setValue("Failed to load rides: " + response.code());
                     Log.e(TAG, "Error loading rides: " + response.code());
@@ -67,7 +90,7 @@ public class PassengerHistoryViewModel extends ViewModel {
             }
 
             @Override
-            public void onFailure(Call<List<RideResponse>> call, Throwable t) {
+            public void onFailure(Call<PageResponse<RideResponse>> call, Throwable t) {
                 isLoading.setValue(false);
                 error.setValue("Network error: " + t.getMessage());
                 Log.e(TAG, "Network error", t);
@@ -75,4 +98,5 @@ public class PassengerHistoryViewModel extends ViewModel {
         });
     }
 }
+
 

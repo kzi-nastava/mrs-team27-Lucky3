@@ -1,140 +1,146 @@
 package com.example.mobile.ui.driver;
 
-import android.content.Context;
-import android.os.Bundle;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-import androidx.navigation.Navigation;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mobile.R;
+import com.example.mobile.models.RideResponse;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class RideHistoryAdapter extends BaseAdapter {
+public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.RideViewHolder> {
 
-    private final List<RideHistoryItem> items;
-    private final LayoutInflater inflater;
+    private List<RideResponse> rides = new ArrayList<>();
 
-    public RideHistoryAdapter(Context context, List<RideHistoryItem> items) {
-        this.items = items;
-        this.inflater = LayoutInflater.from(context);
+    public void setRides(List<RideResponse> rides) {
+        this.rides = rides != null ? rides : new ArrayList<>();
+        notifyDataSetChanged();
+    }
+
+    @NonNull
+    @Override
+    public RideViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_ride_history, parent, false);
+        return new RideViewHolder(view);
     }
 
     @Override
-    public int getCount() {
-        return items.size();
+    public void onBindViewHolder(@NonNull RideViewHolder holder, int position) {
+        RideResponse ride = rides.get(position);
+        holder.bind(ride);
     }
 
     @Override
-    public RideHistoryItem getItem(int position) {
-        return items.get(position);
+    public int getItemCount() {
+        return rides.size();
     }
 
-    @Override
-    public long getItemId(int position) {
-        return items.get(position).rideId;
-    }
+    static class RideViewHolder extends RecyclerView.ViewHolder {
+        private final TextView tvStatus;
+        private final TextView tvDate;
+        private final TextView tvDeparture;
+        private final TextView tvDestination;
+        private final TextView tvVehicleInfo;
+        private final TextView tvCost;
+        private final TextView tvDriverName;
+        private final TextView tvRejectionReason;
 
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        ViewHolder holder;
-
-        if (convertView == null) {
-            convertView = inflater.inflate(R.layout.item_ride_history, parent, false);
-            holder = new ViewHolder();
-            holder.startDate = convertView.findViewById(R.id.start_date);
-            holder.startTime = convertView.findViewById(R.id.start_time);
-            holder.endDate = convertView.findViewById(R.id.end_date);
-            holder.endTime = convertView.findViewById(R.id.end_time);
-            holder.pickupAddress = convertView.findViewById(R.id.pickup_address);
-            holder.dropoffAddress = convertView.findViewById(R.id.dropoff_address);
-            holder.passengerCount = convertView.findViewById(R.id.passenger_count);
-            holder.distance = convertView.findViewById(R.id.distance);
-            holder.duration = convertView.findViewById(R.id.duration);
-            holder.price = convertView.findViewById(R.id.price);
-            convertView.setTag(holder);
-        } else {
-            holder = (ViewHolder) convertView.getTag();
+        public RideViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvStatus = itemView.findViewById(R.id.tv_status);
+            tvDate = itemView.findViewById(R.id.tv_date);
+            tvDeparture = itemView.findViewById(R.id.tv_departure);
+            tvDestination = itemView.findViewById(R.id.tv_destination);
+            tvVehicleInfo = itemView.findViewById(R.id.tv_vehicle_info);
+            tvCost = itemView.findViewById(R.id.tv_cost);
+            tvDriverName = itemView.findViewById(R.id.tv_driver_name);
+            tvRejectionReason = itemView.findViewById(R.id.tv_rejection_reason);
         }
 
-        RideHistoryItem item = getItem(position);
+        public void bind(RideResponse ride) {
+            // Status
+            if (ride.getStatus() != null) {
+                tvStatus.setText(ride.getStatus());
+                int statusColor = getStatusColor(ride.getStatus());
+                tvStatus.setTextColor(statusColor);
+            }
 
-        holder.startDate.setText(item.startDate);
-        holder.startTime.setText(item.startTime);
-        holder.endDate.setText(item.endDate);
-        holder.endTime.setText(item.endTime);
-        holder.pickupAddress.setText(item.pickupAddress);
-        holder.dropoffAddress.setText(item.dropoffAddress);
-        holder.passengerCount.setText(String.valueOf(item.passengerCount));
-        holder.distance.setText(item.distance);
-        holder.duration.setText(item.duration);
+            // Date
+            if (ride.getStartTime() != null) {
+                tvDate.setText(ride.getStartTime());
+            } else if (ride.getScheduledTime() != null) {
+                tvDate.setText(ride.getScheduledTime());
+            }
 
-        if (holder.price != null) {
-            holder.price.setText(String.format(Locale.US, "%.2f RSD", item.price));
+            // Locations
+            if (ride.getDeparture() != null) {
+                tvDeparture.setText(ride.getDeparture().getAddress());
+            }
+            if (ride.getDestination() != null) {
+                tvDestination.setText(ride.getDestination().getAddress());
+            }
+
+            // Vehicle info
+            if (ride.getModel() != null && ride.getLicensePlates() != null) {
+                tvVehicleInfo.setText(ride.getModel() + " • " + ride.getLicensePlates());
+            } else if (ride.getVehicleType() != null) {
+                tvVehicleInfo.setText(ride.getVehicleType());
+            }
+
+            // Cost
+            if (ride.getTotalCost() != null) {
+                tvCost.setText(String.format(Locale.US, "$%.2f", ride.getTotalCost()));
+            } else if (ride.getEstimatedCost() != null) {
+                tvCost.setText(String.format(Locale.US, "~$%.2f", ride.getEstimatedCost()));
+            }
+
+            // Driver
+            if (ride.getDriver() != null) {
+                tvDriverName.setText("Driver: " + ride.getDriver().getName());
+            } else {
+                tvDriverName.setText("Driver: Not assigned");
+            }
+
+            // Rejection reason
+            if (ride.getRejectionReason() != null && !ride.getRejectionReason().isEmpty()) {
+                tvRejectionReason.setVisibility(View.VISIBLE);
+                tvRejectionReason.setText("Reason: " + ride.getRejectionReason());
+            } else {
+                tvRejectionReason.setVisibility(View.GONE);
+            }
         }
 
-        convertView.setOnClickListener(v -> {
-            Bundle args = new Bundle();
-            args.putLong("rideId", item.rideId);
-            Navigation.findNavController(v).navigate(R.id.action_nav_driver_dashboard_to_nav_ride_details, args);
-        });
-
-        return convertView;
-    }
-
-    private static class ViewHolder {
-        TextView startDate;
-        TextView startTime;
-        TextView endDate;
-        TextView endTime;
-        TextView pickupAddress;
-        TextView dropoffAddress;
-        TextView passengerCount;
-        TextView distance;
-        TextView duration;
-        TextView price;
-    }
-
-    public static class RideHistoryItem {
-        public long rideId;
-        public String startDate;
-        public String startTime;
-        public String endDate;
-        public String endTime;
-        public String pickupAddress;
-        public String dropoffAddress;
-        public int passengerCount;
-        public String distance;
-        public String duration;
-        public double price;
-
-        public RideHistoryItem(String startDate, String startTime, String endDate, String endTime,
-                               String pickupAddress, String dropoffAddress, int passengerCount,
-                               String distance, String duration) {
-            this(0, startDate, startTime, endDate, endTime, pickupAddress, dropoffAddress,
-                 passengerCount, distance, duration, 0);
+        private int getStatusColor(String status) {
+            switch (status.toUpperCase()) {
+                case "FINISHED":
+                    return Color.parseColor("#00C950"); // green_500
+                case "PENDING":
+                    return Color.parseColor("#F9C31F"); // yellow_500
+                case "REJECTED":
+                case "CANCELED":
+                    return Color.parseColor("#EF4343"); // red_500
+                case "ACCEPTED":
+                case "IN_PROGRESS":
+                    return Color.parseColor("#FFD045"); // yellow_400
+                default:
+                    return Color.parseColor("#B3B3B3"); // gray_400
+            }
         }
 
-        public RideHistoryItem(long rideId, String startDate, String startTime, String endDate, String endTime,
-                               String pickupAddress, String dropoffAddress, int passengerCount,
-                               String distance, String duration, double price) {
-            this.rideId = rideId;
-            this.startDate = startDate;
-            this.startTime = startTime;
-            this.endDate = endDate;
-            this.endTime = endTime;
-            this.pickupAddress = pickupAddress;
-            this.dropoffAddress = dropoffAddress;
-            this.passengerCount = passengerCount;
-            this.distance = distance;
-            this.duration = duration;
-            this.price = price;
+        private String formatDate(LocalDateTime dateTime) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm", Locale.US);
+            return dateTime.format(formatter);
         }
     }
 }
-
