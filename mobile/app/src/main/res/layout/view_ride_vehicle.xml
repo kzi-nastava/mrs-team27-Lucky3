@@ -37,7 +37,7 @@
         android:id="@+id/vehicle_model"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Toyota Camry"
+        android:text=""
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="bold"
@@ -70,7 +70,7 @@
                 android:id="@+id/vehicle_plate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ABC-1234"
+                android:text=""
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"/>
@@ -93,7 +93,7 @@
                 android:id="@+id/vehicle_color"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Silver"
+                android:text=""
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"/>
@@ -115,7 +115,7 @@
                 android:id="@+id/vehicle_year"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="2022"
+                android:text=""
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"/>
@@ -137,7 +137,7 @@
                 android:id="@+id/vehicle_capacity"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="4 passengers"
+                android:text=""
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"/>

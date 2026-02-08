@@ -72,6 +72,7 @@
                 android:gravity="center_vertical">
 
                 <TextView
+                    android:id="@+id/ride_number"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Ride #1"
@@ -80,6 +81,7 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/ride_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="COMPLETED"
@@ -96,6 +98,7 @@
                     android:layout_weight="1" />
 
                 <TextView
+                    android:id="@+id/ride_price"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="25 RSD"
@@ -111,17 +114,19 @@
                 android:layout_marginTop="4dp">
 
                 <TextView
+                    android:id="@+id/ride_date_range"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Dec 21, 2025, 4:00 PM - 4:25 PM"
+                    android:text=""
                     android:textColor="@color/gray_400"
                     android:textSize="12sp" />
 
                 <TextView
+                    android:id="@+id/ride_vehicle_type"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Economy"
+                    android:text=""
                     android:textColor="@color/gray_400"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -147,9 +152,10 @@
                     android:textSize="14sp" />
 
                 <TextView
+                    android:id="@+id/base_fare_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="3 RSD"
+                    android:text=""
                     android:textColor="@color/white"
                     android:textSize="14sp" />
             </LinearLayout>
@@ -161,48 +167,56 @@
                 android:layout_marginBottom="8dp">
 
                 <TextView
+                    android:id="@+id/distance_label"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Distance (6.3km)"
+                    android:text="Distance"
                     android:textColor="@color/gray_400"
                     android:textSize="14sp" />
 
                 <TextView
+                    android:id="@+id/distance_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="9 RSD"
+                    android:text=""
                     android:textColor="@color/white"
                     android:textSize="14sp" />
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/time_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="8dp"
+                android:visibility="gone">
 
                 <TextView
+                    android:id="@+id/time_label"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Time (25 min)"
+                    android:text="Time"
                     android:textColor="@color/gray_400"
                     android:textSize="14sp" />
 
                 <TextView
+                    android:id="@+id/time_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="4 RSD"
+                    android:text=""
                     android:textColor="@color/white"
                     android:textSize="14sp" />
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/service_fee_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="8dp"
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="0dp"
@@ -213,9 +227,10 @@
                     android:textSize="14sp" />
 
                 <TextView
+                    android:id="@+id/service_fee_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="3 RSD"
+                    android:text=""
                     android:textColor="@color/white"
                     android:textSize="14sp" />
             </LinearLayout>
@@ -242,9 +257,10 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/total_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="25 RSD"
+                    android:text=""
                     android:textColor="@color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -293,7 +309,7 @@
                         android:id="@+id/route_duration"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="25 min"
+                        android:text=""
                         android:textColor="@color/gray_400"
                         android:textSize="12sp"
                         android:layout_marginStart="4dp" />
@@ -309,7 +325,7 @@
                         android:id="@+id/route_distance"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="6.3 km"
+                        android:text=""
                         android:textColor="@color/gray_400"
                         android:textSize="12sp"
                         android:layout_marginStart="4dp" />
@@ -360,7 +376,7 @@
                         android:id="@+id/pickup_address"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="111 Pine St, San Francisco, CA 94111"
+                        android:text=""
                         android:textColor="@color/white"
                         android:textSize="14sp"
                         android:layout_marginTop="2dp" />
@@ -369,7 +385,7 @@
                         android:id="@+id/pickup_time"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Picked up at 4:00 PM"
+                        android:text=""
                         android:textColor="@color/gray_500"
                         android:textSize="12sp"
                         android:layout_marginTop="2dp" />
@@ -407,7 +423,7 @@
                         android:id="@+id/destination_address"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="222 Oak St, San Francisco, CA 94112"
+                        android:text=""
                         android:textColor="@color/white"
                         android:textSize="14sp"
                         android:layout_marginTop="2dp" />
@@ -416,7 +432,7 @@
                         android:id="@+id/arrival_time"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Arrived at 4:25 PM"
+                        android:text=""
                         android:textColor="@color/gray_500"
                         android:textSize="12sp"
                         android:layout_marginTop="2dp" />
@@ -511,7 +527,7 @@
                             android:id="@+id/timeline_requested"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Dec 21, 2025, 3:55 PM"
+                            android:text=""
                             android:textColor="@color/gray_400"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -562,7 +578,7 @@
                             android:id="@+id/timeline_accepted"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Dec 21, 2025, 3:55 PM"
+                            android:text=""
                             android:textColor="@color/gray_400"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -613,7 +629,7 @@
                             android:id="@+id/timeline_started"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Dec 21, 2025, 4:00 PM"
+                            android:text=""
                             android:textColor="@color/gray_400"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -649,7 +665,7 @@
                             android:id="@+id/timeline_completed"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Dec 21, 2025, 4:25 PM"
+                            android:text=""
                             android:textColor="@color/gray_400"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />

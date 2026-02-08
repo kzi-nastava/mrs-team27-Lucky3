@@ -176,30 +176,90 @@ public class RideDetailsFragment extends Fragment {
     
     private void updateRideSummary(View root) {
         try {
-            // Find the ride summary card - it's the second LinearLayout after the back button
-            // These IDs are defined inline in the XML or we find by structure
-            
-            // Ride ID and status
-            // We need to find TextViews by traversing - the layout doesn't have explicit IDs for all elements
-            // Let's use a more targeted approach with findViewWithTag or by content
-            
-            // For simplicity, let's update using binding where available
-            // The layout has hardcoded text, so we need to find views by their position
-            
-            // Since the layout uses hardcoded values, let's find and update the relevant TextViews
-            // We can use content description or tags if added, but for now traverse
-            
-            // Get total cost
+            SimpleDateFormat dateTimeFormat = new SimpleDateFormat("MMM d, yyyy", Locale.US);
+            SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.US);
+
+            // Ride number
+            TextView rideNumber = root.findViewById(R.id.ride_number);
+            if (rideNumber != null) {
+                rideNumber.setText("Ride #" + ride.getId());
+            }
+
+            // Status badge
+            TextView rideStatus = root.findViewById(R.id.ride_status);
+            if (rideStatus != null) {
+                rideStatus.setText(ride.getDisplayStatus().toUpperCase());
+            }
+
+            // Price (top-right)
             double totalCost = ride.getEffectiveCost();
-            
-            // Find the price TextView (shows $25.50 in original)
-            // It's the large text in the ride summary that shows the price
-            
-            // For now, we'll update what we can find
-            // The detailed updates would require adding IDs to the XML
-            
+            TextView ridePrice = root.findViewById(R.id.ride_price);
+            if (ridePrice != null) {
+                ridePrice.setText(String.format(Locale.US, "%.0f RSD", totalCost));
+            }
+
+            // Date range (e.g., "Dec 21, 2025, 4:00 PM - 4:25 PM")
+            TextView rideDateRange = root.findViewById(R.id.ride_date_range);
+            if (rideDateRange != null) {
+                Date startDate = parseDate(ride.getStartTime());
+                Date endDate = parseDate(ride.getEndTime());
+                if (startDate != null && endDate != null) {
+                    rideDateRange.setText(dateTimeFormat.format(startDate) + ", " +
+                        timeFormat.format(startDate) + " - " + timeFormat.format(endDate));
+                } else if (startDate != null) {
+                    rideDateRange.setText(dateTimeFormat.format(startDate) + ", " +
+                        timeFormat.format(startDate));
+                } else {
+                    rideDateRange.setText("—");
+                }
+            }
+
+            // Vehicle type
+            TextView rideVehicleType = root.findViewById(R.id.ride_vehicle_type);
+            if (rideVehicleType != null) {
+                String vt = ride.getVehicleType();
+                if (vt != null) {
+                    // Format: STANDARD -> Standard, LUXURY -> Luxury, VAN -> Van
+                    rideVehicleType.setText(vt.substring(0, 1).toUpperCase() + vt.substring(1).toLowerCase());
+                } else {
+                    rideVehicleType.setText("");
+                }
+            }
+
+            // Fare breakdown
+            double distance = ride.getEffectiveDistance();
+            Double baseFare = ride.getRateBaseFare();
+            Double perKm = ride.getRatePricePerKm();
+
+            // Base fare
+            TextView baseFareValue = root.findViewById(R.id.base_fare_value);
+            if (baseFareValue != null) {
+                baseFareValue.setText(baseFare != null
+                    ? String.format(Locale.US, "%.0f RSD", baseFare) : "—");
+            }
+
+            // Distance cost
+            TextView distanceLabel = root.findViewById(R.id.distance_label);
+            TextView distanceValue = root.findViewById(R.id.distance_value);
+            if (distanceLabel != null) {
+                distanceLabel.setText(String.format(Locale.US, "Distance (%.1f km)", distance));
+            }
+            if (distanceValue != null) {
+                double distCost = (perKm != null ? perKm : 0) * distance;
+                distanceValue.setText(String.format(Locale.US, "%.0f RSD", distCost));
+            }
+
+            // Time row — hide since backend doesn't charge per-minute
+            // (kept in layout but hidden by default via android:visibility="gone")
+
+            // Total
+            TextView totalValue = root.findViewById(R.id.total_value);
+            if (totalValue != null) {
+                totalValue.setText(String.format(Locale.US, "%.0f RSD", totalCost));
+            }
+
             Log.d(TAG, "Ride loaded: #" + ride.getId() + " Status: " + ride.getStatus() + " Cost: " + totalCost);
-            
+
         } catch (Exception e) {
             Log.e(TAG, "Error updating ride summary", e);
         }
