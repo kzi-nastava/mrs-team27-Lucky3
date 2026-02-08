@@ -207,23 +207,32 @@ public class RideDetailsFragment extends Fragment {
                 ridePrice.setText(String.format(Locale.US, "%.0f RSD", totalCost));
             }
 
-            // Date range (e.g., "Dec 21, 2025, 4:00 PM - 4:25 PM")
+            // Date display
+            // Cancelled: just the scheduled date (ride never happened)
+            // Finished:  startTime - endTime range
+            // Other:     startTime or scheduledTime
             TextView rideDateRange = root.findViewById(R.id.ride_date_range);
             if (rideDateRange != null) {
-                Date startDate = parseDate(ride.getStartTime());
-                Date endDate = parseDate(ride.getEndTime());
-                if (startDate != null && endDate != null) {
-                    rideDateRange.setText(dateTimeFormat.format(startDate) + ", " +
-                        timeFormat.format(startDate) + " - " + timeFormat.format(endDate));
-                } else if (startDate != null) {
-                    rideDateRange.setText(dateTimeFormat.format(startDate) + ", " +
-                        timeFormat.format(startDate));
-                } else {
-                    // For cancelled rides that never started, use scheduled time
+                if (ride.isCancelled()) {
+                    // Show only the scheduled date for cancelled rides
                     Date scheduled = parseDate(ride.getScheduledTime());
                     if (scheduled != null) {
                         rideDateRange.setText(dateTimeFormat.format(scheduled) + ", " +
                             timeFormat.format(scheduled));
+                    } else {
+                        rideDateRange.setText("\u2014");
+                    }
+                } else {
+                    Date rangeStart = parseDate(ride.getStartTime());
+                    if (rangeStart == null) rangeStart = parseDate(ride.getScheduledTime());
+                    Date rangeEnd = parseDate(ride.getEndTime());
+
+                    if (rangeStart != null && rangeEnd != null) {
+                        rideDateRange.setText(dateTimeFormat.format(rangeStart) + ", " +
+                            timeFormat.format(rangeStart) + " - " + timeFormat.format(rangeEnd));
+                    } else if (rangeStart != null) {
+                        rideDateRange.setText(dateTimeFormat.format(rangeStart) + ", " +
+                            timeFormat.format(rangeStart));
                     } else {
                         rideDateRange.setText("\u2014");
                     }
@@ -253,7 +262,6 @@ public class RideDetailsFragment extends Fragment {
                         String reason = ride.getRejectionReason();
                         if (reason != null && !reason.isEmpty()) {
                             cancellationReason.setVisibility(View.VISIBLE);
-                            reason = "reason: " + reason;
                             cancellationReason.setText(reason);
                         } else {
                             cancellationReason.setVisibility(View.GONE);
@@ -329,18 +337,23 @@ public class RideDetailsFragment extends Fragment {
             }
             
             // Update route duration
+            // For cancelled rides always use estimated time (actual times are meaningless)
             TextView routeDuration = root.findViewById(R.id.route_duration);
             if (routeDuration != null) {
                 Integer estimatedTime = ride.getEstimatedTimeInMinutes();
-                if (estimatedTime != null) {
+                if (ride.isCancelled() && estimatedTime != null) {
+                    routeDuration.setText(estimatedTime + " min");
+                } else if (estimatedTime != null) {
                     routeDuration.setText(estimatedTime + " min");
                 } else {
-                    // Calculate from start/end time
+                    // Calculate from start/end time (only for non-cancelled rides)
                     Date startDate = parseDate(ride.getStartTime());
                     Date endDate = parseDate(ride.getEndTime());
                     if (startDate != null && endDate != null) {
                         long durationMinutes = (endDate.getTime() - startDate.getTime()) / 60000;
                         routeDuration.setText(durationMinutes + " min");
+                    } else {
+                        routeDuration.setText("\u2014");
                     }
                 }
             }
@@ -480,14 +493,13 @@ public class RideDetailsFragment extends Fragment {
             boolean cancelled = ride.isCancelled();
             boolean finished = ride.isFinished();
 
-            // --- Requested ---
+            // --- Requested (use scheduledTime = creation time) ---
             TextView requestedView = root.findViewById(R.id.timeline_requested);
             if (requestedView != null) {
-                Date scheduled = parseDate(ride.getScheduledTime());
-                Date start = parseDate(ride.getStartTime());
-                Date displayDate = scheduled != null ? scheduled : start;
-                if (displayDate != null) {
-                    requestedView.setText(dateTimeFormat.format(displayDate));
+                Date createdDate = parseDate(ride.getScheduledTime());
+                if (createdDate == null) createdDate = parseDate(ride.getStartTime());
+                if (createdDate != null) {
+                    requestedView.setText(dateTimeFormat.format(createdDate));
                 }
             }
             // Requested dot: always green (it happened)
@@ -547,15 +559,11 @@ public class RideDetailsFragment extends Fragment {
 
             TextView completedView = root.findViewById(R.id.timeline_completed);
             if (completedView != null) {
-                Date end = parseDate(ride.getEndTime());
-                if (end != null) {
-                    completedView.setText(dateTimeFormat.format(end));
-                } else if (cancelled) {
-                    // Use start time or scheduled time as cancellation time
-                    Date cancelTime = parseDate(ride.getStartTime());
-                    if (cancelTime == null) cancelTime = parseDate(ride.getScheduledTime());
-                    completedView.setText(cancelTime != null
-                        ? dateTimeFormat.format(cancelTime) : "\u2014");
+                Date endDate = parseDate(ride.getEndTime());
+                if (endDate != null) {
+                    completedView.setText(dateTimeFormat.format(endDate));
+                } else {
+                    completedView.setText("\u2014");
                 }
             }
 
