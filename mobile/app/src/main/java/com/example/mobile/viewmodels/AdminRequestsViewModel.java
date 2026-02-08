@@ -1,4 +1,8 @@
 package com.example.mobile.viewmodels;
+import android.app.Application;
+
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -6,6 +10,7 @@ import androidx.lifecycle.ViewModel;
 import com.example.mobile.models.DriverChangeRequest;
 import com.example.mobile.models.ReviewDriverChangeRequest;
 import com.example.mobile.utils.ClientUtils;
+import com.example.mobile.utils.SharedPreferencesManager;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -16,13 +21,18 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class AdminRequestsViewModel extends ViewModel {
-
+public class AdminRequestsViewModel extends AndroidViewModel {
+    private final SharedPreferencesManager prefsManager;
     private final MutableLiveData<List<DriverChangeRequest>> requests = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final Set<Long> busyIds = new HashSet<>();
     private final MutableLiveData<Set<Long>> busyIdsLiveData = new MutableLiveData<>(new HashSet<>());
+
+    public AdminRequestsViewModel(@NonNull Application application) {
+        super(application);
+        prefsManager = new SharedPreferencesManager(application.getApplicationContext());
+    }
 
     public LiveData<List<DriverChangeRequest>> getRequests() {
         return requests;
@@ -43,8 +53,8 @@ public class AdminRequestsViewModel extends ViewModel {
     public void loadRequests() {
         isLoading.setValue(true);
         errorMessage.setValue(null);
-
-        ClientUtils.driverService.getDriverChangeRequests("PENDING")
+        String token = "Bearer " + prefsManager.getToken();
+        ClientUtils.driverService.getDriverChangeRequests("PENDING", token)
                 .enqueue(new Callback<List<DriverChangeRequest>>() {
                     @Override
                     public void onResponse(Call<List<DriverChangeRequest>> call,
@@ -79,8 +89,8 @@ public class AdminRequestsViewModel extends ViewModel {
         errorMessage.setValue(null);
 
         ReviewDriverChangeRequest review = new ReviewDriverChangeRequest(approve);
-
-        ClientUtils.driverService.reviewDriverChangeRequest(requestId, review)
+        String token = "Bearer " + prefsManager.getToken();
+        ClientUtils.driverService.reviewDriverChangeRequest(requestId, review, token)
                 .enqueue(new Callback<Void>() {
                     @Override
                     public void onResponse(Call<Void> call, Response<Void> response) {

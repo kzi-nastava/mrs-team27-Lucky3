@@ -1,6 +1,5 @@
 package com.example.mobile.models;
 import java.time.LocalDateTime;
-
 public class DriverChangeRequest {
     private Long id;
     private String name;
@@ -9,7 +8,7 @@ public class DriverChangeRequest {
     private String address;
     private String phone;
     private Long requestedDriverId;
-    private LocalDateTime createdAt;
+    private String createdAt;  // Changed from LocalDateTime to String
     private Long imageId;
     private VehicleInformation vehicle;
     private String status;
@@ -18,7 +17,7 @@ public class DriverChangeRequest {
 
     public DriverChangeRequest(Long id, String name, String surname, String email,
                                String address, String phone, Long requestedDriverId,
-                               LocalDateTime createdAt, Long imageId,
+                               String createdAt, Long imageId,  // Changed parameter type
                                VehicleInformation vehicle, String status) {
         this.id = id;
         this.name = name;
@@ -33,6 +32,7 @@ public class DriverChangeRequest {
         this.status = status;
     }
 
+    // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -56,8 +56,8 @@ public class DriverChangeRequest {
         this.requestedDriverId = requestedDriverId;
     }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getCreatedAt() { return createdAt; }  // Changed return type
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }  // Changed parameter type
 
     public Long getImageId() { return imageId; }
     public void setImageId(Long imageId) { this.imageId = imageId; }
@@ -68,4 +68,3 @@ public class DriverChangeRequest {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 }
-

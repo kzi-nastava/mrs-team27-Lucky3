@@ -4,11 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardBackgroundColor="#1F2937"
-    app:strokeColor="#374151"
+    app:cardBackgroundColor="#262626"
+    app:strokeColor="#404040"
     app:strokeWidth="1dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="0dp">
+    app:cardElevation="2dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -27,31 +27,33 @@
             <Button
                 android:id="@+id/btn_approve"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:text="Confirm"
                 android:textAllCaps="false"
-                android:textSize="12sp"
-                android:backgroundTint="#064E3B"
-                app:strokeColor="#059669"
-                app:strokeWidth="1dp"
-                app:cornerRadius="12dp"
-                android:textColor="#A7F3D0"
-                android:layout_marginEnd="8dp"
+                android:textSize="13sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#1A1A1A"
+                app:strokeColor="#22C55E"
+                app:strokeWidth="2dp"
+                app:cornerRadius="10dp"
+                android:paddingHorizontal="24dp"
+                android:layout_marginEnd="12dp"
                 style="@style/Widget.Material3.Button" />
 
             <Button
                 android:id="@+id/btn_reject"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:text="Reject"
                 android:textAllCaps="false"
-                android:textSize="12sp"
-                android:backgroundTint="#7F1D1D"
-                app:strokeColor="#DC2626"
-                app:strokeWidth="1dp"
-                app:cornerRadius="12dp"
-                android:textColor="#FCA5A5"
-                style="@style/Widget.Material3.Button" />
+                android:textSize="13sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#1A1A1A"
+                app:strokeColor="#EF4444"
+                app:strokeWidth="2dp"
+                app:cornerRadius="10dp"
+                android:paddingHorizontal="24dp"
+                style="@style/Widget.Material3.Button.OutlinedButton" />
         </LinearLayout>
 
         <!-- Driver Image -->
@@ -63,134 +65,144 @@
             android:layout_marginBottom="12dp">
 
             <TextView
-                android:layout_width="120dp"
+                android:layout_width="130dp"
                 android:layout_height="wrap_content"
-                android:text="New Image:"
-                android:textColor="#9CA3AF"
-                android:textSize="13sp" />
+                android:text="Profile Image:"
+                android:textColor="#FCD34D"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
             <ImageView
                 android:id="@+id/iv_driver_image"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:scaleType="centerCrop" />
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:scaleType="centerCrop"
+                android:background="#404040"
+                android:contentDescription="Driver profile image" />
         </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#404040"
+            android:layout_marginVertical="8dp" />
 
         <!-- Driver Information Grid -->
         <GridLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:columnCount="2"
-            android:rowCount="6">
+            android:rowCount="5">
 
             <!-- Name -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
-                android:text="New Name:"
-                android:textColor="#9CA3AF"
+                android:layout_columnWeight="0.45"
+                android:text="Name:"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_name"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <!-- Surname -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
-                android:text="New Surname:"
-                android:textColor="#9CA3AF"
+                android:layout_columnWeight="0.45"
+                android:text="Surname:"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_surname"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <!-- Email -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
-                android:text="New Email:"
-                android:textColor="#9CA3AF"
+                android:layout_columnWeight="0.45"
+                android:text="Email:"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_email"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <!-- Phone -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
-                android:text="New Phone:"
-                android:textColor="#9CA3AF"
+                android:layout_columnWeight="0.45"
+                android:text="Phone:"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_phone"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <!-- Address -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
-                android:text="New Address:"
-                android:textColor="#9CA3AF"
+                android:layout_columnWeight="0.45"
+                android:text="Address:"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_address"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
         </GridLayout>
 
         <!-- Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#374151"
+            android:background="#404040"
             android:layout_marginVertical="12dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Vehicle Information"
-            android:textColor="#FFFFFF"
+            android:textColor="#FCD34D"
             android:textSize="15sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
@@ -206,115 +218,115 @@
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
+                android:layout_columnWeight="0.45"
                 android:text="Baby Transport:"
-                android:textColor="#9CA3AF"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_baby_transport"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <!-- Pet Transport -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
+                android:layout_columnWeight="0.45"
                 android:text="Pet Transport:"
-                android:textColor="#9CA3AF"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_pet_transport"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <!-- Vehicle Type -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
+                android:layout_columnWeight="0.45"
                 android:text="Vehicle Type:"
-                android:textColor="#9CA3AF"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_vehicle_type"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <!-- Passenger Seats -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
+                android:layout_columnWeight="0.45"
                 android:text="Passenger Seats:"
-                android:textColor="#9CA3AF"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_passenger_seats"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <!-- License Number -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
+                android:layout_columnWeight="0.45"
                 android:text="License Number:"
-                android:textColor="#9CA3AF"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_license_number"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <!-- Model -->
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.4"
+                android:layout_columnWeight="0.45"
                 android:text="Model:"
-                android:textColor="#9CA3AF"
+                android:textColor="#A3A3A3"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/tv_model"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_columnWeight="0.6"
+                android:layout_columnWeight="0.55"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                android:paddingVertical="6dp" />
+                android:paddingVertical="8dp" />
         </GridLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

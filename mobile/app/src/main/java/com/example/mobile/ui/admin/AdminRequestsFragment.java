@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -11,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentAdminRequestsBinding;
 import com.example.mobile.viewmodels.AdminRequestsViewModel;
 
@@ -25,6 +27,14 @@ public class AdminRequestsFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         binding = FragmentAdminRequestsBinding.inflate(inflater, container, false);
+        // Navbar setup
+        View navbar = binding.getRoot().findViewById(R.id.navbar);
+        if (navbar != null) {
+            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
+                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
+            });
+            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Requests");
+        }
         return binding.getRoot();
     }
 

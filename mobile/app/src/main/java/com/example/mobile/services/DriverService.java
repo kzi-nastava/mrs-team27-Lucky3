@@ -74,11 +74,12 @@ public interface DriverService {
     );
 
     @GET("/api/driver-change-requests")
-    Call<List<DriverChangeRequest>> getDriverChangeRequests(@Query("status") String status);
+    Call<List<DriverChangeRequest>> getDriverChangeRequests(@Query("status") String status, @Header("Authorization") String token);
 
     @PUT("/api/driver-change-requests/{requestId}/review")
     Call<Void> reviewDriverChangeRequest(@Path("requestId") Long requestId,
-                                         @Body ReviewDriverChangeRequest review);
+                                         @Body ReviewDriverChangeRequest review,
+                                         @Header("Authorization") String token);
 
 
 

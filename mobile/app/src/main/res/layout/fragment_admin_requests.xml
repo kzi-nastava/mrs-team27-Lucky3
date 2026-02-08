@@ -10,6 +10,10 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
+        <!--navbar-->
+        <include
+            android:id="@+id/navbar"
+            layout="@layout/view_custom_navbar" />
 
         <!-- Header -->
         <LinearLayout
