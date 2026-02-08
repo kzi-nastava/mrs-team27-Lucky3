@@ -16,7 +16,6 @@ import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentRideDetailsBinding;
 import com.example.mobile.models.LocationDto;
 import com.example.mobile.models.RideResponse;
-import com.example.mobile.services.RideService;
 import com.example.mobile.ui.maps.RideMapRenderer;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
@@ -39,7 +38,6 @@ public class RideDetailsFragment extends Fragment {
     private static final String TAG = "RideDetails";
     private FragmentRideDetailsBinding binding;
     private SharedPreferencesManager preferencesManager;
-    private RideService rideService;
     
     private RideResponse ride;
     private long rideId = -1;
@@ -54,7 +52,6 @@ public class RideDetailsFragment extends Fragment {
         View root = binding.getRoot();
 
         preferencesManager = new SharedPreferencesManager(requireContext());
-        rideService = ClientUtils.getAuthenticatedRideService(preferencesManager);
 
         // Initialize map
         mapView = root.findViewById(R.id.map_view);
@@ -83,7 +80,8 @@ public class RideDetailsFragment extends Fragment {
     }
     
     private void loadRideDetails() {
-        rideService.getRide(rideId).enqueue(new Callback<RideResponse>() {
+        String token = "Bearer " + preferencesManager.getToken();
+        ClientUtils.rideService.getRide(rideId, token).enqueue(new Callback<RideResponse>() {
             @Override
             public void onResponse(Call<RideResponse> call, Response<RideResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
