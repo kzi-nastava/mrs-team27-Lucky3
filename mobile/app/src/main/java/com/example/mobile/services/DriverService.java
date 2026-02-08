@@ -1,15 +1,18 @@
 package com.example.mobile.services;
 
+import com.example.mobile.models.DriverChangeRequest;
 import com.example.mobile.models.DriverChangeRequestCreated;
 import com.example.mobile.models.DriverProfileResponse;
 import com.example.mobile.models.DriverResponse;
 import com.example.mobile.models.DriverStatsResponse;
+import com.example.mobile.models.ReviewDriverChangeRequest;
 
 import java.util.List;
 
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import retrofit2.Call;
+import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.Multipart;
@@ -69,6 +72,15 @@ public interface DriverService {
             @Part MultipartBody.Part profileImage,          // Optional profile image
             @Header("Authorization") String token
     );
+
+    @GET("/api/driver-change-requests")
+    Call<List<DriverChangeRequest>> getDriverChangeRequests(@Query("status") String status, @Header("Authorization") String token);
+
+    @PUT("/api/driver-change-requests/{requestId}/review")
+    Call<Void> reviewDriverChangeRequest(@Path("requestId") Long requestId,
+                                         @Body ReviewDriverChangeRequest review,
+                                         @Header("Authorization") String token);
+
 
 
 }
