@@ -51,7 +51,7 @@ public class RideCreatedDialog extends DialogFragment {
                 : new ArrayList<>();
 
         tvMessage.setText("Your ride was successfully created!");
-        tvPrice.setText("Price is " + price + "$.");
+        tvPrice.setText("Price is " + Math.round(price) + " RSD.");
 
         if (emails != null && !emails.isEmpty()) {
             StringBuilder sb = new StringBuilder("Linked passengers:\n");

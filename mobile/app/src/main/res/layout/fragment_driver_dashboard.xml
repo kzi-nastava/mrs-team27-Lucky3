@@ -135,7 +135,7 @@
                         android:id="@+id/total_earnings"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="$121.25"
+                        android:text="121 RSD"
                         android:textColor="@color/white"
                         android:textSize="24sp"
                         android:textStyle="bold"
@@ -206,7 +206,7 @@
                         android:id="@+id/avg_per_ride"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Avg $24.25/ride"
+                        android:text="Avg 24 RSD/ride"
                         android:textColor="@color/gray_400"
                         android:textSize="10sp"
                         android:layout_marginTop="4dp"/>

@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Ride } from '../../../shared/data/mock-data';
+import { Ride } from '../../../shared/data/ride.model';
 import { RideSummaryComponent } from '../../../shared/rides/ride-summary/ride-summary.component';
 import { RideRouteComponent } from '../../../shared/rides/ride-route/ride-route.component';
 import { RidePassengerComponent } from '../../../shared/rides/ride-passenger/ride-passenger.component';

@@ -22,7 +22,7 @@
         <p class="my-2 text-gray-900"><strong>Status:</strong> {{ rideData.status }}</p>
         <p class="my-2 text-gray-900"><strong>Distance:</strong> {{ rideData.distanceKm || rideData.estimatedDistance }} km</p>
         <p class="my-2 text-gray-900"><strong>Estimated Time:</strong> {{ rideData.estimatedTimeInMinutes || '—' }} min</p>
-        <p class="my-2 text-gray-900"><strong>Estimated Cost:</strong> ${{ (rideData.estimatedCost || 0).toFixed(2) }}</p>
+        <p class="my-2 text-gray-900"><strong>Estimated Cost:</strong> {{ (rideData.estimatedCost || 0).toFixed(0) }} RSD</p>
         <p *ngIf="rideData.scheduledTime" class="my-2 text-gray-900">
           <strong>Scheduled Time:</strong> {{ rideData.scheduledTime | date:'medium' }}
         </p>

@@ -1,0 +1,157 @@
+<div class="p-6 max-w-7xl mx-auto">
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-20">
+    <p class="text-xl text-gray-400">Loading pricing data...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage" class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-4">
+    <p>{{ errorMessage }}</p>
+    <button (click)="loadPrices()" class="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+      Retry
+    </button>
+  </div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+    <!-- Heading -->
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-white">Pricing Management</h1>
+        <p class="text-gray-400 mt-1">Set base fares and per-kilometer rates for each vehicle type</p>
+      </div>
+    </div>
+
+    <!-- Vehicle Pricing Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div *ngFor="let vt of vehicleTypes"
+           class="bg-[#1C1C1E] rounded-2xl border border-gray-800 overflow-hidden hover:border-gray-700 transition-colors">
+        
+        <!-- Card Header -->
+        <div class="p-6 border-b border-gray-800">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl border"
+                   [ngClass]="vt.bgColor">
+                {{ vt.icon }}
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">{{ vt.label }}</h3>
+                <p class="text-sm text-gray-500">{{ vt.type }}</p>
+              </div>
+            </div>
+            <button (click)="openEditModal(vt)"
+                    class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" 
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                <path d="m15 5 4 4"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Pricing Details -->
+        <div class="p-6 space-y-4">
+          <div class="flex justify-between items-center">
+            <span class="text-gray-400 text-sm">Base Fare</span>
+            <span class="text-white font-semibold text-lg">{{ getBaseFare(vt.type) | number:'1.0-2' }} RSD</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-400 text-sm">Per Kilometer</span>
+            <span class="text-white font-semibold text-lg">{{ getPricePerKm(vt.type) | number:'1.0-2' }} RSD</span>
+          </div>
+          <div class="pt-3 border-t border-gray-800">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-500 text-xs">Example: 5 km ride</span>
+              <span class="font-bold text-lg" [ngClass]="vt.color">{{ getEstimatedFare(vt.type) | number:'1.0-0' }} RSD</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 flex-shrink-0">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 16v-4"/>
+        <path d="M12 8h.01"/>
+      </svg>
+      <div>
+        <p class="text-blue-400 font-medium text-sm">Pricing Formula</p>
+        <p class="text-gray-400 text-sm mt-1">
+          Total Cost = <span class="text-white">Base Fare</span> + (<span class="text-white">Distance in km</span> × <span class="text-white">Per Kilometer Rate</span>)
+        </p>
+        <p class="text-gray-500 text-xs mt-2">
+          Changes apply immediately to new rides. In-progress rides continue using the rate from when they started.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div *ngIf="showEditModal"
+     class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+     (click)="closeEditModal()">
+  <div class="bg-[#1C1C1E] rounded-2xl border border-gray-800 max-w-md w-full shadow-xl"
+       (click)="$event.stopPropagation()">
+    
+    <!-- Modal Header -->
+    <div class="p-6 border-b border-gray-800">
+      <h3 class="text-xl font-bold text-white">Edit {{ editingType?.label }} Pricing</h3>
+      <p class="text-gray-400 text-sm mt-1">Update the pricing rates for {{ editingType?.label }} vehicles</p>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-6 space-y-5">
+      <!-- Base Fare -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Base Fare (RSD)</label>
+        <input type="number" [(ngModel)]="editBaseFare" min="0" step="10"
+               class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-yellow-400 focus:outline-none transition-colors"
+               placeholder="e.g. 120">
+      </div>
+
+      <!-- Per KM -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Per Kilometer (RSD)</label>
+        <input type="number" [(ngModel)]="editPricePerKm" min="0" step="10"
+               class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-yellow-400 focus:outline-none transition-colors"
+               placeholder="e.g. 120">
+      </div>
+
+      <!-- Preview -->
+      <div class="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
+        <p class="text-gray-500 text-xs mb-2">Preview (5 km ride)</p>
+        <p class="text-white font-bold text-xl">{{ (editBaseFare + editPricePerKm * 5) | number:'1.0-0' }} RSD</p>
+        <p class="text-gray-500 text-xs mt-1">{{ editBaseFare | number:'1.0-0' }} base + {{ editPricePerKm | number:'1.0-0' }} × 5 km</p>
+      </div>
+
+      <!-- Error -->
+      <div *ngIf="saveError" class="bg-red-500/10 border border-red-500/30 text-red-400 px-3 py-2 rounded-lg text-sm">
+        {{ saveError }}
+      </div>
+
+      <!-- Success -->
+      <div *ngIf="saveSuccess" class="bg-green-500/10 border border-green-500/30 text-green-400 px-3 py-2 rounded-lg text-sm">
+        ✓ Price updated successfully
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="p-6 border-t border-gray-800 flex gap-3">
+      <button (click)="closeEditModal()"
+              class="flex-1 py-3 px-4 bg-gray-800 hover:bg-gray-700 text-white font-medium rounded-xl transition-colors">
+        Cancel
+      </button>
+      <button (click)="savePrice()"
+              [disabled]="isSaving || editBaseFare < 0 || editPricePerKm < 0"
+              class="flex-1 py-3 px-4 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        {{ isSaving ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div>

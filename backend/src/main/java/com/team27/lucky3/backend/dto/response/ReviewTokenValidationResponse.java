@@ -19,4 +19,6 @@ public class ReviewTokenValidationResponse {
     private String driverName;
     private String pickupAddress;
     private String dropoffAddress;
+    /** Set when the reviewer is a linked (non-registered) passenger. */
+    private String reviewerEmail;
 }

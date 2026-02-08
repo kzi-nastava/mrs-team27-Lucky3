@@ -128,7 +128,7 @@ public class AdminDriverAdapter extends ArrayAdapter<DriverInfoCard> {
             holder.tvTotalRides.setText(String.valueOf(driver.getTotalRides()));
 
             // Earnings, formatted
-            holder.tvEarnings.setText("$" + (int) driver.getEarnings());
+            holder.tvEarnings.setText((int) driver.getEarnings() + " RSD");
 
             // Avatar image:
             // right now you only have imageUrl as String; you can:

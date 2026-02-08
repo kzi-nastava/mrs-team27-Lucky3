@@ -55,10 +55,10 @@ public class RideServiceImpl implements RideService {
     private final ReviewTokenUtils reviewTokenUtils;
     private final PanicService panicService;
     private final com.team27.lucky3.backend.service.socket.VehicleSocketService vehicleSocketService;
+    private final com.team27.lucky3.backend.service.socket.RideSocketService rideSocketService;
+    private final com.team27.lucky3.backend.service.VehiclePriceService vehiclePriceService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    private static final double PRICE_PER_KM = 120.0;
 
     // Base OSRM URL without coordinates
     private static final String OSRM_Base_URL = "http://router.project-osrm.org/route/v1/driving/";
@@ -138,9 +138,10 @@ public class RideServiceImpl implements RideService {
             durationMinutes = (int) Math.ceil(distanceKm * 1.2); // Rough estimate
         }
 
-        // Calculate Price
-        double basePrice = getBasePriceForVehicle(type);
-        double estimatedCost = Math.round((basePrice + (distanceKm * PRICE_PER_KM)) * 100.0) / 100.0;
+        // Calculate Price (dynamic from DB)
+        double basePrice = vehiclePriceService.getBaseFare(type);
+        double perKm = vehiclePriceService.getPricePerKm(type);
+        double estimatedCost = Math.round((basePrice + (distanceKm * perKm)) * 100.0) / 100.0;
 
         // Find Closest Driver Time (Simple logic retained)
         int timeToPickup = calculateDriverArrival(start, type);
@@ -199,9 +200,10 @@ public class RideServiceImpl implements RideService {
             routePoints.add(new RoutePointResponse(end, 1));
         }
 
-        // Calculate Price
-        double basePrice = getBasePriceForVehicle(type);
-        double estimatedCost = Math.round((basePrice + (distanceKm * PRICE_PER_KM)) * 100.0) / 100.0;
+        // Calculate Price (dynamic from DB)
+        double basePrice = vehiclePriceService.getBaseFare(type);
+        double perKm = vehiclePriceService.getPricePerKm(type);
+        double estimatedCost = Math.round((basePrice + (distanceKm * perKm)) * 100.0) / 100.0;
 
         // Find Closest Driver Time (Simple logic retained)
         int timeToPickup = calculateDriverArrival(start, type);
@@ -279,6 +281,11 @@ public class RideServiceImpl implements RideService {
         ride.setEstimatedCost(estimation.getEstimatedCost());
         ride.setDistance(estimation.getEstimatedDistance());
 
+        // Snapshot current pricing so price changes don't affect this ride
+        VehicleType rideVehicleType = request.getRequirements().getVehicleType();
+        ride.setRateBaseFare(vehiclePriceService.getBaseFare(rideVehicleType));
+        ride.setRatePricePerKm(vehiclePriceService.getPricePerKm(rideVehicleType));
+
         // Set ride requirements
         ride.setRequestedVehicleType(request.getRequirements().getVehicleType());
         ride.setBabyTransport(request.getRequirements().isBabyTransport());
@@ -320,19 +327,13 @@ public class RideServiceImpl implements RideService {
         // ── Notification integration ──
         if (savedRide.getDriver() != null && savedRide.getStatus() != RideStatus.REJECTED) {
             notificationService.sendDriverAssignmentNotification(savedRide);
+            
+            // Notify linked passengers (from invitedEmails) - sends email with tracking token to all,
+            // and push notification only to registered users. Exclude the ride creator.
+            notificationService.notifyLinkedPassengersRideCreated(savedRide, passenger.getEmail());
         }
 
-        // Notify passengers that their ride has been created
-        notificationService.sendRideCreatedNotification(savedRide);
-
-        // Send linked-passenger invites if additional emails were provided
-        if (request.getPassengerEmails() != null && !request.getPassengerEmails().isEmpty()) {
-            for (String email : request.getPassengerEmails()) {
-                userRepository.findByEmail(email).ifPresent(invitee ->
-                        notificationService.sendLinkedPassengerInvite(savedRide, invitee)
-                );
-            }
-        }
+        // Do NOT notify the creator about their own ride creation - they already know about it
 
         return mapToResponse(savedRide);
     }
@@ -448,7 +449,11 @@ public class RideServiceImpl implements RideService {
         notificationService.sendRideStatusNotification(savedRide,
                 "Your ride has been accepted by driver " + driver.getName() + " " + driver.getSurname() + ".");
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override
@@ -477,7 +482,11 @@ public class RideServiceImpl implements RideService {
         notificationService.sendRideStatusNotification(savedRide,
                 "Your ride has started. Driver is on the way!");
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override
@@ -496,12 +505,11 @@ public class RideServiceImpl implements RideService {
 
         Ride savedRide = rideRepository.save(ride);
 
-        // Logic check for next scheduled ride
+        // Logic check for next scheduled or pending ride
         if (ride.getDriver() != null) {
-            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(
+            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
                     ride.getDriver().getId(),
-                    RideStatus.SCHEDULED,
-                    LocalDateTime.now()
+                    List.of(RideStatus.SCHEDULED, RideStatus.PENDING)
             );
 
             Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
@@ -511,9 +519,6 @@ public class RideServiceImpl implements RideService {
                 
                 if (!nextRides.isEmpty()) {
                     vehicle.setStatus(VehicleStatus.BUSY);
-                    // "load next ride" logic could mean setting the next ride as active or notifying driver,
-                    // but for now we just handle status.
-                    // If we wanted to "activate" next ride automatically, we might do it here or let driver do it.
                 } else {
                     vehicle.setStatus(VehicleStatus.FREE);
                 }
@@ -524,13 +529,20 @@ public class RideServiceImpl implements RideService {
         // Trigger notification
         notificationService.sendRideFinishedNotification(savedRide);
 
+        // Notify linked passengers about ride completion
+        notificationService.notifyLinkedPassengersRideCompleted(savedRide);
+
         // Send review request emails to passengers
         sendReviewRequestEmails(savedRide);
 
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override
@@ -590,11 +602,23 @@ public class RideServiceImpl implements RideService {
 
         Ride savedRide = rideRepository.save(ride);
 
-        // Reset vehicle panic flag when ride is cancelled
+        // Reset vehicle panic flag and update status when ride is cancelled
         if (ride.getDriver() != null) {
             Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
             if (vehicle != null) {
                 vehicle.setCurrentPanic(false);
+
+                List<Ride> nextRides = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
+                        ride.getDriver().getId(),
+                        List.of(RideStatus.SCHEDULED, RideStatus.PENDING)
+                );
+
+                if (!nextRides.isEmpty()) {
+                    vehicle.setStatus(VehicleStatus.BUSY);
+                } else {
+                    vehicle.setStatus(VehicleStatus.FREE);
+                }
+
                 vehicleRepository.save(vehicle);
             }
         }
@@ -602,10 +626,17 @@ public class RideServiceImpl implements RideService {
         // Notify the other party about the cancellation
         notificationService.sendRideCancelledNotification(savedRide, currentUser);
 
+        // Notify linked passengers about the cancellation
+        notificationService.notifyLinkedPassengersRideCancelled(savedRide, currentUser);
+
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     /* TODO: Check what is better between this and down same function
@@ -698,6 +729,8 @@ public class RideServiceImpl implements RideService {
         res.setEstimatedCost(ride.getEstimatedCost());
         res.setDistanceKm(ride.getDistance());
         res.setDistanceTraveled(ride.getDistanceTraveled());
+        res.setRateBaseFare(ride.getRateBaseFare());
+        res.setRatePricePerKm(ride.getRatePricePerKm());
         res.setStatus(ride.getStatus());
         res.setPanicPressed(Boolean.TRUE.equals(ride.getPanicPressed()));
         res.setPanicReason(ride.getPanicReason());
@@ -830,14 +863,25 @@ public class RideServiceImpl implements RideService {
         totalDistance += calculateHaversineDistance(currentPos, newEndLocation);
         ride.setDistance(totalDistance);
 
-        double basePrice = getBasePriceForVehicle(ride.getRequestedVehicleType());
-        double newPrice = basePrice + (totalDistance * 120.0);
+        double basePrice = ride.getRateBaseFare() != null
+                ? ride.getRateBaseFare()
+                : vehiclePriceService.getBaseFare(ride.getRequestedVehicleType());
+        double perKm = ride.getRatePricePerKm() != null
+                ? ride.getRatePricePerKm()
+                : vehiclePriceService.getPricePerKm(ride.getRequestedVehicleType());
+        double newPrice = basePrice + (totalDistance * perKm);
         ride.setTotalCost(Math.round(newPrice * 100.0) / 100.0);
 
         ride.setPassengersExited(true);
         ride.setPaid(true);
 
         Ride savedRide = rideRepository.save(ride);
+
+        // Trigger notification (same as endRide)
+        notificationService.sendRideFinishedNotification(savedRide);
+
+        // Notify linked passengers about ride completion (same as endRide)
+        notificationService.notifyLinkedPassengersRideCompleted(savedRide);
 
         // Send review request emails to passengers (same as endRide)
         sendReviewRequestEmails(savedRide);
@@ -847,10 +891,9 @@ public class RideServiceImpl implements RideService {
 
         // Update Vehicle Status
         if (ride.getDriver() != null) {
-            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(
+            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
                     ride.getDriver().getId(),
-                    RideStatus.SCHEDULED,
-                    LocalDateTime.now()
+                    List.of(RideStatus.SCHEDULED, RideStatus.PENDING)
             );
 
             Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
@@ -867,7 +910,11 @@ public class RideServiceImpl implements RideService {
             }
         }
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates (same as endRide)
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override
@@ -947,61 +994,88 @@ public class RideServiceImpl implements RideService {
     }
 
     /**
-     * Sends review request emails to all passengers of a finished ride.
+     * Sends review request email to every passenger on the ride,
+     * including linked (non-registered) passengers from invitedEmails.
      * Only sends to passengers whose email does not end with '@example.com'.
      */
     private void sendReviewRequestEmails(Ride ride) {
-        if (ride == null || ride.getPassengers() == null || ride.getPassengers().isEmpty()) {
+        if (ride == null || ride.getDriver() == null) {
             return;
         }
-        
-        if (ride.getDriver() == null) {
-            return;
-        }
-        
+
         Long driverId = ride.getDriver().getId();
-        
-        for (User passenger : ride.getPassengers()) {
-            String email = passenger.getEmail();
-            
-            // Skip test emails ending with @example.com
-            if (email == null || email.toLowerCase().endsWith("@example.com")) {
-                continue;
-            }
-            
-            try {
-                // Generate a JWT token valid for 3 days
-                String reviewToken = reviewTokenUtils.generateReviewToken(
-                    ride.getId(), 
-                    passenger.getId(), 
-                    driverId
-                );
-                
-                // Get passenger name for personalization
-                String passengerName = passenger.getName();
-                if (passengerName == null || passengerName.trim().isEmpty()) {
-                    passengerName = "Valued Customer";
+
+        // Collect registered passenger emails so we don't send duplicates to invitedEmails
+        Set<String> sentEmails = new java.util.HashSet<>();
+
+        // 1. Send to registered passengers
+        if (ride.getPassengers() != null) {
+            for (User passenger : ride.getPassengers()) {
+                String email = passenger.getEmail();
+
+                // Skip test emails ending with @example.com
+                if (email == null || email.toLowerCase().endsWith("@example.com")) {
+                    continue;
                 }
-                
-                // Send the review request email
-                emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
-                
-                System.out.println("Sent review request email to: " + email + " for ride: " + ride.getId());
-            } catch (Exception e) {
-                // Log error but don't fail the ride completion
-                System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
+
+                try {
+                    String reviewToken = reviewTokenUtils.generateReviewToken(
+                        ride.getId(),
+                        passenger.getId(),
+                        driverId
+                    );
+
+                    String passengerName = passenger.getName();
+                    if (passengerName == null || passengerName.trim().isEmpty()) {
+                        passengerName = "Valued Customer";
+                    }
+
+                    emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
+                    sentEmails.add(email.toLowerCase());
+
+                    System.out.println("Sent review request email to passenger: " + email + " for ride: " + ride.getId());
+                } catch (Exception e) {
+                    System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
+                }
+            }
+        }
+
+        // 2. Send to linked (potentially non-registered) passengers
+        if (ride.getInvitedEmails() != null) {
+            for (String email : ride.getInvitedEmails()) {
+                if (email == null || email.toLowerCase().endsWith("@example.com")) {
+                    continue;
+                }
+
+                // Skip if already sent via registered passengers
+                if (sentEmails.contains(email.toLowerCase())) {
+                    continue;
+                }
+
+                try {
+                    // Generate email-based token for linked passenger
+                    String reviewToken = reviewTokenUtils.generateReviewTokenForEmail(
+                        ride.getId(),
+                        email,
+                        driverId
+                    );
+
+                    // Try to get name if user is registered
+                    String passengerName = userRepository.findByEmail(email)
+                        .map(User::getName)
+                        .orElse("Valued Customer");
+
+                    emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
+
+                    System.out.println("Sent review request email to linked passenger: " + email + " for ride: " + ride.getId());
+                } catch (Exception e) {
+                    System.err.println("Failed to send review request email to linked passenger " + email + ": " + e.getMessage());
+                }
             }
         }
     }
 
-    private double getBasePriceForVehicle(VehicleType type) {
-        if (type == null) return 120.0;
-        return switch (type) {
-            case LUXURY -> 360.0;
-            case VAN -> 180.0;
-            default -> 120.0;
-        };
-    }
+
 
     @Override
     @Transactional(readOnly = true)

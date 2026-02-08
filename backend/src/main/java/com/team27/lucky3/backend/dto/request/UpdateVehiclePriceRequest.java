@@ -14,7 +14,11 @@ public class UpdateVehiclePriceRequest {
     @NotNull(message = "Vehicle type is required")
     private VehicleType vehicleType;
 
+    @NotNull(message = "Base fare is required")
+    @DecimalMin(value = "0.0", message = "Base fare must be zero or positive")
+    private Double baseFare;
+
     @NotNull(message = "Price per kilometer is required")
-    @DecimalMin(value = "0.0", message = "Price must be zero or positive")
+    @DecimalMin(value = "0.0", message = "Price per km must be zero or positive")
     private Double pricePerKm;
 }

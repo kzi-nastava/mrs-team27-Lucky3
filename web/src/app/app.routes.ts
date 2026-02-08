@@ -36,10 +36,13 @@ import { FavoritePageComponent } from './pages/passenger/favorite-page/favorite-
 import { ReviewPage } from './pages/review/review.page';
 import { reviewGuard } from './infrastructure/auth/review.guard';
 import { AdminPanicPage } from './pages/admin/panic/admin-panic.page';
+import { AdminPricingPage } from './pages/admin/pricing/admin-pricing.page';
 import { NotFoundPage } from './pages/not-found/not-found.page';
 import { SupportPage } from './shared/support/support.page';
 import { AdminSupportPage } from './pages/admin/support/admin-support.page';
 import { AdminRideHistoryPage } from './pages/admin/ride-history/admin-ride-history.page';
+import { rideTrackingGuard } from './infrastructure/auth/ride-tracking.guard';
+import { RideTrackingPage } from './shared/active-ride/ride-tracking.page';
 
 export const routes: Routes = [
   // --- GUEST-ONLY ROUTES (redirect to dashboard if logged in) ---
@@ -115,6 +118,13 @@ export const routes: Routes = [
     path: 'review',
     component: ReviewPage,
     canActivate: [reviewGuard]
+  },
+
+  // --- RIDE TRACKING PAGE (PUBLIC - TOKEN BASED) ---
+  {
+    path: 'ride/track',
+    component: RideTrackingPage,
+    canActivate: [rideTrackingGuard]
   },
 
   // --- PASSENGER ROUTES ---
@@ -194,6 +204,12 @@ export const routes: Routes = [
   {
     path: 'admin/panic',
     component: AdminPanicPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/pricing',
+    component: AdminPricingPage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },

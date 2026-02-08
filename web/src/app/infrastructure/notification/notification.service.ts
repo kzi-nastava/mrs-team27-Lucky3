@@ -338,18 +338,27 @@ export class NotificationService implements OnDestroy {
 
   private mapRoute(backendType: string, relatedEntityId: number | null): string | undefined {
     if (!relatedEntityId) return undefined;
+    const role = this.authService.getRole();
     switch (backendType) {
       case 'PANIC':             return '/admin/panic';
+      case 'RIDE_FINISHED':
+      case 'RIDE_CANCELLED': {
+        if (role === 'DRIVER') {
+          return `/driver/overview/ride/${relatedEntityId}`;
+        }
+        return `/passenger/ride-history?rideId=${relatedEntityId}`;
+      }
       case 'RIDE_STATUS':
       case 'RIDE_INVITE':
-      case 'RIDE_FINISHED':
       case 'RIDE_CREATED':
-      case 'RIDE_CANCELLED':
-      case 'RIDE_SCHEDULED_REMINDER': return `/passenger/ride/${relatedEntityId}`;
+      case 'RIDE_SCHEDULED_REMINDER': {
+        if (role === 'DRIVER') {
+          return `/driver/ride/${relatedEntityId}`;
+        }
+        return `/passenger/ride/${relatedEntityId}`;
+      }
       case 'DRIVER_ASSIGNMENT': return `/driver/dashboard`;
       case 'SUPPORT': {
-        // Admins go to admin support page, users go to regular support
-        const role = this.authService.getRole();
         if (role === 'ADMIN') {
           return `/admin/support?chatId=${relatedEntityId}`;
         }
