@@ -339,21 +339,34 @@ public class NotificationServiceImpl implements NotificationService {
                     // Send push notification
                     sendNotification(passenger, text, NotificationType.RIDE_CANCELLED, ride.getId());
                     
-                    // Send email to each passenger (including the ride creator)
-                    try {
-                        emailService.sendLinkedPassengerRideCancelledEmail(
-                                passenger.getEmail(), 
-                                passenger.getName(), 
-                                ride, 
-                                cancellerName, 
-                                "driver"
-                        );
-                        log.info("Sent ride-cancelled email to passenger {} for ride #{}", 
-                                passenger.getEmail(), ride.getId());
-                    } catch (Exception e) {
-                        log.error("Failed to send ride-cancelled email to {}: {}", 
-                                passenger.getEmail(), e.getMessage());
-                    }
+                    // Send email to each passenger (including the ride creator) - async
+                    final String passengerEmail = passenger.getEmail();
+                    final String passengerName = passenger.getName();
+                    final Long rideId = ride.getId();
+                    final String startAddr = ride.getStartLocation() != null ? ride.getStartLocation().getAddress() : "Unknown";
+                    final String endAddr = ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : "Unknown";
+                    final double cost = ride.getEstimatedCost();
+                    final String cancellerNameCopy = cancellerName;
+                    
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            emailService.sendLinkedPassengerRideCancelledEmail(
+                                    passengerEmail, 
+                                    passengerName, 
+                                    rideId,
+                                    startAddr,
+                                    endAddr,
+                                    cost,
+                                    cancellerNameCopy, 
+                                    "driver"
+                            );
+                            log.info("Sent ride-cancelled email to passenger {} for ride #{}", 
+                                    passengerEmail, rideId);
+                        } catch (Exception e) {
+                            log.error("Failed to send ride-cancelled email to {}: {}", 
+                                    passengerEmail, e.getMessage());
+                        }
+                    });
                 }
             }
             log.info("Ride cancelled notification sent to passengers for ride #{}", ride.getId());
@@ -520,69 +533,74 @@ public class NotificationServiceImpl implements NotificationService {
         if (passenger.getEmail() == null || passenger.getEmail().endsWith("@example.com")) return;
 
         String rideLink = frontendUrl + "/passenger/ride/" + ride.getId();
+        final String email = passenger.getEmail();
+        final String name = passenger.getName() != null ? passenger.getName() : "Passenger";
+        final String startAddr = ride.getStartLocation() != null ? ride.getStartLocation().getAddress() : "Unknown";
+        final String endAddr = ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : "Unknown";
+        final double cost = ride.getEstimatedCost();
 
-        String body = String.format(
-                "Hi %s,\n\n" +
-                "You've been invited to join a ride on Lucky3!\n\n" +
-                "Route: %s → %s\n" +
-                "Estimated cost: %.2f RSD\n\n" +
-                "View and accept the ride here:\n%s\n\n" +
-                "If you did not expect this invite, you can safely ignore this email.\n\n" +
-                "— The Lucky3 Team",
-                passenger.getName() != null ? passenger.getName() : "Passenger",
-                ride.getStartLocation() != null ? ride.getStartLocation().getAddress() : "Unknown",
-                ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : "Unknown",
-                ride.getEstimatedCost(),
-                rideLink
-        );
+        CompletableFuture.runAsync(() -> {
+            String body = String.format(
+                    "Hi %s,\n\n" +
+                    "You've been invited to join a ride on Lucky3!\n\n" +
+                    "Route: %s → %s\n" +
+                    "Estimated cost: %.2f RSD\n\n" +
+                    "View and accept the ride here:\n%s\n\n" +
+                    "If you did not expect this invite, you can safely ignore this email.\n\n" +
+                    "— The Lucky3 Team",
+                    name, startAddr, endAddr, cost, rideLink
+            );
 
-        try {
-            emailService.sendSimpleMessage(passenger.getEmail(),
-                    "Lucky3 — You've been invited to join a ride!", body);
-        } catch (Exception e) {
-            log.error("Failed to send linked-passenger email to {}: {}",
-                    passenger.getEmail(), e.getMessage());
-        }
+            try {
+                emailService.sendSimpleMessage(email,
+                        "Lucky3 — You've been invited to join a ride!", body);
+            } catch (Exception e) {
+                log.error("Failed to send linked-passenger email to {}: {}", email, e.getMessage());
+            }
+        });
     }
 
     /**
-     * Sends a ride-summary email after a ride finishes.
+     * Sends a ride-summary email after a ride finishes (async).
      */
     private void sendRideSummaryEmail(User passenger, Ride ride) {
         if (passenger.getEmail() == null || passenger.getEmail().endsWith("@example.com")) return;
 
-        String body = String.format(
-                "Hi %s,\n\n" +
-                "Your ride #%d has been completed!\n\n" +
-                "═══ Ride Summary ═══\n" +
-                "From:     %s\n" +
-                "To:       %s\n" +
-                "Distance: %.2f km\n" +
-                "Cost:     %.2f RSD\n" +
-                "Start:    %s\n" +
-                "End:      %s\n" +
-                "Driver:   %s %s\n\n" +
-                "Thank you for riding with Lucky3!\n\n" +
-                "— The Lucky3 Team",
-                passenger.getName() != null ? passenger.getName() : "Passenger",
-                ride.getId(),
-                ride.getStartLocation() != null ? ride.getStartLocation().getAddress() : "N/A",
-                ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : "N/A",
-                ride.getDistance() != null ? ride.getDistance() : 0.0,
-                ride.getTotalCost() != null ? ride.getTotalCost() : 0.0,
-                ride.getStartTime() != null ? ride.getStartTime().format(FMT) : "N/A",
-                ride.getEndTime() != null ? ride.getEndTime().format(FMT) : "N/A",
-                ride.getDriver() != null ? ride.getDriver().getName() : "N/A",
-                ride.getDriver() != null ? ride.getDriver().getSurname() : ""
-        );
+        final String email = passenger.getEmail();
+        final String name = passenger.getName() != null ? passenger.getName() : "Passenger";
+        final Long rideId = ride.getId();
+        final String startAddr = ride.getStartLocation() != null ? ride.getStartLocation().getAddress() : "N/A";
+        final String endAddr = ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : "N/A";
+        final double distance = ride.getDistance() != null ? ride.getDistance() : 0.0;
+        final double cost = ride.getTotalCost() != null ? ride.getTotalCost() : 0.0;
+        final String startTime = ride.getStartTime() != null ? ride.getStartTime().format(FMT) : "N/A";
+        final String endTime = ride.getEndTime() != null ? ride.getEndTime().format(FMT) : "N/A";
+        final String driverName = ride.getDriver() != null ? ride.getDriver().getName() : "N/A";
+        final String driverSurname = ride.getDriver() != null ? ride.getDriver().getSurname() : "";
 
-        try {
-            emailService.sendSimpleMessage(passenger.getEmail(),
-                    "Lucky3 — Your Ride #" + ride.getId() + " Summary", body);
-        } catch (Exception e) {
-            log.error("Failed to send ride-summary email to {}: {}",
-                    passenger.getEmail(), e.getMessage());
-        }
+        CompletableFuture.runAsync(() -> {
+            String body = String.format(
+                    "Hi %s,\n\n" +
+                    "Your ride #%d has been completed!\n\n" +
+                    "═══ Ride Summary ═══\n" +
+                    "From:     %s\n" +
+                    "To:       %s\n" +
+                    "Distance: %.2f km\n" +
+                    "Cost:     %.2f RSD\n" +
+                    "Start:    %s\n" +
+                    "End:      %s\n" +
+                    "Driver:   %s %s\n\n" +
+                    "Thank you for riding with Lucky3!\n\n" +
+                    "— The Lucky3 Team",
+                    name, rideId, startAddr, endAddr, distance, cost, startTime, endTime, driverName, driverSurname
+            );
+
+            try {
+                emailService.sendSimpleMessage(email, "Lucky3 — Your Ride #" + rideId + " Summary", body);
+            } catch (Exception e) {
+                log.error("Failed to send ride-summary email to {}: {}", email, e.getMessage());
+            }
+        });
     }
 
     private String buildRideSummaryText(Ride ride) {
@@ -632,13 +650,25 @@ public class NotificationServiceImpl implements NotificationService {
             Optional<User> registeredUser = userRepository.findByEmail(email);
             String passengerName = registeredUser.map(User::getName).orElse(null);
 
-            // Send email to ALL linked passengers (registered or not)
-            try {
-                emailService.sendLinkedPassengerAddedEmail(email, passengerName, ride, tokenString);
-                log.info("Sent ride-created email to linked passenger {} for ride #{}", email, ride.getId());
-            } catch (Exception e) {
-                log.error("Failed to send ride-created email to {}: {}", email, e.getMessage());
-            }
+            // Send email to ALL linked passengers (registered or not) - async
+            final String emailCopy = email;
+            final String passengerNameCopy = passengerName;
+            final Long rideId = ride.getId();
+            final String scheduledTime = ride.getScheduledTime() != null 
+                    ? ride.getScheduledTime().format(FMT) : "As soon as possible";
+            final String driverName = ride.getDriver() != null 
+                    ? ride.getDriver().getName() + " " + ride.getDriver().getSurname() : "To be assigned";
+            final double estimatedCost = ride.getEstimatedCost() != null ? ride.getEstimatedCost() : 0.0;
+            
+            CompletableFuture.runAsync(() -> {
+                try {
+                    emailService.sendLinkedPassengerAddedEmail(emailCopy, passengerNameCopy, rideId,
+                            startAddress, endAddress, scheduledTime, driverName, estimatedCost, tokenString);
+                    log.info("Sent ride-created email to linked passenger {} for ride #{}", emailCopy, rideId);
+                } catch (Exception e) {
+                    log.error("Failed to send ride-created email to {}: {}", emailCopy, e.getMessage());
+                }
+            });
 
             // Send push notification ONLY to registered users
             if (registeredUser.isPresent()) {
@@ -675,13 +705,24 @@ public class NotificationServiceImpl implements NotificationService {
             Optional<User> registeredUser = userRepository.findByEmail(email);
             String passengerName = registeredUser.map(User::getName).orElse(null);
 
-            // Send email to ALL linked passengers
-            try {
-                emailService.sendLinkedPassengerRideCompletedEmail(email, passengerName, ride);
-                log.info("Sent ride-completed email to linked passenger {} for ride #{}", email, ride.getId());
-            } catch (Exception e) {
-                log.error("Failed to send ride-completed email to {}: {}", email, e.getMessage());
-            }
+            // Send email to ALL linked passengers - async
+            final String emailCopy = email;
+            final String passengerNameCopy = passengerName;
+            final Long rideId = ride.getId();
+            final double distance = ride.getDistance() != null ? ride.getDistance() : 0.0;
+            final double totalCost = ride.getTotalCost() != null ? ride.getTotalCost() : 0.0;
+            final String startTime = ride.getStartTime() != null ? ride.getStartTime().format(FMT) : "N/A";
+            final String endTime = ride.getEndTime() != null ? ride.getEndTime().format(FMT) : "N/A";
+            
+            CompletableFuture.runAsync(() -> {
+                try {
+                    emailService.sendLinkedPassengerRideCompletedEmail(emailCopy, passengerNameCopy, rideId,
+                            startAddress, endAddress, distance, totalCost, startTime, endTime);
+                    log.info("Sent ride-completed email to linked passenger {} for ride #{}", emailCopy, rideId);
+                } catch (Exception e) {
+                    log.error("Failed to send ride-completed email to {}: {}", emailCopy, e.getMessage());
+                }
+            });
 
             // Send push notification ONLY to registered users
             if (registeredUser.isPresent()) {
@@ -726,14 +767,21 @@ public class NotificationServiceImpl implements NotificationService {
             Optional<User> registeredUser = userRepository.findByEmail(email);
             String passengerName = registeredUser.map(User::getName).orElse(null);
 
-            // Send email to ALL linked passengers
-            try {
-                emailService.sendLinkedPassengerRideCancelledEmail(
-                        email, passengerName, ride, cancellerName, cancellerRole);
-                log.info("Sent ride-cancelled email to linked passenger {} for ride #{}", email, ride.getId());
-            } catch (Exception e) {
-                log.error("Failed to send ride-cancelled email to {}: {}", email, e.getMessage());
-            }
+            // Send email to ALL linked passengers - async
+            final String emailCopy = email;
+            final String passengerNameCopy = passengerName;
+            final Long rideId = ride.getId();
+            
+            CompletableFuture.runAsync(() -> {
+                try {
+                    emailService.sendLinkedPassengerRideCancelledEmail(
+                            emailCopy, passengerNameCopy, rideId, startAddress, endAddress, 
+                            ride.getEstimatedCost(), cancellerName, cancellerRole);
+                    log.info("Sent ride-cancelled email to linked passenger {} for ride #{}", emailCopy, rideId);
+                } catch (Exception e) {
+                    log.error("Failed to send ride-cancelled email to {}: {}", emailCopy, e.getMessage());
+                }
+            });
 
             // Send push notification ONLY to registered users
             if (registeredUser.isPresent()) {

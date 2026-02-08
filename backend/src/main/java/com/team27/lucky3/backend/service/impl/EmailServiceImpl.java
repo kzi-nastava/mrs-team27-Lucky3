@@ -71,6 +71,17 @@ public class EmailServiceImpl implements EmailService {
         String driverName = ride.getDriver() != null 
                 ? ride.getDriver().getName() + " " + ride.getDriver().getSurname() : "To be assigned";
 
+        sendLinkedPassengerAddedEmail(to, passengerName, ride.getId(), 
+                startAddress, endAddress, scheduledTime, driverName, 
+                ride.getEstimatedCost() != null ? ride.getEstimatedCost() : 0.0, trackingToken);
+    }
+
+    @Override
+    public void sendLinkedPassengerAddedEmail(String to, String passengerName, Long rideId,
+                                               String startAddress, String endAddress, String scheduledTime,
+                                               String driverName, double estimatedCost, String trackingToken) {
+        String trackingLink = frontendUrl + "/ride/track?token=" + trackingToken;
+
         String subject = "You've been added to a ride - Lucky3";
         String text = String.format(
             "Hi %s,\n\n" +
@@ -92,7 +103,7 @@ public class EmailServiceImpl implements EmailService {
             endAddress,
             scheduledTime,
             driverName,
-            ride.getEstimatedCost() != null ? ride.getEstimatedCost() : 0.0,
+            estimatedCost,
             trackingLink
         );
         
@@ -110,6 +121,17 @@ public class EmailServiceImpl implements EmailService {
         String endTime = ride.getEndTime() != null 
                 ? ride.getEndTime().format(FMT) : "N/A";
 
+        sendLinkedPassengerRideCompletedEmail(to, passengerName, ride.getId(),
+                startAddress, endAddress,
+                ride.getDistance() != null ? ride.getDistance() : 0.0,
+                ride.getTotalCost() != null ? ride.getTotalCost() : 0.0,
+                startTime, endTime);
+    }
+
+    @Override
+    public void sendLinkedPassengerRideCompletedEmail(String to, String passengerName, Long rideId,
+                                                       String startAddress, String endAddress, double distance,
+                                                       double totalCost, String startTime, String endTime) {
         String subject = "Your ride has been completed - Lucky3";
         String text = String.format(
             "Hi %s,\n\n" +
@@ -126,8 +148,8 @@ public class EmailServiceImpl implements EmailService {
             passengerName != null ? passengerName : "Passenger",
             startAddress,
             endAddress,
-            ride.getDistance() != null ? ride.getDistance() : 0.0,
-            ride.getTotalCost() != null ? ride.getTotalCost() : 0.0,
+            distance,
+            totalCost,
             startTime,
             endTime
         );
@@ -163,6 +185,32 @@ public class EmailServiceImpl implements EmailService {
             cancelledByName,
             cancelledByRole,
             reason
+        );
+        
+        sendSimpleMessage(to, subject, text);
+    }
+
+    @Override
+    public void sendLinkedPassengerRideCancelledEmail(String to, String passengerName, Long rideId,
+                                                       String startAddress, String endAddress, double estimatedCost,
+                                                       String cancelledByName, String cancelledByRole) {
+        String subject = "Your ride has been cancelled - Lucky3";
+        String text = String.format(
+            "Hi %s,\n\n" +
+            "Unfortunately, the ride #%d you were part of has been cancelled.\n\n" +
+            "═══ Cancelled Ride Details ═══\n" +
+            "From:          %s\n" +
+            "To:            %s\n" +
+            "Cancelled by:  %s (%s)\n\n" +
+            "We apologize for any inconvenience. " +
+            "Please book a new ride if you still need transportation.\n\n" +
+            "— The Lucky3 Team",
+            passengerName != null ? passengerName : "Passenger",
+            rideId,
+            startAddress,
+            endAddress,
+            cancelledByName,
+            cancelledByRole
         );
         
         sendSimpleMessage(to, subject, text);
