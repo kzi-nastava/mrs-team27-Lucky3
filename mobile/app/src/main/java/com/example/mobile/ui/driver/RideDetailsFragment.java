@@ -253,6 +253,7 @@ public class RideDetailsFragment extends Fragment {
                         String reason = ride.getRejectionReason();
                         if (reason != null && !reason.isEmpty()) {
                             cancellationReason.setVisibility(View.VISIBLE);
+                            reason = "reason: " + reason;
                             cancellationReason.setText(reason);
                         } else {
                             cancellationReason.setVisibility(View.GONE);
