@@ -15,11 +15,12 @@ import androidx.navigation.Navigation;
 import android.widget.ListView;
 
 import com.example.mobile.R;
-import com.example.mobile.databinding.FragmentDriverDashboardBinding;
+import com.example.mobile.databinding.FragmentDriverOverviewBinding;
 import com.example.mobile.models.DriverStatsResponse;
 import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.RideResponse;
 import com.example.mobile.utils.ClientUtils;
+import com.example.mobile.utils.ListViewHelper;
 import com.example.mobile.utils.SharedPreferencesManager;
 
 import java.text.SimpleDateFormat;
@@ -35,10 +36,10 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class DriverDashboardFragment extends Fragment {
+public class DriverOverviewFragment extends Fragment {
 
-    private static final String TAG = "DriverDashboard";
-    private FragmentDriverDashboardBinding binding;
+    private static final String TAG = "DriverOverview";
+    private FragmentDriverOverviewBinding binding;
     private SharedPreferencesManager preferencesManager;
     
     private RideHistoryAdapter adapter;
@@ -64,7 +65,7 @@ public class DriverDashboardFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        binding = FragmentDriverDashboardBinding.inflate(inflater, container, false);
+        binding = FragmentDriverOverviewBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
         preferencesManager = new SharedPreferencesManager(requireContext());
@@ -260,6 +261,7 @@ public class DriverDashboardFragment extends Fragment {
         rideItems.clear();
         if (adapter != null) {
             adapter.notifyDataSetChanged();
+            ListViewHelper.setListViewHeightBasedOnChildren(binding.rideHistoryList);
         }
         updateFilterButtonStyles();
         loadRides();
@@ -428,6 +430,7 @@ public class DriverDashboardFragment extends Fragment {
         }
         
         adapter.notifyDataSetChanged();
+        ListViewHelper.setListViewHeightBasedOnChildren(binding.rideHistoryList);
     }
     
     private RideHistoryAdapter.RideHistoryItem mapToHistoryItem(RideResponse ride) {

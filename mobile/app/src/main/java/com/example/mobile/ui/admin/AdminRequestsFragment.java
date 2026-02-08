@@ -10,10 +10,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentAdminRequestsBinding;
+import com.example.mobile.utils.ListViewHelper;
 import com.example.mobile.viewmodels.AdminRequestsViewModel;
 
 public class AdminRequestsFragment extends Fragment {
@@ -43,7 +43,7 @@ public class AdminRequestsFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         setupViewModel();
-        setupRecyclerView();
+        setupListView();
         setupListeners();
         observeData();
 
@@ -54,8 +54,8 @@ public class AdminRequestsFragment extends Fragment {
         viewModel = new ViewModelProvider(this).get(AdminRequestsViewModel.class);
     }
 
-    private void setupRecyclerView() {
-        adapter = new ChangeRequestAdapter(new ChangeRequestAdapter.OnActionListener() {
+    private void setupListView() {
+        adapter = new ChangeRequestAdapter(requireContext(), new ChangeRequestAdapter.OnActionListener() {
             @Override
             public void onApprove(Long requestId) {
                 viewModel.approveRequest(requestId);
@@ -67,7 +67,8 @@ public class AdminRequestsFragment extends Fragment {
             }
         });
 
-        binding.recyclerRequests.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.recyclerRequests.setDivider(null);
+        binding.recyclerRequests.setDividerHeight(0);
         binding.recyclerRequests.setAdapter(adapter);
     }
 
@@ -78,6 +79,7 @@ public class AdminRequestsFragment extends Fragment {
     private void observeData() {
         viewModel.getRequests().observe(getViewLifecycleOwner(), requests -> {
             adapter.setRequests(requests);
+            ListViewHelper.setListViewHeightBasedOnChildren(binding.recyclerRequests);
             binding.tvPendingCount.setText(String.valueOf(requests.size()));
 
             if (requests.isEmpty()) {
@@ -104,6 +106,7 @@ public class AdminRequestsFragment extends Fragment {
 
         viewModel.getBusyIds().observe(getViewLifecycleOwner(), busyIds -> {
             adapter.setBusyIds(busyIds);
+            ListViewHelper.setListViewHeightBasedOnChildren(binding.recyclerRequests);
         });
     }
 
