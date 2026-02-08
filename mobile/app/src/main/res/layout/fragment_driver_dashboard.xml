@@ -481,13 +481,12 @@
                         android:layout_marginBottom="8dp"/>
 
                     <!-- Ride History List -->
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/ride_history_recycler"
+                    <ListView
+                        android:id="@+id/ride_history_list"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:nestedScrollingEnabled="false"
-                        tools:listitem="@layout/item_ride_history"
-                        tools:itemCount="3"/>
+                        android:divider="@null"
+                        android:dividerHeight="0dp"/>
                 </LinearLayout>
             </HorizontalScrollView>
 

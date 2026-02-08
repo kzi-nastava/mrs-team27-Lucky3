@@ -243,14 +243,15 @@
         app:layout_constraintTop_toBottomOf="@id/stats_scroll"
         app:layout_constraintStart_toStartOf="parent"/>
 
-    <!-- Placeholder for RecyclerView -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rides_recycler_view"
+    <!-- Placeholder for ListView -->
+    <ListView
+        android:id="@+id/rides_list_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="12dp"
+        android:divider="@null"
+        android:dividerHeight="0dp"
         app:layout_constraintTop_toBottomOf="@id/history_title"
-        app:layout_constraintBottom_toBottomOf="parent"
-        tools:listitem="@layout/item_ride_history"/>
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
