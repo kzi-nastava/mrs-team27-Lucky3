@@ -7,7 +7,6 @@ import { RideResponse, RideStatus } from '../../../infrastructure/rest/model/rid
 import { RouterModule } from '@angular/router';
 import { RideService } from '../../../infrastructure/rest/ride.service';
 import { Subject, takeUntil } from 'rxjs';
-import { Ride } from '../../../shared/data/mock-data';
 import * as L from 'leaflet';
 import { environment } from '../../../../env/environment';
 

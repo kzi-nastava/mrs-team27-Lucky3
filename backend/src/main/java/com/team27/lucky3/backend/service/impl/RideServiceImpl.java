@@ -56,10 +56,9 @@ public class RideServiceImpl implements RideService {
     private final PanicService panicService;
     private final com.team27.lucky3.backend.service.socket.VehicleSocketService vehicleSocketService;
     private final com.team27.lucky3.backend.service.socket.RideSocketService rideSocketService;
+    private final com.team27.lucky3.backend.service.VehiclePriceService vehiclePriceService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    private static final double PRICE_PER_KM = 120.0;
 
     // Base OSRM URL without coordinates
     private static final String OSRM_Base_URL = "http://router.project-osrm.org/route/v1/driving/";
@@ -139,9 +138,10 @@ public class RideServiceImpl implements RideService {
             durationMinutes = (int) Math.ceil(distanceKm * 1.2); // Rough estimate
         }
 
-        // Calculate Price
-        double basePrice = getBasePriceForVehicle(type);
-        double estimatedCost = Math.round((basePrice + (distanceKm * PRICE_PER_KM)) * 100.0) / 100.0;
+        // Calculate Price (dynamic from DB)
+        double basePrice = vehiclePriceService.getBaseFare(type);
+        double perKm = vehiclePriceService.getPricePerKm(type);
+        double estimatedCost = Math.round((basePrice + (distanceKm * perKm)) * 100.0) / 100.0;
 
         // Find Closest Driver Time (Simple logic retained)
         int timeToPickup = calculateDriverArrival(start, type);
@@ -200,9 +200,10 @@ public class RideServiceImpl implements RideService {
             routePoints.add(new RoutePointResponse(end, 1));
         }
 
-        // Calculate Price
-        double basePrice = getBasePriceForVehicle(type);
-        double estimatedCost = Math.round((basePrice + (distanceKm * PRICE_PER_KM)) * 100.0) / 100.0;
+        // Calculate Price (dynamic from DB)
+        double basePrice = vehiclePriceService.getBaseFare(type);
+        double perKm = vehiclePriceService.getPricePerKm(type);
+        double estimatedCost = Math.round((basePrice + (distanceKm * perKm)) * 100.0) / 100.0;
 
         // Find Closest Driver Time (Simple logic retained)
         int timeToPickup = calculateDriverArrival(start, type);
@@ -279,6 +280,11 @@ public class RideServiceImpl implements RideService {
         // Set costs and distance
         ride.setEstimatedCost(estimation.getEstimatedCost());
         ride.setDistance(estimation.getEstimatedDistance());
+
+        // Snapshot current pricing so price changes don't affect this ride
+        VehicleType rideVehicleType = request.getRequirements().getVehicleType();
+        ride.setRateBaseFare(vehiclePriceService.getBaseFare(rideVehicleType));
+        ride.setRatePricePerKm(vehiclePriceService.getPricePerKm(rideVehicleType));
 
         // Set ride requirements
         ride.setRequestedVehicleType(request.getRequirements().getVehicleType());
@@ -723,6 +729,8 @@ public class RideServiceImpl implements RideService {
         res.setEstimatedCost(ride.getEstimatedCost());
         res.setDistanceKm(ride.getDistance());
         res.setDistanceTraveled(ride.getDistanceTraveled());
+        res.setRateBaseFare(ride.getRateBaseFare());
+        res.setRatePricePerKm(ride.getRatePricePerKm());
         res.setStatus(ride.getStatus());
         res.setPanicPressed(Boolean.TRUE.equals(ride.getPanicPressed()));
         res.setPanicReason(ride.getPanicReason());
@@ -855,8 +863,13 @@ public class RideServiceImpl implements RideService {
         totalDistance += calculateHaversineDistance(currentPos, newEndLocation);
         ride.setDistance(totalDistance);
 
-        double basePrice = getBasePriceForVehicle(ride.getRequestedVehicleType());
-        double newPrice = basePrice + (totalDistance * 120.0);
+        double basePrice = ride.getRateBaseFare() != null
+                ? ride.getRateBaseFare()
+                : vehiclePriceService.getBaseFare(ride.getRequestedVehicleType());
+        double perKm = ride.getRatePricePerKm() != null
+                ? ride.getRatePricePerKm()
+                : vehiclePriceService.getPricePerKm(ride.getRequestedVehicleType());
+        double newPrice = basePrice + (totalDistance * perKm);
         ride.setTotalCost(Math.round(newPrice * 100.0) / 100.0);
 
         ride.setPassengersExited(true);
@@ -1062,14 +1075,7 @@ public class RideServiceImpl implements RideService {
         }
     }
 
-    private double getBasePriceForVehicle(VehicleType type) {
-        if (type == null) return 120.0;
-        return switch (type) {
-            case LUXURY -> 360.0;
-            case VAN -> 180.0;
-            default -> 120.0;
-        };
-    }
+
 
     @Override
     @Transactional(readOnly = true)

@@ -9,7 +9,7 @@ import { RouterModule } from '@angular/router';
 import { RideService } from '../../../infrastructure/rest/ride.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
 import { Subject, takeUntil } from 'rxjs';
-import { Ride } from '../../../shared/data/mock-data';
+import { Ride } from '../../../shared/data/ride.model';
 import * as L from 'leaflet';
 
 @Component({

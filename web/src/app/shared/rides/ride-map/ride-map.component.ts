@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, SimpleChanges, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Ride } from '../../data/mock-data';
+import { Ride } from '../../data/ride.model';
 import * as L from 'leaflet';
 import { environment } from '../../../../env/environment';
 

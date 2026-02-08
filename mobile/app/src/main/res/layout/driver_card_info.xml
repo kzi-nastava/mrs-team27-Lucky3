@@ -136,7 +136,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="end"
-            android:text="$45120"
+            android:text="45120 RSD"
             android:textColor="@color/white"/>
     </LinearLayout>
 

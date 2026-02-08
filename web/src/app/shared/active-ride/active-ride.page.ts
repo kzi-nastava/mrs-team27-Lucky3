@@ -143,6 +143,9 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         return;
     }
     
+    // Load dynamic pricing from backend
+    this.loadDynamicPricing();
+    
     // Load immediately
     this.loadRide();
   }
@@ -252,14 +255,35 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     return 'Ride Status: ' + this.rideStatus;
   }
 
-  private static readonly PRICE_PER_KM = 120;
+  private static readonly PRICE_PER_KM = 120; // Fallback only
+
+  // Dynamic pricing loaded from backend
+  private dynamicPrices: Map<string, { baseFare: number; pricePerKm: number }> = new Map();
+  private pricesLoaded = false;
 
   private getBasePriceRsd(vehicleType?: string): number {
-    switch ((vehicleType ?? '').toUpperCase()) {
+    // Priority 1: Use ride's snapshot rate (locked at creation)
+    if (this.backendRide?.rateBaseFare != null) return this.backendRide.rateBaseFare;
+    // Priority 2: Dynamic prices from /api/vehicles/prices
+    const key = (vehicleType ?? 'STANDARD').toUpperCase();
+    const dynamic = this.dynamicPrices.get(key);
+    if (dynamic) return dynamic.baseFare;
+    // Static fallback
+    switch (key) {
       case 'LUXURY': return 360;
       case 'VAN': return 180;
       default: return 120;
     }
+  }
+
+  private getPricePerKmRsd(vehicleType?: string): number {
+    // Priority 1: Use ride's snapshot rate (locked at creation)
+    if (this.backendRide?.ratePricePerKm != null) return this.backendRide.ratePricePerKm;
+    // Priority 2: Dynamic prices from /api/vehicles/prices
+    const key = (vehicleType ?? 'STANDARD').toUpperCase();
+    const dynamic = this.dynamicPrices.get(key);
+    if (dynamic) return dynamic.pricePerKm;
+    return ActiveRidePage.PRICE_PER_KM;
   }
 
   private getEstimatedTotalRsd(): number {
@@ -605,7 +629,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       // Calculate current cost: base price + (distance traveled * price per km)
       // distanceTraveledKm is accumulated in pollDriverLocation based on actual vehicle movement
       const base = this.getBasePriceRsd(this.backendRide?.vehicleType ?? this.ride?.type);
-      const computed = base + this.distanceTraveledKm * ActiveRidePage.PRICE_PER_KM;
+      const perKm = this.getPricePerKmRsd(this.backendRide?.vehicleType ?? this.ride?.type);
+      const computed = base + this.distanceTraveledKm * perKm;
 
       this.currentCost = computed;
 
@@ -613,7 +638,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     } else if (this.isRidePending && this.distanceLeftKm != null) {
       // For pending rides, estimate cost based on distance: base + distance * price per km
       const base = this.getBasePriceRsd(this.backendRide?.vehicleType ?? this.ride?.type);
-      this.currentCost = base + this.distanceLeftKm * ActiveRidePage.PRICE_PER_KM;
+      const perKm = this.getPricePerKmRsd(this.backendRide?.vehicleType ?? this.ride?.type);
+      this.currentCost = base + this.distanceLeftKm * perKm;
     }
     
     this.cdr.detectChanges();
@@ -671,6 +697,24 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: () => { /* ignore */ }
+    });
+  }
+
+  private loadDynamicPricing(): void {
+    this.http.get<Array<{ vehicleType: string; baseFare: number; pricePerKm: number }>>(
+      `${environment.apiHost}vehicles/prices`,
+      { headers: { 'skip': 'true' } }
+    ).subscribe({
+      next: (prices) => {
+        for (const p of prices) {
+          this.dynamicPrices.set(p.vehicleType.toUpperCase(), {
+            baseFare: p.baseFare,
+            pricePerKm: p.pricePerKm
+          });
+        }
+        this.pricesLoaded = true;
+      },
+      error: () => { /* fallback to static prices */ }
     });
   }
 
@@ -820,6 +864,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
     // Initialize cost and distance traveled
     const base = this.getBasePriceRsd(r.vehicleType ?? this.ride?.type);
+    const perKm = this.getPricePerKmRsd(r.vehicleType ?? this.ride?.type);
     
     // Get vehicle location from ride response
     const vehicleLoc = r.vehicleLocation;
@@ -833,13 +878,13 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       // PRIORITY 1: Use backend totalCost if it exists and is valid (ride is saved in DB)
       if (r.totalCost && r.totalCost >= base) {
         this.currentCost = r.totalCost;
-        this.distanceTraveledKm = (r.totalCost - base) / ActiveRidePage.PRICE_PER_KM;
+        this.distanceTraveledKm = (r.totalCost - base) / perKm;
       } 
       // PRIORITY 2: Calculate from positions as fallback
       else if (this.rideStartLocation && this.driverLocation) {
         const calculatedDistance = this.haversineKm(this.rideStartLocation, this.driverLocation);
         this.distanceTraveledKm = calculatedDistance;
-        this.currentCost = base + this.distanceTraveledKm * ActiveRidePage.PRICE_PER_KM;
+        this.currentCost = base + this.distanceTraveledKm * perKm;
       } 
       // PRIORITY 3: Start fresh
       else {

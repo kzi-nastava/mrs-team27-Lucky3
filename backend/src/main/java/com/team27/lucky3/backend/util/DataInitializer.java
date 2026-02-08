@@ -168,9 +168,9 @@ public class DataInitializer implements CommandLineRunner {
         ridePending.setScheduledTime(LocalDateTime.now().plusHours(2));
         ridePending.setStartTime(ridePending.getScheduledTime());
         ridePending.setEndTime(ridePending.getStartTime().plusMinutes(15));
-        ridePending.setEstimatedCost(450.00);
+        ridePending.setEstimatedCost(504.00);
         ridePending.setDistance(3.2);
-        ridePending.setTotalCost(450.00);
+        ridePending.setTotalCost(504.00);
         ridePending.setPetTransport(false);
         ridePending.setBabyTransport(false);
         ridePending.setRequestedVehicleType(VehicleType.STANDARD);
@@ -178,6 +178,8 @@ public class DataInitializer implements CommandLineRunner {
         ridePending.setPaid(false);
         ridePending.setPassengersExited(false);
         ridePending.setDistanceTraveled(0.0);
+        ridePending.setRateBaseFare(120.0);
+        ridePending.setRatePricePerKm(120.0);
         rideRepository.save(ridePending);
 
         // Ride 2: IN_PROGRESS (Active now) - Driver 1
@@ -189,15 +191,17 @@ public class DataInitializer implements CommandLineRunner {
         rideActive.setStartLocation(new Location("Promenada Shopping Center, Novi Sad", 45.2420, 19.8520));
         rideActive.setEndLocation(new Location("Strand Beach, Novi Sad", 45.2429, 19.8424));
         rideActive.setStartTime(LocalDateTime.now().minusMinutes(10));
-        rideActive.setEstimatedCost(320.00);
+        rideActive.setEstimatedCost(372.00);
         rideActive.setDistance(2.1);
-        rideActive.setTotalCost(320.00);
+        rideActive.setTotalCost(372.00);
         rideActive.setPetTransport(false);
         rideActive.setBabyTransport(true);
         rideActive.setRequestedVehicleType(VehicleType.STANDARD);
         rideActive.setPanicPressed(false);
         rideActive.setPaid(false);
         rideActive.setPassengersExited(false);
+        rideActive.setRateBaseFare(120.0);
+        rideActive.setRatePricePerKm(120.0);
         rideActive.setDistanceTraveled(0.5);
         rideActive.setLastTrackedLatitude(45.2450);
         rideActive.setLastTrackedLongitude(19.8515);
@@ -230,8 +234,8 @@ public class DataInitializer implements CommandLineRunner {
         rideFinished.setEndLocation(new Location("Spens, Novi Sad", 45.2465, 19.8480));
         rideFinished.setStartTime(LocalDateTime.now().minusDays(1).minusHours(1));
         rideFinished.setEndTime(LocalDateTime.now().minusDays(1));
-        rideFinished.setTotalCost(280.00);
-        rideFinished.setEstimatedCost(280.00);
+        rideFinished.setTotalCost(300.00);
+        rideFinished.setEstimatedCost(300.00);
         rideFinished.setDistance(1.5);
         rideFinished.setRequestedVehicleType(VehicleType.STANDARD);
         rideFinished.setPanicPressed(false);
@@ -240,6 +244,8 @@ public class DataInitializer implements CommandLineRunner {
         rideFinished.setDistanceTraveled(1.5);
         rideFinished.setPetTransport(false);
         rideFinished.setBabyTransport(false);
+        rideFinished.setRateBaseFare(120.0);
+        rideFinished.setRatePricePerKm(120.0);
         rideRepository.save(rideFinished);
 
         // Ride 4: FINISHED (2 days ago) - Driver 1 with passenger2
@@ -251,8 +257,8 @@ public class DataInitializer implements CommandLineRunner {
         rideFinished2.setEndLocation(new Location("Sajmiste, Novi Sad", 45.2580, 19.8200));
         rideFinished2.setStartTime(LocalDateTime.now().minusDays(2).minusHours(3));
         rideFinished2.setEndTime(LocalDateTime.now().minusDays(2).minusHours(2));
-        rideFinished2.setTotalCost(350.00);
-        rideFinished2.setEstimatedCost(350.00);
+        rideFinished2.setTotalCost(456.00);
+        rideFinished2.setEstimatedCost(456.00);
         rideFinished2.setDistance(2.8);
         rideFinished2.setRequestedVehicleType(VehicleType.STANDARD);
         rideFinished2.setPanicPressed(false);
@@ -261,6 +267,8 @@ public class DataInitializer implements CommandLineRunner {
         rideFinished2.setDistanceTraveled(2.8);
         rideFinished2.setPetTransport(false);
         rideFinished2.setBabyTransport(false);
+        rideFinished2.setRateBaseFare(120.0);
+        rideFinished2.setRatePricePerKm(120.0);
         rideRepository.save(rideFinished2);
 
         // Ride 5: FINISHED (3 days ago) - Driver 2 with passenger
@@ -272,8 +280,8 @@ public class DataInitializer implements CommandLineRunner {
         rideFinished3.setEndLocation(new Location("Centar, Novi Sad", 45.2500, 19.8400));
         rideFinished3.setStartTime(LocalDateTime.now().minusDays(3).minusHours(2));
         rideFinished3.setEndTime(LocalDateTime.now().minusDays(3).minusHours(1));
-        rideFinished3.setTotalCost(520.00);
-        rideFinished3.setEstimatedCost(520.00);
+        rideFinished3.setTotalCost(1200.00);
+        rideFinished3.setEstimatedCost(1200.00);
         rideFinished3.setDistance(8.5);
         rideFinished3.setRequestedVehicleType(VehicleType.VAN);
         rideFinished3.setPanicPressed(false);
@@ -282,6 +290,8 @@ public class DataInitializer implements CommandLineRunner {
         rideFinished3.setDistanceTraveled(8.5);
         rideFinished3.setPetTransport(true);
         rideFinished3.setBabyTransport(false);
+        rideFinished3.setRateBaseFare(180.0);
+        rideFinished3.setRatePricePerKm(120.0);
         rideRepository.save(rideFinished3);
 
         // Ride 6: SCHEDULED (Tomorrow) - Driver 2 with passenger3
@@ -294,9 +304,9 @@ public class DataInitializer implements CommandLineRunner {
         rideScheduled.setScheduledTime(LocalDateTime.now().plusDays(1).withHour(14).withMinute(0));
         rideScheduled.setStartTime(rideScheduled.getScheduledTime());
         rideScheduled.setEndTime(rideScheduled.getStartTime().plusHours(1));
-        rideScheduled.setEstimatedCost(2500.00);
+        rideScheduled.setEstimatedCost(10380.00);
         rideScheduled.setDistance(85.0);
-        rideScheduled.setTotalCost(2500.00);
+        rideScheduled.setTotalCost(10380.00);
         rideScheduled.setPetTransport(false);
         rideScheduled.setBabyTransport(false);
         rideScheduled.setRequestedVehicleType(VehicleType.VAN);
@@ -304,6 +314,8 @@ public class DataInitializer implements CommandLineRunner {
         rideScheduled.setPaid(false);
         rideScheduled.setPassengersExited(false);
         rideScheduled.setDistanceTraveled(0.0);
+        rideScheduled.setRateBaseFare(180.0);
+        rideScheduled.setRatePricePerKm(120.0);
         rideRepository.save(rideScheduled);
 
         // Ride 7: CANCELLED (Yesterday) - Driver 1 with passenger2
@@ -314,7 +326,7 @@ public class DataInitializer implements CommandLineRunner {
         rideCancelled.setStartLocation(new Location("Liman 4, Novi Sad", 45.2350, 19.8250));
         rideCancelled.setEndLocation(new Location("Telep, Novi Sad", 45.2300, 19.8000));
         rideCancelled.setScheduledTime(LocalDateTime.now().minusDays(1).withHour(10).withMinute(0));
-        rideCancelled.setEstimatedCost(200.00);
+        rideCancelled.setEstimatedCost(480.00);
         rideCancelled.setDistance(3.0);
         rideCancelled.setRejectionReason("Passenger cancelled");
         rideCancelled.setRequestedVehicleType(VehicleType.STANDARD);
@@ -324,6 +336,8 @@ public class DataInitializer implements CommandLineRunner {
         rideCancelled.setDistanceTraveled(0.0);
         rideCancelled.setPetTransport(false);
         rideCancelled.setBabyTransport(false);
+        rideCancelled.setRateBaseFare(120.0);
+        rideCancelled.setRatePricePerKm(120.0);
         rideRepository.save(rideCancelled);
 
         // Ride 8: FINISHED with multiple passengers (4 days ago)
@@ -338,8 +352,8 @@ public class DataInitializer implements CommandLineRunner {
         rideMultiPassenger.setEndLocation(new Location("Centar, Novi Sad", 45.2550, 19.8450));
         rideMultiPassenger.setStartTime(LocalDateTime.now().minusDays(4).withHour(2).withMinute(30));
         rideMultiPassenger.setEndTime(LocalDateTime.now().minusDays(4).withHour(2).withMinute(50));
-        rideMultiPassenger.setTotalCost(180.00);
-        rideMultiPassenger.setEstimatedCost(180.00);
+        rideMultiPassenger.setTotalCost(264.00);
+        rideMultiPassenger.setEstimatedCost(264.00);
         rideMultiPassenger.setDistance(1.2);
         rideMultiPassenger.setRequestedVehicleType(VehicleType.STANDARD);
         rideMultiPassenger.setPanicPressed(false);
@@ -348,6 +362,8 @@ public class DataInitializer implements CommandLineRunner {
         rideMultiPassenger.setDistanceTraveled(1.2);
         rideMultiPassenger.setPetTransport(false);
         rideMultiPassenger.setBabyTransport(false);
+        rideMultiPassenger.setRateBaseFare(120.0);
+        rideMultiPassenger.setRatePricePerKm(120.0);
         rideRepository.save(rideMultiPassenger);
 
         // Ride 9: FINISHED with PANIC (5 days ago) - to show panic history
@@ -359,8 +375,8 @@ public class DataInitializer implements CommandLineRunner {
         ridePanicHistory.setEndLocation(new Location("Detelinara, Novi Sad", 45.2600, 19.8150));
         ridePanicHistory.setStartTime(LocalDateTime.now().minusDays(5).minusHours(4));
         ridePanicHistory.setEndTime(LocalDateTime.now().minusDays(5).minusHours(3));
-        ridePanicHistory.setTotalCost(320.00);
-        ridePanicHistory.setEstimatedCost(320.00);
+        ridePanicHistory.setTotalCost(600.00);
+        ridePanicHistory.setEstimatedCost(600.00);
         ridePanicHistory.setDistance(3.5);
         ridePanicHistory.setRequestedVehicleType(VehicleType.VAN);
         ridePanicHistory.setPanicPressed(true);
@@ -370,6 +386,8 @@ public class DataInitializer implements CommandLineRunner {
         ridePanicHistory.setDistanceTraveled(3.5);
         ridePanicHistory.setPetTransport(false);
         ridePanicHistory.setBabyTransport(true);
+        ridePanicHistory.setRateBaseFare(180.0);
+        ridePanicHistory.setRatePricePerKm(120.0);
         rideRepository.save(ridePanicHistory);
 
         // ==========================================

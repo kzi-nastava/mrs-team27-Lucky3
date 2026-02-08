@@ -19,5 +19,9 @@ public class VehiclePrice {
     @Column(unique = true, nullable = false)
     private VehicleType vehicleType;
 
+    @Column(nullable = false)
+    private Double baseFare;
+
+    @Column(nullable = false)
     private Double pricePerKm;
 }
