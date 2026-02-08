@@ -974,7 +974,8 @@ public class RideServiceImpl implements RideService {
     }
 
     /**
-     * Sends review request emails to all passengers of a finished ride.
+     * Sends review request email to the ride creator (first passenger) only.
+     * Other passengers receive a basic ride completion email via NotificationService.
      * Only sends to passengers whose email does not end with '@example.com'.
      */
     private void sendReviewRequestEmails(Ride ride) {
@@ -988,36 +989,36 @@ public class RideServiceImpl implements RideService {
         
         Long driverId = ride.getDriver().getId();
         
-        for (User passenger : ride.getPassengers()) {
-            String email = passenger.getEmail();
+        // Get the first passenger (ride creator) to send review request
+        User creator = ride.getPassengers().iterator().next();
+        String email = creator.getEmail();
+        
+        // Skip test emails ending with @example.com
+        if (email == null || email.toLowerCase().endsWith("@example.com")) {
+            return;
+        }
+        
+        try {
+            // Generate a JWT token valid for 3 days
+            String reviewToken = reviewTokenUtils.generateReviewToken(
+                ride.getId(), 
+                creator.getId(), 
+                driverId
+            );
             
-            // Skip test emails ending with @example.com
-            if (email == null || email.toLowerCase().endsWith("@example.com")) {
-                continue;
+            // Get passenger name for personalization
+            String passengerName = creator.getName();
+            if (passengerName == null || passengerName.trim().isEmpty()) {
+                passengerName = "Valued Customer";
             }
             
-            try {
-                // Generate a JWT token valid for 3 days
-                String reviewToken = reviewTokenUtils.generateReviewToken(
-                    ride.getId(), 
-                    passenger.getId(), 
-                    driverId
-                );
-                
-                // Get passenger name for personalization
-                String passengerName = passenger.getName();
-                if (passengerName == null || passengerName.trim().isEmpty()) {
-                    passengerName = "Valued Customer";
-                }
-                
-                // Send the review request email
-                emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
-                
-                System.out.println("Sent review request email to: " + email + " for ride: " + ride.getId());
-            } catch (Exception e) {
-                // Log error but don't fail the ride completion
-                System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
-            }
+            // Send the review request email only to the creator
+            emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
+            
+            System.out.println("Sent review request email to creator: " + email + " for ride: " + ride.getId());
+        } catch (Exception e) {
+            // Log error but don't fail the ride completion
+            System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
         }
     }
 

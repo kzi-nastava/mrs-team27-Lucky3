@@ -72,6 +72,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   private locationSubscription: Subscription | null = null;
   private locationUpdates$ = new Subject<{ ride: RideResponse; location: MapPoint }>();
   private routeUpdateSubscription: Subscription | null = null;
+  private rideUpdateSubscription: Subscription | null = null;
+  private currentRideId: number | null = null;
   
   stats = {
     earnings: 0,
@@ -143,6 +145,9 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
     if (this.routeUpdateSubscription) {
         this.routeUpdateSubscription.unsubscribe();
+    }
+    if (this.rideUpdateSubscription) {
+        this.rideUpdateSubscription.unsubscribe();
     }
     this.destroy$.next();
     this.destroy$.complete();
@@ -354,6 +359,8 @@ export class DashboardPage implements OnInit, OnDestroy {
           const activeRide = relevant.find(r => r.id === mapped[0]?.id);
           if (activeRide) {
              this.fetchRoutesForRide(activeRide);
+             // Subscribe to WebSocket updates for this ride
+             this.subscribeToRideUpdates(activeRide.id!);
           } else {
              this.rideMapData = null;
              this.routePolyline = null;
@@ -361,6 +368,8 @@ export class DashboardPage implements OnInit, OnDestroy {
              this.remainingRoute = null;
              this.completedStopIndexes = new Set();
              this.isNextRideInProgress = false;
+             // No active ride, cleanup subscription
+             this.unsubscribeFromRideUpdates();
           }
 
           this.cdr.detectChanges();
@@ -740,5 +749,73 @@ export class DashboardPage implements OnInit, OnDestroy {
       if (raw) {
           this.fetchRoutesForRide(raw);
       }
+  }
+
+  /**
+   * Subscribe to WebSocket updates for a specific ride.
+   * Used to get real-time updates when passenger cancels, ride ends, etc.
+   */
+  private subscribeToRideUpdates(rideId: number): void {
+    // Don't re-subscribe if already subscribed to this ride
+    if (this.currentRideId === rideId && this.rideUpdateSubscription) {
+      return;
+    }
+
+    // Cleanup previous subscription
+    this.unsubscribeFromRideUpdates();
+
+    this.currentRideId = rideId;
+    this.rideUpdateSubscription = this.socketService.getRideUpdates(rideId).subscribe({
+      next: (rideUpdate) => {
+        console.log('Dashboard received ride update via WebSocket:', rideUpdate);
+        
+        const newStatus = rideUpdate.status;
+        if (newStatus) {
+          // Handle terminal states - reload dashboard data
+          if (newStatus === 'FINISHED' || newStatus === 'CANCELLED' || 
+              newStatus === 'CANCELLED_BY_DRIVER' || newStatus === 'CANCELLED_BY_PASSENGER') {
+            
+            // Show toast notification
+            if (newStatus.includes('CANCELLED')) {
+              this.showToastMessage('Ride has been cancelled', 'warning');
+            } else {
+              this.showToastMessage('Ride has been completed', 'success');
+            }
+
+            // Reload dashboard data
+            this.loadFutureRides();
+            this.loadDriverStatus();
+            this.loadDriverStats();
+            
+            // Cleanup subscription
+            this.unsubscribeFromRideUpdates();
+          }
+        }
+        
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Dashboard WebSocket error for ride updates:', err)
+    });
+  }
+
+  /**
+   * Cleanup WebSocket subscription for ride updates
+   */
+  private unsubscribeFromRideUpdates(): void {
+    if (this.rideUpdateSubscription) {
+      this.rideUpdateSubscription.unsubscribe();
+      this.rideUpdateSubscription = null;
+    }
+    this.currentRideId = null;
+  }
+
+  /**
+   * Show a toast notification
+   */
+  private showToastMessage(message: string, type: 'success' | 'error' | 'warning' | 'info'): void {
+    this.toastMessage = message;
+    this.toastType = type;
+    this.showToast = true;
+    this.cdr.detectChanges();
   }
 }

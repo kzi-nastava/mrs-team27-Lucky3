@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Implementation of the Notification Subsystem.
@@ -486,25 +487,30 @@ public class NotificationServiceImpl implements NotificationService {
     /**
      * Sends email asynchronously so WebSocket push is not delayed.
      */
-    @Async
+    /**
+     * Sends email asynchronously using CompletableFuture to avoid blocking the main thread.
+     * This ensures email timeouts don't affect the API response.
+     */
     protected void sendEmailAsync(String to, NotificationType type,
                                   String bodyText, Long relatedEntityId) {
-        try {
-            String subject;
-            switch (type) {
-                case RIDE_INVITE:
-                    subject = "Lucky3 — You've been invited to a ride!";
-                    break;
-                case RIDE_FINISHED:
-                    subject = "Lucky3 — Your ride summary";
-                    break;
-                default:
-                    subject = "Lucky3 Notification";
+        CompletableFuture.runAsync(() -> {
+            try {
+                String subject;
+                switch (type) {
+                    case RIDE_INVITE:
+                        subject = "Lucky3 — You've been invited to a ride!";
+                        break;
+                    case RIDE_FINISHED:
+                        subject = "Lucky3 — Your ride summary";
+                        break;
+                    default:
+                        subject = "Lucky3 Notification";
+                }
+                emailService.sendSimpleMessage(to, subject, bodyText);
+            } catch (Exception e) {
+                log.error("Async email to {} failed: {}", to, e.getMessage());
             }
-            emailService.sendSimpleMessage(to, subject, bodyText);
-        } catch (Exception e) {
-            log.error("Async email to {} failed: {}", to, e.getMessage());
-        }
+        });
     }
 
     /**
