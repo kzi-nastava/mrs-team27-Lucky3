@@ -134,7 +134,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="0.9"
             android:orientation="vertical"
             android:gravity="end">
             <TextView
@@ -165,6 +165,18 @@
                     android:textSize="10sp"/>
             </LinearLayout>
         </LinearLayout>
+        
+        <!-- Price -->
+        <TextView
+            android:id="@+id/price"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.9"
+            tools:text="250.00 RSD"
+            android:textColor="@color/yellow_500"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:gravity="end"/>
 
     </LinearLayout>
 

@@ -13,6 +13,7 @@ import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.*;
 import com.team27.lucky3.backend.service.EmailService;
 import com.team27.lucky3.backend.service.NotificationService;
+import com.team27.lucky3.backend.service.PanicService;
 import com.team27.lucky3.backend.service.RideService;
 import com.team27.lucky3.backend.util.ReviewTokenUtils;
 import jakarta.persistence.EntityNotFoundException;
@@ -52,6 +53,8 @@ public class RideServiceImpl implements RideService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final ReviewTokenUtils reviewTokenUtils;
+    private final PanicService panicService;
+    private final com.team27.lucky3.backend.service.socket.VehicleSocketService vehicleSocketService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -313,6 +316,24 @@ public class RideServiceImpl implements RideService {
         }
 
         Ride savedRide = rideRepository.save(ride);
+
+        // ── Notification integration ──
+        if (savedRide.getDriver() != null && savedRide.getStatus() != RideStatus.REJECTED) {
+            notificationService.sendDriverAssignmentNotification(savedRide);
+        }
+
+        // Notify passengers that their ride has been created
+        notificationService.sendRideCreatedNotification(savedRide);
+
+        // Send linked-passenger invites if additional emails were provided
+        if (request.getPassengerEmails() != null && !request.getPassengerEmails().isEmpty()) {
+            for (String email : request.getPassengerEmails()) {
+                userRepository.findByEmail(email).ifPresent(invitee ->
+                        notificationService.sendLinkedPassengerInvite(savedRide, invitee)
+                );
+            }
+        }
+
         return mapToResponse(savedRide);
     }
 
@@ -422,6 +443,11 @@ public class RideServiceImpl implements RideService {
         ride.setDriver(driver);
         ride.setStatus(RideStatus.ACCEPTED);
         Ride savedRide = rideRepository.save(ride);
+
+        // Notify all passengers that the ride has been accepted
+        notificationService.sendRideStatusNotification(savedRide,
+                "Your ride has been accepted by driver " + driver.getName() + " " + driver.getSurname() + ".");
+
         return mapToResponse(savedRide);
     }
 
@@ -446,6 +472,11 @@ public class RideServiceImpl implements RideService {
         ride.setStartTime(LocalDateTime.now());
         ride.setStatus(RideStatus.IN_PROGRESS); // or ACTIVE based on enum
         Ride savedRide = rideRepository.save(ride);
+
+        // Notify all passengers that the ride has started
+        notificationService.sendRideStatusNotification(savedRide,
+                "Your ride has started. Driver is on the way!");
+
         return mapToResponse(savedRide);
     }
 
@@ -567,6 +598,9 @@ public class RideServiceImpl implements RideService {
                 vehicleRepository.save(vehicle);
             }
         }
+
+        // Notify the other party about the cancellation
+        notificationService.sendRideCancelledNotification(savedRide, currentUser);
 
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
@@ -733,6 +767,27 @@ public class RideServiceImpl implements RideService {
             res.setRoutePoints(routePoints);
         }
 
+        if (ride.getInconsistencyReports() != null) {
+            res.setInconsistencyReports(ride.getInconsistencyReports().stream()
+                    .map(ir -> new InconsistencyResponse(ir.getDescription(), ir.getTimestamp()))
+                    .collect(Collectors.toList()));
+        }
+
+        if (ride.getReviews() != null) {
+            List<ReviewResponse> reviews = ride.getReviews().stream()
+                    .map(r -> new ReviewResponse(
+                            r.getId(),
+                            r.getRide().getId(),
+                            r.getPassenger() != null ? r.getPassenger().getId() : null,
+                            r.getDriverRating(),
+                            r.getVehicleRating(),
+                            r.getComment(),
+                            r.getTimestamp()
+                    ))
+                    .collect(Collectors.toList());
+            res.setReviews(reviews);
+        }
+
         return res;
     }
 
@@ -867,6 +922,15 @@ public class RideServiceImpl implements RideService {
         // Save Ride
         Ride savedRide = rideRepository.save(ride);
 
+        // Broadcast panic alert to admins via WebSocket (existing channel)
+        panicService.broadcastPanicAlert(panic);
+
+        // Persist PANIC notifications for ALL admins (notification history + CRITICAL priority)
+        notificationService.sendPanicNotification(savedRide, currentUser, request.getReason());
+
+        // Trigger immediate vehicle broadcast so admin map updates in real-time
+        vehicleSocketService.notifyVehicleUpdate();
+
         return mapToResponse(savedRide);
     }
 
@@ -940,11 +1004,13 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public RideResponse getRideDetails(Long id) {
         return mapToResponse(findById(id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<RideResponse> getRidesHistory(Pageable pageable, LocalDateTime fromDate, LocalDateTime toDate, Long driverId, Long passengerId, String status) {
         Specification<Ride> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -1225,5 +1291,52 @@ public class RideServiceImpl implements RideService {
                         0.0
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<RideResponse> getAllActiveRides(Pageable pageable, String search, String status, String vehicleType) {
+        // Active statuses: PENDING, ACCEPTED, SCHEDULED, IN_PROGRESS, ACTIVE
+        List<RideStatus> activeStatuses = List.of(
+                RideStatus.PENDING, RideStatus.ACCEPTED, RideStatus.SCHEDULED, 
+                RideStatus.IN_PROGRESS, RideStatus.ACTIVE
+        );
+
+        Specification<Ride> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Filter by active statuses
+            if (status != null && !status.isEmpty()) {
+                // If specific status is provided, use it
+                predicates.add(cb.equal(root.get("status"), RideStatus.valueOf(status)));
+            } else {
+                // Otherwise, show all active statuses
+                predicates.add(root.get("status").in(activeStatuses));
+            }
+
+            // Search by driver name (first or last name)
+            if (search != null && !search.trim().isEmpty()) {
+                String searchLower = "%" + search.trim().toLowerCase() + "%";
+                Join<Ride, User> driver = root.join("driver", jakarta.persistence.criteria.JoinType.LEFT);
+                Predicate namePredicate = cb.or(
+                        cb.like(cb.lower(driver.get("name")), searchLower),
+                        cb.like(cb.lower(driver.get("surname")), searchLower)
+                );
+                predicates.add(namePredicate);
+            }
+
+            // Filter by vehicle type
+            if (vehicleType != null && !vehicleType.isEmpty()) {
+                predicates.add(cb.equal(root.get("requestedVehicleType"), VehicleType.valueOf(vehicleType)));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Ride> ridesPage = rideRepository.findAll(spec, pageable);
+        List<RideResponse> dtos = ridesPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, ridesPage.getTotalElements());
     }
 }

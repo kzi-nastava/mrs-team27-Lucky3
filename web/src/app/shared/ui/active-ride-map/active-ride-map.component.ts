@@ -47,6 +47,7 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   private startMarker: L.Marker | null = null;
   private stopMarkers: L.Marker[] = [];
   private endMarker: L.Marker | null = null;
+  private initialBoundsSet: boolean = false; // Only fit bounds once on initial load
 
   private resizeObserver: ResizeObserver | null = null;
   private invalidateQueued = false;
@@ -117,6 +118,14 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    // If panic state changes, re-sync all routes to update colors
+    if (changes['panicActivated']) {
+      this.syncApproach();
+      this.syncRemainingRoute();
+      this.syncRide();
+      this.syncDriver();
+    }
+    
     // Sync approach and remaining routes first (these affect how the main route is rendered)
     if (changes['approachRoute']) {
       this.syncApproach();
@@ -131,7 +140,7 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
       this.syncRide();
     }
     
-    if (changes['driverLocation'] || changes['panicActivated']) this.syncDriver();
+    if (changes['driverLocation']) this.syncDriver();
     
     // Always ensure approach line is on top after any sync
     if (this.approachLine) {
@@ -213,8 +222,9 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
     // For IN-PROGRESS rides: Don't show the full route - the approach (blue) + remaining (yellow) routes handle it
     if (!this.isRideInProgress) {
       // Yellow dotted line for the full route (only for pending rides)
+      // Use red if panic is active
       this.routeLine = L.polyline(polyPoints, {
-        color: '#eab308',
+        color: this.panicActivated ? '#ef4444' : '#eab308',
         weight: 4,
         opacity: 0.9,
         dashArray: '12, 8',
@@ -239,8 +249,12 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
 
     this.endMarker = L.marker(coarsePoints[coarsePoints.length - 1], { icon: this.endIcon, zIndexOffset: 900 }).addTo(this.map);
 
-    const bounds = L.latLngBounds(polyPoints as any);
-    this.map.fitBounds(bounds, { padding: [40, 40] });
+    // Only fit bounds once on initial load to prevent map zoom reset on every update
+    if (!this.initialBoundsSet) {
+      const bounds = L.latLngBounds(polyPoints as any);
+      this.map.fitBounds(bounds, { padding: [40, 40] });
+      this.initialBoundsSet = true;
+    }
   }
 
   private syncApproach(): void {
@@ -251,9 +265,9 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
     if (!this.approachRoute || this.approachRoute.length < 2) return;
 
     const latlngs = this.approachRoute.map(p => [p.latitude, p.longitude] as L.LatLngExpression);
-    // Blue solid line from vehicle to next stop
+    // Blue solid line from vehicle to next stop (red if panic is active)
     this.approachLine = L.polyline(latlngs, {
-      color: '#3b82f6', // blue-500
+      color: this.panicActivated ? '#ef4444' : '#3b82f6',
       weight: 5,
       opacity: 0.95,
       lineCap: 'round',
@@ -270,9 +284,9 @@ export class ActiveRideMapComponent implements AfterViewInit, OnChanges, OnDestr
     if (!this.remainingRoute || this.remainingRoute.length < 2) return;
 
     const latlngs = this.remainingRoute.map(p => [p.latitude, p.longitude] as L.LatLngExpression);
-    // Yellow dotted line for remaining route
+    // Yellow dotted line for remaining route (red if panic is active)
     this.remainingLine = L.polyline(latlngs, {
-      color: '#eab308', // yellow-500
+      color: this.panicActivated ? '#ef4444' : '#eab308',
       weight: 4,
       opacity: 0.9,
       dashArray: '12, 8',

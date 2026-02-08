@@ -61,4 +61,20 @@ public interface RideRepository extends JpaRepository<Ride, Long>, JpaSpecificat
     // Find all rides that are currently in progress (for cost tracking)
     @Query("SELECT r FROM Ride r WHERE r.status IN ('IN_PROGRESS', 'ACTIVE') AND r.driver IS NOT NULL")
     List<Ride> findAllInProgressRides();
+
+    // Count all active rides (PENDING, ACCEPTED, SCHEDULED, IN_PROGRESS, ACTIVE)
+    @Query("SELECT COUNT(r) FROM Ride r WHERE r.status IN ('PENDING', 'ACCEPTED', 'SCHEDULED', 'IN_PROGRESS', 'ACTIVE')")
+    Integer countActiveRides();
+
+    // Get all rides with active statuses for passenger counting
+    @Query("SELECT r FROM Ride r WHERE r.status IN ('IN_PROGRESS', 'ACTIVE')")
+    List<Ride> findAllActiveRidesForPassengerCount();
+
+    // Find rides scheduled to start within a time window (for reminder notifications)
+    @Query("SELECT r FROM Ride r WHERE r.scheduledTime BETWEEN :start AND :end AND r.status IN :statuses")
+    List<Ride> findByScheduledTimeBetweenAndStatusIn(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("statuses") List<RideStatus> statuses
+    );
 }

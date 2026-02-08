@@ -39,28 +39,22 @@
         </LinearLayout>
 
         <!-- Map Card -->
-        <LinearLayout
+        <androidx.cardview.widget.CardView
             android:id="@+id/map_card"
             android:layout_width="match_parent"
             android:layout_height="200dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/gray_900"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@android:drawable/ic_menu_mapmode"
-                app:tint="@color/gray_400" />
+            <org.osmdroid.views.MapView
+                android:id="@+id/map_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#1A1A2E" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Map View"
-                android:textColor="@color/gray_400"
-                android:layout_marginTop="8dp"/>
-        </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
         <!-- Ride Summary Card -->
         <LinearLayout

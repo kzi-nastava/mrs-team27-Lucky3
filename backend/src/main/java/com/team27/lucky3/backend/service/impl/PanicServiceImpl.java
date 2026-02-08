@@ -9,6 +9,7 @@ import com.team27.lucky3.backend.entity.Vehicle;
 import com.team27.lucky3.backend.repository.PanicRepository;
 import com.team27.lucky3.backend.repository.VehicleRepository;
 import com.team27.lucky3.backend.service.PanicService;
+import com.team27.lucky3.backend.service.socket.PanicSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,7 @@ public class PanicServiceImpl implements PanicService {
 
     private final PanicRepository panicRepository;
     private final VehicleRepository vehicleRepository;
+    private final PanicSocketService panicSocketService;
 
     @Override
     @Transactional(readOnly = true)
@@ -99,5 +101,11 @@ public class PanicServiceImpl implements PanicService {
             res.setPassengers(passengers);
         }
         return res;
+    }
+
+    @Override
+    public void broadcastPanicAlert(Panic panic) {
+        PanicResponse response = mapToResponse(panic);
+        panicSocketService.broadcastPanicAlert(response);
     }
 }

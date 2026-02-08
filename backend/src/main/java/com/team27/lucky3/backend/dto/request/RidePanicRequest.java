@@ -1,6 +1,6 @@
 package com.team27.lucky3.backend.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
+
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,8 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RidePanicRequest {
-    @NotBlank(message = "Panic reason is required")
     @Size(max = 500, message = "Reason cannot exceed 500 characters")
-    private String reason;
+    private String reason; // Optional - can be null or empty
 }
 

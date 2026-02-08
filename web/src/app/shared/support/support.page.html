@@ -1,0 +1,111 @@
+<div class="h-[calc(100vh-4rem)] bg-black text-white flex flex-col">
+  <!-- Header -->
+  <div class="flex-shrink-0 border-b border-gray-800 px-6 py-4">
+    <div class="max-w-3xl mx-auto">
+      <p class="text-gray-400 text-sm">SupportChat</p>
+      <h1 class="text-2xl font-bold mt-1">Support Chat</h1>
+      <p class="text-gray-400 text-sm mt-1">We typically respond within 5 minutes</p>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex-1 flex items-center justify-center">
+    <div class="text-center">
+      <div class="animate-spin w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+      <p class="text-gray-400">Loading support chat...</p>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !isLoading" class="flex-1 flex items-center justify-center">
+    <div class="text-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto mb-4 text-red-500" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="m15 9-6 6"/>
+        <path d="m9 9 6 6"/>
+      </svg>
+      <p class="text-red-400 mb-4">{{ error }}</p>
+      <button (click)="loadChat()" class="px-4 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-600 transition-colors">
+        Try Again
+      </button>
+    </div>
+  </div>
+
+  <!-- Chat Container -->
+  <div *ngIf="!isLoading && !error" #messagesContainer class="flex-1 overflow-y-auto px-6 py-4">
+    <div class="max-w-3xl mx-auto space-y-4">
+      <!-- Empty State -->
+      <div *ngIf="messages.length === 0" class="text-center py-8">
+        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto mb-4 text-gray-500" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <p class="text-gray-400">No messages yet. Start a conversation with our support team!</p>
+      </div>
+
+      <!-- Messages -->
+      <ng-container *ngFor="let msg of messages">
+        <!-- User Message (Right aligned, yellow background) -->
+        <div *ngIf="msg.sender === 'user'" class="flex justify-end">
+          <div class="max-w-[80%]">
+            <div class="flex items-center justify-end gap-2 mb-1">
+              <span class="text-sm font-medium text-yellow-500">{{ msg.senderName }}</span>
+              <span class="text-xs text-gray-500">{{ formatTime(msg.timestamp) }}</span>
+            </div>
+            <div class="bg-yellow-500 text-black rounded-2xl rounded-tr-md px-4 py-3">
+              <p class="text-sm">{{ msg.message }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Support Message (Left aligned, dark background) -->
+        <div *ngIf="msg.sender === 'support'" class="flex justify-start">
+          <div class="max-w-[80%]">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-sm font-medium text-gray-300">{{ msg.senderName }}</span>
+              <span class="text-xs text-gray-500">{{ formatTime(msg.timestamp) }}</span>
+            </div>
+            <div class="bg-gray-800 text-white rounded-2xl rounded-tl-md px-4 py-3">
+              <p class="text-sm">{{ msg.message }}</p>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Message Input -->
+  <div *ngIf="!isLoading && !error" class="flex-shrink-0 border-t border-gray-800 px-6 py-4 bg-black">
+    <div class="max-w-3xl mx-auto">
+      <div class="flex items-center gap-3 bg-gray-900 rounded-2xl px-4 py-3 border border-gray-800">
+        <!-- Attachment Button -->
+        <button class="text-gray-400 hover:text-gray-300 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+          </svg>
+        </button>
+        
+        <!-- Input -->
+        <input
+          type="text"
+          [(ngModel)]="newMessage"
+          (keydown)="onKeyDown($event)"
+          placeholder="Type your message..."
+          class="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-sm"
+        />
+        
+        <!-- Send Button -->
+        <button 
+          (click)="sendMessage()"
+          [disabled]="!newMessage.trim()"
+          class="w-10 h-10 flex items-center justify-center bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-black rounded-full transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m22 2-7 20-4-9-9-4Z"/>
+            <path d="M22 2 11 13"/>
+          </svg>
+        </button>
+      </div>
+      <p class="text-xs text-gray-500 mt-2 text-center">Press Enter to send • Shift + Enter for new line</p>
+    </div>
+  </div>
+</div>

@@ -10,8 +10,9 @@ import { RideService } from '../../../infrastructure/rest/ride.service';
 import { DriverService } from '../../../infrastructure/rest/driver.service';
 import { ToastComponent } from '../../../shared/ui/toast/toast.component';
 import { CreateRideRequest } from '../../../infrastructure/rest/model/create-ride.model';
-import { Subject, takeUntil, timer } from 'rxjs';
+import { Subject, Subscription, takeUntil, timer, debounceTime, switchMap, of, Observable, catchError } from 'rxjs';
 import { RideResponse } from '../../../infrastructure/rest/model/ride-response.model';
+import { SocketService } from '../../../infrastructure/rest/socket.service';
 
 type DashboardRide = {
   id: number;
@@ -68,6 +69,9 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
   private driverId: number | null = null;
+  private locationSubscription: Subscription | null = null;
+  private locationUpdates$ = new Subject<{ ride: RideResponse; location: MapPoint }>();
+  private routeUpdateSubscription: Subscription | null = null;
   
   stats = {
     earnings: 0,
@@ -92,7 +96,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     private authService: AuthService,
     private rideService: RideService,
     private driverService: DriverService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private socketService: SocketService
   ) {}
 
   ngOnInit(): void {
@@ -127,9 +132,18 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     // Upcoming rides (backend)
     this.loadFutureRides();
+    
+    // Setup debounced route updates when vehicle location changes
+    this.setupRouteUpdates();
   }
 
   ngOnDestroy(): void {
+    if (this.locationSubscription) {
+        this.locationSubscription.unsubscribe();
+    }
+    if (this.routeUpdateSubscription) {
+        this.routeUpdateSubscription.unsubscribe();
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -589,6 +603,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   private fetchDriverLocation(): void {
+    if (this.locationSubscription) return;
     if (!this.driverId) return;
 
     this.vehicleService
@@ -598,12 +613,8 @@ export class DashboardPage implements OnInit, OnDestroy {
       next: (vehicles) => {
         const mine = vehicles.find(v => v.driverId === this.driverId);
         if (mine) {
-           this.driverLocation = { latitude: mine.latitude, longitude: mine.longitude };
-           
-           if (this.nextRide && !this.approachRoute) {
-               this.reloadRoutesIfMissing();
-           }
-           this.cdr.detectChanges();
+           this.subscribeToVehicle(mine.id);
+           this.updateLocation(mine);
         } else {
            this.driverLocation = null;
            this.cdr.detectChanges();
@@ -615,8 +626,112 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
+  private subscribeToVehicle(vehicleId: number): void {
+      if (this.locationSubscription) return;
+      this.locationSubscription = this.socketService.getVehicleLocationUpdates(vehicleId).subscribe({
+          next: (loc) => this.updateLocation(loc),
+          error: (err) => console.error(err)
+      });
+  }
+
+  private updateLocation(loc: any): void {
+       const newLocation = { latitude: loc.latitude, longitude: loc.longitude };
+       const locationChanged = !this.driverLocation || 
+         this.driverLocation.latitude !== newLocation.latitude || 
+         this.driverLocation.longitude !== newLocation.longitude;
+       
+       this.driverLocation = newLocation;
+       
+       // Emit to subject for debounced route recalculation
+       if (locationChanged && this.nextRide) {
+           const activeId = this.futureRides[0]?.id;
+           const raw = this.rawRides.find(r => r.id === activeId);
+           if (raw) {
+               this.locationUpdates$.next({ ride: raw, location: newLocation });
+           }
+       }
+       
+       this.cdr.detectChanges();
+  }
+
   // Cache of raw ride objects
   private rawRides: RideResponse[] = [];
+
+  private setupRouteUpdates(): void {
+      this.routeUpdateSubscription = this.locationUpdates$.pipe(
+          debounceTime(2000), // Wait 2 seconds after last location update before recalculating
+          switchMap(data => {
+              const ride = data.ride;
+              const loc = data.location;
+              
+              // For pending/scheduled rides: calculate route to pickup
+              // For in-progress rides: calculate route to next stop or destination
+              return this.calculateApproachRouteObservable(ride, loc);
+          })
+      ).subscribe((routePoints) => {
+          if (routePoints) {
+              this.approachRoute = routePoints;
+              this.cdr.detectChanges();
+          }
+      });
+  }
+
+  private calculateApproachRouteObservable(ride: RideResponse, vehicleLoc: MapPoint): Observable<MapPoint[] | null> {
+      if (ride.status === 'FINISHED' || ride.status === 'CANCELLED' || 
+          ride.status === 'CANCELLED_BY_DRIVER' || ride.status === 'CANCELLED_BY_PASSENGER') {
+          return of(null);
+      }
+      
+      const stops = ride.stops ?? [];
+      const end = ride.destination ?? ride.endLocation;
+      let nextDestination: { address: string; latitude: number; longitude: number } | null = null;
+      
+      if (ride.status === 'IN_PROGRESS') {
+          // Find next uncompleted stop, or end if all stops completed
+          let nextStopIndex = -1;
+          for (let i = 0; i < stops.length; i++) {
+              if (!this.completedStopIndexes.has(i)) {
+                  nextStopIndex = i;
+                  break;
+              }
+          }
+          
+          if (nextStopIndex >= 0) {
+              nextDestination = stops[nextStopIndex];
+          } else if (end) {
+              nextDestination = end;
+          }
+      } else {
+          // For pending/scheduled rides, show route to pickup
+          const pickup = ride.departure ?? ride.start ?? ride.startLocation;
+          nextDestination = pickup ?? null;
+      }
+      
+      if (!nextDestination) {
+          return of(null);
+      }
+      
+      const req: CreateRideRequest = {
+          start: { address: 'Current Location', latitude: vehicleLoc.latitude, longitude: vehicleLoc.longitude },
+          destination: nextDestination,
+          stops: [],
+          passengerEmails: [],
+          scheduledTime: null,
+          requirements: { vehicleType: 'STANDARD', babyTransport: false, petTransport: false }
+      };
+      
+      return this.rideService.estimateRide(req).pipe(
+          catchError(() => of(null)),
+          switchMap(res => {
+              if (res && res.routePoints?.length) {
+                  return of(res.routePoints
+                    .sort((a, b) => a.order - b.order)
+                    .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude })));
+              }
+              return of(null);
+          })
+      );
+  }
 
   private reloadRoutesIfMissing() {
       if (!this.futureRides.length) return;

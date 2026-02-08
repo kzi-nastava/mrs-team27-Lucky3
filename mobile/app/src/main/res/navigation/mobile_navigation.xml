@@ -3,7 +3,20 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/nav_login">
+    app:startDestination="@+id/nav_guest_home">
+
+    <fragment
+        android:id="@+id/nav_guest_home"
+        android:name="com.example.mobile.ui.guest.GuestHomeFragment"
+        android:label="Home"
+        tools:layout="@layout/fragment_guest_home">
+        <action
+            android:id="@+id/action_nav_guest_home_to_nav_login"
+            app:destination="@id/nav_login" />
+        <action
+            android:id="@+id/action_nav_guest_home_to_nav_register"
+            app:destination="@id/nav_register" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_login"
@@ -26,6 +39,10 @@
         <action
             android:id="@+id/action_nav_register_to_nav_register_verification"
             app:destination="@id/nav_register_verification" />
+        <action
+            android:id="@+id/action_nav_register_to_nav_login"
+            app:destination="@id/nav_login"
+            app:popUpTo="@id/nav_guest_home" />
     </fragment>
 
     <fragment
@@ -94,7 +111,12 @@
         android:id="@+id/nav_ride_details"
         android:name="com.example.mobile.ui.driver.RideDetailsFragment"
         android:label="Ride Details"
-        tools:layout="@layout/fragment_ride_details" />
+        tools:layout="@layout/fragment_ride_details">
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_admin_dashboard"
@@ -109,16 +131,10 @@
         tools:layout="@layout/fragment_passenger_home" />
 
     <fragment
-        android:id="@+id/nav_profile"
-        android:name="com.example.mobile.ui.profile.ProfileFragment"
-        android:label="Profile"
-        tools:layout="@layout/fragment_profile" />
-
-    <fragment
         android:id="@+id/nav_admin_profile"
-        android:name="com.example.mobile.ui.profile.AdminProfileFragment"
+        android:name="com.example.mobile.ui.profile.UserProfileFragment"
         android:label="Admin Profile"
-        tools:layout="@layout/fragment_admin_profile" />
+        tools:layout="@layout/fragment_user_profile" />
 
     <fragment
         android:id="@+id/nav_user_profile"

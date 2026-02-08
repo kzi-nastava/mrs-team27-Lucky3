@@ -14,6 +14,8 @@ import { ResetPasswordComponent } from './account-control/reset-password/reset-p
 import { ResetPasswordSuccessComponent } from './account-control/reset-password-success/reset-password-success.component';
 import { PassengerHomePage } from './pages/passenger/home/passenger-home.page';
 import { AdminDashboardPage } from './pages/admin/dashboard/admin-dashboard.page';
+import { AdminRequestsPage } from './pages/admin/requests/admin-requests.page';
+import { AdminRidePage } from './pages/admin/ride/admin-ride.page';
 import { HomePage } from './pages/home.page/home.page';
 import { authGuard } from './infrastructure/auth/auth.guard';
 import { roleGuard } from './infrastructure/auth/role.guard';
@@ -35,6 +37,9 @@ import { ReviewPage } from './pages/review/review.page';
 import { reviewGuard } from './infrastructure/auth/review.guard';
 import { AdminPanicPage } from './pages/admin/panic/admin-panic.page';
 import { NotFoundPage } from './pages/not-found/not-found.page';
+import { SupportPage } from './shared/support/support.page';
+import { AdminSupportPage } from './pages/admin/support/admin-support.page';
+import { AdminRideHistoryPage } from './pages/admin/ride-history/admin-ride-history.page';
 
 export const routes: Routes = [
   // --- GUEST-ONLY ROUTES (redirect to dashboard if logged in) ---
@@ -142,6 +147,12 @@ export const routes: Routes = [
     component: ActiveRidePage,
     canActivate: [passengerRideAccessGuard]
   },
+  {
+    path: 'passenger/support',
+    component: SupportPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['PASSENGER'] }
+  },
 
   // --- ADMIN ROUTES ---
   {
@@ -153,6 +164,18 @@ export const routes: Routes = [
   {
     path: 'admin/dashboard',
     component: AdminDashboardPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/requests',
+    component: AdminRequestsPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/ride/:id',
+    component: AdminRidePage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },
@@ -171,6 +194,18 @@ export const routes: Routes = [
   {
     path: 'admin/panic',
     component: AdminPanicPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/support',
+    component: AdminSupportPage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/ride-history',
+    component: AdminRideHistoryPage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },
@@ -201,6 +236,12 @@ export const routes: Routes = [
   {
     path: 'driver/profile',
     component: DriverProfilePage,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['DRIVER'] }
+  },
+  {
+    path: 'driver/support',
+    component: SupportPage,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },

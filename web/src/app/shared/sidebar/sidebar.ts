@@ -59,6 +59,8 @@ export class Sidebar implements OnInit, OnDestroy {
 
   adminItems: SidebarItem[] = [
     { icon: 'dashboard', label: 'Dashboard', route: '/admin/dashboard', active: false },
+    { icon: 'history', label: 'Ride History', route: '/admin/ride-history', active: false },
+    { icon: 'requests', label: 'Requests', route: '/admin/requests', active: false },
     { icon: 'reports', label: 'Reports', route: '/admin/reports', active: false },
     { icon: 'drivers', label: 'Drivers', route: '/admin/drivers', active: false },
     { icon: 'pricing', label: 'Pricing', route: '/admin/pricing', active: false },
@@ -85,9 +87,12 @@ export class Sidebar implements OnInit, OnDestroy {
       this.checkActiveRoute();
     });
 
-    // Start polling for active ride
-    this.pollActiveRide();
-    this.activeRidePoller = interval(10000).subscribe(() => this.pollActiveRide());
+    // Start polling for active ride (only for drivers and passengers, not admins)
+    const role = this.authService.getRole();
+    if (role === 'DRIVER' || role === 'PASSENGER') {
+      this.pollActiveRide();
+      this.activeRidePoller = interval(10000).subscribe(() => this.pollActiveRide());
+    }
   }
 
   ngOnDestroy() {

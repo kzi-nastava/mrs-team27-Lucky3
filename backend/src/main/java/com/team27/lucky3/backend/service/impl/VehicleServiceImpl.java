@@ -1,10 +1,14 @@
 package com.team27.lucky3.backend.service.impl;
 
+import com.team27.lucky3.backend.dto.LocationDto;
 import com.team27.lucky3.backend.dto.response.VehicleLocationResponse;
+import com.team27.lucky3.backend.entity.Location;
 import com.team27.lucky3.backend.entity.Vehicle;
 import com.team27.lucky3.backend.entity.enums.VehicleStatus;
 import com.team27.lucky3.backend.repository.VehicleRepository;
 import com.team27.lucky3.backend.service.VehicleService;
+import com.team27.lucky3.backend.service.socket.VehicleSocketService;
+import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +20,7 @@ import java.util.stream.Collectors;
 public class VehicleServiceImpl implements VehicleService {
 
     private final VehicleRepository vehicleRepository;
+    private final VehicleSocketService vehicleSocketService;
 
     @Override
     public List<VehicleLocationResponse> getPublicMapVehicles() {
@@ -25,6 +30,19 @@ public class VehicleServiceImpl implements VehicleService {
         return vehicles.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void updateVehicleLocation(Long vehicleId, LocationDto locationDto) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
+
+        Location location = new Location(locationDto.getAddress(), locationDto.getLatitude(), locationDto.getLongitude());
+        vehicle.setCurrentLocation(location);
+        vehicleRepository.save(vehicle);
+
+        VehicleLocationResponse response = mapToResponse(vehicle);
+        vehicleSocketService.sendVehicleLocationUpdate(vehicleId, response);
     }
 
     private VehicleLocationResponse mapToResponse(Vehicle vehicle) {

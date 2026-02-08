@@ -16,12 +16,19 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // BuildConfig field for IP address configuration (Lecture 07)
+        buildConfigField "String", "IP_ADDR", "\"10.0.2.2\""
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "IP_ADDR", "\"YOUR_PRODUCTION_IP\""
+        }
+        debug {
+            buildConfigField "String", "IP_ADDR", "\"10.0.2.2\""
         }
     }
     compileOptions {
@@ -30,6 +37,7 @@ android {
     }
     buildFeatures {
         viewBinding true
+        buildConfig true
     }
 }
 
@@ -43,11 +51,18 @@ dependencies {
     implementation libs.navigation.fragment
     implementation libs.navigation.ui
 
-    implementation 'org.osmdroid:osmdroid-android:6.1.20'          // or your current osmdroid [web:296]
-    implementation 'com.github.MKergall:osmbonuspack:6.9.0'        // via JitPack [web:292][web:295]
+    // OSM Maps
+    implementation 'org.osmdroid:osmdroid-android:6.1.20'
+    implementation 'com.github.MKergall:osmbonuspack:6.9.0'
 
+    // Retrofit2 + Gson (Lecture 07 - Networking)
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
 
-    // Optional: For Material Design support
+    // Material Design
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     

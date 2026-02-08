@@ -1,62 +1,193 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/black">
 
-    <include
-        android:id="@+id/navbar"
-        layout="@layout/view_custom_navbar" />
-
-    <LinearLayout
+    <!-- Full-screen Map -->
+    <org.osmdroid.views.MapView
+        android:id="@+id/map"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/gray_900"
-        android:orientation="vertical"
-        >
+        android:background="#1A1A2E" />
 
+    <!-- Top Bar with Logo -->
+    <LinearLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:layout_gravity="top">
 
-        <org.osmdroid.views.MapView
-            android:id="@+id/map"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="9"
-            android:background="#2C2C2E"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/btnRequestRide"
-            app:layout_constraintVertical_weight="1" />
+        <!-- Menu Button -->
+        <ImageButton
+            android:id="@+id/btn_menu"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_icon_box"
+            android:src="@drawable/ic_menu_hamburger"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            app:tint="@color/yellow_500"
+            android:contentDescription="Menu" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- Logo & Brand -->
+        <FrameLayout
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_icon_box_yellow">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="🚗"
+                android:textSize="18sp" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:layout_margin="5dp">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRequestRide"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Request ride"
-                android:textColor="@color/black"
-                app:backgroundTint="@color/yellow_500"
-                android:layout_marginHorizontal="3dp"
-                android:layout_weight="1"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnLinkPassengers"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Link passengers"
-                android:textColor="@color/black"
-                app:backgroundTint="@color/yellow_500"
-                android:layout_marginHorizontal="3dp"
-                android:layout_weight="1"/>
-
-
-        </LinearLayout>
+            android:layout_marginStart="12dp"
+            android:text="Lucky Ride"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
-</LinearLayout>
+
+    <!-- Vehicle Status Legend (Floating over map) -->
+    <LinearLayout
+        android:id="@+id/legend_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginTop="76dp"
+        android:layout_marginStart="12dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@drawable/bg_card">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Active Vehicles"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Available vehicles -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <View
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:background="@drawable/bg_dot_green" />
+
+            <TextView
+                android:id="@+id/tv_available_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Available (0)"
+                android:textColor="@color/gray_300"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Occupied vehicles -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <View
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:background="@drawable/bg_dot_red" />
+
+            <TextView
+                android:id="@+id/tv_occupied_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Occupied (0)"
+                android:textColor="@color/gray_300"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Bottom Action Buttons Container -->
+    <LinearLayout
+        android:id="@+id/bottom_actions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="center_horizontal">
+
+        <!-- Link Passengers Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_link_passengers"
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:text="Link Passengers"
+            android:textColor="@color/black"
+            android:textSize="14sp"
+            android:textAllCaps="false"
+            android:textStyle="bold"
+            android:paddingHorizontal="24dp"
+            app:backgroundTint="@color/yellow_500"
+            app:cornerRadius="16dp"
+            app:icon="@drawable/ic_person"
+            app:iconTint="@color/black"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            android:elevation="8dp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Order Ride Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_request_ride"
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:text="Order Ride"
+            android:textColor="@color/black"
+            android:textSize="14sp"
+            android:textAllCaps="false"
+            android:textStyle="bold"
+            android:paddingHorizontal="32dp"
+            app:backgroundTint="@color/yellow_500"
+            app:cornerRadius="16dp"
+            app:icon="@drawable/ic_navigation_icon"
+            app:iconTint="@color/black"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            android:elevation="8dp" />
+
+    </LinearLayout>
+
+    <!-- Attribution -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:text="© OpenStreetMap contributors"
+        android:textColor="@color/gray_600"
+        android:textSize="10sp" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

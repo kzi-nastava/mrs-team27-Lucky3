@@ -27,14 +27,16 @@ export interface RideResponse {
     name?: string;
     surname?: string;
     email?: string;
-    profilePicture?: string;
+    profilePictureUrl?: string;
     phoneNumber?: string;
     address?: string;
+    active?: boolean;
+    blocked?: boolean;
     vehicle?: {
       model?: string;
       vehicleType?: string;
-      licensePlates?: string;
-      seatCount?: number;
+      licenseNumber?: string;
+      passengerSeats?: number;
       babyTransport?: boolean;
       petTransport?: boolean;
     };
@@ -86,6 +88,25 @@ export interface RideResponse {
   
   // Distance tracking (updated by backend)
   distanceTraveled?: number;
+
+  reviews?: ReviewResponse[];
+
+  inconsistencyReports?: InconsistencyResponse[];
+}
+
+export interface InconsistencyResponse {
+  description: string;
+  timestamp: string;
+}
+
+export interface ReviewResponse {
+  id: number;
+  rideId: number;
+  passengerId: number;
+  driverRating: number;
+  vehicleRating: number;
+  comment: string;
+  createdAt: string;
 }
 
 export interface EndRideRequest {

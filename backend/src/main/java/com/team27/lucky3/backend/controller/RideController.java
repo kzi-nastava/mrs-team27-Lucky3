@@ -146,6 +146,17 @@ public class RideController {
         return ResponseEntity.ok(rideService.getActiveRide(userId));
     }
 
+    // Admin endpoint: Get all active rides (PENDING, ACCEPTED, SCHEDULED, IN_PROGRESS)
+    @GetMapping("/active/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<RideResponse>> getAllActiveRides(
+            Pageable pageable,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String vehicleType) {
+        return ResponseEntity.ok(rideService.getAllActiveRides(pageable, search, status, vehicleType));
+    }
+
     // 2.4.3 Adding route to favourite
     // MARK as favourite (create)
     @PreAuthorize("hasRole('PASSENGER')")

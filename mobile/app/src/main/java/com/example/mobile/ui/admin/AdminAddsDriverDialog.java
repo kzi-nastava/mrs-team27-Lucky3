@@ -18,10 +18,15 @@ import androidx.fragment.app.DialogFragment;
 
 import com.example.mobile.R;
 import com.example.mobile.Domain.DriverInfoCard;
+import com.example.mobile.models.CreateDriverRequest;
+import com.example.mobile.models.VehicleInformation;
+import com.example.mobile.models.VehicleType;
+
+import okhttp3.MultipartBody;
 
 public class AdminAddsDriverDialog extends DialogFragment {
     public interface OnDriverCreatedListener {
-        void onDriverCreated(DriverInfoCard driver);
+        void onDriverCreated(CreateDriverRequest request, MultipartBody.Part imageFile);
     }
 
     private OnDriverCreatedListener listener;
@@ -56,13 +61,13 @@ public class AdminAddsDriverDialog extends DialogFragment {
         ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(
                 requireContext(),
                 android.R.layout.simple_spinner_item,
-                new String[]{"Standard", "Luxury", "Van"}
+                new String[]{"STANDARD", "LUXURY", "VAN"}
         );
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerType.setAdapter(typeAdapter);
 
 
-        // Set up the submit button
+        // In the submit button click listener:
         btnSubmit.setOnClickListener(v -> {
             String name = etName.getText().toString().trim();
             String surname = etSurname.getText().toString().trim();
@@ -74,29 +79,68 @@ public class AdminAddsDriverDialog extends DialogFragment {
             String seats = etSeats.getText().toString().trim();
             boolean babyTransport = cbBaby.isChecked();
             boolean petTransport = cbPet.isChecked();
-            int vehicleType = spinnerType.getSelectedItemPosition();
+            String vehicleType = spinnerType.getSelectedItem().toString();
 
-            //TODO: more validation needed
             if (name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
                 Toast.makeText(v.getContext(), "Fill all required fields", Toast.LENGTH_SHORT).show();
                 return;
             }
 
+            if (vehicleModel.isEmpty() || licensePlate.isEmpty()) {
+                Toast.makeText(v.getContext(), "Vehicle information is required", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-            // Show confirmation dialog
-            androidx.appcompat.app.AlertDialog.Builder builder =
-                    new androidx.appcompat.app.AlertDialog.Builder(requireContext());
+            if (seats.isEmpty()) {
+                Toast.makeText(v.getContext(), "Number of seats is required", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-            //TODO: send real email...
-            builder.setTitle("Driver Account Created");
-            builder.setMessage("Confirmation link to set up driver's account\nhas been sent to email:\n\n" + email);
-            builder.setPositiveButton("OK", (dialog, which) -> {
+            int seatsNumber;
+            try {
+                seatsNumber = Integer.parseInt(seats);
+                if (seatsNumber < 1 || seatsNumber > 10) {
+                    Toast.makeText(v.getContext(), "Seats must be between 1 and 10", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                Toast.makeText(v.getContext(), "Invalid number of seats", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-                dismiss(); // Close the main dialog
-            });
+            VehicleType vehicleTypeEnum;
+            try {
+                // Convert "Standard" -> "STANDARD" to match enum
+                vehicleTypeEnum = VehicleType.valueOf(vehicleType.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Fallback to STANDARD if conversion fails
+                vehicleTypeEnum = VehicleType.STANDARD;
+            }
 
-            builder.setCancelable(false); // User must click OK
-            builder.show();
+            // Create request object
+            CreateDriverRequest request = new CreateDriverRequest();
+            request.setName(name);
+            request.setSurname(surname);
+            request.setEmail(email);
+            request.setPhone(phone);
+            request.setAddress(address);
+
+            VehicleInformation vehicle = new VehicleInformation(
+                    vehicleModel,
+                    vehicleTypeEnum,  // Use the converted enum
+                    licensePlate,
+                    seatsNumber,      // Use parsed integer
+                    babyTransport,
+                    petTransport,
+                    1
+            );
+            request.setVehicle(vehicle);
+
+            MultipartBody.Part imagePart = null;
+            if (listener != null) {
+                listener.onDriverCreated(request, imagePart);
+                dismiss();
+            }
         });
 
 

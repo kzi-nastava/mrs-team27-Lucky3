@@ -4,5 +4,14 @@
     "secure": false,
     "changeOrigin": true,
     "logLevel": "warn"
+  },
+  "/osrm": {
+    "target": "https://router.project-osrm.org",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/osrm": ""
+    },
+    "logLevel": "debug"
   }
 }
