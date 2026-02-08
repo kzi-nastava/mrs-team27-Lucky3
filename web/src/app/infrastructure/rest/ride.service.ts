@@ -6,7 +6,6 @@ import { environment } from '../../../env/environment';
 import { CreateRideRequest } from './model/create-ride.model';
 import { LocationDto } from './model/location.model';
 import { EndRideRequest, RideCancellationRequest, RideResponse } from './model/ride-response.model';
-import { Ride } from '../../shared/data/mock-data';
 
 export interface PageResponse<T> {
   content: T[];

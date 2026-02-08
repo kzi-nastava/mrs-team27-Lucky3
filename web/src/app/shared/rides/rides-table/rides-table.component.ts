@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Ride } from '../../data/mock-data';
+import { Ride } from '../../data/ride.model';
 
 export type RideSortField = 'startTime' | 'endTime' | 'distance' | 'departure' | 'passengerCount' | 'totalCost';
 

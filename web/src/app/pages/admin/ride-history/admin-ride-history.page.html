@@ -232,55 +232,55 @@
           <div class="w-full h-px bg-gray-800"></div>
 
           <!-- Driver -->
-          <div *ngIf="selectedRide?.driver" class="space-y-4">
+          <div *ngIf="selectedRide.driver" class="space-y-4">
             <h4 class="text-sm font-medium text-gray-300 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Driver
             </h4>
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-full bg-gray-800 border-2 border-yellow-500/30 flex items-center justify-center text-gray-400 overflow-hidden shrink-0">
-                <img *ngIf="selectedRide?.driver?.profilePictureUrl" [src]="selectedRide?.driver?.profilePictureUrl" class="w-full h-full object-cover">
-                <span *ngIf="!selectedRide?.driver?.profilePictureUrl" class="text-lg font-bold text-yellow-500">{{ selectedRide?.driver?.name?.charAt(0) }}</span>
+                <img *ngIf="selectedRide.driver.profilePictureUrl" [src]="selectedRide.driver.profilePictureUrl" class="w-full h-full object-cover">
+                <span *ngIf="!selectedRide.driver.profilePictureUrl" class="text-lg font-bold text-yellow-500">{{ selectedRide.driver.name?.charAt(0) }}</span>
               </div>
               <div class="flex-1">
-                <p class="text-sm font-semibold text-white">{{ selectedRide?.driver?.name }} {{ selectedRide?.driver?.surname }}</p>
-                <p class="text-xs text-gray-400">{{ selectedRide?.driver?.email }}</p>
-                <p *ngIf="selectedRide?.driver?.phoneNumber" class="text-xs text-gray-500">{{ selectedRide?.driver?.phoneNumber }}</p>
+                <p class="text-sm font-semibold text-white">{{ selectedRide.driver.name }} {{ selectedRide.driver.surname }}</p>
+                <p class="text-xs text-gray-400">{{ selectedRide.driver.email }}</p>
+                <p *ngIf="selectedRide.driver.phoneNumber" class="text-xs text-gray-500">{{ selectedRide.driver.phoneNumber }}</p>
               </div>
             </div>
 
             <!-- Vehicle -->
-            <div *ngIf="selectedRide?.driver?.vehicle" class="p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+            <div *ngIf="selectedRide.driver.vehicle" class="p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
               <div class="grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <span class="text-gray-500">Model:</span>
-                  <span class="text-white ml-1">{{ selectedRide?.driver?.vehicle?.model }}</span>
+                  <span class="text-white ml-1">{{ selectedRide.driver.vehicle.model }}</span>
                 </div>
                 <div>
                   <span class="text-gray-500">Plates:</span>
-                  <span class="text-white ml-1">{{ selectedRide?.driver?.vehicle?.licenseNumber }}</span>
+                  <span class="text-white ml-1">{{ selectedRide.driver.vehicle.licenseNumber }}</span>
                 </div>
                 <div>
                   <span class="text-gray-500">Type:</span>
-                  <span class="text-white ml-1">{{ selectedRide?.driver?.vehicle?.vehicleType }}</span>
+                  <span class="text-white ml-1">{{ selectedRide.driver.vehicle.vehicleType }}</span>
                 </div>
                 <div>
                   <span class="text-gray-500">Seats:</span>
-                  <span class="text-white ml-1">{{ selectedRide?.driver?.vehicle?.passengerSeats }}</span>
+                  <span class="text-white ml-1">{{ selectedRide.driver.vehicle.passengerSeats }}</span>
                 </div>
               </div>
               <div class="flex gap-2 mt-2">
-                <span *ngIf="selectedRide?.driver?.vehicle?.babyTransport" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Baby Seat</span>
-                <span *ngIf="selectedRide?.driver?.vehicle?.petTransport" class="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">Pet Friendly</span>
+                <span *ngIf="selectedRide.driver.vehicle.babyTransport" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Baby Seat</span>
+                <span *ngIf="selectedRide.driver.vehicle.petTransport" class="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">Pet Friendly</span>
               </div>
             </div>
           </div>
 
           <!-- Passengers -->
-          <div *ngIf="selectedRide?.passengers?.length" class="space-y-3">
+          <div *ngIf="selectedRide.passengers?.length" class="space-y-3">
             <h4 class="text-sm font-medium text-gray-300 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              Passengers ({{ selectedRide?.passengers?.length || 0 }})
+              Passengers ({{ selectedRide.passengers?.length || 0 }})
             </h4>
             <div class="space-y-2">
               <div *ngFor="let passenger of selectedRide.passengers" class="flex items-center gap-3 p-2 bg-gray-800/30 rounded-lg">
@@ -296,7 +296,7 @@
           </div>
 
           <!-- Inconsistencies -->
-          <div *ngIf="selectedRide?.inconsistencyReports?.length" class="p-4 bg-red-950/30 border border-red-900/30 rounded-lg">
+          <div *ngIf="selectedRide.inconsistencyReports?.length" class="p-4 bg-red-950/30 border border-red-900/30 rounded-lg">
             <div class="flex items-center gap-2 mb-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <p class="text-sm text-red-400 font-medium">Inconsistency Reports</p>
@@ -309,7 +309,7 @@
           </div>
 
           <!-- Reviews -->
-          <div *ngIf="selectedRide?.reviews?.length" class="space-y-3">
+          <div *ngIf="selectedRide.reviews?.length" class="space-y-3">
             <h4 class="text-sm font-medium text-gray-300 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               Ratings

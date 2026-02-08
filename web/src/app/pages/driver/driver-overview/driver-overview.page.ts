@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Ride } from '../../../shared/data/mock-data';
+import { Ride } from '../../../shared/data/ride.model';
 import { RidesTableComponent, RideSortField } from '../../../shared/rides/rides-table/rides-table.component';
 import { RideService, PageResponse } from '../../../infrastructure/rest/ride.service';
 import { AuthService } from '../../../infrastructure/auth/auth.service';
