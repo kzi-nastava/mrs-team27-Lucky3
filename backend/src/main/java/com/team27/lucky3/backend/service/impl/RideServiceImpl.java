@@ -55,6 +55,7 @@ public class RideServiceImpl implements RideService {
     private final ReviewTokenUtils reviewTokenUtils;
     private final PanicService panicService;
     private final com.team27.lucky3.backend.service.socket.VehicleSocketService vehicleSocketService;
+    private final com.team27.lucky3.backend.service.socket.RideSocketService rideSocketService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -442,7 +443,11 @@ public class RideServiceImpl implements RideService {
         notificationService.sendRideStatusNotification(savedRide,
                 "Your ride has been accepted by driver " + driver.getName() + " " + driver.getSurname() + ".");
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override
@@ -471,7 +476,11 @@ public class RideServiceImpl implements RideService {
         notificationService.sendRideStatusNotification(savedRide,
                 "Your ride has started. Driver is on the way!");
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override
@@ -527,7 +536,11 @@ public class RideServiceImpl implements RideService {
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override
@@ -605,7 +618,11 @@ public class RideServiceImpl implements RideService {
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     /* TODO: Check what is better between this and down same function
@@ -839,6 +856,12 @@ public class RideServiceImpl implements RideService {
 
         Ride savedRide = rideRepository.save(ride);
 
+        // Trigger notification (same as endRide)
+        notificationService.sendRideFinishedNotification(savedRide);
+
+        // Notify linked passengers about ride completion (same as endRide)
+        notificationService.notifyLinkedPassengersRideCompleted(savedRide);
+
         // Send review request emails to passengers (same as endRide)
         sendReviewRequestEmails(savedRide);
 
@@ -867,7 +890,11 @@ public class RideServiceImpl implements RideService {
             }
         }
 
-        return mapToResponse(savedRide);
+        // Broadcast ride update via WebSocket for real-time UI updates (same as endRide)
+        RideResponse response = mapToResponse(savedRide);
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override

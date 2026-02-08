@@ -189,6 +189,63 @@ export class SocketService implements OnDestroy {
   }
 
   /**
+   * Subscribe to ride status updates for a specific ride.
+   * @param rideId The ID of the ride to track
+   */
+  getRideUpdates(rideId: number): Observable<any> {
+    return new Observable(observer => {
+      let stompSub: { unsubscribe: () => void } | null = null;
+      let stateSub: { unsubscribe: () => void } | null = null;
+      
+      const subscribeToStomp = () => {
+        if (!this.client?.connected) {
+          return;
+        }
+        
+        try {
+          stompSub = this.client.subscribe(`/topic/ride/${rideId}`, (message: IMessage) => {
+            try {
+              const rideUpdate = JSON.parse(message.body);
+              observer.next(rideUpdate);
+            } catch (e) {
+              console.error('Error parsing ride update:', e);
+            }
+          });
+        } catch (error) {
+           console.error('Error subscribing to ride updates:', error);
+        }
+      };
+
+      // If already connected, subscribe immediately
+      if (this.client?.connected) {
+        subscribeToStomp();
+      } else {
+        // Auto-connect if not connected
+        this.connect();
+        
+        // Wait for connection then subscribe
+        stateSub = this.socketState.subscribe(state => {
+          if (state.connected && !stompSub) {
+            subscribeToStomp();
+          }
+        });
+      }
+
+      // Cleanup function
+      return () => {
+        if (stompSub) {
+          stompSub.unsubscribe();
+          stompSub = null;
+        }
+        if (stateSub) {
+          stateSub.unsubscribe();
+          stateSub = null;
+        }
+      };
+    });
+  }
+
+  /**
    * Get connection state observable
    */
   getConnectionState(): Observable<SocketState> {

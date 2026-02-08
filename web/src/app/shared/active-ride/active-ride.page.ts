@@ -53,6 +53,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private locationSubscription: Subscription | null = null;
   private locationUpdates$ = new Subject<any>();
   private routeUpdateSubscription: Subscription | null = null;
+  private rideUpdateSubscription: Subscription | null = null; // WebSocket subscription for ride status updates
   private ridePoller: any; // Poll ride data to get updated cost from backend
 
   private totalPlannedDistanceKm: number | null = null;
@@ -159,6 +160,9 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
     this.updateTimer = setInterval(() => this.tick(), 1000);
     this.setupRouteUpdates();
+
+    // Subscribe to real-time ride status updates via WebSocket
+    this.subscribeToRideUpdates();
   }
 
   ngOnDestroy(): void {
@@ -167,6 +171,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     if (this.ridePoller) clearInterval(this.ridePoller);
     if (this.locationSubscription) this.locationSubscription.unsubscribe();
     if (this.routeUpdateSubscription) this.routeUpdateSubscription.unsubscribe();
+    if (this.rideUpdateSubscription) this.rideUpdateSubscription.unsubscribe();
   }
 
   goBack(): void {
@@ -1079,6 +1084,47 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       error: () => {
         this.pollErrors++;
       }
+    });
+  }
+
+  /**
+   * Subscribe to real-time ride status updates via WebSocket.
+   * This provides instant updates when the ride is cancelled, finished, etc.
+   */
+  private subscribeToRideUpdates(): void {
+    if (!this.rideId || this.rideUpdateSubscription) return;
+
+    this.rideUpdateSubscription = this.socketService.getRideUpdates(this.rideId).subscribe({
+      next: (rideUpdate) => {
+        console.log('Received ride update via WebSocket:', rideUpdate);
+        
+        // Check if ride status changed to a terminal state
+        const newStatus = rideUpdate.status;
+        if (newStatus && newStatus !== this.rideStatus) {
+          this.rideStatus = newStatus;
+          
+          // Handle terminal states - redirect users away from active ride page
+          if (newStatus === 'FINISHED' || newStatus === 'CANCELLED' || 
+              newStatus === 'CANCELLED_BY_DRIVER' || newStatus === 'CANCELLED_BY_PASSENGER') {
+            // Small delay to let the user see the status change before redirecting
+            setTimeout(() => {
+              if (this.userRole === 'DRIVER') {
+                this.router.navigate(['/driver/dashboard']);
+              } else {
+                this.router.navigate(['/passenger/home']);
+              }
+            }, 1500);
+          } else if (newStatus === 'ACCEPTED' || newStatus === 'IN_PROGRESS') {
+            // Update ride data for non-terminal status changes
+            if (rideUpdate.driver) {
+              this.applyRideResponse(rideUpdate);
+            }
+          }
+          
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => console.error('WebSocket error for ride updates:', err)
     });
   }
 

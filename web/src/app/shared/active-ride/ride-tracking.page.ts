@@ -53,6 +53,7 @@ export class RideTrackingPage implements OnInit, OnDestroy {
   
   private pollingInterval: any;
   private locationSubscription: Subscription | null = null;
+  private rideUpdateSubscription: Subscription | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -85,6 +86,9 @@ export class RideTrackingPage implements OnInit, OnDestroy {
     if (this.locationSubscription) {
       this.locationSubscription.unsubscribe();
     }
+    if (this.rideUpdateSubscription) {
+      this.rideUpdateSubscription.unsubscribe();
+    }
   }
 
   loadRide(): void {
@@ -102,6 +106,11 @@ export class RideTrackingPage implements OnInit, OnDestroy {
         // Subscribe to vehicle location updates if we have driver info
         if (ride.driver?.id && !this.locationSubscription) {
           this.subscribeToDriverLocation(ride.driver.id);
+        }
+        
+        // Subscribe to ride status updates via WebSocket
+        if (ride.id && !this.rideUpdateSubscription) {
+          this.subscribeToRideUpdates(ride.id);
         }
       },
       error: (err) => {
@@ -167,6 +176,39 @@ export class RideTrackingPage implements OnInit, OnDestroy {
           }
         },
         error: (err: Error) => console.warn('Vehicle location subscription error:', err)
+      });
+  }
+
+  /**
+   * Subscribe to real-time ride status updates via WebSocket.
+   * This provides instant updates when the ride is cancelled, finished, etc.
+   */
+  private subscribeToRideUpdates(rideId: number): void {
+    this.rideUpdateSubscription = this.socketService
+      .getRideUpdates(rideId)
+      .subscribe({
+        next: (rideUpdate: any) => {
+          console.log('Received ride update via WebSocket:', rideUpdate);
+          
+          const newStatus = rideUpdate.status;
+          if (newStatus && newStatus !== this.rideStatus) {
+            this.rideStatus = newStatus;
+            
+            // Update cost if available
+            if (rideUpdate.totalCost != null) {
+              this.currentCost = rideUpdate.totalCost;
+            }
+            
+            // Update full ride data if available
+            if (rideUpdate.id) {
+              this.ride = rideUpdate;
+              this.updateMapData(rideUpdate);
+            }
+            
+            this.cdr.detectChanges();
+          }
+        },
+        error: (err: Error) => console.warn('Ride update subscription error:', err)
       });
   }
 
