@@ -320,19 +320,13 @@ public class RideServiceImpl implements RideService {
         // ── Notification integration ──
         if (savedRide.getDriver() != null && savedRide.getStatus() != RideStatus.REJECTED) {
             notificationService.sendDriverAssignmentNotification(savedRide);
+            
+            // Notify linked passengers (from invitedEmails) - sends email with tracking token to all,
+            // and push notification only to registered users. Exclude the ride creator.
+            notificationService.notifyLinkedPassengersRideCreated(savedRide, passenger.getEmail());
         }
 
-        // Notify passengers that their ride has been created
-        notificationService.sendRideCreatedNotification(savedRide);
-
-        // Send linked-passenger invites if additional emails were provided
-        if (request.getPassengerEmails() != null && !request.getPassengerEmails().isEmpty()) {
-            for (String email : request.getPassengerEmails()) {
-                userRepository.findByEmail(email).ifPresent(invitee ->
-                        notificationService.sendLinkedPassengerInvite(savedRide, invitee)
-                );
-            }
-        }
+        // Do NOT notify the creator about their own ride creation - they already know about it
 
         return mapToResponse(savedRide);
     }
@@ -524,6 +518,9 @@ public class RideServiceImpl implements RideService {
         // Trigger notification
         notificationService.sendRideFinishedNotification(savedRide);
 
+        // Notify linked passengers about ride completion
+        notificationService.notifyLinkedPassengersRideCompleted(savedRide);
+
         // Send review request emails to passengers
         sendReviewRequestEmails(savedRide);
 
@@ -601,6 +598,9 @@ public class RideServiceImpl implements RideService {
 
         // Notify the other party about the cancellation
         notificationService.sendRideCancelledNotification(savedRide, currentUser);
+
+        // Notify linked passengers about the cancellation
+        notificationService.notifyLinkedPassengersRideCancelled(savedRide, currentUser);
 
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());

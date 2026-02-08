@@ -74,6 +74,31 @@ public interface NotificationService {
     /** SCHEDULED RIDE REMINDER — 15 min before scheduled start. */
     void sendScheduledRideReminder(Ride ride);
 
+    // ─── linked passenger notifications (email + token) ───────────────
+
+    /**
+     * Notify linked passengers (from invitedEmails) when a ride is created.
+     * Sends email with tracking token to ALL linked emails except the creator.
+     * Sends push notification only to registered users.
+     * @param ride The ride that was created
+     * @param creatorEmail Email of the ride creator to exclude from notifications
+     */
+    void notifyLinkedPassengersRideCreated(Ride ride, String creatorEmail);
+
+    /**
+     * Notify linked passengers when a ride is completed.
+     * Sends email to ALL linked emails.
+     * Sends push notification only to registered users.
+     */
+    void notifyLinkedPassengersRideCompleted(Ride ride);
+
+    /**
+     * Notify linked passengers when a ride is cancelled.
+     * Sends email to ALL linked emails with cancellation details.
+     * Sends push notification only to registered users.
+     */
+    void notifyLinkedPassengersRideCancelled(Ride ride, User cancelledBy);
+
     // ─── history / read-state endpoints ────────────────────────────────
 
     /** Paginated notification history for a user. */

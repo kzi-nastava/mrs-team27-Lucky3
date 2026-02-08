@@ -3,14 +3,17 @@ package com.team27.lucky3.backend.service.impl;
 import com.team27.lucky3.backend.dto.response.NotificationResponse;
 import com.team27.lucky3.backend.entity.Notification;
 import com.team27.lucky3.backend.entity.Ride;
+import com.team27.lucky3.backend.entity.RideTrackingToken;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.NotificationType;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.NotificationRepository;
+import com.team27.lucky3.backend.repository.RideTrackingTokenRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
 import com.team27.lucky3.backend.service.EmailService;
 import com.team27.lucky3.backend.service.NotificationService;
+import com.team27.lucky3.backend.util.RideTrackingTokenUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -51,8 +55,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final RideTrackingTokenRepository rideTrackingTokenRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final EmailService emailService;
+    private final RideTrackingTokenUtils rideTrackingTokenUtils;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -321,7 +327,7 @@ public class NotificationServiceImpl implements NotificationService {
                 : "";
 
         if (cancelledByDriver) {
-            // Driver cancelled → notify all passengers
+            // Driver cancelled → notify all passengers (push + email)
             String text = String.format(
                     "Ride #%d has been cancelled by driver %s.%s",
                     ride.getId(), cancellerName, reason
@@ -329,7 +335,24 @@ public class NotificationServiceImpl implements NotificationService {
 
             if (ride.getPassengers() != null) {
                 for (User passenger : ride.getPassengers()) {
+                    // Send push notification
                     sendNotification(passenger, text, NotificationType.RIDE_CANCELLED, ride.getId());
+                    
+                    // Send email to each passenger (including the ride creator)
+                    try {
+                        emailService.sendLinkedPassengerRideCancelledEmail(
+                                passenger.getEmail(), 
+                                passenger.getName(), 
+                                ride, 
+                                cancellerName, 
+                                "driver"
+                        );
+                        log.info("Sent ride-cancelled email to passenger {} for ride #{}", 
+                                passenger.getEmail(), ride.getId());
+                    } catch (Exception e) {
+                        log.error("Failed to send ride-cancelled email to {}: {}", 
+                                passenger.getEmail(), e.getMessage());
+                    }
                 }
             }
             log.info("Ride cancelled notification sent to passengers for ride #{}", ride.getId());
@@ -565,6 +588,164 @@ public class NotificationServiceImpl implements NotificationService {
                 ride.getDistance() != null ? ride.getDistance() : 0.0,
                 ride.getTotalCost() != null ? ride.getTotalCost() : 0.0
         );
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  LINKED PASSENGER NOTIFICATIONS
+    // ════════════════════════════════════════════════════════════════════
+
+    @Override
+    @Transactional
+    public void notifyLinkedPassengersRideCreated(Ride ride, String creatorEmail) {
+        List<String> invitedEmails = ride.getInvitedEmails();
+        if (invitedEmails == null || invitedEmails.isEmpty()) {
+            log.debug("No linked passengers to notify for ride #{}", ride.getId());
+            return;
+        }
+
+        String startAddress = ride.getStartLocation() != null 
+                ? ride.getStartLocation().getAddress() : "Unknown";
+        String endAddress = ride.getEndLocation() != null 
+                ? ride.getEndLocation().getAddress() : "Unknown";
+
+        for (String email : invitedEmails) {
+            // Skip the ride creator - they already know about the ride
+            if (creatorEmail != null && email.equalsIgnoreCase(creatorEmail)) {
+                log.debug("Skipping notification for ride creator {} for ride #{}", email, ride.getId());
+                continue;
+            }
+
+            // Generate tracking token for this email
+            String tokenString = rideTrackingTokenUtils.generateTrackingToken(ride.getId(), email);
+            
+            // Persist the token
+            RideTrackingToken trackingToken = new RideTrackingToken(tokenString, ride, email);
+            rideTrackingTokenRepository.save(trackingToken);
+
+            // Check if this email belongs to a registered user
+            Optional<User> registeredUser = userRepository.findByEmail(email);
+            String passengerName = registeredUser.map(User::getName).orElse(null);
+
+            // Send email to ALL linked passengers (registered or not)
+            try {
+                emailService.sendLinkedPassengerAddedEmail(email, passengerName, ride, tokenString);
+                log.info("Sent ride-created email to linked passenger {} for ride #{}", email, ride.getId());
+            } catch (Exception e) {
+                log.error("Failed to send ride-created email to {}: {}", email, e.getMessage());
+            }
+
+            // Send push notification ONLY to registered users
+            if (registeredUser.isPresent()) {
+                User user = registeredUser.get();
+                String text = String.format(
+                        "You've been added to ride #%d from %s to %s. Tap to track.",
+                        ride.getId(), startAddress, endAddress
+                );
+                sendNotification(user, text, NotificationType.RIDE_INVITE, ride.getId());
+                log.info("Sent push notification to registered linked passenger {} for ride #{}", 
+                        email, ride.getId());
+            }
+        }
+
+        log.info("Notified {} linked passengers for ride #{}", invitedEmails.size(), ride.getId());
+    }
+
+    @Override
+    @Transactional
+    public void notifyLinkedPassengersRideCompleted(Ride ride) {
+        List<String> invitedEmails = ride.getInvitedEmails();
+        if (invitedEmails == null || invitedEmails.isEmpty()) {
+            log.debug("No linked passengers to notify for completed ride #{}", ride.getId());
+            return;
+        }
+
+        String startAddress = ride.getStartLocation() != null 
+                ? ride.getStartLocation().getAddress() : "Unknown";
+        String endAddress = ride.getEndLocation() != null 
+                ? ride.getEndLocation().getAddress() : "Unknown";
+
+        for (String email : invitedEmails) {
+            // Check if this email belongs to a registered user
+            Optional<User> registeredUser = userRepository.findByEmail(email);
+            String passengerName = registeredUser.map(User::getName).orElse(null);
+
+            // Send email to ALL linked passengers
+            try {
+                emailService.sendLinkedPassengerRideCompletedEmail(email, passengerName, ride);
+                log.info("Sent ride-completed email to linked passenger {} for ride #{}", email, ride.getId());
+            } catch (Exception e) {
+                log.error("Failed to send ride-completed email to {}: {}", email, e.getMessage());
+            }
+
+            // Send push notification ONLY to registered users
+            if (registeredUser.isPresent()) {
+                User user = registeredUser.get();
+                String text = String.format(
+                        "Ride #%d from %s to %s has been completed! Distance: %.2f km, Cost: %.2f RSD.",
+                        ride.getId(), startAddress, endAddress,
+                        ride.getDistance() != null ? ride.getDistance() : 0.0,
+                        ride.getTotalCost() != null ? ride.getTotalCost() : 0.0
+                );
+                sendNotification(user, text, NotificationType.RIDE_FINISHED, ride.getId());
+            }
+        }
+
+        // Revoke all tracking tokens for this ride
+        rideTrackingTokenRepository.revokeAllByRideId(ride.getId());
+        log.info("Revoked tracking tokens and notified {} linked passengers for completed ride #{}", 
+                invitedEmails.size(), ride.getId());
+    }
+
+    @Override
+    @Transactional
+    public void notifyLinkedPassengersRideCancelled(Ride ride, User cancelledBy) {
+        List<String> invitedEmails = ride.getInvitedEmails();
+        if (invitedEmails == null || invitedEmails.isEmpty()) {
+            log.debug("No linked passengers to notify for cancelled ride #{}", ride.getId());
+            return;
+        }
+
+        String cancellerName = cancelledBy.getName() + " " + cancelledBy.getSurname();
+        boolean cancelledByDriver = ride.getDriver() != null 
+                && ride.getDriver().getId().equals(cancelledBy.getId());
+        String cancellerRole = cancelledByDriver ? "driver" : "passenger";
+
+        String startAddress = ride.getStartLocation() != null 
+                ? ride.getStartLocation().getAddress() : "Unknown";
+        String endAddress = ride.getEndLocation() != null 
+                ? ride.getEndLocation().getAddress() : "Unknown";
+
+        for (String email : invitedEmails) {
+            // Check if this email belongs to a registered user
+            Optional<User> registeredUser = userRepository.findByEmail(email);
+            String passengerName = registeredUser.map(User::getName).orElse(null);
+
+            // Send email to ALL linked passengers
+            try {
+                emailService.sendLinkedPassengerRideCancelledEmail(
+                        email, passengerName, ride, cancellerName, cancellerRole);
+                log.info("Sent ride-cancelled email to linked passenger {} for ride #{}", email, ride.getId());
+            } catch (Exception e) {
+                log.error("Failed to send ride-cancelled email to {}: {}", email, e.getMessage());
+            }
+
+            // Send push notification ONLY to registered users
+            if (registeredUser.isPresent()) {
+                User user = registeredUser.get();
+                String reason = ride.getRejectionReason() != null && !ride.getRejectionReason().isEmpty()
+                        ? " Reason: " + ride.getRejectionReason() : "";
+                String text = String.format(
+                        "Ride #%d from %s to %s has been cancelled by %s (%s).%s",
+                        ride.getId(), startAddress, endAddress, cancellerName, cancellerRole, reason
+                );
+                sendNotification(user, text, NotificationType.RIDE_CANCELLED, ride.getId());
+            }
+        }
+
+        // Revoke all tracking tokens for this ride
+        rideTrackingTokenRepository.revokeAllByRideId(ride.getId());
+        log.info("Revoked tracking tokens and notified {} linked passengers for cancelled ride #{}", 
+                invitedEmails.size(), ride.getId());
     }
 
     // ─── entity  →  DTO mapper ─────────────────────────────────────────
