@@ -981,48 +981,83 @@ public class RideServiceImpl implements RideService {
     }
 
     /**
-     * Sends review request email to every passenger on the ride.
+     * Sends review request email to every passenger on the ride,
+     * including linked (non-registered) passengers from invitedEmails.
      * Only sends to passengers whose email does not end with '@example.com'.
      */
     private void sendReviewRequestEmails(Ride ride) {
-        if (ride == null || ride.getPassengers() == null || ride.getPassengers().isEmpty()) {
+        if (ride == null || ride.getDriver() == null) {
             return;
         }
-        
-        if (ride.getDriver() == null) {
-            return;
-        }
-        
+
         Long driverId = ride.getDriver().getId();
-        
-        for (User passenger : ride.getPassengers()) {
-            String email = passenger.getEmail();
-            
-            // Skip test emails ending with @example.com
-            if (email == null || email.toLowerCase().endsWith("@example.com")) {
-                continue;
-            }
-            
-            try {
-                // Generate a JWT token valid for 3 days
-                String reviewToken = reviewTokenUtils.generateReviewToken(
-                    ride.getId(), 
-                    passenger.getId(), 
-                    driverId
-                );
-                
-                // Get passenger name for personalization
-                String passengerName = passenger.getName();
-                if (passengerName == null || passengerName.trim().isEmpty()) {
-                    passengerName = "Valued Customer";
+
+        // Collect registered passenger emails so we don't send duplicates to invitedEmails
+        Set<String> sentEmails = new java.util.HashSet<>();
+
+        // 1. Send to registered passengers
+        if (ride.getPassengers() != null) {
+            for (User passenger : ride.getPassengers()) {
+                String email = passenger.getEmail();
+
+                // Skip test emails ending with @example.com
+                if (email == null || email.toLowerCase().endsWith("@example.com")) {
+                    continue;
                 }
-                
-                emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
-                
-                System.out.println("Sent review request email to passenger: " + email + " for ride: " + ride.getId());
-            } catch (Exception e) {
-                // Log error but don't fail the ride completion
-                System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
+
+                try {
+                    String reviewToken = reviewTokenUtils.generateReviewToken(
+                        ride.getId(),
+                        passenger.getId(),
+                        driverId
+                    );
+
+                    String passengerName = passenger.getName();
+                    if (passengerName == null || passengerName.trim().isEmpty()) {
+                        passengerName = "Valued Customer";
+                    }
+
+                    emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
+                    sentEmails.add(email.toLowerCase());
+
+                    System.out.println("Sent review request email to passenger: " + email + " for ride: " + ride.getId());
+                } catch (Exception e) {
+                    System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
+                }
+            }
+        }
+
+        // 2. Send to linked (potentially non-registered) passengers
+        if (ride.getInvitedEmails() != null) {
+            for (String email : ride.getInvitedEmails()) {
+                if (email == null || email.toLowerCase().endsWith("@example.com")) {
+                    continue;
+                }
+
+                // Skip if already sent via registered passengers
+                if (sentEmails.contains(email.toLowerCase())) {
+                    continue;
+                }
+
+                try {
+                    // Generate email-based token for linked passenger
+                    String reviewToken = reviewTokenUtils.generateReviewTokenForEmail(
+                        ride.getId(),
+                        email,
+                        driverId
+                    );
+
+                    // Try to get name if user is registered
+                    String passengerName = userRepository.findByEmail(email)
+                        .map(User::getName)
+                        .orElse("Valued Customer");
+
+                    emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
+
+                    System.out.println("Sent review request email to linked passenger: " + email + " for ride: " + ride.getId());
+                } catch (Exception e) {
+                    System.err.println("Failed to send review request email to linked passenger " + email + ": " + e.getMessage());
+                }
             }
         }
     }
