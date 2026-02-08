@@ -12,13 +12,17 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentPassengerHomeBinding;
+import com.example.mobile.models.PageResponse;
+import com.example.mobile.models.RideResponse;
 import com.example.mobile.models.VehicleLocationResponse;
 import com.example.mobile.services.VehicleService;
 import com.example.mobile.ui.maps.RideMapRenderer;
 import com.example.mobile.utils.ClientUtils;
+import com.example.mobile.utils.SharedPreferencesManager;
 import com.google.android.material.button.MaterialButton;
 
 import android.widget.ImageButton;
@@ -63,10 +67,15 @@ public class PassengerHomeFragment extends Fragment {
     private int availableCount = 0;
     private int occupiedCount = 0;
 
+    private SharedPreferencesManager preferencesManager;
+    private RideResponse activeRide = null;
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
                              Bundle savedInstanceState) {
         binding = FragmentPassengerHomeBinding.inflate(inflater, container, false);
+
+        preferencesManager = new SharedPreferencesManager(requireContext());
 
         // Get references from new layout
         btnMenu = binding.btnMenu;
@@ -95,7 +104,95 @@ public class PassengerHomeFragment extends Fragment {
         // Setup vehicle refresh
         setupVehicleRefresh();
 
+        checkForActiveRide();
+
         return binding.getRoot();
+    }
+
+    private void checkForActiveRide() {
+        Long userId = preferencesManager.getUserId();
+        if (userId == null || userId <= 0) return;
+
+        String token = "Bearer " + preferencesManager.getToken();
+
+        ClientUtils.rideService.getActiveRides(null, userId, "ACCEPTED", 0, 1, token)
+                .enqueue(new Callback<PageResponse<RideResponse>>() {
+                    @Override
+                    public void onResponse(Call<PageResponse<RideResponse>> call,
+                                           Response<PageResponse<RideResponse>> response) {
+                        if (!isAdded()) return;
+                        if (response.isSuccessful() && response.body() != null
+                                && response.body().getContent() != null
+                                && !response.body().getContent().isEmpty()) {
+                            activeRide = response.body().getContent().get(0);
+                            showPassengerActiveRideCard();
+                            return;
+                        }
+                        checkForPendingPassengerRide(userId, token);
+                    }
+
+                    @Override
+                    public void onFailure(Call<PageResponse<RideResponse>> call, Throwable t) {
+                        Log.e(TAG, "Failed to check active rides", t);
+                    }
+                });
+    }
+
+    private void checkForPendingPassengerRide(Long userId, String token) {
+        ClientUtils.rideService.getActiveRides(null, userId, "PENDING", 0, 1, token)
+                .enqueue(new Callback<PageResponse<RideResponse>>() {
+                    @Override
+                    public void onResponse(Call<PageResponse<RideResponse>> call,
+                                           Response<PageResponse<RideResponse>> response) {
+                        if (!isAdded()) return;
+                        if (response.isSuccessful() && response.body() != null
+                                && response.body().getContent() != null
+                                && !response.body().getContent().isEmpty()) {
+                            activeRide = response.body().getContent().get(0);
+                            showPassengerActiveRideCard();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<PageResponse<RideResponse>> call, Throwable t) {
+                        Log.e(TAG, "Failed to check pending rides", t);
+                    }
+                });
+    }
+
+    private void showPassengerActiveRideCard() {
+        if (binding == null || activeRide == null) return;
+        View root = binding.getRoot();
+
+        View card = root.findViewById(R.id.passenger_active_ride_card);
+        if (card == null) return;
+        card.setVisibility(View.VISIBLE);
+
+        TextView statusView = root.findViewById(R.id.passenger_active_ride_status);
+        if (statusView != null) {
+            statusView.setText(activeRide.getDisplayStatus().toUpperCase());
+        }
+
+        TextView routeView = root.findViewById(R.id.passenger_active_ride_route);
+        if (routeView != null) {
+            String from = activeRide.getEffectiveStartLocation() != null
+                    ? activeRide.getEffectiveStartLocation().getAddress() : "—";
+            String to = activeRide.getEffectiveEndLocation() != null
+                    ? activeRide.getEffectiveEndLocation().getAddress() : "—";
+            String fromTrunc = from != null && from.length() > 25 ? from.substring(0, 25) + "..." : from;
+            String toTrunc = to != null && to.length() > 25 ? to.substring(0, 25) + "..." : to;
+            routeView.setText(fromTrunc + " → " + toTrunc);
+        }
+
+        View btn = root.findViewById(R.id.btn_view_passenger_active_ride);
+        if (btn != null) {
+            btn.setOnClickListener(v -> {
+                Bundle args = new Bundle();
+                args.putLong("rideId", activeRide.getId());
+                Navigation.findNavController(v)
+                        .navigate(R.id.action_nav_passenger_home_to_nav_active_ride, args);
+            });
+        }
     }
 
     private void setupVehicleRefresh() {

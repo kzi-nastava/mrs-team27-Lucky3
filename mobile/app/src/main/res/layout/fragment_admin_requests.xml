@@ -141,11 +141,13 @@
                     android:gravity="center"
                     android:visibility="gone" />
 
-                <!-- RecyclerView -->
-                <androidx.recyclerview.widget.RecyclerView
+                <!-- ListView -->
+                <ListView
                     android:id="@+id/recycler_requests"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:divider="@null"
+                    android:dividerHeight="0dp"
                     android:clipToPadding="false" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

@@ -178,7 +178,7 @@ public class LoginFragment extends Fragment {
                 break;
             case "DRIVER":
                 activity.setupNavigationForRole("DRIVER");
-                Navigation.findNavController(requireView()).navigate(R.id.nav_driver_dashboard);
+                Navigation.findNavController(requireView()).navigate(R.id.nav_driver_overview);
                 break;
             case "PASSENGER":
             default:

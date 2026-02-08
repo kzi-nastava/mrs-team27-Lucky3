@@ -1,5 +1,7 @@
 package com.example.mobile.models;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.util.List;
 
 /**
@@ -90,7 +92,9 @@ public class RideResponse {
     public static class VehicleInfo {
         private String model;
         private String vehicleType;
+        @SerializedName("licenseNumber")
         private String licensePlates;
+        @SerializedName("passengerSeats")
         private Integer seatCount;
         private Boolean babyTransport;
         private Boolean petTransport;
