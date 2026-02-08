@@ -53,6 +53,7 @@ public class DriverDashboardFragment extends Fragment {
     
     // All rides for the current time period (used for stats calculation)
     private List<RideResponse> allRidesInPeriod = new ArrayList<>();
+    private List<RideResponse> allRidesRaw = new ArrayList<>();
     
     // Time filter: today, week, month, all
     private String timeFilter = "week";
@@ -271,18 +272,17 @@ public class DriverDashboardFragment extends Fragment {
                     Log.d(TAG, "Loaded " + (content != null ? content.size() : 0) + " rides");
                     
                     if (content != null) {
-                        // Filter to only past rides (FINISHED or CANCELLED)
+                        allRidesRaw = new ArrayList<>(content);
                         allRidesInPeriod = content.stream()
                             .filter(r -> r.isFinished() || r.isCancelled())
                             .collect(Collectors.toList());
                         
                         Log.d(TAG, "Filtered to " + allRidesInPeriod.size() + " past rides");
                         
-                        // Calculate stats from all FINISHED rides in the period
                         calculateStats();
-                        
-                        // Apply status filter for the list display
                         applyStatusFilterToList();
+                        
+                        updateActiveRideBanner(content);
                     }
                 } else {
                     String errorBody = "";
@@ -453,6 +453,18 @@ public class DriverDashboardFragment extends Fragment {
         if (binding == null) return;
         
         View root = binding.getRoot();
+
+        View btnActiveRide = root.findViewById(R.id.btn_active_ride);
+        if (btnActiveRide != null) {
+            btnActiveRide.setOnClickListener(v -> {
+                long activeRideId = getActiveRideId();
+                if (activeRideId > 0) {
+                    navigateToActiveRide(activeRideId);
+                } else {
+                    Toast.makeText(requireContext(), "No active ride found", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
         
         // Update Total Earnings
         TextView earningsView = root.findViewById(R.id.total_earnings);
@@ -497,6 +509,36 @@ public class DriverDashboardFragment extends Fragment {
             double avgDist = finishedRides > 0 ? totalDistance / finishedRides : 0;
             avgDistanceView.setText(String.format(Locale.US, "Avg %.1f km/ride", avgDist));
         }
+    }
+
+    private void updateActiveRideBanner(List<RideResponse> allRides) {
+        if (binding == null) return;
+        View btnActiveRide = binding.getRoot().findViewById(R.id.btn_active_ride);
+        if (btnActiveRide == null) return;
+
+        boolean hasActive = allRides.stream().anyMatch(r -> {
+            String s = r.getStatus();
+            return "PENDING".equals(s) || "ACCEPTED".equals(s) || "SCHEDULED".equals(s);
+        });
+        btnActiveRide.setVisibility(hasActive ? View.VISIBLE : View.GONE);
+    }
+
+    public void navigateToActiveRide(long rideId) {
+        if (!isAdded()) return;
+        Bundle args = new Bundle();
+        args.putLong("rideId", rideId);
+        Navigation.findNavController(requireView())
+                .navigate(R.id.action_nav_driver_dashboard_to_nav_active_ride, args);
+    }
+
+    private long getActiveRideId() {
+        for (RideResponse r : allRidesRaw) {
+            String status = r.getStatus();
+            if ("PENDING".equals(status) || "ACCEPTED".equals(status) || "SCHEDULED".equals(status)) {
+                return r.getId() != null ? r.getId() : -1;
+            }
+        }
+        return -1;
     }
 
     @Override

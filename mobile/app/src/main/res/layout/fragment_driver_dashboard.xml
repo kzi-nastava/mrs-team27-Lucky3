@@ -11,6 +11,20 @@
         android:id="@+id/navbar"
         layout="@layout/view_custom_navbar" />
 
+    <!-- Active Ride Banner -->
+    <Button
+        android:id="@+id/btn_active_ride"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="View Active Ride"
+        android:textColor="@color/black"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:background="@drawable/bg_rounded_yellow"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog_dark"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tv_dialog_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Cancel Ride"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Warning message -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_error_box"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/tv_warning"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="This action cannot be undone. The ride will be permanently cancelled."
+            android:textColor="@color/red_500"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Reason label -->
+    <TextView
+        android:id="@+id/tv_reason_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reason for cancellation"
+        android:textColor="@color/gray_300"
+        android:textSize="14sp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Reason input -->
+    <EditText
+        android:id="@+id/et_reason"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:background="@drawable/bg_edit_text_dark"
+        android:gravity="top|start"
+        android:hint="Enter your reason..."
+        android:textColorHint="@color/gray_500"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:padding="12dp"
+        android:inputType="textMultiLine"
+        android:maxLength="500"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Required hint for driver -->
+    <TextView
+        android:id="@+id/tv_required_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Required — visible to the passenger and admins."
+        android:textColor="@color/gray_500"
+        android:textSize="12sp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Error message -->
+    <TextView
+        android:id="@+id/tv_error"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/red_500"
+        android:textSize="13sp"
+        android:visibility="gone"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btn_keep_ride"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="Keep Ride"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_button_gray"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btn_confirm_cancel"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="Confirm Cancel"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_button_red" />
+    </LinearLayout>
+
+    <!-- Loading indicator -->
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>

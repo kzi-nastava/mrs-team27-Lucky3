@@ -25,6 +25,8 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.navigation.Navigation;
+
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
@@ -282,6 +284,14 @@ public class PassengerHomeFragment extends Fragment {
         RideCreatedDialog dialog =
                 RideCreatedDialog.newInstance(price, passengerEmails);
         dialog.show(getParentFragmentManager(), "RideCreatedDialog");
+    }
+
+    public void navigateToActiveRide(long rideId) {
+        if (!isAdded()) return;
+        Bundle args = new Bundle();
+        args.putLong("rideId", rideId);
+        Navigation.findNavController(requireView())
+                .navigate(R.id.action_nav_passenger_home_to_nav_active_ride, args);
     }
 
     @Override
