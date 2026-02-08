@@ -5,22 +5,21 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
+import android.widget.BaseAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentDriverRideHistoryBinding;
 import com.example.mobile.models.DriverStatsResponse;
 import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.RideResponse;
-import com.example.mobile.services.DriverService;
-import com.example.mobile.services.RideService;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
 
@@ -41,8 +40,6 @@ public class DriverRideHistoryFragment extends Fragment {
     private static final String TAG = "DriverRideHistory";
     private FragmentDriverRideHistoryBinding binding;
     private SharedPreferencesManager preferencesManager;
-    private RideService rideService;
-    private DriverService driverService;
     
     private RidesAdapter adapter;
     private List<RideResponse> rides = new ArrayList<>();
@@ -71,8 +68,6 @@ public class DriverRideHistoryFragment extends Fragment {
         View root = binding.getRoot();
 
         preferencesManager = new SharedPreferencesManager(requireContext());
-        rideService = ClientUtils.getAuthenticatedRideService(preferencesManager);
-        driverService = ClientUtils.getAuthenticatedDriverService(preferencesManager);
 
         // Navbar setup
         View navbar = root.findViewById(R.id.navbar);
@@ -84,7 +79,7 @@ public class DriverRideHistoryFragment extends Fragment {
         }
 
         setupTimeFilterButtons();
-        setupRecyclerView();
+        setupListView();
         setupScrollListener();
         
         loadDriverStats();
@@ -142,34 +137,30 @@ public class DriverRideHistoryFragment extends Fragment {
         }
     }
 
-    private void setupRecyclerView() {
-        adapter = new RidesAdapter(rides, ride -> {
-            // Navigate to ride details
+    private void setupListView() {
+        adapter = new RidesAdapter(rides);
+        binding.ridesListView.setAdapter(adapter);
+        binding.ridesListView.setOnItemClickListener((parent, view, position, id) -> {
+            RideResponse ride = rides.get(position);
             Bundle args = new Bundle();
             args.putLong("rideId", ride.getId());
             Navigation.findNavController(requireView())
                 .navigate(R.id.action_nav_driver_history_to_nav_ride_details, args);
         });
-        binding.ridesRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        binding.ridesRecyclerView.setAdapter(adapter);
     }
     
     private void setupScrollListener() {
-        binding.ridesRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        binding.ridesListView.setOnScrollListener(new AbsListView.OnScrollListener() {
             @Override
-            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                
-                LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                if (layoutManager != null && !isLoading && hasMorePages) {
-                    int visibleItemCount = layoutManager.getChildCount();
-                    int totalItemCount = layoutManager.getItemCount();
-                    int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
-                    
-                    if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 2
-                            && firstVisibleItemPosition >= 0) {
-                        loadMoreRides();
-                    }
+            public void onScrollStateChanged(AbsListView view, int scrollState) {
+                // no-op
+            }
+
+            @Override
+            public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                if (!isLoading && hasMorePages && totalItemCount > 0
+                        && (firstVisibleItem + visibleItemCount) >= totalItemCount - 2) {
+                    loadMoreRides();
                 }
             }
         });
@@ -180,7 +171,7 @@ public class DriverRideHistoryFragment extends Fragment {
         if (userId == null) return;
 
         String token = "Bearer " + preferencesManager.getToken();
-        driverService.getStats(userId, token).enqueue(new Callback<DriverStatsResponse>() {
+        ClientUtils.driverService.getStats(userId, token).enqueue(new Callback<DriverStatsResponse>() {
             @Override
             public void onResponse(Call<DriverStatsResponse> call, Response<DriverStatsResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -216,7 +207,8 @@ public class DriverRideHistoryFragment extends Fragment {
         String fromDate = getFromDateForFilter();
         String toDate = formatDateForApi(new Date(), true);
         
-        rideService.getRidesHistory(
+        String token = "Bearer " + preferencesManager.getToken();
+        ClientUtils.rideService.getRidesHistory(
             userId,    // driverId
             null,      // passengerId
             null,      // status - get all
@@ -224,7 +216,8 @@ public class DriverRideHistoryFragment extends Fragment {
             toDate,
             currentPage,
             pageSize,
-            "startTime,desc"
+            "startTime,desc",
+            token
         ).enqueue(new Callback<PageResponse<RideResponse>>() {
             @Override
             public void onResponse(Call<PageResponse<RideResponse>> call, Response<PageResponse<RideResponse>> response) {
@@ -396,34 +389,56 @@ public class DriverRideHistoryFragment extends Fragment {
     }
 
     // Inner adapter class
-    private static class RidesAdapter extends RecyclerView.Adapter<RidesAdapter.RideViewHolder> {
+    private static class RidesAdapter extends BaseAdapter {
 
         private final List<RideResponse> rides;
-        private final OnRideClickListener listener;
         
         private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
         private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("h:mm a", Locale.US);
 
-        interface OnRideClickListener {
-            void onRideClick(RideResponse ride);
-        }
-
-        public RidesAdapter(List<RideResponse> rides, OnRideClickListener listener) {
+        public RidesAdapter(List<RideResponse> rides) {
             this.rides = rides;
-            this.listener = listener;
-        }
-
-        @NonNull
-        @Override
-        public RideViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_ride_history, parent, false);
-            return new RideViewHolder(view);
         }
 
         @Override
-        public void onBindViewHolder(@NonNull RideViewHolder holder, int position) {
+        public int getCount() {
+            return rides.size();
+        }
+
+        @Override
+        public RideResponse getItem(int position) {
+            return rides.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
             RideResponse ride = rides.get(position);
+            return ride.getId() != null ? ride.getId() : position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ViewHolder holder;
+
+            if (convertView == null) {
+                convertView = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.item_ride_history, parent, false);
+                holder = new ViewHolder();
+                holder.startDate = convertView.findViewById(R.id.start_date);
+                holder.startTime = convertView.findViewById(R.id.start_time);
+                holder.endDate = convertView.findViewById(R.id.end_date);
+                holder.endTime = convertView.findViewById(R.id.end_time);
+                holder.pickupAddress = convertView.findViewById(R.id.pickup_address);
+                holder.dropoffAddress = convertView.findViewById(R.id.dropoff_address);
+                holder.passengerCount = convertView.findViewById(R.id.passenger_count);
+                holder.distance = convertView.findViewById(R.id.distance);
+                holder.duration = convertView.findViewById(R.id.duration);
+                convertView.setTag(holder);
+            } else {
+                holder = (ViewHolder) convertView.getTag();
+            }
+
+            RideResponse ride = getItem(position);
             
             // Parse dates
             Date startDate = parseDate(ride.getStartTime());
@@ -486,15 +501,8 @@ public class DriverRideHistoryFragment extends Fragment {
             } else {
                 holder.duration.setText("—");
             }
-            
-            // Price column (we need to add this to the layout or repurpose an existing view)
-            // For now, we could show it in the distance area
-            
-            holder.itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onRideClick(ride);
-                }
-            });
+
+            return convertView;
         }
         
         private Date parseDate(String dateStr) {
@@ -517,34 +525,16 @@ public class DriverRideHistoryFragment extends Fragment {
             return s.length() > maxLen ? s.substring(0, maxLen) + "..." : s;
         }
 
-        @Override
-        public int getItemCount() {
-            return rides.size();
-        }
-
-        static class RideViewHolder extends RecyclerView.ViewHolder {
-            final TextView startDate;
-            final TextView startTime;
-            final TextView endDate;
-            final TextView endTime;
-            final TextView pickupAddress;
-            final TextView dropoffAddress;
-            final TextView passengerCount;
-            final TextView distance;
-            final TextView duration;
-
-            public RideViewHolder(View view) {
-                super(view);
-                startDate = view.findViewById(R.id.start_date);
-                startTime = view.findViewById(R.id.start_time);
-                endDate = view.findViewById(R.id.end_date);
-                endTime = view.findViewById(R.id.end_time);
-                pickupAddress = view.findViewById(R.id.pickup_address);
-                dropoffAddress = view.findViewById(R.id.dropoff_address);
-                passengerCount = view.findViewById(R.id.passenger_count);
-                distance = view.findViewById(R.id.distance);
-                duration = view.findViewById(R.id.duration);
-            }
+        static class ViewHolder {
+            TextView startDate;
+            TextView startTime;
+            TextView endDate;
+            TextView endTime;
+            TextView pickupAddress;
+            TextView dropoffAddress;
+            TextView passengerCount;
+            TextView distance;
+            TextView duration;
         }
     }
 }

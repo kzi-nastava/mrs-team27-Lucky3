@@ -70,12 +70,7 @@ public class ClientUtils {
             .build();
 
     /**
-     * OkHttpClient with authentication interceptor.
-     */
-    private static OkHttpClient authHttpClient = null;
-
-    /**
-     * Retrofit instance without authentication.
+     * Retrofit instance.
      */
     private static final Retrofit retrofit = new Retrofit.Builder()
             .baseUrl(SERVICE_API_PATH)
@@ -84,12 +79,7 @@ public class ClientUtils {
             .build();
 
     /**
-     * Retrofit instance with authentication (lazy initialized).
-     */
-    private static Retrofit authRetrofit = null;
-
-    /**
-     * UserService instance (without auth - for login/register).
+     * UserService instance.
      */
     public static final UserService userService = retrofit.create(UserService.class);
 
@@ -99,137 +89,17 @@ public class ClientUtils {
 
     public static final DriverService driverService = retrofit.create(DriverService.class);
     /**
-     * VehicleService instance (without auth - for public vehicle data).
+     * VehicleService instance.
      */
     public static final VehicleService vehicleService = retrofit.create(VehicleService.class);
 
     /**
-     * RideService instance (without auth - for estimation).
+     * RideService instance.
      */
     public static final RideService rideService = retrofit.create(RideService.class);
 
     /**
-     * Authenticated UserService instance (lazy initialized).
-     */
-    private static UserService authenticatedUserService = null;
-
-    /**
-     * Authenticated VehicleService instance (lazy initialized).
-     */
-    private static VehicleService authenticatedVehicleService = null;
-    
-    /**
-     * Authenticated RideService instance (lazy initialized).
-     */
-    private static RideService authenticatedRideService = null;
-    
-    /**
-     * Authenticated DriverService instance (lazy initialized).
-     */
-    private static DriverService authenticatedDriverService = null;
-
-    /**
-     * Creates and returns an OkHttpClient with the AuthInterceptor.
-     * 
-     * @param preferencesManager SharedPreferencesManager to retrieve JWT token
-     * @return OkHttpClient configured with authentication
-     */
-    public static OkHttpClient getAuthenticatedClient(SharedPreferencesManager preferencesManager) {
-        if (authHttpClient == null) {
-            authHttpClient = new OkHttpClient.Builder()
-                    .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
-                    .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
-                    .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
-                    .addInterceptor(new AuthInterceptor(preferencesManager))
-                    .addInterceptor(loggingInterceptor)
-                    .build();
-        }
-        return authHttpClient;
-    }
-
-    /**
-     * Creates and returns a Retrofit instance with authentication.
-     * 
-     * @param preferencesManager SharedPreferencesManager to retrieve JWT token
-     * @return Retrofit instance configured with authentication
-     */
-    public static Retrofit getAuthenticatedRetrofit(SharedPreferencesManager preferencesManager) {
-        if (authRetrofit == null) {
-            authRetrofit = new Retrofit.Builder()
-                    .baseUrl(SERVICE_API_PATH)
-                    .client(getAuthenticatedClient(preferencesManager))
-                    .addConverterFactory(GsonConverterFactory.create(gson))
-                    .build();
-        }
-        return authRetrofit;
-    }
-
-    /**
-     * Gets the authenticated UserService.
-     * 
-     * @param preferencesManager SharedPreferencesManager to retrieve JWT token
-     * @return UserService with authentication headers
-     */
-    public static UserService getAuthenticatedUserService(SharedPreferencesManager preferencesManager) {
-        if (authenticatedUserService == null) {
-            authenticatedUserService = getAuthenticatedRetrofit(preferencesManager).create(UserService.class);
-        }
-        return authenticatedUserService;
-    }
-
-    /**
-     * Gets the authenticated VehicleService.
-     * 
-     * @param preferencesManager SharedPreferencesManager to retrieve JWT token
-     * @return VehicleService with authentication headers
-     */
-    public static VehicleService getAuthenticatedVehicleService(SharedPreferencesManager preferencesManager) {
-        if (authenticatedVehicleService == null) {
-            authenticatedVehicleService = getAuthenticatedRetrofit(preferencesManager).create(VehicleService.class);
-        }
-        return authenticatedVehicleService;
-    }
-    
-    /**
-     * Gets the authenticated RideService.
-     * 
-     * @param preferencesManager SharedPreferencesManager to retrieve JWT token
-     * @return RideService with authentication headers
-     */
-    public static RideService getAuthenticatedRideService(SharedPreferencesManager preferencesManager) {
-        if (authenticatedRideService == null) {
-            authenticatedRideService = getAuthenticatedRetrofit(preferencesManager).create(RideService.class);
-        }
-        return authenticatedRideService;
-    }
-    
-    /**
-     * Gets the authenticated DriverService.
-     * 
-     * @param preferencesManager SharedPreferencesManager to retrieve JWT token
-     * @return DriverService with authentication headers
-     */
-    public static DriverService getAuthenticatedDriverService(SharedPreferencesManager preferencesManager) {
-        if (authenticatedDriverService == null) {
-            authenticatedDriverService = getAuthenticatedRetrofit(preferencesManager).create(DriverService.class);
-        }
-        return authenticatedDriverService;
-    }
-
-    /**
-     * Resets authenticated clients (call on logout).
-     */
-    public static void resetAuthenticatedClients() {
-        authHttpClient = null;
-        authRetrofit = null;
-        authenticatedUserService = null;
-        authenticatedVehicleService = null;
-        authenticatedRideService = null;
-        authenticatedDriverService = null;
-    }
-
-    /**
-     * Returns the base Retrofit instance (no auth).
+     * Returns the base Retrofit instance.
      */
     public static Retrofit getRetrofit() {
         return retrofit;

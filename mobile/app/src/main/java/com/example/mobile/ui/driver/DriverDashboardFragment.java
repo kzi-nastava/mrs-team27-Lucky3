@@ -11,16 +11,14 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+
+import android.widget.ListView;
 
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentDriverDashboardBinding;
 import com.example.mobile.models.DriverStatsResponse;
 import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.RideResponse;
-import com.example.mobile.services.DriverService;
-import com.example.mobile.services.RideService;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
 
@@ -42,8 +40,6 @@ public class DriverDashboardFragment extends Fragment {
     private static final String TAG = "DriverDashboard";
     private FragmentDriverDashboardBinding binding;
     private SharedPreferencesManager preferencesManager;
-    private RideService rideService;
-    private DriverService driverService;
     
     private RideHistoryAdapter adapter;
     private List<RideHistoryAdapter.RideHistoryItem> rideItems = new ArrayList<>();
@@ -69,8 +65,6 @@ public class DriverDashboardFragment extends Fragment {
         View root = binding.getRoot();
 
         preferencesManager = new SharedPreferencesManager(requireContext());
-        rideService = ClientUtils.getAuthenticatedRideService(preferencesManager);
-        driverService = ClientUtils.getAuthenticatedDriverService(preferencesManager);
 
         // Navbar setup
         View navbar = root.findViewById(R.id.navbar);
@@ -83,7 +77,7 @@ public class DriverDashboardFragment extends Fragment {
 
         setupTimeFilterButtons();
         setupStatusFilterButtons();
-        setupRecyclerView();
+        setupListView();
         
         loadDriverStats();
         loadRides();
@@ -207,12 +201,10 @@ public class DriverDashboardFragment extends Fragment {
         }
     }
 
-    private void setupRecyclerView() {
-        RecyclerView recyclerView = binding.rideHistoryRecycler;
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        
-        adapter = new RideHistoryAdapter(rideItems);
-        recyclerView.setAdapter(adapter);
+    private void setupListView() {
+        ListView listView = binding.rideHistoryList;
+        adapter = new RideHistoryAdapter(requireContext(), rideItems);
+        listView.setAdapter(adapter);
     }
     
     private void loadDriverStats() {
@@ -224,7 +216,7 @@ public class DriverDashboardFragment extends Fragment {
         
         Log.d(TAG, "Loading driver stats for driver " + userId);
         String token = "Bearer " + preferencesManager.getToken();
-        driverService.getStats(userId, token).enqueue(new Callback<DriverStatsResponse>() {
+        ClientUtils.driverService.getStats(userId, token).enqueue(new Callback<DriverStatsResponse>() {
             @Override
             public void onResponse(Call<DriverStatsResponse> call, Response<DriverStatsResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -258,7 +250,8 @@ public class DriverDashboardFragment extends Fragment {
         
         Log.d(TAG, "Loading rides for driver " + userId + " fromDate=" + fromDate + " toDate=" + toDate);
         
-        rideService.getRidesHistory(
+        String token = "Bearer " + preferencesManager.getToken();
+        ClientUtils.rideService.getRidesHistory(
             userId,    // driverId
             null,      // passengerId
             null,      // status - get all, filter on frontend
@@ -266,7 +259,8 @@ public class DriverDashboardFragment extends Fragment {
             toDate,
             0,         // page
             100,       // size - larger to capture full history
-            "startTime,desc"
+            "startTime,desc",
+            token
         ).enqueue(new Callback<PageResponse<RideResponse>>() {
             @Override
             public void onResponse(Call<PageResponse<RideResponse>> call, Response<PageResponse<RideResponse>> response) {

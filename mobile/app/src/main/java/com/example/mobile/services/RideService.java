@@ -8,6 +8,7 @@ import com.example.mobile.models.RideResponse;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
+import retrofit2.http.Header;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
@@ -21,7 +22,7 @@ public interface RideService {
      * Get ride by ID
      */
     @GET("api/rides/{id}")
-    Call<RideResponse> getRide(@Path("id") long id);
+    Call<RideResponse> getRide(@Path("id") long id, @Header("Authorization") String token);
     
     /**
      * Get ride history with pagination and filters
@@ -35,6 +36,7 @@ public interface RideService {
         @Query("toDate") String toDate,
         @Query("page") Integer page,
         @Query("size") Integer size,
-        @Query("sort") String sort
+        @Query("sort") String sort,
+        @Header("Authorization") String token
     );
 }
