@@ -89,6 +89,10 @@ export interface RideResponse {
   // Distance tracking (updated by backend)
   distanceTraveled?: number;
 
+  // Rate snapshot: locked at ride creation so admin price changes don't affect existing rides
+  rateBaseFare?: number;
+  ratePricePerKm?: number;
+
   reviews?: ReviewResponse[];
 
   inconsistencyReports?: InconsistencyResponse[];

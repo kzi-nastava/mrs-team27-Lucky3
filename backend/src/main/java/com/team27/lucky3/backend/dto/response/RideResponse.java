@@ -44,5 +44,7 @@ public class RideResponse {
     private List<LocationDto> stops;
     private Set<Integer> completedStopIndexes;
     private Double distanceTraveled; // Distance traveled so far (for cost calculation)
+    private Double rateBaseFare; // Snapshot: base fare at ride creation
+    private Double ratePricePerKm; // Snapshot: price per km at ride creation
     private List<ReviewResponse> reviews;
 }

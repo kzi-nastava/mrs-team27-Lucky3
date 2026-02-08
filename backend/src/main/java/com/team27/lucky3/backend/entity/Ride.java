@@ -58,6 +58,13 @@ public class Ride {
     @Column(name = "distance_traveled")
     private Double distanceTraveled;
 
+    // Rate snapshot: locked at ride creation so price changes don't affect existing rides
+    @Column(name = "rate_base_fare")
+    private Double rateBaseFare;
+
+    @Column(name = "rate_price_per_km")
+    private Double ratePricePerKm;
+
     @Embedded
     @AttributeOverrides({
             @AttributeOverride(name = "address", column = @Column(name = "start_address")),

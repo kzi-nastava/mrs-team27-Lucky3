@@ -27,8 +27,8 @@ public class RideCostTrackingService {
 
     private final RideRepository rideRepository;
     private final VehicleRepository vehicleRepository;
+    private final VehiclePriceService vehiclePriceService;
 
-    private static final double PRICE_PER_KM = 120.0;
     private static final double MIN_MOVEMENT_KM = 0.001; // 1 meter minimum movement
     private static final double MAX_MOVEMENT_KM = 2.0; // 2km max per poll (filter GPS jumps)
 
@@ -91,9 +91,11 @@ public class RideCostTrackingService {
                 ride.setDistanceTraveled(0.0);
             }
             
-            // Initialize total cost to base price if not set
+            // Initialize total cost to base price if not set (use ride's snapshot rate)
             if (ride.getTotalCost() == null || ride.getTotalCost() == 0) {
-                double basePrice = getBasePriceForVehicle(ride.getRequestedVehicleType());
+                double basePrice = ride.getRateBaseFare() != null
+                        ? ride.getRateBaseFare()
+                        : vehiclePriceService.getBaseFare(ride.getRequestedVehicleType());
                 ride.setTotalCost(basePrice);
             }
             
@@ -130,9 +132,14 @@ public class RideCostTrackingService {
         double newDistanceTraveled = (ride.getDistanceTraveled() != null ? ride.getDistanceTraveled() : 0.0) + distanceKm;
         ride.setDistanceTraveled(Math.round(newDistanceTraveled * 1000.0) / 1000.0); // Round to 3 decimal places
 
-        // Calculate new total cost
-        double basePrice = getBasePriceForVehicle(ride.getRequestedVehicleType());
-        double newTotalCost = basePrice + (ride.getDistanceTraveled() * PRICE_PER_KM);
+        // Calculate new total cost (use ride's snapshot rates, fallback to DB)
+        double basePrice = ride.getRateBaseFare() != null
+                ? ride.getRateBaseFare()
+                : vehiclePriceService.getBaseFare(ride.getRequestedVehicleType());
+        double pricePerKm = ride.getRatePricePerKm() != null
+                ? ride.getRatePricePerKm()
+                : vehiclePriceService.getPricePerKm(ride.getRequestedVehicleType());
+        double newTotalCost = basePrice + (ride.getDistanceTraveled() * pricePerKm);
         ride.setTotalCost(Math.round(newTotalCost * 100.0) / 100.0); // Round to 2 decimal places
 
         // Update last tracked position
@@ -162,17 +169,5 @@ public class RideCostTrackingService {
                 * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
-    }
-
-    /**
-     * Get base price for vehicle type.
-     */
-    private double getBasePriceForVehicle(VehicleType type) {
-        if (type == null) return 120.0;
-        return switch (type) {
-            case LUXURY -> 360.0;
-            case VAN -> 180.0;
-            default -> 120.0;
-        };
     }
 }

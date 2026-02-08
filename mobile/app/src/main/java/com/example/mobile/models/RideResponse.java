@@ -39,6 +39,10 @@ public class RideResponse {
     private Integer estimatedTimeInMinutes;
     private Double distanceTraveled;
     
+    // Rate snapshot: locked at ride creation
+    private Double rateBaseFare;
+    private Double ratePricePerKm;
+    
     // Vehicle info
     private String vehicleType;
     private String model;
@@ -202,6 +206,12 @@ public class RideResponse {
     
     public Double getDistanceTraveled() { return distanceTraveled; }
     public void setDistanceTraveled(Double distanceTraveled) { this.distanceTraveled = distanceTraveled; }
+    
+    public Double getRateBaseFare() { return rateBaseFare; }
+    public void setRateBaseFare(Double rateBaseFare) { this.rateBaseFare = rateBaseFare; }
+    
+    public Double getRatePricePerKm() { return ratePricePerKm; }
+    public void setRatePricePerKm(Double ratePricePerKm) { this.ratePricePerKm = ratePricePerKm; }
     
     public String getVehicleType() { return vehicleType; }
     public void setVehicleType(String vehicleType) { this.vehicleType = vehicleType; }
