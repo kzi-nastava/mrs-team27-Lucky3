@@ -81,7 +81,7 @@ public class RideHistoryAdapter extends BaseAdapter {
         convertView.setOnClickListener(v -> {
             Bundle args = new Bundle();
             args.putLong("rideId", item.rideId);
-            Navigation.findNavController(v).navigate(R.id.action_nav_driver_dashboard_to_nav_ride_details, args);
+            Navigation.findNavController(v).navigate(R.id.action_nav_driver_overview_to_nav_ride_details, args);
         });
 
         return convertView;
