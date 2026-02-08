@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { RideResponse, RideStatus } from '../../../infrastructure/rest/model/ride-response.model';
 import { RidesTableComponent, RideSortField } from '../../../shared/rides/rides-table/rides-table.component';
@@ -40,9 +40,11 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
   private passengerId: number | null = null;
   private destroy$ = new Subject<void>();
   private map: L.Map | undefined;
+  private pendingRideId: number | null = null;
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private rideService: RideService,
     private authService: AuthService,
     private http: HttpClient,
@@ -51,6 +53,13 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     this.passengerId = this.authService.getUserId();
+
+    // Check for rideId query param (e.g. from notification click)
+    const rideIdParam = this.route.snapshot.queryParamMap.get('rideId');
+    if (rideIdParam) {
+      this.pendingRideId = Number(rideIdParam);
+    }
+
     this.loadRides();
   }
   ngOnDestroy(): void {
@@ -117,6 +126,25 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
           // Since we are filtering on backend, we just map what we got
           this.sortedRides = this.fullRideResponses.map(r => this.mapToRide(r));
           this.cdr.detectChanges();
+
+          // Auto-select ride from query param (e.g. notification deep link)
+          if (this.pendingRideId) {
+            const targetRide = this.sortedRides.find(r => r.id === String(this.pendingRideId));
+            if (targetRide) {
+              this.onRideSelected(targetRide);
+            } else {
+              // Ride not in current page/filter — fetch and select it directly
+              this.rideService.getRide(this.pendingRideId).subscribe({
+                next: (details) => {
+                  const mapped = this.mapToRide(details);
+                  this.sortedRides = [mapped, ...this.sortedRides];
+                  this.onRideSelected(mapped);
+                },
+                error: () => console.error('Failed to load ride from notification')
+              });
+            }
+            this.pendingRideId = null;
+          }
         },
         error: (err) => console.error('Failed to load history', err)
       });

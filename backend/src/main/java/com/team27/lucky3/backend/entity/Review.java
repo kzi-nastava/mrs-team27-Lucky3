@@ -27,6 +27,10 @@ public class Review {
     private Ride ride;
 
     @ManyToOne
-    @JoinColumn(name = "passenger_id")
+    @JoinColumn(name = "passenger_id", nullable = true)
     private User passenger;
+
+    /** Email of the reviewer when they are a linked (non-registered) passenger. */
+    @Column(name = "reviewer_email")
+    private String reviewerEmail;
 }

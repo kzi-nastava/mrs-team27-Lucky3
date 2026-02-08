@@ -27,7 +27,7 @@ public class ReviewTokenUtils {
     private final SignatureAlgorithm SIGNATURE_ALGORITHM = SignatureAlgorithm.HS512;
 
     /**
-     * Generates a JWT token for ride review.
+     * Generates a JWT token for ride review (registered passenger).
      * Token contains rideId, passengerId, and driverId and expires in 3 days.
      */
     public String generateReviewToken(Long rideId, Long passengerId, Long driverId) {
@@ -39,6 +39,26 @@ public class ReviewTokenUtils {
                 .setSubject("review")
                 .claim("rideId", rideId)
                 .claim("passengerId", passengerId)
+                .claim("driverId", driverId)
+                .setIssuedAt(now)
+                .setExpiration(expiration)
+                .signWith(getKey(), SIGNATURE_ALGORITHM)
+                .compact();
+    }
+
+    /**
+     * Generates a JWT token for ride review (linked / non-registered passenger).
+     * Token contains rideId, reviewerEmail, and driverId and expires in 3 days.
+     */
+    public String generateReviewTokenForEmail(Long rideId, String reviewerEmail, Long driverId) {
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + THREE_DAYS_MS);
+
+        return Jwts.builder()
+                .setIssuer(ISSUER)
+                .setSubject("review")
+                .claim("rideId", rideId)
+                .claim("reviewerEmail", reviewerEmail)
                 .claim("driverId", driverId)
                 .setIssuedAt(now)
                 .setExpiration(expiration)
@@ -91,6 +111,16 @@ public class ReviewTokenUtils {
         Claims claims = validateAndGetClaims(token);
         if (claims == null) return null;
         return claims.get("driverId", Long.class);
+    }
+
+    /**
+     * Extracts reviewer email from the review token (for linked/non-registered passengers).
+     * Returns null if not present (i.e. registered-passenger token).
+     */
+    public String getReviewerEmailFromToken(String token) {
+        Claims claims = validateAndGetClaims(token);
+        if (claims == null) return null;
+        return claims.get("reviewerEmail", String.class);
     }
 
     /**

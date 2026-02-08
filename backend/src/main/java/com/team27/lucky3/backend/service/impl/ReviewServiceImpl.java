@@ -91,6 +91,7 @@ public class ReviewServiceImpl implements ReviewService {
         Long rideId = claims.get("rideId", Long.class);
         Long passengerId = claims.get("passengerId", Long.class);
         Long driverId = claims.get("driverId", Long.class);
+        String reviewerEmail = claims.get("reviewerEmail", String.class);
         
         // Verify ride exists and get details
         Ride ride = rideRepository.findById(rideId).orElse(null);
@@ -111,15 +112,16 @@ public class ReviewServiceImpl implements ReviewService {
         String pickupAddress = ride.getStartLocation() != null ? ride.getStartLocation().getAddress() : null;
         String dropoffAddress = ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : null;
         
-        return new ReviewTokenValidationResponse(
-                true,
-                rideId,
-                passengerId,
-                driverId,
-                driverName,
-                pickupAddress,
-                dropoffAddress
-        );
+        ReviewTokenValidationResponse response = new ReviewTokenValidationResponse();
+        response.setValid(true);
+        response.setRideId(rideId);
+        response.setPassengerId(passengerId);
+        response.setDriverId(driverId);
+        response.setDriverName(driverName);
+        response.setPickupAddress(pickupAddress);
+        response.setDropoffAddress(dropoffAddress);
+        response.setReviewerEmail(reviewerEmail);
+        return response;
     }
 
     @Override
@@ -134,6 +136,7 @@ public class ReviewServiceImpl implements ReviewService {
         
         Long rideId = claims.get("rideId", Long.class);
         Long passengerId = claims.get("passengerId", Long.class);
+        String reviewerEmail = claims.get("reviewerEmail", String.class);
         
         // Get the ride
         Ride ride = rideRepository.findById(rideId)
@@ -149,33 +152,60 @@ public class ReviewServiceImpl implements ReviewService {
             throw new IllegalStateException("Review period has expired (3 days limit).");
         }
         
-        // Get the passenger
-        User passenger = userRepository.findById(passengerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Passenger not found"));
-        
-        // Verify passenger was actually part of this ride
-        if (ride.getPassengers() == null || !ride.getPassengers().contains(passenger)) {
-            throw new IllegalStateException("You are not a passenger of this ride.");
-        }
-        
-        // Check if passenger already reviewed this ride
-        if (reviewRepository.existsByRideIdAndPassengerId(rideId, passengerId)) {
-            throw new IllegalStateException("You have already submitted a review for this ride.");
-        }
-        
-        // Create the review
         Review review = new Review();
         review.setRide(ride);
-        review.setPassenger(passenger);
         review.setDriverRating(request.getDriverRating());
         review.setVehicleRating(request.getVehicleRating());
         review.setComment(request.getComment());
         review.setTimestamp(LocalDateTime.now());
         
-        Review savedReview = reviewRepository.save(review);
+        if (reviewerEmail != null) {
+            // Email-based token (linked / non-registered passenger)
+            // Verify the email is in the ride's invitedEmails list
+            if (ride.getInvitedEmails() == null || !ride.getInvitedEmails().contains(reviewerEmail)) {
+                throw new IllegalStateException("You are not a passenger of this ride.");
+            }
+            
+            // Check if this email already reviewed
+            if (reviewRepository.existsByRideIdAndReviewerEmail(rideId, reviewerEmail)) {
+                throw new IllegalStateException("You have already submitted a review for this ride.");
+            }
+            
+            // Check if this email belongs to a registered user who is a passenger
+            User registeredUser = userRepository.findByEmail(reviewerEmail).orElse(null);
+            if (registeredUser != null && ride.getPassengers() != null && ride.getPassengers().contains(registeredUser)) {
+                review.setPassenger(registeredUser);
+            } else {
+                review.setPassenger(null);
+            }
+            review.setReviewerEmail(reviewerEmail);
+            
+            System.out.println("Review created for ride " + rideId + " by linked passenger " + reviewerEmail +
+                    ": driver=" + request.getDriverRating() + ", vehicle=" + request.getVehicleRating());
+        } else if (passengerId != null) {
+            // Registered passenger token
+            User passenger = userRepository.findById(passengerId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Passenger not found"));
+            
+            // Verify passenger was actually part of this ride
+            if (ride.getPassengers() == null || !ride.getPassengers().contains(passenger)) {
+                throw new IllegalStateException("You are not a passenger of this ride.");
+            }
+            
+            // Check if passenger already reviewed this ride
+            if (reviewRepository.existsByRideIdAndPassengerId(rideId, passengerId)) {
+                throw new IllegalStateException("You have already submitted a review for this ride.");
+            }
+            
+            review.setPassenger(passenger);
+            
+            System.out.println("Review created for ride " + rideId + " by passenger " + passengerId +
+                    ": driver=" + request.getDriverRating() + ", vehicle=" + request.getVehicleRating());
+        } else {
+            throw new IllegalStateException("Invalid review token: missing passenger identification.");
+        }
         
-        System.out.println("Review created for ride " + rideId + " by passenger " + passengerId + 
-                ": driver=" + request.getDriverRating() + ", vehicle=" + request.getVehicleRating());
+        Review savedReview = reviewRepository.save(review);
         
         return new ReviewResponse(
                 savedReview.getId(),

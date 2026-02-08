@@ -146,7 +146,7 @@
             <span class="text-xs text-gray-400" *ngIf="!driverLocation && isOnline">Location unavailable</span>
             <span class="text-xs text-gray-400" *ngIf="!isOnline && !isInactiveRequested">You are offline</span>
           </div>
-          <div class="h-[360px] rounded-xl overflow-hidden border border-gray-800 relative">
+          <div class="h-[360px] rounded-xl overflow-hidden border border-gray-800 relative z-0 isolate">
             <app-active-ride-map 
               class="absolute inset-0"
               [ride]="rideMapData" 
