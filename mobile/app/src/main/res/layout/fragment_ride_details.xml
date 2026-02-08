@@ -132,10 +132,39 @@
             </LinearLayout>
 
             <View
+                android:id="@+id/summary_divider"
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="@color/gray_800"
                 android:layout_marginVertical="16dp" />
+
+            <!-- Cancellation info (hidden by default, shown for cancelled rides) -->
+            <LinearLayout
+                android:id="@+id/cancellation_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:id="@+id/cancellation_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textColor="@color/red_500"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/cancellation_reason"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textColor="@color/gray_400"
+                    android:textSize="13sp"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -485,6 +514,7 @@
 
                 <!-- Ride Requested -->
                 <LinearLayout
+                    android:id="@+id/timeline_requested_row"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
@@ -495,6 +525,7 @@
                         android:layout_height="match_parent">
 
                         <View
+                            android:id="@+id/dot_requested"
                             android:layout_width="12dp"
                             android:layout_height="12dp"
                             android:background="@drawable/bg_dot_yellow"
@@ -502,6 +533,7 @@
 
                         <!-- Connecting line -->
                         <View
+                            android:id="@+id/line_requested"
                             android:layout_width="2dp"
                             android:layout_height="match_parent"
                             android:background="@color/gray_800"
@@ -534,8 +566,9 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Driver Accepted -->
+                <!-- Ride Started (hidden for cancelled rides) -->
                 <LinearLayout
+                    android:id="@+id/timeline_started_row"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
@@ -546,57 +579,7 @@
                         android:layout_height="match_parent">
 
                         <View
-                            android:layout_width="12dp"
-                            android:layout_height="12dp"
-                            android:background="@drawable/bg_dot_gray"
-                            android:layout_gravity="top" />
-
-                        <!-- Connecting line -->
-                        <View
-                            android:layout_width="2dp"
-                            android:layout_height="match_parent"
-                            android:background="@color/gray_800"
-                            android:layout_gravity="center_horizontal"
-                            android:layout_marginTop="14dp" />
-                    </FrameLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Driver Accepted"
-                            android:textColor="@color/white"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/timeline_accepted"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text=""
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:layout_marginTop="2dp" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- Ride Started -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="16dp">
-
-                    <FrameLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent">
-
-                        <View
+                            android:id="@+id/dot_started"
                             android:layout_width="12dp"
                             android:layout_height="12dp"
                             android:background="@drawable/bg_dot_gray"
@@ -636,13 +619,15 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Ride Completed -->
+                <!-- Ride Completed/Cancelled -->
                 <LinearLayout
+                    android:id="@+id/timeline_final_row"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
                     <View
+                        android:id="@+id/dot_completed"
                         android:layout_width="12dp"
                         android:layout_height="12dp"
                         android:background="@drawable/bg_dot_gray" />
@@ -655,6 +640,7 @@
                         android:layout_marginStart="12dp">
 
                         <TextView
+                            android:id="@+id/timeline_final_title"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Ride Completed"

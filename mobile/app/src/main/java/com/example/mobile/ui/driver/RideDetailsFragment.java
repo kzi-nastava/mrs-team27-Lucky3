@@ -5,10 +5,12 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
@@ -185,10 +187,17 @@ public class RideDetailsFragment extends Fragment {
                 rideNumber.setText("Ride #" + ride.getId());
             }
 
-            // Status badge
+            // Status badge with color
             TextView rideStatus = root.findViewById(R.id.ride_status);
             if (rideStatus != null) {
                 rideStatus.setText(ride.getDisplayStatus().toUpperCase());
+                if (ride.isFinished()) {
+                    rideStatus.setBackgroundResource(R.drawable.bg_badge_green);
+                    rideStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.green_500));
+                } else if (ride.isCancelled()) {
+                    rideStatus.setBackgroundResource(R.drawable.bg_badge_cancelled);
+                    rideStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_500));
+                }
             }
 
             // Price (top-right)
@@ -210,7 +219,47 @@ public class RideDetailsFragment extends Fragment {
                     rideDateRange.setText(dateTimeFormat.format(startDate) + ", " +
                         timeFormat.format(startDate));
                 } else {
-                    rideDateRange.setText("—");
+                    // For cancelled rides that never started, use scheduled time
+                    Date scheduled = parseDate(ride.getScheduledTime());
+                    if (scheduled != null) {
+                        rideDateRange.setText(dateTimeFormat.format(scheduled) + ", " +
+                            timeFormat.format(scheduled));
+                    } else {
+                        rideDateRange.setText("\u2014");
+                    }
+                }
+            }
+
+            // Cancellation section
+            LinearLayout cancellationSection = root.findViewById(R.id.cancellation_section);
+            if (cancellationSection != null) {
+                if (ride.isCancelled()) {
+                    cancellationSection.setVisibility(View.VISIBLE);
+
+                    TextView cancellationLabel = root.findViewById(R.id.cancellation_label);
+                    if (cancellationLabel != null) {
+                        String status = ride.getStatus();
+                        if ("CANCELLED_BY_DRIVER".equals(status)) {
+                            cancellationLabel.setText("Cancelled by Driver");
+                        } else if ("CANCELLED_BY_PASSENGER".equals(status)) {
+                            cancellationLabel.setText("Cancelled by Passenger");
+                        } else {
+                            cancellationLabel.setText("Cancelled");
+                        }
+                    }
+
+                    TextView cancellationReason = root.findViewById(R.id.cancellation_reason);
+                    if (cancellationReason != null) {
+                        String reason = ride.getRejectionReason();
+                        if (reason != null && !reason.isEmpty()) {
+                            cancellationReason.setVisibility(View.VISIBLE);
+                            cancellationReason.setText(reason);
+                        } else {
+                            cancellationReason.setVisibility(View.GONE);
+                        }
+                    }
+                } else {
+                    cancellationSection.setVisibility(View.GONE);
                 }
             }
 
@@ -248,9 +297,6 @@ public class RideDetailsFragment extends Fragment {
                 double distCost = (perKm != null ? perKm : 0) * distance;
                 distanceValue.setText(String.format(Locale.US, "%.0f RSD", distCost));
             }
-
-            // Time row — hide since backend doesn't charge per-minute
-            // (kept in layout but hidden by default via android:visibility="gone")
 
             // Total
             TextView totalValue = root.findViewById(R.id.total_value);
@@ -375,39 +421,52 @@ public class RideDetailsFragment extends Fragment {
             if (vehicleCard == null) return;
             
             RideResponse.DriverInfo driver = ride.getDriver();
-            if (driver != null && driver.getVehicle() != null) {
-                RideResponse.VehicleInfo vehicle = driver.getVehicle();
-                
-                // Find vehicle model TextView
-                TextView modelView = vehicleCard.findViewById(R.id.vehicle_model);
-                if (modelView != null) {
-                    modelView.setText(vehicle.getModel() != null ? vehicle.getModel() : "—");
+            RideResponse.VehicleInfo vehicle = (driver != null) ? driver.getVehicle() : null;
+            
+            // Vehicle model — try nested vehicle first, fall back to top-level
+            TextView modelView = vehicleCard.findViewById(R.id.vehicle_model);
+            if (modelView != null) {
+                String modelStr = (vehicle != null && vehicle.getModel() != null)
+                    ? vehicle.getModel() : ride.getModel();
+                modelView.setText(modelStr != null ? modelStr : "\u2014");
+            }
+            
+            // License plate — try nested vehicle first, fall back to top-level
+            TextView plateView = vehicleCard.findViewById(R.id.vehicle_plate);
+            if (plateView != null) {
+                String plate = (vehicle != null && vehicle.getLicensePlates() != null)
+                    ? vehicle.getLicensePlates() : ride.getLicensePlates();
+                plateView.setText(plate != null ? plate : "\u2014");
+            }
+            
+            // Vehicle type — try nested vehicle first, fall back to top-level
+            TextView typeView = vehicleCard.findViewById(R.id.vehicle_type);
+            if (typeView != null) {
+                String vt = (vehicle != null && vehicle.getVehicleType() != null)
+                    ? vehicle.getVehicleType() : ride.getVehicleType();
+                if (vt != null) {
+                    typeView.setText(vt.substring(0, 1).toUpperCase() + vt.substring(1).toLowerCase());
+                } else {
+                    typeView.setText("\u2014");
                 }
-                
-                // Find license plate TextView
-                TextView plateView = vehicleCard.findViewById(R.id.vehicle_plate);
-                if (plateView != null) {
-                    plateView.setText(vehicle.getLicensePlates() != null ? vehicle.getLicensePlates() : "—");
-                }
-                
-                // Find color TextView
-                TextView colorView = vehicleCard.findViewById(R.id.vehicle_color);
-                if (colorView != null) {
-                    colorView.setText(vehicle.getColor() != null ? vehicle.getColor() : "—");
-                }
-                
-                // Find year TextView
-                TextView yearView = vehicleCard.findViewById(R.id.vehicle_year);
-                if (yearView != null) {
-                    yearView.setText(vehicle.getYear() != null ? String.valueOf(vehicle.getYear()) : "—");
-                }
-                
-                // Find capacity TextView
-                TextView capacityView = vehicleCard.findViewById(R.id.vehicle_capacity);
-                if (capacityView != null) {
-                    Integer seats = vehicle.getSeatCount();
-                    capacityView.setText(seats != null ? seats + " passengers" : "—");
-                }
+            }
+            
+            // Transport features (baby/pet)
+            TextView transportView = vehicleCard.findViewById(R.id.vehicle_transport);
+            if (transportView != null) {
+                Boolean baby = (vehicle != null) ? vehicle.getBabyTransport() : ride.getBabyTransport();
+                Boolean pet = (vehicle != null) ? vehicle.getPetTransport() : ride.getPetTransport();
+                List<String> features = new ArrayList<>();
+                if (Boolean.TRUE.equals(baby)) features.add("Baby");
+                if (Boolean.TRUE.equals(pet)) features.add("Pet");
+                transportView.setText(features.isEmpty() ? "None" : String.join(", ", features));
+            }
+            
+            // Capacity
+            TextView capacityView = vehicleCard.findViewById(R.id.vehicle_capacity);
+            if (capacityView != null) {
+                Integer seats = (vehicle != null) ? vehicle.getSeatCount() : null;
+                capacityView.setText(seats != null ? seats + " passengers" : "\u2014");
             }
         } catch (Exception e) {
             Log.e(TAG, "Error updating vehicle info", e);
@@ -417,8 +476,10 @@ public class RideDetailsFragment extends Fragment {
     private void updateTimeline(View root) {
         try {
             SimpleDateFormat dateTimeFormat = new SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.US);
-            
-            // Update timeline requested
+            boolean cancelled = ride.isCancelled();
+            boolean finished = ride.isFinished();
+
+            // --- Requested ---
             TextView requestedView = root.findViewById(R.id.timeline_requested);
             if (requestedView != null) {
                 Date scheduled = parseDate(ride.getScheduledTime());
@@ -428,36 +489,75 @@ public class RideDetailsFragment extends Fragment {
                     requestedView.setText(dateTimeFormat.format(displayDate));
                 }
             }
-            
-            // Update timeline accepted (use start time as approximation)
-            TextView acceptedView = root.findViewById(R.id.timeline_accepted);
-            if (acceptedView != null) {
-                Date start = parseDate(ride.getStartTime());
-                if (start != null) {
-                    acceptedView.setText(dateTimeFormat.format(start));
+            // Requested dot: always green (it happened)
+            View dotRequested = root.findViewById(R.id.dot_requested);
+            if (dotRequested != null) {
+                dotRequested.setBackgroundResource(R.drawable.bg_dot_green);
+            }
+            // Connecting line after requested: hide if cancelled (no more steps)
+            View lineRequested = root.findViewById(R.id.line_requested);
+            if (lineRequested != null) {
+                lineRequested.setVisibility(cancelled ? View.INVISIBLE : View.VISIBLE);
+            }
+
+            // --- Ride Started (hidden for cancelled rides) ---
+            LinearLayout startedRow = root.findViewById(R.id.timeline_started_row);
+            if (startedRow != null) {
+                if (cancelled) {
+                    startedRow.setVisibility(View.GONE);
+                } else {
+                    startedRow.setVisibility(View.VISIBLE);
+                    TextView startedView = root.findViewById(R.id.timeline_started);
+                    if (startedView != null) {
+                        Date start = parseDate(ride.getStartTime());
+                        if (start != null) {
+                            startedView.setText(dateTimeFormat.format(start));
+                        }
+                    }
+                    View dotStarted = root.findViewById(R.id.dot_started);
+                    if (dotStarted != null) {
+                        dotStarted.setBackgroundResource(
+                            finished ? R.drawable.bg_dot_green : R.drawable.bg_dot_gray);
+                    }
                 }
             }
-            
-            // Update timeline started
-            TextView startedView = root.findViewById(R.id.timeline_started);
-            if (startedView != null) {
-                Date start = parseDate(ride.getStartTime());
-                if (start != null) {
-                    startedView.setText(dateTimeFormat.format(start));
+
+            // --- Final row: Completed or Cancelled ---
+            TextView finalTitle = root.findViewById(R.id.timeline_final_title);
+            if (finalTitle != null) {
+                finalTitle.setText(cancelled ? "Ride Cancelled" : "Ride Completed");
+                if (cancelled) {
+                    finalTitle.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_500));
+                } else {
+                    finalTitle.setTextColor(ContextCompat.getColor(requireContext(), R.color.white));
                 }
             }
-            
-            // Update timeline completed
+
+            View dotCompleted = root.findViewById(R.id.dot_completed);
+            if (dotCompleted != null) {
+                if (finished) {
+                    dotCompleted.setBackgroundResource(R.drawable.bg_dot_green);
+                } else if (cancelled) {
+                    dotCompleted.setBackgroundResource(R.drawable.bg_dot_red);
+                } else {
+                    dotCompleted.setBackgroundResource(R.drawable.bg_dot_gray);
+                }
+            }
+
             TextView completedView = root.findViewById(R.id.timeline_completed);
             if (completedView != null) {
                 Date end = parseDate(ride.getEndTime());
                 if (end != null) {
                     completedView.setText(dateTimeFormat.format(end));
-                } else if (ride.isCancelled()) {
-                    completedView.setText("Cancelled");
+                } else if (cancelled) {
+                    // Use start time or scheduled time as cancellation time
+                    Date cancelTime = parseDate(ride.getStartTime());
+                    if (cancelTime == null) cancelTime = parseDate(ride.getScheduledTime());
+                    completedView.setText(cancelTime != null
+                        ? dateTimeFormat.format(cancelTime) : "\u2014");
                 }
             }
-            
+
         } catch (Exception e) {
             Log.e(TAG, "Error updating timeline", e);
         }
