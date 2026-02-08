@@ -94,13 +94,16 @@
         tools:layout="@layout/fragment_register_verification" />
 
     <fragment
-        android:id="@+id/nav_driver_dashboard"
-        android:name="com.example.mobile.ui.driver.DriverDashboardFragment"
-        android:label="Driver Dashboard"
-        tools:layout="@layout/fragment_driver_dashboard">
+        android:id="@+id/nav_driver_overview"
+        android:name="com.example.mobile.ui.driver.DriverOverviewFragment"
+        android:label="Driver Overview"
+        tools:layout="@layout/fragment_driver_overview">
         <action
-            android:id="@+id/action_nav_driver_dashboard_to_nav_ride_details"
+            android:id="@+id/action_nav_driver_overview_to_nav_ride_details"
             app:destination="@id/nav_ride_details" />
+        <action
+            android:id="@+id/action_nav_driver_dashboard_to_nav_active_ride"
+            app:destination="@id/nav_active_ride" />
     </fragment>
 
     <fragment
@@ -125,6 +128,17 @@
     </fragment>
 
     <fragment
+        android:id="@+id/nav_active_ride"
+        android:name="com.example.mobile.ui.ride.ActiveRideFragment"
+        android:label="Active Ride"
+        tools:layout="@layout/fragment_active_ride">
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
         android:id="@+id/nav_admin_dashboard"
         android:name="com.example.mobile.ui.admin.AdminDashboardFragment"
         android:label="Admin Dashboard"
@@ -134,7 +148,11 @@
         android:id="@+id/nav_passenger_home"
         android:name="com.example.mobile.ui.passenger.PassengerHomeFragment"
         android:label="Passenger Home"
-        tools:layout="@layout/fragment_passenger_home" />
+        tools:layout="@layout/fragment_passenger_home">
+        <action
+            android:id="@+id/action_nav_passenger_home_to_nav_active_ride"
+            app:destination="@id/nav_active_ride" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_admin_profile"

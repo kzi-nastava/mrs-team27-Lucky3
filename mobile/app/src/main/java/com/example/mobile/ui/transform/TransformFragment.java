@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -11,26 +12,25 @@ import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.DiffUtil;
-import androidx.recyclerview.widget.ListAdapter;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentTransformBinding;
 import com.example.mobile.databinding.ItemTransformBinding;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 /**
  * Fragment that demonstrates a responsive layout pattern where the format of the content
  * transforms depending on the size of the screen. Specifically this Fragment shows items in
- * the [RecyclerView] using LinearLayoutManager in a small screen
- * and shows items using GridLayoutManager in a large screen.
+ * a ListView.
  */
 public class TransformFragment extends Fragment {
 
     private FragmentTransformBinding binding;
+    private TransformAdapter adapter;
+    private List<String> items = new ArrayList<>();
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -40,10 +40,12 @@ public class TransformFragment extends Fragment {
         binding = FragmentTransformBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        RecyclerView recyclerView = binding.recyclerviewTransform;
-        ListAdapter<String, TransformViewHolder> adapter = new TransformAdapter();
-        recyclerView.setAdapter(adapter);
-        transformViewModel.getTexts().observe(getViewLifecycleOwner(), adapter::submitList);
+        adapter = new TransformAdapter();
+        binding.listviewTransform.setAdapter(adapter);
+        transformViewModel.getTexts().observe(getViewLifecycleOwner(), texts -> {
+            items = texts;
+            adapter.notifyDataSetChanged();
+        });
         return root;
     }
 
@@ -53,7 +55,7 @@ public class TransformFragment extends Fragment {
         binding = null;
     }
 
-    private static class TransformAdapter extends ListAdapter<String, TransformViewHolder> {
+    private class TransformAdapter extends BaseAdapter {
 
         private final List<Integer> drawables = Arrays.asList(
                 R.drawable.avatar_1,
@@ -73,44 +75,49 @@ public class TransformFragment extends Fragment {
                 R.drawable.avatar_15,
                 R.drawable.avatar_16);
 
-        protected TransformAdapter() {
-            super(new DiffUtil.ItemCallback<String>() {
-                @Override
-                public boolean areItemsTheSame(@NonNull String oldItem, @NonNull String newItem) {
-                    return oldItem.equals(newItem);
-                }
-
-                @Override
-                public boolean areContentsTheSame(@NonNull String oldItem, @NonNull String newItem) {
-                    return oldItem.equals(newItem);
-                }
-            });
-        }
-
-        @NonNull
         @Override
-        public TransformViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            ItemTransformBinding binding = ItemTransformBinding.inflate(LayoutInflater.from(parent.getContext()));
-            return new TransformViewHolder(binding);
+        public int getCount() {
+            return items.size();
         }
 
         @Override
-        public void onBindViewHolder(@NonNull TransformViewHolder holder, int position) {
+        public String getItem(int position) {
+            return items.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ViewHolder holder;
+            if (convertView == null) {
+                ItemTransformBinding itemBinding = ItemTransformBinding.inflate(
+                        LayoutInflater.from(parent.getContext()), parent, false);
+                convertView = itemBinding.getRoot();
+                holder = new ViewHolder(itemBinding);
+                convertView.setTag(holder);
+            } else {
+                holder = (ViewHolder) convertView.getTag();
+            }
+
             holder.textView.setText(getItem(position));
             holder.imageView.setImageDrawable(
                     ResourcesCompat.getDrawable(holder.imageView.getResources(),
                             drawables.get(position),
                             null));
+            return convertView;
         }
     }
 
-    private static class TransformViewHolder extends RecyclerView.ViewHolder {
+    private static class ViewHolder {
 
         private final ImageView imageView;
         private final TextView textView;
 
-        public TransformViewHolder(ItemTransformBinding binding) {
-            super(binding.getRoot());
+        public ViewHolder(ItemTransformBinding binding) {
             imageView = binding.imageViewItemTransform;
             textView = binding.textViewItemTransform;
         }
