@@ -499,12 +499,11 @@ public class RideServiceImpl implements RideService {
 
         Ride savedRide = rideRepository.save(ride);
 
-        // Logic check for next scheduled ride
+        // Logic check for next scheduled or pending ride
         if (ride.getDriver() != null) {
-            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(
+            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
                     ride.getDriver().getId(),
-                    RideStatus.SCHEDULED,
-                    LocalDateTime.now()
+                    List.of(RideStatus.SCHEDULED, RideStatus.PENDING)
             );
 
             Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
@@ -514,9 +513,6 @@ public class RideServiceImpl implements RideService {
                 
                 if (!nextRides.isEmpty()) {
                     vehicle.setStatus(VehicleStatus.BUSY);
-                    // "load next ride" logic could mean setting the next ride as active or notifying driver,
-                    // but for now we just handle status.
-                    // If we wanted to "activate" next ride automatically, we might do it here or let driver do it.
                 } else {
                     vehicle.setStatus(VehicleStatus.FREE);
                 }
@@ -600,11 +596,23 @@ public class RideServiceImpl implements RideService {
 
         Ride savedRide = rideRepository.save(ride);
 
-        // Reset vehicle panic flag when ride is cancelled
+        // Reset vehicle panic flag and update status when ride is cancelled
         if (ride.getDriver() != null) {
             Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
             if (vehicle != null) {
                 vehicle.setCurrentPanic(false);
+
+                List<Ride> nextRides = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
+                        ride.getDriver().getId(),
+                        List.of(RideStatus.SCHEDULED, RideStatus.PENDING)
+                );
+
+                if (!nextRides.isEmpty()) {
+                    vehicle.setStatus(VehicleStatus.BUSY);
+                } else {
+                    vehicle.setStatus(VehicleStatus.FREE);
+                }
+
                 vehicleRepository.save(vehicle);
             }
         }
@@ -870,10 +878,9 @@ public class RideServiceImpl implements RideService {
 
         // Update Vehicle Status
         if (ride.getDriver() != null) {
-            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(
+            List<Ride> nextRides = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
                     ride.getDriver().getId(),
-                    RideStatus.SCHEDULED,
-                    LocalDateTime.now()
+                    List.of(RideStatus.SCHEDULED, RideStatus.PENDING)
             );
 
             Vehicle vehicle = vehicleRepository.findByDriverId(ride.getDriver().getId()).orElse(null);
