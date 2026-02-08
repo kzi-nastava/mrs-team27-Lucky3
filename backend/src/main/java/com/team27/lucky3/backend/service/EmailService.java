@@ -84,8 +84,9 @@ public interface EmailService {
      * @param estimatedCost The estimated cost of the ride
      * @param cancelledByName The name of the person who cancelled the ride
      * @param cancelledByRole "driver" or "passenger"
+     * @param reason The reason for cancellation
      */
     void sendLinkedPassengerRideCancelledEmail(String to, String passengerName, Long rideId,
                                                 String startAddress, String endAddress, double estimatedCost,
-                                                String cancelledByName, String cancelledByRole);
+                                                String cancelledByName, String cancelledByRole, String reason);
 }

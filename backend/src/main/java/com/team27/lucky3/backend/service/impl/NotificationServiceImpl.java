@@ -347,6 +347,7 @@ public class NotificationServiceImpl implements NotificationService {
                     final String endAddr = ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : "Unknown";
                     final double cost = ride.getEstimatedCost();
                     final String cancellerNameCopy = cancellerName;
+                    final String rejectionReason = ride.getRejectionReason();
                     
                     CompletableFuture.runAsync(() -> {
                         try {
@@ -358,7 +359,8 @@ public class NotificationServiceImpl implements NotificationService {
                                     endAddr,
                                     cost,
                                     cancellerNameCopy, 
-                                    "driver"
+                                    "driver",
+                                    rejectionReason
                             );
                             log.info("Sent ride-cancelled email to passenger {} for ride #{}", 
                                     passengerEmail, rideId);
@@ -762,6 +764,9 @@ public class NotificationServiceImpl implements NotificationService {
         String endAddress = ride.getEndLocation() != null 
                 ? ride.getEndLocation().getAddress() : "Unknown";
 
+        final String rejectionReason = ride.getRejectionReason();
+        final double estimatedCost = ride.getEstimatedCost();
+
         for (String email : invitedEmails) {
             // Check if this email belongs to a registered user
             Optional<User> registeredUser = userRepository.findByEmail(email);
@@ -776,7 +781,7 @@ public class NotificationServiceImpl implements NotificationService {
                 try {
                     emailService.sendLinkedPassengerRideCancelledEmail(
                             emailCopy, passengerNameCopy, rideId, startAddress, endAddress, 
-                            ride.getEstimatedCost(), cancellerName, cancellerRole);
+                            estimatedCost, cancellerName, cancellerRole, rejectionReason);
                     log.info("Sent ride-cancelled email to linked passenger {} for ride #{}", emailCopy, rideId);
                 } catch (Exception e) {
                     log.error("Failed to send ride-cancelled email to {}: {}", emailCopy, e.getMessage());

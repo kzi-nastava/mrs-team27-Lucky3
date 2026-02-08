@@ -193,7 +193,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendLinkedPassengerRideCancelledEmail(String to, String passengerName, Long rideId,
                                                        String startAddress, String endAddress, double estimatedCost,
-                                                       String cancelledByName, String cancelledByRole) {
+                                                       String cancelledByName, String cancelledByRole, String reason) {
         String subject = "Your ride has been cancelled - Lucky3";
         String text = String.format(
             "Hi %s,\n\n" +
@@ -201,7 +201,8 @@ public class EmailServiceImpl implements EmailService {
             "═══ Cancelled Ride Details ═══\n" +
             "From:          %s\n" +
             "To:            %s\n" +
-            "Cancelled by:  %s (%s)\n\n" +
+            "Cancelled by:  %s (%s)\n" +
+            "Reason:        %s\n\n" +
             "We apologize for any inconvenience. " +
             "Please book a new ride if you still need transportation.\n\n" +
             "— The Lucky3 Team",
@@ -210,7 +211,8 @@ public class EmailServiceImpl implements EmailService {
             startAddress,
             endAddress,
             cancelledByName,
-            cancelledByRole
+            cancelledByRole,
+            reason != null && !reason.isEmpty() ? reason : "No reason provided"
         );
         
         sendSimpleMessage(to, subject, text);
