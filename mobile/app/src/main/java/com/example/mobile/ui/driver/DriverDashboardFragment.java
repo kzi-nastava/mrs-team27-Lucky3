@@ -828,6 +828,12 @@ public class DriverDashboardFragment extends Fragment {
                         mapView.getOverlays().add(approachRoute);
                     }
 
+                    // Ensure vehicle marker stays on top of route overlays
+                    if (vehicleMarker != null) {
+                        mapView.getOverlays().remove(vehicleMarker);
+                        mapView.getOverlays().add(vehicleMarker);
+                    }
+
                     mapView.invalidate();
                 });
             } catch (Exception e) {

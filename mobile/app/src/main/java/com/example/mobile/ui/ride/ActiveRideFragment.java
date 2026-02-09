@@ -76,6 +76,9 @@ public class ActiveRideFragment extends Fragment {
     private volatile double remainingDistanceKm = -1;
     private volatile double remainingTimeMin = -1;
     private volatile double lastYellowDistanceKm = 0;
+    // Route distance/time for non-IN_PROGRESS rides (only the ride route, no approach)
+    private volatile double routeDistanceKm = -1;
+    private volatile double routeTimeMin = -1;
 
     // Polling
     private final Handler pollingHandler = new Handler(Looper.getMainLooper());
@@ -261,15 +264,21 @@ public class ActiveRideFragment extends Fragment {
             }
         } else {
             tvTimeLabel.setText("Est. Time");
-            Integer estimatedTime = ride.getEstimatedTimeInMinutes();
-            if (estimatedTime != null) {
-                tvTimeValue.setText(estimatedTime + " min");
-            } else {
-                tvTimeValue.setText("—");
-            }
             tvDistanceLabel.setText("Distance");
-            double distance = ride.getEffectiveDistance();
-            tvDistanceValue.setText(String.format(Locale.US, "%.1f km", distance));
+            // Values come from OSRM route data (yellow route only, no approach)
+            if (routeDistanceKm >= 0) {
+                updateRouteTimeDistance();
+            } else {
+                // Fallback to backend estimate until OSRM data arrives
+                Integer estimatedTime = ride.getEstimatedTimeInMinutes();
+                if (estimatedTime != null) {
+                    tvTimeValue.setText(estimatedTime + " min");
+                } else {
+                    tvTimeValue.setText("—");
+                }
+                double distance = ride.getEffectiveDistance();
+                tvDistanceValue.setText(String.format(Locale.US, "%.1f km", distance));
+            }
         }
 
         // Build route stops dynamically
@@ -288,6 +297,24 @@ public class ActiveRideFragment extends Fragment {
         }
         if (remainingTimeMin >= 0) {
             int mins = (int) Math.round(remainingTimeMin);
+            tvTimeValue.setText(mins < 1 ? "< 1 min" : mins + " min");
+        } else {
+            tvTimeValue.setText("—");
+        }
+    }
+
+    /**
+     * Updates Est. Time and Distance for non-IN_PROGRESS rides from OSRM route data.
+     * Uses only the ride route (yellow), excludes approach distance.
+     */
+    private void updateRouteTimeDistance() {
+        if (routeDistanceKm >= 0) {
+            tvDistanceValue.setText(String.format(Locale.US, "%.1f km", routeDistanceKm));
+        } else {
+            tvDistanceValue.setText("—");
+        }
+        if (routeTimeMin >= 0) {
+            int mins = (int) Math.round(routeTimeMin);
             tvTimeValue.setText(mins < 1 ? "< 1 min" : mins + " min");
         } else {
             tvTimeValue.setText("—");
@@ -702,14 +729,20 @@ public class ActiveRideFragment extends Fragment {
                     }
                 }
 
-                // Update remaining distance: blue (vehicle→next stop) + yellow (rest of route)
+                // Update distance/time from OSRM route data
                 if (isInProgress) {
+                    // IN_PROGRESS: blue (vehicle→next stop) + yellow (remaining route)
                     if (redrawYellow) {
                         lastYellowDistanceKm = yellowDistKm;
                     }
                     remainingDistanceKm = blueDistKm + lastYellowDistanceKm;
-                    // Time heuristic: 3.2 min/km (same as web)
                     remainingTimeMin = remainingDistanceKm * 3.2;
+                } else {
+                    // SCHEDULED/PENDING/ACCEPTED: only yellow route (pickup→stops→destination)
+                    if (redrawYellow && yellowDistKm > 0) {
+                        routeDistanceKm = yellowDistKm;
+                        routeTimeMin = yellowDistKm * 3.2;
+                    }
                 }
 
                 final Polyline finalBlue = blueOverlay;
@@ -732,11 +765,20 @@ public class ActiveRideFragment extends Fragment {
                         approachRoute = finalBlue;
                         mapView.getOverlays().add(approachRoute);
                     }
+
+                    // Ensure vehicle marker stays on top of route overlays
+                    if (vehicleMarker != null) {
+                        mapView.getOverlays().remove(vehicleMarker);
+                        mapView.getOverlays().add(vehicleMarker);
+                    }
+
                     mapView.invalidate();
 
                     // Update time/distance display with fresh route data
                     if (isInProgress) {
                         updateRemainingTimeDistance();
+                    } else {
+                        updateRouteTimeDistance();
                     }
                 });
             } catch (Exception e) {
