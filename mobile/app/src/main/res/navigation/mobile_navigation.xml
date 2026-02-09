@@ -252,7 +252,24 @@
         android:id="@+id/nav_passenger_history"
         android:name="com.example.mobile.ui.passenger.PassengerHistoryFragment"
         android:label="Ride History"
-        tools:layout="@layout/fragment_passenger_history" />
+        tools:layout="@layout/fragment_passenger_history">
+
+        <action
+            android:id="@+id/action_passenger_history_to_passenger_ride_detail"
+            app:destination="@id/nav_passenger_ride_detail" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_passenger_ride_detail"
+        android:name="com.example.mobile.ui.passenger.PassengerRideDetailFragment"
+        android:label="Ride Detail"
+        tools:layout="@layout/fragment_passenger_ride_detail">
+
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_passenger_profile"
