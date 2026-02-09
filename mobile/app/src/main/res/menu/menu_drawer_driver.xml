@@ -7,6 +7,10 @@
             android:title="Dashboard"
             android:checked="true" />
         <item
+            android:id="@+id/nav_driver_active_ride"
+            android:icon="@drawable/ic_menu_active_ride"
+            android:title="Active Ride" />
+        <item
             android:id="@+id/nav_driver_overview"
             android:icon="@drawable/ic_menu_overview"
             android:title="Overview" />

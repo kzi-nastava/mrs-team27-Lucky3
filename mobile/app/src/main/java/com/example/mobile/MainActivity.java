@@ -1,14 +1,18 @@
 package com.example.mobile;
 
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.Menu;
 import android.preference.PreferenceManager;
 
-import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
@@ -17,15 +21,30 @@ import androidx.navigation.ui.NavigationUI;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobile.databinding.ActivityMainBinding;
+import com.example.mobile.models.PageResponse;
+import com.example.mobile.models.RideResponse;
+import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
 
 import org.osmdroid.config.Configuration;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
+    private static final long ACTIVE_RIDE_POLL_INTERVAL = 15_000; // 15 seconds
+
     private AppBarConfiguration mAppBarConfiguration;
-    // Helper to check session
     private SharedPreferencesManager sharedPreferencesManager;
+
+    // Active ride polling
+    private Handler activeRidePollHandler;
+    private Runnable activeRidePollRunnable;
+    private Long currentActiveRideId = null;
+    private String currentRole = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,8 +70,9 @@ public class MainActivity extends AppCompatActivity {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
                     R.id.nav_guest_home, R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow, R.id.nav_settings,
                     R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support,
-                    R.id.nav_passenger_home, R.id.nav_passenger_history, R.id.nav_passenger_profile, R.id.nav_passenger_support,
-                    R.id.nav_driver_dashboard, R.id.nav_driver_overview, R.id.nav_driver_profile, R.id.nav_driver_support)
+                    R.id.nav_passenger_home, R.id.nav_passenger_history, R.id.nav_passenger_profile, R.id.nav_passenger_support, R.id.nav_passenger_favorites,
+                    R.id.nav_driver_dashboard, R.id.nav_driver_overview, R.id.nav_driver_profile, R.id.nav_driver_support,
+                    R.id.nav_active_ride)
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupWithNavController(navigationView, navController);
@@ -67,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
         if (token != null && !token.isEmpty()) {
             String role = sharedPreferencesManager.getUserRole();
             if (role != null) {
+                currentRole = role;
                 setupNavigationForRole(role);
                 // Navigate to the role's landing page
                 if ("DRIVER".equals(role)) {
@@ -111,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setupNavigationForRole(String role) {
+        currentRole = role;
         NavigationView navigationView = findViewById(R.id.nav_view);
         if (navigationView != null) {
             navigationView.setItemIconTintList(null); // Allow custom icon colors
@@ -128,39 +150,187 @@ public class MainActivity extends AppCompatActivity {
             MenuItem logoutItem = navigationView.getMenu().findItem(R.id.nav_logout);
             if (logoutItem != null) {
                 android.text.SpannableString s = new android.text.SpannableString(logoutItem.getTitle());
-                s.setSpan(new android.text.style.ForegroundColorSpan(android.graphics.Color.RED), 0, s.length(), 0);
+                s.setSpan(new android.text.style.ForegroundColorSpan(Color.RED), 0, s.length(), 0);
                 logoutItem.setTitle(s);
 
                 // Tint icon red
                 if (logoutItem.getIcon() != null) {
                     android.graphics.drawable.Drawable icon = logoutItem.getIcon();
-                    icon = androidx.core.graphics.drawable.DrawableCompat.wrap(icon);
-                    androidx.core.graphics.drawable.DrawableCompat.setTint(icon.mutate(), android.graphics.Color.RED);
+                    icon = DrawableCompat.wrap(icon);
+                    DrawableCompat.setTint(icon.mutate(), Color.RED);
                     logoutItem.setIcon(icon);
                 }
             }
 
-            // Handle logout
+            // Style active ride item as gray initially
+            styleActiveRideMenuItem(false);
+
+            // Handle navigation item clicks
             navigationView.setNavigationItemSelectedListener(item -> {
-                if (item.getItemId() == R.id.nav_logout) {
+                int itemId = item.getItemId();
+
+                // Handle logout
+                if (itemId == R.id.nav_logout) {
+                    stopActiveRidePolling();
+                    currentActiveRideId = null;
+                    currentRole = null;
+                    sharedPreferencesManager.logout();
                     NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
                     navController.navigate(R.id.nav_guest_home);
-                    androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
-                    if (drawer != null) {
-                        drawer.close();
-                    }
+                    closeDrawer();
                     return true;
                 }
+
+                // Handle Active Ride click (programmatic navigation with rideId)
+                if (itemId == R.id.nav_driver_active_ride || itemId == R.id.nav_passenger_active_ride) {
+                    if (currentActiveRideId != null) {
+                        Bundle args = new Bundle();
+                        args.putLong("rideId", currentActiveRideId);
+                        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+                        navController.navigate(R.id.nav_active_ride, args);
+                    }
+                    closeDrawer();
+                    return true;
+                }
+
                 // Let NavigationUI handle other items if ids match destinations
                 boolean handled = NavigationUI.onNavDestinationSelected(item, Navigation.findNavController(this, R.id.nav_host_fragment_content_main));
                 if (handled) {
-                    androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
-                    if (drawer != null) {
-                        drawer.close();
-                    }
+                    closeDrawer();
                 }
                 return handled;
             });
+
+            // Start polling for active ride if applicable
+            if ("DRIVER".equals(role) || "PASSENGER".equals(role)) {
+                startActiveRidePolling();
+            }
+        }
+    }
+
+    // ======================== Active Ride Polling ========================
+
+    private void startActiveRidePolling() {
+        stopActiveRidePolling();
+        activeRidePollHandler = new Handler(Looper.getMainLooper());
+        activeRidePollRunnable = new Runnable() {
+            @Override
+            public void run() {
+                pollForActiveRide();
+                if (activeRidePollHandler != null) {
+                    activeRidePollHandler.postDelayed(this, ACTIVE_RIDE_POLL_INTERVAL);
+                }
+            }
+        };
+        // Initial poll immediately
+        activeRidePollHandler.post(activeRidePollRunnable);
+    }
+
+    private void stopActiveRidePolling() {
+        if (activeRidePollHandler != null && activeRidePollRunnable != null) {
+            activeRidePollHandler.removeCallbacks(activeRidePollRunnable);
+        }
+        activeRidePollHandler = null;
+        activeRidePollRunnable = null;
+    }
+
+    private void pollForActiveRide() {
+        String token = sharedPreferencesManager.getToken();
+        Long userId = sharedPreferencesManager.getUserId();
+        if (token == null || userId == null || userId <= 0) return;
+
+        String bearerToken = "Bearer " + token;
+        Long driverId = "DRIVER".equals(currentRole) ? userId : null;
+        Long passengerId = "PASSENGER".equals(currentRole) ? userId : null;
+
+        // Check IN_PROGRESS first (highest priority)
+        checkRideStatus(driverId, passengerId, "IN_PROGRESS", bearerToken, () -> {
+            // Then ACCEPTED
+            checkRideStatus(driverId, passengerId, "ACCEPTED", bearerToken, () -> {
+                // Then PENDING
+                checkRideStatus(driverId, passengerId, "PENDING", bearerToken, () -> {
+                    // Then SCHEDULED
+                    checkRideStatus(driverId, passengerId, "SCHEDULED", bearerToken, () -> {
+                        // No active ride found
+                        runOnUiThread(() -> {
+                            currentActiveRideId = null;
+                            styleActiveRideMenuItem(false);
+                        });
+                    });
+                });
+            });
+        });
+    }
+
+    private void checkRideStatus(Long driverId, Long passengerId, String status, String token, Runnable onNotFound) {
+        ClientUtils.rideService.getActiveRides(driverId, passengerId, status, 0, 1, token)
+                .enqueue(new Callback<PageResponse<RideResponse>>() {
+                    @Override
+                    public void onResponse(Call<PageResponse<RideResponse>> call,
+                                           Response<PageResponse<RideResponse>> response) {
+                        if (response.isSuccessful() && response.body() != null
+                                && response.body().getContent() != null
+                                && !response.body().getContent().isEmpty()) {
+                            RideResponse ride = response.body().getContent().get(0);
+                            runOnUiThread(() -> {
+                                currentActiveRideId = ride.getId();
+                                styleActiveRideMenuItem(true);
+                            });
+                        } else {
+                            onNotFound.run();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<PageResponse<RideResponse>> call, Throwable t) {
+                        Log.e(TAG, "Failed to poll active rides (" + status + ")", t);
+                        onNotFound.run();
+                    }
+                });
+    }
+
+    private void styleActiveRideMenuItem(boolean hasActiveRide) {
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        if (navigationView == null) return;
+
+        int activeRideMenuId;
+        if ("DRIVER".equals(currentRole)) {
+            activeRideMenuId = R.id.nav_driver_active_ride;
+        } else if ("PASSENGER".equals(currentRole)) {
+            activeRideMenuId = R.id.nav_passenger_active_ride;
+        } else {
+            return;
+        }
+
+        MenuItem activeRideItem = navigationView.getMenu().findItem(activeRideMenuId);
+        if (activeRideItem == null) return;
+
+        int color = hasActiveRide ? Color.parseColor("#eab308") : Color.parseColor("#9CA3AF");
+
+        // Tint icon
+        if (activeRideItem.getIcon() != null) {
+            android.graphics.drawable.Drawable icon = activeRideItem.getIcon();
+            icon = DrawableCompat.wrap(icon);
+            DrawableCompat.setTint(icon.mutate(), color);
+            activeRideItem.setIcon(icon);
+        }
+
+        // Tint text
+        android.text.SpannableString s = new android.text.SpannableString(
+                hasActiveRide ? "Active Ride  ●" : "Active Ride");
+        s.setSpan(new android.text.style.ForegroundColorSpan(color), 0, s.length(), 0);
+        activeRideItem.setTitle(s);
+
+        // Enable/disable clickability
+        activeRideItem.setEnabled(hasActiveRide);
+    }
+
+    // ======================== Drawer Helpers ========================
+
+    private void closeDrawer() {
+        androidx.drawerlayout.widget.DrawerLayout drawer = findViewById(R.id.drawer_layout);
+        if (drawer != null) {
+            drawer.close();
         }
     }
 
@@ -169,5 +339,11 @@ public class MainActivity extends AppCompatActivity {
         if (drawer != null) {
             drawer.open();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        stopActiveRidePolling();
     }
 }

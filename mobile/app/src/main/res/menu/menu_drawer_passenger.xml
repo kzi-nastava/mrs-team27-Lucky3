@@ -6,19 +6,27 @@
             android:icon="@drawable/ic_menu_home"
             android:title="Home" />
         <item
+            android:id="@+id/nav_passenger_active_ride"
+            android:icon="@drawable/ic_menu_active_ride"
+            android:title="Active Ride" />
+        <item
             android:id="@+id/nav_passenger_history"
             android:icon="@drawable/ic_menu_history"
             android:title="Ride History" />
         <item
-            android:id="@+id/nav_user_profile"
+            android:id="@+id/nav_passenger_profile"
             android:icon="@drawable/ic_menu_profile"
             android:title="Profile" />
         <item
             android:id="@+id/nav_passenger_support"
             android:icon="@drawable/ic_menu_support"
             android:title="Support" />
+        <item
+            android:id="@+id/nav_passenger_favorites"
+            android:icon="@drawable/ic_menu_favourites"
+            android:title="Favorites" />
     </group>
-    <item android:title="Account">
+    <item android:title="">
         <menu>
             <item
                 android:id="@+id/nav_logout"

@@ -246,6 +246,12 @@
         tools:layout="@layout/fragment_support" />
 
     <fragment
+        android:id="@+id/nav_passenger_favorites"
+        android:name="com.example.mobile.ui.passenger.PassengerFavoritesFragment"
+        android:label="Favorites"
+        tools:layout="@layout/fragment_passenger_favorites" />
+
+    <fragment
         android:id="@+id/nav_driver_support"
         android:name="com.example.mobile.ui.support.SupportFragment"
         android:label="Support"
