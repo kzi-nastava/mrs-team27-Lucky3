@@ -24,6 +24,7 @@ import com.example.mobile.models.LocationDto;
 import com.example.mobile.models.RideResponse;
 import com.example.mobile.models.VehicleLocationResponse;
 import com.example.mobile.ui.maps.RideMapRenderer;
+import com.example.mobile.ui.ride.ReportInconsistencyDialog;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
 import com.google.android.material.button.MaterialButton;
@@ -71,18 +72,25 @@ public class ActiveRideFragment extends Fragment {
     // Stop auto-completion
     private final Set<Integer> pendingStopCompletions = new HashSet<>();
 
+    // Remaining distance/time from OSRM route data (updated in drawRoutes)
+    private volatile double remainingDistanceKm = -1;
+    private volatile double remainingTimeMin = -1;
+    private volatile double lastYellowDistanceKm = 0;
+
     // Polling
     private final Handler pollingHandler = new Handler(Looper.getMainLooper());
     private boolean isPollingActive = false;
 
-    private TextView tvRideId, tvStatusBadge;
-    private TextView tvPickupAddress, tvDestinationAddress;
-    private TextView tvDistance, tvDuration, tvCost;
+    private TextView tvStatusBadge;
+    private TextView tvRideType, tvCost, tvCostLabel;
+    private TextView tvTimeLabel, tvTimeValue, tvDistanceLabel, tvDistanceValue;
+    private LinearLayout rideInfoCard, routeStopsContainer;
     private LinearLayout driverInfoCard, passengerInfoCard, cancellationInfoCard;
     private TextView tvDriverName, tvDriverVehicle;
     private LinearLayout passengersList;
     private TextView tvCancelledBy, tvCancellationReason;
     private MaterialButton btnDriverCancel, btnPassengerCancel;
+    private MaterialButton btnReportInconsistency, btnPanic;
     private LinearLayout actionButtons;
 
     @Override
@@ -109,13 +117,16 @@ public class ActiveRideFragment extends Fragment {
     }
 
     private void bindViews(View root) {
-        tvRideId = root.findViewById(R.id.tv_ride_id);
         tvStatusBadge = root.findViewById(R.id.tv_status_badge);
-        tvPickupAddress = root.findViewById(R.id.tv_pickup_address);
-        tvDestinationAddress = root.findViewById(R.id.tv_destination_address);
-        tvDistance = root.findViewById(R.id.tv_distance);
-        tvDuration = root.findViewById(R.id.tv_duration);
+        tvRideType = root.findViewById(R.id.tv_ride_type);
         tvCost = root.findViewById(R.id.tv_cost);
+        tvCostLabel = root.findViewById(R.id.tv_cost_label);
+        tvTimeLabel = root.findViewById(R.id.tv_time_label);
+        tvTimeValue = root.findViewById(R.id.tv_time_value);
+        tvDistanceLabel = root.findViewById(R.id.tv_distance_label);
+        tvDistanceValue = root.findViewById(R.id.tv_distance_value);
+        rideInfoCard = root.findViewById(R.id.ride_info_card);
+        routeStopsContainer = root.findViewById(R.id.route_stops_container);
         driverInfoCard = root.findViewById(R.id.driver_info_card);
         passengerInfoCard = root.findViewById(R.id.passenger_info_card);
         cancellationInfoCard = root.findViewById(R.id.cancellation_info_card);
@@ -126,7 +137,12 @@ public class ActiveRideFragment extends Fragment {
         tvCancellationReason = root.findViewById(R.id.tv_cancellation_reason);
         btnDriverCancel = root.findViewById(R.id.btn_driver_cancel);
         btnPassengerCancel = root.findViewById(R.id.btn_passenger_cancel);
+        btnReportInconsistency = root.findViewById(R.id.btn_report_inconsistency);
+        btnPanic = root.findViewById(R.id.btn_panic);
         actionButtons = root.findViewById(R.id.action_buttons);
+
+        // Set PANIC button text with emoji
+        btnPanic.setText("\uD83E\uDD2F PANIC");
     }
 
     private void setupMap(View root) {
@@ -194,8 +210,6 @@ public class ActiveRideFragment extends Fragment {
     }
 
     private void updateHeader() {
-        tvRideId.setText("Ride #" + ride.getId());
-
         String status = ride.getStatus();
         if (status != null) {
             tvStatusBadge.setText(ride.getDisplayStatus().toUpperCase());
@@ -213,26 +227,183 @@ public class ActiveRideFragment extends Fragment {
     }
 
     private void updateRoute() {
+        // Update ride info card
+        boolean isInProgress = "IN_PROGRESS".equals(ride.getStatus());
+        rideInfoCard.setVisibility(View.VISIBLE);
+
+        // Ride type
+        String vehicleType = ride.getVehicleType();
+        if (vehicleType != null) {
+            tvRideType.setText(vehicleType.toUpperCase());
+        }
+
+        // Cost
+        if (isInProgress) {
+            tvCostLabel.setText("Current Cost");
+            double cost = ride.getTotalCost() != null ? ride.getTotalCost() : 0;
+            tvCost.setText(String.format(Locale.US, "RSD %.0f", cost));
+        } else {
+            tvCostLabel.setText("Est. Cost");
+            double cost = ride.getEffectiveCost();
+            tvCost.setText(String.format(Locale.US, "RSD %.0f", cost));
+        }
+
+        // Time & Distance
+        if (isInProgress) {
+            tvTimeLabel.setText("Time Left");
+            tvDistanceLabel.setText("Distance Left");
+            // Values come from OSRM route data (updated in drawRoutes)
+            if (remainingDistanceKm >= 0) {
+                updateRemainingTimeDistance();
+            } else {
+                tvTimeValue.setText("—");
+                tvDistanceValue.setText("—");
+            }
+        } else {
+            tvTimeLabel.setText("Est. Time");
+            Integer estimatedTime = ride.getEstimatedTimeInMinutes();
+            if (estimatedTime != null) {
+                tvTimeValue.setText(estimatedTime + " min");
+            } else {
+                tvTimeValue.setText("—");
+            }
+            tvDistanceLabel.setText("Distance");
+            double distance = ride.getEffectiveDistance();
+            tvDistanceValue.setText(String.format(Locale.US, "%.1f km", distance));
+        }
+
+        // Build route stops dynamically
+        buildRouteStops();
+    }
+
+    /**
+     * Updates Time Left and Distance Left labels from OSRM route data.
+     * Called from updateRoute() and from drawRoutes() on the main thread.
+     */
+    private void updateRemainingTimeDistance() {
+        if (remainingDistanceKm >= 0) {
+            tvDistanceValue.setText(String.format(Locale.US, "%.1f km", remainingDistanceKm));
+        } else {
+            tvDistanceValue.setText("—");
+        }
+        if (remainingTimeMin >= 0) {
+            int mins = (int) Math.round(remainingTimeMin);
+            tvTimeValue.setText(mins < 1 ? "< 1 min" : mins + " min");
+        } else {
+            tvTimeValue.setText("—");
+        }
+    }
+
+    /**
+     * Builds the route stops UI dynamically:
+     * - Start: always green dot
+     * - Intermediate stops: green if completed, gray if pending
+     * - End: always red dot
+     * Connecting dashed lines between each stop.
+     */
+    private void buildRouteStops() {
+        routeStopsContainer.removeAllViews();
+        Set<Integer> completed = ride.getCompletedStopIndexes();
+
+        // Start location
         LocationDto start = ride.getEffectiveStartLocation();
+        if (start != null) {
+            addRouteStopRow("Start", start.getAddress(), R.drawable.bg_dot_green,
+                    getResources().getColor(R.color.gray_400, null));
+        }
+
+        // Intermediate stops
+        List<LocationDto> stops = ride.getStops();
+        if (stops != null) {
+            for (int i = 0; i < stops.size(); i++) {
+                // Add connecting line before each stop
+                addConnectionLine();
+
+                boolean isCompleted = completed.contains(i);
+                int dotDrawable = isCompleted ? R.drawable.bg_dot_green : R.drawable.bg_dot_gray;
+                int labelColor = isCompleted
+                        ? getResources().getColor(R.color.green_500, null)
+                        : getResources().getColor(R.color.gray_400, null);
+                String label = "Stop " + (i + 1) + (isCompleted ? " ✓" : "");
+                addRouteStopRow(label, stops.get(i).getAddress(), dotDrawable, labelColor);
+            }
+        }
+
+        // Add connecting line before destination
+        addConnectionLine();
+
+        // End location
         LocationDto end = ride.getEffectiveEndLocation();
-
-        if (start != null && start.getAddress() != null) {
-            tvPickupAddress.setText(start.getAddress());
+        if (end != null) {
+            addRouteStopRow("End", end.getAddress(), R.drawable.bg_dot_red,
+                    getResources().getColor(R.color.gray_400, null));
         }
-        if (end != null && end.getAddress() != null) {
-            tvDestinationAddress.setText(end.getAddress());
-        }
+    }
 
-        double distance = ride.getEffectiveDistance();
-        tvDistance.setText(String.format(Locale.US, "%.1f km", distance));
+    private void addRouteStopRow(String label, String address, int dotDrawable, int labelColor) {
+        LinearLayout row = new LinearLayout(requireContext());
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.TOP);
+        row.setPadding(0, 4, 0, 4);
 
-        Integer estimatedTime = ride.getEstimatedTimeInMinutes();
-        if (estimatedTime != null) {
-            tvDuration.setText(estimatedTime + " min");
-        }
+        // Dot + label column
+        LinearLayout dotColumn = new LinearLayout(requireContext());
+        dotColumn.setOrientation(LinearLayout.VERTICAL);
+        dotColumn.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+        LinearLayout.LayoutParams dotColParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        dotColParams.setMarginEnd(12);
+        dotColumn.setLayoutParams(dotColParams);
 
-        double cost = ride.getEffectiveCost();
-        tvCost.setText(String.format(Locale.US, "%.0f RSD", cost));
+        // Dot
+        View dot = new View(requireContext());
+        LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(
+                dpToPx(10), dpToPx(10));
+        dotParams.topMargin = dpToPx(4);
+        dot.setLayoutParams(dotParams);
+        dot.setBackgroundResource(dotDrawable);
+        dotColumn.addView(dot);
+
+        row.addView(dotColumn);
+
+        // Text column (label + address)
+        LinearLayout textColumn = new LinearLayout(requireContext());
+        textColumn.setOrientation(LinearLayout.VERTICAL);
+        textColumn.setLayoutParams(new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+
+        // Label (Start, Stop 1, End)
+        TextView labelView = new TextView(requireContext());
+        labelView.setText(label);
+        labelView.setTextColor(labelColor);
+        labelView.setTextSize(11);
+        textColumn.addView(labelView);
+
+        // Address
+        TextView addressView = new TextView(requireContext());
+        addressView.setText(address != null ? address : "—");
+        addressView.setTextColor(getResources().getColor(R.color.white, null));
+        addressView.setTextSize(14);
+        textColumn.addView(addressView);
+
+        row.addView(textColumn);
+        routeStopsContainer.addView(row);
+    }
+
+    private void addConnectionLine() {
+        View line = new View(requireContext());
+        LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(
+                dpToPx(2), dpToPx(20));
+        lineParams.setMarginStart(dpToPx(4));
+        lineParams.topMargin = dpToPx(2);
+        lineParams.bottomMargin = dpToPx(2);
+        line.setLayoutParams(lineParams);
+        line.setBackgroundColor(getResources().getColor(R.color.gray_700, null));
+        routeStopsContainer.addView(line);
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
     private void updateMap() {
@@ -505,6 +676,7 @@ public class ActiveRideFragment extends Fragment {
                 RoadManager roadManager = new OSRMRoadManager(
                         requireContext().getApplicationContext(), "Lucky3-mobile");
 
+                double blueDistKm = 0;
                 Polyline blueOverlay = null;
                 if (blueWaypoints.size() >= 2) {
                     Road blueRoad = roadManager.getRoad(blueWaypoints);
@@ -512,9 +684,11 @@ public class ActiveRideFragment extends Fragment {
                         blueOverlay = RoadManager.buildRoadOverlay(blueRoad);
                         blueOverlay.setColor(Color.parseColor("#3b82f6"));
                         blueOverlay.setWidth(10f);
+                        blueDistKm = blueRoad.mLength;
                     }
                 }
 
+                double yellowDistKm = 0;
                 Polyline yellowOverlay = null;
                 if (redrawYellow && yellowWaypoints.size() >= 2) {
                     Road yellowRoad = roadManager.getRoad(yellowWaypoints);
@@ -524,7 +698,18 @@ public class ActiveRideFragment extends Fragment {
                         yellowOverlay.setWidth(12f);
                         Paint paint = yellowOverlay.getOutlinePaint();
                         paint.setPathEffect(new DashPathEffect(new float[]{30, 20}, 0));
+                        yellowDistKm = yellowRoad.mLength;
                     }
+                }
+
+                // Update remaining distance: blue (vehicle→next stop) + yellow (rest of route)
+                if (isInProgress) {
+                    if (redrawYellow) {
+                        lastYellowDistanceKm = yellowDistKm;
+                    }
+                    remainingDistanceKm = blueDistKm + lastYellowDistanceKm;
+                    // Time heuristic: 3.2 min/km (same as web)
+                    remainingTimeMin = remainingDistanceKm * 3.2;
                 }
 
                 final Polyline finalBlue = blueOverlay;
@@ -548,6 +733,11 @@ public class ActiveRideFragment extends Fragment {
                         mapView.getOverlays().add(approachRoute);
                     }
                     mapView.invalidate();
+
+                    // Update time/distance display with fresh route data
+                    if (isInProgress) {
+                        updateRemainingTimeDistance();
+                    }
                 });
             } catch (Exception e) {
                 Log.e(TAG, "Failed to draw routes", e);
@@ -619,6 +809,9 @@ public class ActiveRideFragment extends Fragment {
         clearRouteOverlays();
         placeRideMarkers();
         yellowRouteNeedsRedraw = true;
+
+        // Rebuild route stops UI so completed dot turns green
+        buildRouteStops();
     }
 
     private static double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
@@ -746,12 +939,35 @@ public class ActiveRideFragment extends Fragment {
 
         btnDriverCancel.setVisibility(View.GONE);
         btnPassengerCancel.setVisibility(View.GONE);
+        btnReportInconsistency.setVisibility(View.GONE);
+        btnPanic.setVisibility(View.GONE);
 
-        if (ride.isCancelled() || "FINISHED".equals(status) || "IN_PROGRESS".equals(status)) {
+        if (ride.isCancelled() || "FINISHED".equals(status)) {
             actionButtons.setVisibility(View.GONE);
             return;
         }
 
+        actionButtons.setVisibility(View.VISIBLE);
+
+        // IN_PROGRESS: show Report Inconsistency (passenger only) + PANIC (both roles)
+        if ("IN_PROGRESS".equals(status)) {
+            // PANIC button for both roles
+            btnPanic.setVisibility(View.VISIBLE);
+            // PANIC does nothing (just a button stub as requested)
+
+            // Report Inconsistency for passengers only
+            if ("PASSENGER".equals(role) && isCurrentUserPassenger()) {
+                btnReportInconsistency.setVisibility(View.VISIBLE);
+                btnReportInconsistency.setOnClickListener(v -> {
+                    ReportInconsistencyDialog dialog =
+                            ReportInconsistencyDialog.newInstance(rideId);
+                    dialog.show(getParentFragmentManager(), "report_inconsistency");
+                });
+            }
+            return;
+        }
+
+        // Non-IN_PROGRESS: show cancel buttons
         boolean canCancel = "PENDING".equals(status)
                 || "ACCEPTED".equals(status)
                 || "SCHEDULED".equals(status);
@@ -760,8 +976,6 @@ public class ActiveRideFragment extends Fragment {
             actionButtons.setVisibility(View.GONE);
             return;
         }
-
-        actionButtons.setVisibility(View.VISIBLE);
 
         if ("DRIVER".equals(role) && isCurrentUserDriver()) {
             btnDriverCancel.setVisibility(View.VISIBLE);
