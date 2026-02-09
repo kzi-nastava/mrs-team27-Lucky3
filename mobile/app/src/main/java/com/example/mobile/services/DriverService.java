@@ -5,6 +5,7 @@ import com.example.mobile.models.DriverChangeRequestCreated;
 import com.example.mobile.models.DriverProfileResponse;
 import com.example.mobile.models.DriverResponse;
 import com.example.mobile.models.DriverStatsResponse;
+import com.example.mobile.models.DriverStatusResponse;
 import com.example.mobile.models.ReviewDriverChangeRequest;
 
 import java.util.List;
@@ -81,6 +82,23 @@ public interface DriverService {
                                          @Body ReviewDriverChangeRequest review,
                                          @Header("Authorization") String token);
 
+    /**
+     * Get driver online/offline status
+     */
+    @GET("api/drivers/{driverId}/status")
+    Call<DriverStatusResponse> getDriverStatus(
+            @Path("driverId") long driverId,
+            @Header("Authorization") String token
+    );
 
+    /**
+     * Toggle driver online/offline status
+     */
+    @PUT("api/drivers/{driverId}/status")
+    Call<DriverStatusResponse> toggleDriverStatus(
+            @Path("driverId") long driverId,
+            @Query("active") boolean active,
+            @Header("Authorization") String token
+    );
 
 }

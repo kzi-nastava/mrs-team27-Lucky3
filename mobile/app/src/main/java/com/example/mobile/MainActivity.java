@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
                     R.id.nav_guest_home, R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow, R.id.nav_settings,
                     R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support,
                     R.id.nav_passenger_home, R.id.nav_passenger_history, R.id.nav_passenger_profile, R.id.nav_passenger_support,
-                    R.id.nav_driver_overview, R.id.nav_driver_profile, R.id.nav_driver_support)
+                    R.id.nav_driver_dashboard, R.id.nav_driver_overview, R.id.nav_driver_profile, R.id.nav_driver_support)
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupWithNavController(navigationView, navController);
@@ -68,8 +68,14 @@ public class MainActivity extends AppCompatActivity {
             String role = sharedPreferencesManager.getUserRole();
             if (role != null) {
                 setupNavigationForRole(role);
-                // Optionally navigate to dashboard if on start destination
-                // For now, we just setup the menu so the user can navigate.
+                // Navigate to the role's landing page
+                if ("DRIVER".equals(role)) {
+                    navController.navigate(R.id.nav_driver_dashboard);
+                } else if ("ADMIN".equals(role)) {
+                    navController.navigate(R.id.nav_admin_dashboard);
+                } else if ("PASSENGER".equals(role)) {
+                    navController.navigate(R.id.nav_passenger_home);
+                }
             }
         }
     }
@@ -111,8 +117,7 @@ public class MainActivity extends AppCompatActivity {
             navigationView.getMenu().clear();
             if ("DRIVER".equals(role)) {
                 navigationView.inflateMenu(R.menu.menu_drawer_driver);
-                // Set Overview as checked by default for driver
-                navigationView.setCheckedItem(R.id.nav_driver_overview);
+                navigationView.setCheckedItem(R.id.nav_driver_dashboard);
             } else if ("PASSENGER".equals(role)) {
                 navigationView.inflateMenu(R.menu.menu_drawer_passenger);
             } else if ("ADMIN".equals(role)) {

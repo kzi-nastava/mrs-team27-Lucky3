@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_card"
+    android:padding="16dp"
+    android:layout_marginBottom="8dp">
+
+    <!-- Top Row: Time + Status Badge -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/scheduled_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Today, 3:30 PM"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/scheduled_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SCHEDULED"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textAllCaps="true"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:background="@drawable/bg_badge_active"
+            android:textColor="@color/yellow_500" />
+    </LinearLayout>
+
+    <!-- Route -->
+    <TextView
+        android:id="@+id/scheduled_route"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Pickup → Destination"
+        android:textColor="@color/gray_400"
+        android:textSize="13sp"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Passenger -->
+    <TextView
+        android:id="@+id/scheduled_passenger"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Passenger Name"
+        android:textColor="@color/gray_400"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Bottom Row: Price + Cancel Button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/scheduled_price"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="~ 350.00 RSD"
+            android:textColor="@color/yellow_500"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel_scheduled"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Cancel"
+            android:textColor="@color/red_500"
+            android:textSize="12sp"
+            android:backgroundTint="@android:color/transparent"
+            app:strokeColor="@color/red_500"
+            app:strokeWidth="1dp"
+            app:cornerRadius="8dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+    </LinearLayout>
+</LinearLayout>
