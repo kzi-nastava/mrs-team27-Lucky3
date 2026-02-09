@@ -10,6 +10,10 @@
             android:icon="@drawable/ic_menu_reports"
             android:title="Reports" />
         <item
+            android:id="@+id/nav_admin_ride_history"
+            android:icon="@drawable/ic_menu_history"
+            android:title="Ride History" />
+        <item
             android:id="@+id/nav_admin_drivers"
             android:icon="@drawable/ic_menu_drivers"
             android:title="Drivers" />

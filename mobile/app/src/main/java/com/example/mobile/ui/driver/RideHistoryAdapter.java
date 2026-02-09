@@ -47,16 +47,14 @@ public class RideHistoryAdapter extends BaseAdapter {
         if (convertView == null) {
             convertView = inflater.inflate(R.layout.item_ride_history, parent, false);
             holder = new ViewHolder();
-            holder.startDate = convertView.findViewById(R.id.start_date);
-            holder.startTime = convertView.findViewById(R.id.start_time);
-            holder.endDate = convertView.findViewById(R.id.end_date);
-            holder.endTime = convertView.findViewById(R.id.end_time);
-            holder.pickupAddress = convertView.findViewById(R.id.pickup_address);
-            holder.dropoffAddress = convertView.findViewById(R.id.dropoff_address);
-            holder.passengerCount = convertView.findViewById(R.id.passenger_count);
-            holder.distance = convertView.findViewById(R.id.distance);
-            holder.duration = convertView.findViewById(R.id.duration);
-            holder.price = convertView.findViewById(R.id.price);
+            holder.tvStatus = convertView.findViewById(R.id.tv_status);
+            holder.tvDate = convertView.findViewById(R.id.tv_date);
+            holder.tvDeparture = convertView.findViewById(R.id.tv_departure);
+            holder.tvDestination = convertView.findViewById(R.id.tv_destination);
+            holder.tvVehicleInfo = convertView.findViewById(R.id.tv_vehicle_info);
+            holder.tvCost = convertView.findViewById(R.id.tv_cost);
+            holder.tvDriverName = convertView.findViewById(R.id.tv_driver_name);
+            holder.tvRejectionReason = convertView.findViewById(R.id.tv_rejection_reason);
             convertView.setTag(holder);
         } else {
             holder = (ViewHolder) convertView.getTag();
@@ -64,19 +62,34 @@ public class RideHistoryAdapter extends BaseAdapter {
 
         RideHistoryItem item = getItem(position);
 
-        holder.startDate.setText(item.startDate);
-        holder.startTime.setText(item.startTime);
-        holder.endDate.setText(item.endDate);
-        holder.endTime.setText(item.endTime);
-        holder.pickupAddress.setText(item.pickupAddress);
-        holder.dropoffAddress.setText(item.dropoffAddress);
-        holder.passengerCount.setText(String.valueOf(item.passengerCount));
-        holder.distance.setText(item.distance);
-        holder.duration.setText(item.duration);
-
-        if (holder.price != null) {
-            holder.price.setText(String.format(Locale.US, "%.2f RSD", item.price));
+        // Status badge
+        if (item.status != null && !item.status.isEmpty()) {
+            holder.tvStatus.setText(item.status);
+            holder.tvStatus.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvStatus.setVisibility(View.GONE);
         }
+
+        // Date
+        holder.tvDate.setText(item.startDate + " " + item.startTime);
+
+        // Route
+        holder.tvDeparture.setText(item.pickupAddress);
+        holder.tvDestination.setText(item.dropoffAddress);
+
+        // Vehicle info: show distance and duration
+        holder.tvVehicleInfo.setText(item.distance + " • " + item.duration);
+
+        // Cost
+        if (holder.tvCost != null) {
+            holder.tvCost.setText(String.format(Locale.US, "%.0f RSD", item.price));
+        }
+
+        // Driver name row: show end time info
+        holder.tvDriverName.setText("End: " + item.endDate + " " + item.endTime);
+
+        // Rejection reason hidden by default
+        holder.tvRejectionReason.setVisibility(View.GONE);
 
         convertView.setOnClickListener(v -> {
             Bundle args = new Bundle();
@@ -88,20 +101,19 @@ public class RideHistoryAdapter extends BaseAdapter {
     }
 
     private static class ViewHolder {
-        TextView startDate;
-        TextView startTime;
-        TextView endDate;
-        TextView endTime;
-        TextView pickupAddress;
-        TextView dropoffAddress;
-        TextView passengerCount;
-        TextView distance;
-        TextView duration;
-        TextView price;
+        TextView tvStatus;
+        TextView tvDate;
+        TextView tvDeparture;
+        TextView tvDestination;
+        TextView tvVehicleInfo;
+        TextView tvCost;
+        TextView tvDriverName;
+        TextView tvRejectionReason;
     }
 
     public static class RideHistoryItem {
         public long rideId;
+        public String status;
         public String startDate;
         public String startTime;
         public String endDate;

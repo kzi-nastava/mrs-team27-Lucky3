@@ -15,13 +15,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentPassengerHistoryBinding;
+import com.example.mobile.ui.passenger.PassengerRideAdapter;
 import com.google.android.material.button.MaterialButton;
 
 public class PassengerHistoryFragment extends Fragment {
 
     private FragmentPassengerHistoryBinding binding;
     private PassengerHistoryViewModel viewModel;
-    private RideHistoryAdapter adapter;
+    private PassengerRideAdapter adapter;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -54,7 +55,7 @@ public class PassengerHistoryFragment extends Fragment {
     }
 
     private void setupRecyclerView() {
-        adapter = new RideHistoryAdapter();
+        adapter = new PassengerRideAdapter();
         binding.recyclerRides.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.recyclerRides.setAdapter(adapter);
     }

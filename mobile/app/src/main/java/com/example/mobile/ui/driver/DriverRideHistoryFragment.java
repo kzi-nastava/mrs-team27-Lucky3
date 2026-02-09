@@ -424,15 +424,14 @@ public class DriverRideHistoryFragment extends Fragment {
                 convertView = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.item_ride_history, parent, false);
                 holder = new ViewHolder();
-                holder.startDate = convertView.findViewById(R.id.start_date);
-                holder.startTime = convertView.findViewById(R.id.start_time);
-                holder.endDate = convertView.findViewById(R.id.end_date);
-                holder.endTime = convertView.findViewById(R.id.end_time);
-                holder.pickupAddress = convertView.findViewById(R.id.pickup_address);
-                holder.dropoffAddress = convertView.findViewById(R.id.dropoff_address);
-                holder.passengerCount = convertView.findViewById(R.id.passenger_count);
-                holder.distance = convertView.findViewById(R.id.distance);
-                holder.duration = convertView.findViewById(R.id.duration);
+                holder.tvStatus = convertView.findViewById(R.id.tv_status);
+                holder.tvDate = convertView.findViewById(R.id.tv_date);
+                holder.tvDeparture = convertView.findViewById(R.id.tv_departure);
+                holder.tvDestination = convertView.findViewById(R.id.tv_destination);
+                holder.tvVehicleInfo = convertView.findViewById(R.id.tv_vehicle_info);
+                holder.tvCost = convertView.findViewById(R.id.tv_cost);
+                holder.tvDriverName = convertView.findViewById(R.id.tv_driver_name);
+                holder.tvRejectionReason = convertView.findViewById(R.id.tv_rejection_reason);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
@@ -440,66 +439,62 @@ public class DriverRideHistoryFragment extends Fragment {
 
             RideResponse ride = getItem(position);
             
+            // Status badge
+            holder.tvStatus.setText(ride.getDisplayStatus().toUpperCase());
+            
             // Parse dates
             Date startDate = parseDate(ride.getStartTime());
             Date endDate = parseDate(ride.getEndTime());
             
-            // Set start date/time
+            // Date
             if (startDate != null) {
-                holder.startDate.setText(DATE_FORMAT.format(startDate));
-                holder.startTime.setText(TIME_FORMAT.format(startDate));
+                holder.tvDate.setText(DATE_FORMAT.format(startDate));
             } else {
-                String scheduledTime = ride.getScheduledTime();
-                Date scheduled = parseDate(scheduledTime);
-                if (scheduled != null) {
-                    holder.startDate.setText(DATE_FORMAT.format(scheduled));
-                    holder.startTime.setText(TIME_FORMAT.format(scheduled));
-                } else {
-                    holder.startDate.setText("—");
-                    holder.startTime.setText("—");
-                }
+                Date scheduled = parseDate(ride.getScheduledTime());
+                holder.tvDate.setText(scheduled != null ? DATE_FORMAT.format(scheduled) : "—");
             }
             
-            // Set end date/time
-            if (endDate != null) {
-                holder.endDate.setText(DATE_FORMAT.format(endDate));
-                holder.endTime.setText(TIME_FORMAT.format(endDate));
-            } else {
-                holder.endDate.setText("—");
-                holder.endTime.setText("—");
-            }
-            
-            // Set locations
+            // Departure
             if (ride.getEffectiveStartLocation() != null) {
                 String pickup = ride.getEffectiveStartLocation().getAddress();
-                holder.pickupAddress.setText(pickup != null ? truncate(pickup, 25) : "—");
+                holder.tvDeparture.setText(pickup != null ? truncate(pickup, 25) : "—");
             } else {
-                holder.pickupAddress.setText("—");
+                holder.tvDeparture.setText("—");
             }
             
+            // Destination
             if (ride.getEffectiveEndLocation() != null) {
                 String dest = ride.getEffectiveEndLocation().getAddress();
-                holder.dropoffAddress.setText(dest != null ? truncate(dest, 25) : "—");
+                holder.tvDestination.setText(dest != null ? truncate(dest, 25) : "—");
             } else {
-                holder.dropoffAddress.setText("—");
+                holder.tvDestination.setText("—");
             }
             
-            // Passenger count
-            int passengerCount = ride.getPassengers() != null ? ride.getPassengers().size() : 1;
-            holder.passengerCount.setText(String.valueOf(passengerCount));
-            
-            // Distance
+            // Vehicle info: distance and duration
             double distance = ride.getEffectiveDistance();
-            holder.distance.setText(String.format(Locale.US, "%.2f km", distance));
-            
-            // Duration
+            String durationStr = "—";
             if (startDate != null && endDate != null) {
                 long durationMinutes = (endDate.getTime() - startDate.getTime()) / 60000;
-                holder.duration.setText(durationMinutes + " min");
+                durationStr = durationMinutes + " min";
             } else if (ride.getEstimatedTimeInMinutes() != null) {
-                holder.duration.setText(ride.getEstimatedTimeInMinutes() + " min");
+                durationStr = ride.getEstimatedTimeInMinutes() + " min";
+            }
+            holder.tvVehicleInfo.setText(String.format(Locale.US, "%.1f km • %s", distance, durationStr));
+            
+            // Cost
+            double cost = ride.getEffectiveCost();
+            holder.tvCost.setText(String.format(Locale.US, "%.0f RSD", cost));
+            
+            // Driver name (hidden for driver's own history)
+            holder.tvDriverName.setVisibility(View.GONE);
+            
+            // Rejection reason
+            String rejection = ride.getRejectionReason();
+            if (rejection != null && !rejection.isEmpty()) {
+                holder.tvRejectionReason.setVisibility(View.VISIBLE);
+                holder.tvRejectionReason.setText(rejection);
             } else {
-                holder.duration.setText("—");
+                holder.tvRejectionReason.setVisibility(View.GONE);
             }
 
             return convertView;
@@ -526,15 +521,14 @@ public class DriverRideHistoryFragment extends Fragment {
         }
 
         static class ViewHolder {
-            TextView startDate;
-            TextView startTime;
-            TextView endDate;
-            TextView endTime;
-            TextView pickupAddress;
-            TextView dropoffAddress;
-            TextView passengerCount;
-            TextView distance;
-            TextView duration;
+            TextView tvStatus;
+            TextView tvDate;
+            TextView tvDeparture;
+            TextView tvDestination;
+            TextView tvVehicleInfo;
+            TextView tvCost;
+            TextView tvDriverName;
+            TextView tvRejectionReason;
         }
     }
 }
