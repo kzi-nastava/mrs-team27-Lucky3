@@ -52,4 +52,11 @@ public interface RideService {
         @Query("size") Integer size,
         @Header("Authorization") String token
     );
+
+    @PUT("api/rides/{id}/stop/{stopIndex}/complete")
+    Call<RideResponse> completeStop(
+        @Path("id") long rideId,
+        @Path("stopIndex") int stopIndex,
+        @Header("Authorization") String token
+    );
 }

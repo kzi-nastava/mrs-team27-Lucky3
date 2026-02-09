@@ -40,6 +40,7 @@ import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -73,6 +74,11 @@ public class DriverDashboardFragment extends Fragment {
     private Polyline rideRouteOverlay;
     private final List<Marker> mapMarkers = new ArrayList<>();
     private boolean mapCameraInitialized = false;
+    private boolean yellowRouteNeedsRedraw = true;
+
+    // Stop auto-completion
+    private static final double STOP_COMPLETION_THRESHOLD_METERS = 50.0;
+    private final Set<Integer> pendingStopCompletions = new HashSet<>();
 
     // Active ride
     private RideResponse activeRide;
@@ -567,15 +573,8 @@ public class DriverDashboardFragment extends Fragment {
         clearRouteOverlays();
         placeRideMarkers();
 
-        // Center camera only on first display
-        if (!mapCameraInitialized && activeRide.getEffectiveStartLocation() != null) {
-            GeoPoint center = new GeoPoint(
-                    activeRide.getEffectiveStartLocation().getLatitude(),
-                    activeRide.getEffectiveStartLocation().getLongitude());
-            mapView.getController().setCenter(center);
-            mapView.getController().setZoom(16.0);
-            mapCameraInitialized = true;
-        }
+        // Mark yellow route for redraw on ride load
+        yellowRouteNeedsRedraw = true;
 
         // Start vehicle location polling (which also draws routes)
         pollVehicleLocation();
@@ -585,6 +584,7 @@ public class DriverDashboardFragment extends Fragment {
         if (binding == null) return;
         binding.mapSection.setVisibility(View.GONE);
         mapCameraInitialized = false;
+        yellowRouteNeedsRedraw = true;
     }
 
     /**
@@ -608,32 +608,35 @@ public class DriverDashboardFragment extends Fragment {
     }
 
     /**
-     * Places pickup (green), stop (gray), and destination (red) markers.
+     * Places markers on the map. Rules:
+     * - IN_PROGRESS: hide start dot (already departed), hide completed stop dots
+     * - Other statuses: show all dots
      */
     private void placeRideMarkers() {
         if (activeRide == null || mapView == null) return;
+        boolean isInProgress = "IN_PROGRESS".equals(activeRide.getStatus());
+        Set<Integer> completed = activeRide.getCompletedStopIndexes();
 
-        // Pickup marker
-        if (activeRide.getEffectiveStartLocation() != null) {
+        // Pickup marker — hide for IN_PROGRESS
+        if (!isInProgress && activeRide.getEffectiveStartLocation() != null) {
             GeoPoint pickup = new GeoPoint(
                     activeRide.getEffectiveStartLocation().getLatitude(),
                     activeRide.getEffectiveStartLocation().getLongitude());
             addMapMarker(pickup, "Pickup", R.drawable.ic_dot_green);
         }
 
-        // Stop markers
+        // Stop markers — hide completed ones
         if (activeRide.getStops() != null) {
-            Set<Integer> completed = activeRide.getCompletedStopIndexes();
             for (int i = 0; i < activeRide.getStops().size(); i++) {
+                if (completed.contains(i)) continue; // skip completed stops
                 com.example.mobile.models.LocationDto stop = activeRide.getStops().get(i);
                 GeoPoint stopPoint = new GeoPoint(stop.getLatitude(), stop.getLongitude());
                 String label = stop.getAddress() != null ? stop.getAddress() : "Stop " + (i + 1);
-                // Use gray for pending stops (completed ones could use a different color, but keep gray for simplicity)
                 addMapMarker(stopPoint, label, R.drawable.ic_dot_gray);
             }
         }
 
-        // Destination marker
+        // Destination marker — always show
         if (activeRide.getEffectiveEndLocation() != null) {
             GeoPoint dest = new GeoPoint(
                     activeRide.getEffectiveEndLocation().getLatitude(),
@@ -661,6 +664,7 @@ public class DriverDashboardFragment extends Fragment {
                                 if (userId.equals(v.getDriverId())) {
                                     updateVehicleOnMap(v);
                                     drawRoutes(v);
+                                    checkStopCompletion(v);
                                     break;
                                 }
                             }
@@ -688,11 +692,20 @@ public class DriverDashboardFragment extends Fragment {
         }
 
         vehicleMarker.setPosition(vehiclePoint);
+
+        // Center map on vehicle the first time
+        if (!mapCameraInitialized) {
+            mapView.getController().setCenter(vehiclePoint);
+            mapView.getController().setZoom(16.0);
+            mapCameraInitialized = true;
+        }
+
         mapView.invalidate();
     }
 
     /**
-     * Draws two route segments from the vehicle position:
+     * Draws two route segments from the vehicle position.
+     * Blue route updates every poll. Yellow route only when yellowRouteNeedsRedraw is set.
      *
      * For IN_PROGRESS rides:
      *   Blue  = vehicle → next uncompleted stop (or destination if all stops done)
@@ -708,6 +721,8 @@ public class DriverDashboardFragment extends Fragment {
         GeoPoint vehiclePoint = new GeoPoint(vehicle.getLatitude(), vehicle.getLongitude());
         String rideStatus = activeRide.getStatus();
         boolean isInProgress = "IN_PROGRESS".equals(rideStatus);
+        boolean redrawYellow = yellowRouteNeedsRedraw;
+        if (redrawYellow) yellowRouteNeedsRedraw = false;
 
         // Build the full ordered list of ride waypoints: pickup → stops → destination
         List<GeoPoint> allWaypoints = new ArrayList<>();
@@ -730,21 +745,14 @@ public class DriverDashboardFragment extends Fragment {
 
         if (allWaypoints.size() < 2) return;
 
-        // Determine the split point
-        // blueWaypoints: vehicle → target
-        // yellowWaypoints: target → ... → destination
+        // Determine blue target and yellow waypoints
         ArrayList<GeoPoint> blueWaypoints = new ArrayList<>();
         ArrayList<GeoPoint> yellowWaypoints = new ArrayList<>();
 
         if (isInProgress) {
-            // Find the next uncompleted stop
-            // allWaypoints indices: 0=pickup, 1..N-2=stops, N-1=destination
-            // completedStopIndexes refers to indices in the stops list (0-based)
             Set<Integer> completed = activeRide.getCompletedStopIndexes();
             int stopsCount = activeRide.getStops() != null ? activeRide.getStops().size() : 0;
 
-            // Find the next target in the remaining waypoints
-            // Start from index 1 (first stop) since pickup is already passed for IN_PROGRESS
             int nextTargetIdx = allWaypoints.size() - 1; // default to destination
             for (int i = 0; i < stopsCount; i++) {
                 if (!completed.contains(i)) {
@@ -753,30 +761,25 @@ public class DriverDashboardFragment extends Fragment {
                 }
             }
 
-            // Blue: vehicle → next target
             blueWaypoints.add(vehiclePoint);
             blueWaypoints.add(allWaypoints.get(nextTargetIdx));
 
-            // Yellow: next target → remaining → destination
             for (int i = nextTargetIdx; i < allWaypoints.size(); i++) {
                 yellowWaypoints.add(allWaypoints.get(i));
             }
         } else {
-            // Not in progress: blue = vehicle → pickup
             blueWaypoints.add(vehiclePoint);
             blueWaypoints.add(allWaypoints.get(0)); // pickup
 
-            // Yellow: pickup → stops → destination (full route)
             yellowWaypoints.addAll(allWaypoints);
         }
 
-        // Draw both routes on background thread
         new Thread(() -> {
             try {
                 RoadManager roadManager = new OSRMRoadManager(
                         requireContext().getApplicationContext(), "Lucky3-mobile");
 
-                // Build blue approach route
+                // Always rebuild blue route
                 Polyline blueOverlay = null;
                 if (blueWaypoints.size() >= 2) {
                     Road blueRoad = roadManager.getRoad(blueWaypoints);
@@ -787,9 +790,9 @@ public class DriverDashboardFragment extends Fragment {
                     }
                 }
 
-                // Build yellow ride route
+                // Only rebuild yellow route when flagged
                 Polyline yellowOverlay = null;
-                if (yellowWaypoints.size() >= 2) {
+                if (redrawYellow && yellowWaypoints.size() >= 2) {
                     Road yellowRoad = roadManager.getRoad(yellowWaypoints);
                     if (yellowRoad.mStatus == Road.STATUS_OK) {
                         yellowOverlay = RoadManager.buildRoadOverlay(yellowRoad);
@@ -806,19 +809,20 @@ public class DriverDashboardFragment extends Fragment {
                 new Handler(Looper.getMainLooper()).post(() -> {
                     if (mapView == null || !isAdded()) return;
 
-                    // Remove old routes
+                    // Remove old blue route
                     if (approachRoute != null) {
                         mapView.getOverlays().remove(approachRoute);
                     }
-                    if (rideRouteOverlay != null) {
-                        mapView.getOverlays().remove(rideRouteOverlay);
-                    }
 
-                    // Add new routes (yellow first so blue draws on top)
+                    // Remove + replace yellow only when redrawn
                     if (finalYellow != null) {
+                        if (rideRouteOverlay != null) {
+                            mapView.getOverlays().remove(rideRouteOverlay);
+                        }
                         rideRouteOverlay = finalYellow;
                         mapView.getOverlays().add(rideRouteOverlay);
                     }
+
                     if (finalBlue != null) {
                         approachRoute = finalBlue;
                         mapView.getOverlays().add(approachRoute);
@@ -830,6 +834,97 @@ public class DriverDashboardFragment extends Fragment {
                 Log.e(TAG, "Failed to draw routes", e);
             }
         }).start();
+    }
+
+    // ========== Stop Auto-Completion ==========
+
+    /**
+     * Checks proximity of vehicle to each uncompleted stop.
+     * If within 50m, calls the backend to complete the stop.
+     */
+    private void checkStopCompletion(VehicleLocationResponse vehicle) {
+        if (activeRide == null || !"IN_PROGRESS".equals(activeRide.getStatus())) return;
+        if (activeRide.getStops() == null || activeRide.getStops().isEmpty()) return;
+
+        Set<Integer> completed = activeRide.getCompletedStopIndexes();
+
+        for (int i = 0; i < activeRide.getStops().size(); i++) {
+            if (completed.contains(i) || pendingStopCompletions.contains(i)) continue;
+
+            com.example.mobile.models.LocationDto stop = activeRide.getStops().get(i);
+            double meters = haversineMeters(
+                    vehicle.getLatitude(), vehicle.getLongitude(),
+                    stop.getLatitude(), stop.getLongitude());
+
+            if (meters <= STOP_COMPLETION_THRESHOLD_METERS) {
+                pendingStopCompletions.add(i);
+                completeStopOnBackend(i);
+            }
+        }
+    }
+
+    private void completeStopOnBackend(int stopIndex) {
+        if (activeRide == null) return;
+        String token = "Bearer " + preferencesManager.getToken();
+
+        ClientUtils.rideService.completeStop(activeRide.getId(), stopIndex, token)
+                .enqueue(new Callback<RideResponse>() {
+                    @Override
+                    public void onResponse(Call<RideResponse> call,
+                                           Response<RideResponse> response) {
+                        pendingStopCompletions.remove(stopIndex);
+                        if (!isAdded() || binding == null) return;
+
+                        if (response.isSuccessful() && response.body() != null) {
+                            activeRide = response.body();
+                            onStopCompleted(stopIndex);
+                        } else {
+                            Log.e(TAG, "Failed to complete stop " + stopIndex + ": " + response.code());
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<RideResponse> call, Throwable t) {
+                        pendingStopCompletions.remove(stopIndex);
+                        Log.e(TAG, "Network error completing stop " + stopIndex, t);
+                    }
+                });
+    }
+
+    /**
+     * Called after a stop is successfully completed.
+     * Refreshes markers and flags yellow route for redraw.
+     */
+    private void onStopCompleted(int stopIndex) {
+        if (!isAdded() || binding == null || mapView == null) return;
+
+        String stopName = "Stop " + (stopIndex + 1);
+        if (activeRide.getStops() != null && stopIndex < activeRide.getStops().size()) {
+            String addr = activeRide.getStops().get(stopIndex).getAddress();
+            if (addr != null && !addr.isEmpty()) stopName = addr;
+        }
+        Toast.makeText(requireContext(), "✓ Completed: " + stopName, Toast.LENGTH_SHORT).show();
+
+        // Refresh markers (removes completed stop dot)
+        clearRouteOverlays();
+        placeRideMarkers();
+
+        // Flag yellow route for redraw on next poll
+        yellowRouteNeedsRedraw = true;
+    }
+
+    /**
+     * Haversine formula — returns distance in meters between two lat/lng points.
+     */
+    private static double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6_371_000; // Earth radius in meters
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 
     private void addMapMarker(GeoPoint point, String title, int iconRes) {
