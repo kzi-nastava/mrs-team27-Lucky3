@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_bottom_sheet"
+    android:background="@color/gray_600"
     android:fillViewport="true">
 
     <LinearLayout
@@ -34,8 +34,8 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:background="@android:color/transparent"
-                android:src="@drawable/ic_error"
-                app:tint="@color/gray_400"
+                android:src="@drawable/ic_close"
+                app:tint="@color/red_500"
                 android:contentDescription="Close" />
         </LinearLayout>
 
@@ -172,147 +172,42 @@
                 android:orientation="vertical">
 
                 <!-- Standard Option -->
-                <LinearLayout
+                <android.widget.RadioButton
+                    android:id="@+id/rb_standard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:text="Standard\nAffordable rides for everyday use\n120RSD"
+                    android:buttonTint="@color/yellow_500"
+                    android:textColor="@color/white"
                     android:background="@drawable/bg_card2"
                     android:padding="12dp"
-                    android:layout_marginBottom="8dp">
-
-                    <RadioButton
-                        android:id="@+id/rb_standard"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:buttonTint="@color/yellow_500" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="8dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Standard"
-                            android:textColor="@color/white"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Affordable rides for everyday use"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="120 RSD"
-                        android:textColor="@color/yellow_500"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical" />
 
                 <!-- Luxury Option -->
-                <LinearLayout
+                <android.widget.RadioButton
+                    android:id="@+id/rb_luxury"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:text="Luxury\nPremium vehicles for special occasions\n360RSD"
+                    android:buttonTint="@color/yellow_500"
+                    android:textColor="@color/white"
                     android:background="@drawable/bg_card2"
                     android:padding="12dp"
-                    android:layout_marginBottom="8dp">
-
-                    <RadioButton
-                        android:id="@+id/rb_luxury"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:buttonTint="@color/yellow_500" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="8dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Luxury"
-                            android:textColor="@color/white"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Premium vehicles for special occasions"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="360 RSD"
-                        android:textColor="@color/yellow_500"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical" />
 
                 <!-- Van Option -->
-                <LinearLayout
+                <android.widget.RadioButton
+                    android:id="@+id/rb_van"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:text="Van\nExtra comfort for larger groups \n180RSD"
+                    android:buttonTint="@color/yellow_500"
+                    android:textColor="@color/white"
                     android:background="@drawable/bg_card2"
-                    android:padding="12dp">
-
-                    <RadioButton
-                        android:id="@+id/rb_van"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:buttonTint="@color/yellow_500" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="8dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Van"
-                            android:textColor="@color/white"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Extra comfort for larger groups"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="180 RSD"
-                        android:textColor="@color/yellow_500"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                    android:padding="12dp"
+                    android:gravity="center_vertical" />
             </RadioGroup>
 
             <!-- Vehicle Type Error -->
@@ -345,7 +240,7 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
 
-            <CheckBox
+            <android.widget.CheckBox
                 android:id="@+id/cb_pet_transport"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -354,7 +249,7 @@
                 android:buttonTint="@color/yellow_500"
                 android:paddingVertical="8dp" />
 
-            <CheckBox
+            <android.widget.CheckBox
                 android:id="@+id/cb_baby_transport"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -362,6 +257,7 @@
                 android:textColor="@color/gray_300"
                 android:buttonTint="@color/yellow_500"
                 android:paddingVertical="8dp" />
+
         </LinearLayout>
 
         <!-- Error Container -->
