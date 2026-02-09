@@ -172,42 +172,150 @@
                 android:orientation="vertical">
 
                 <!-- Standard Option -->
-                <android.widget.RadioButton
-                    android:id="@+id/rb_standard"
+                <LinearLayout
+                    android:id="@+id/card_standard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Standard\nAffordable rides for everyday use\n120RSD"
-                    android:buttonTint="@color/yellow_500"
-                    android:textColor="@color/white"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:background="@drawable/bg_card2"
                     android:padding="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:gravity="center_vertical" />
+                    android:layout_marginBottom="8dp">
+
+                    <android.widget.RadioButton
+                        android:id="@+id/rb_standard"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/yellow_500" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Standard"
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Affordable rides for everyday use"
+                            android:textColor="@color/gray_400"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="120 RSD"
+                        android:textColor="@color/yellow_500"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <!-- Luxury Option -->
-                <android.widget.RadioButton
-                    android:id="@+id/rb_luxury"
+                <LinearLayout
+                    android:id="@+id/card_luxury"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Luxury\nPremium vehicles for special occasions\n360RSD"
-                    android:buttonTint="@color/yellow_500"
-                    android:textColor="@color/white"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:background="@drawable/bg_card2"
                     android:padding="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:gravity="center_vertical" />
+                    android:layout_marginBottom="8dp">
+
+                    <android.widget.RadioButton
+                        android:id="@+id/rb_luxury"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/yellow_500" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Luxury"
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Premium vehicles for special occasions"
+                            android:textColor="@color/gray_400"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="360 RSD"
+                        android:textColor="@color/yellow_500"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <!-- Van Option -->
-                <android.widget.RadioButton
-                    android:id="@+id/rb_van"
+                <LinearLayout
+                    android:id="@+id/card_van"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Van\nExtra comfort for larger groups \n180RSD"
-                    android:buttonTint="@color/yellow_500"
-                    android:textColor="@color/white"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:background="@drawable/bg_card2"
-                    android:padding="12dp"
-                    android:gravity="center_vertical" />
+                    android:padding="12dp">
+
+                    <android.widget.RadioButton
+                        android:id="@+id/rb_van"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/yellow_500" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Van"
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Extra comfort for larger groups"
+                            android:textColor="@color/gray_400"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="180 RSD"
+                        android:textColor="@color/yellow_500"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
             </RadioGroup>
 
             <!-- Vehicle Type Error -->
@@ -221,6 +329,7 @@
                 android:layout_marginTop="8dp"
                 android:text="Please select a vehicle type" />
         </LinearLayout>
+
 
         <!-- Additional Options Section -->
         <LinearLayout
@@ -258,6 +367,218 @@
                 android:buttonTint="@color/yellow_500"
                 android:paddingVertical="8dp" />
 
+        </LinearLayout>
+        <!-- When Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="When"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Now / Later choice -->
+            <RadioGroup
+                android:id="@+id/rg_when"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <android.widget.RadioButton
+                    android:id="@+id/rb_now"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Now"
+                    android:textColor="@color/gray_300"
+                    android:checked="true"
+                    android:buttonTint="@color/yellow_500" />
+
+                <android.widget.RadioButton
+                    android:id="@+id/rb_later"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Schedule for Later"
+                    android:textColor="@color/gray_300"
+                    android:buttonTint="@color/yellow_500" />
+            </RadioGroup>
+
+            <!-- Time presets container (hidden by default) -->
+            <LinearLayout
+                android:id="@+id/container_later_options"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Select time"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- First row: 15, 30, 45, 60 min -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:id="@+id/chip_15"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="15 min"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_30"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="30 min"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_45"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="45 min"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_60"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="1 hr"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+                </LinearLayout>
+
+                <!-- Second row: 2, 3, 4, 5 hours -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/chip_120"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="2 hrs"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_180"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="3 hrs"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_240"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="4 hrs"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_300"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="5 hrs"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Summary text -->
+            <TextView
+                android:id="@+id/tv_when_summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ride will start immediately"
+                android:textColor="@color/gray_400"
+                android:textSize="12sp"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
 
         <!-- Error Container -->

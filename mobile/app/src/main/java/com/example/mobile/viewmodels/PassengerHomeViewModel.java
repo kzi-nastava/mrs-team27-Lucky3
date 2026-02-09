@@ -185,7 +185,7 @@ public class PassengerHomeViewModel extends ViewModel {
         rideCreationStateLiveData.setValue(Resource.loading(null));
 
         String token = "Bearer " + preferencesManager.getToken();
-
+        Log.d("OrderRideDialog", String.valueOf(rideRequest.getScheduledTime()));
         rideService.createRide(rideRequest, token).enqueue(new Callback<RideResponse>() {
             @Override
             public void onResponse(Call<RideResponse> call, Response<RideResponse> response) {

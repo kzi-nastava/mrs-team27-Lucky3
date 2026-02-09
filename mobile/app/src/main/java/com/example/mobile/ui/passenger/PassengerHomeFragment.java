@@ -32,8 +32,11 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class PassengerHomeFragment extends Fragment {
     private static final String TAG = "PassengerHomeFragment";
@@ -53,6 +56,9 @@ public class PassengerHomeFragment extends Fragment {
     private String vehicleType;
     private boolean babyTransport;
     private boolean petTransport;
+    private boolean isScheduled = false;
+    private int scheduleOffsetMinutes = 0;
+    private long scheduledTimeMillis = 0L;
 
     @Nullable
     @Override
@@ -96,6 +102,7 @@ public class PassengerHomeFragment extends Fragment {
 
         binding.btnRequestRide.setOnClickListener(v -> openRequestRideDialog());
         binding.btnLinkPassengers.setOnClickListener(v -> openLinkPassengersDialog());
+
     }
 
     private void setupFragmentResultListeners() {
@@ -266,16 +273,27 @@ public class PassengerHomeFragment extends Fragment {
         boolean baby = bundle.getBoolean(OrderRideDialog.KEY_BABY_TRANSPORT, false);
         boolean pet = bundle.getBoolean(OrderRideDialog.KEY_PET_TRANSPORT, false);
 
+        // NEW: Extract scheduling data
+        boolean scheduled = bundle.getBoolean(OrderRideDialog.KEY_SCHEDULED, false);
+        int offsetMinutes = bundle.getInt(OrderRideDialog.KEY_SCHEDULE_OFFSET_MIN, 0);
+        long scheduledTime = bundle.getLong(OrderRideDialog.KEY_SCHEDULE_TIME_MILLIS, 0L);
+
         if (locations != null && !locations.isEmpty()) {
             rideLocations = locations;
             vehicleType = vehicle;
             babyTransport = baby;
             petTransport = pet;
 
+            // Store scheduling info
+            isScheduled = scheduled;
+            scheduleOffsetMinutes = offsetMinutes;
+            scheduledTimeMillis = scheduledTime;
+
             mapRenderer.showRideByAddresses(rideLocations);
             createRideRequest();
         }
     }
+
 
     private void handleRideOrderResultLegacy(Bundle bundle) {
         ArrayList<String> locations = bundle.getStringArrayList(RequestRideFormDialog.KEY_LOCATIONS);
@@ -377,8 +395,27 @@ public class PassengerHomeFragment extends Fragment {
                 );
                 request.setRequirements(requirements);
 
+                // Set scheduling info (add 1-hour buffer for timezone mismatch)
+                if (isScheduled && scheduleOffsetMinutes > 0) {
+                    // Add 1 hour buffer to handle timezone issues
+                    long bufferMillis = 60 * 60 * 1000L; // 1 hour buffer
+                    long freshScheduledTimeMillis = System.currentTimeMillis() +
+                            (scheduleOffsetMinutes * 60L * 1000L) +
+                            bufferMillis;
+                    request.setScheduledTimeFromMillis(freshScheduledTimeMillis);
+                }
+
                 // Call ViewModel to create ride on main thread
                 requireActivity().runOnUiThread(() -> {
+                    // Show confirmation for scheduled rides
+                    if (isScheduled) {
+                        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
+                        String formattedTime = sdf.format(new Date(scheduledTimeMillis));
+                        Toast.makeText(requireContext(),
+                                "Ride scheduled for " + formattedTime,
+                                Toast.LENGTH_SHORT).show();
+                    }
+
                     viewModel.createRide(request);
                 });
 
@@ -391,6 +428,8 @@ public class PassengerHomeFragment extends Fragment {
             }
         }).start();
     }
+
+
 
     private void handleRideCreationSuccess(RideResponse ride) {
         showLoading(false);

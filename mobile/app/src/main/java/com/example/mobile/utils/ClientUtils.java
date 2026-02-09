@@ -7,7 +7,11 @@ import com.example.mobile.services.UserService;
 import com.example.mobile.services.VehicleService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonSerializer;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
@@ -46,10 +50,24 @@ public class ClientUtils {
     private static final int WRITE_TIMEOUT = 30;
 
     /**
+     * DateTimeFormatter for LocalDateTime serialization.
+     */
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    /**
      * Gson instance with proper configuration.
      */
+    /**
+     * Gson instance with proper configuration including LocalDateTime support.
+     */
+
     private static final Gson gson = new GsonBuilder()
             .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+            .registerTypeAdapter(LocalDateTime.class, (JsonSerializer<LocalDateTime>) (src, typeOfSrc, context) ->
+                    context.serialize(src.format(DATE_TIME_FORMATTER))
+            )
+            .registerTypeAdapter(LocalDateTime.class, (JsonDeserializer<LocalDateTime>) (json, typeOfT, context) ->
+                    LocalDateTime.parse(json.getAsString(), DATE_TIME_FORMATTER)
+            )
             .setLenient()
             .create();
 
