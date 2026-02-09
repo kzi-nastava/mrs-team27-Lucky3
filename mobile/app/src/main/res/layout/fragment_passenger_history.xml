@@ -1,135 +1,289 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
-    tools:context=".ui.passenger.PassengerHistoryFragment">
+    android:background="@color/black"
+    android:orientation="vertical">
 
+    <!-- Navbar -->
     <include
         android:id="@+id/navbar"
-        layout="@layout/view_custom_navbar"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        layout="@layout/view_custom_navbar" />
 
-    <!-- Filter Buttons -->
-    <HorizontalScrollView
-        android:id="@+id/filter_container"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none"
-        android:paddingVertical="8dp"
-        android:background="#FFFFFF"
-        app:layout_constraintTop_toBottomOf="@id/navbar">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingHorizontal="12dp">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_filter_all"
+            <!-- Title -->
+            <TextView
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="All"
-                android:textColor="#000000"
-                android:backgroundTint="#FFC107"
-                app:cornerRadius="18dp"
-                android:layout_marginEnd="8dp"
-                style="@style/Widget.MaterialComponents.Button"/>
+                android:layout_height="wrap_content"
+                android:text="Ride History"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_filter_pending"
+            <!-- Shake hint -->
+            <TextView
+                android:id="@+id/tv_shake_hint"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="Pending"
-                android:textColor="#666666"
-                android:backgroundTint="#E0E0E0"
-                app:cornerRadius="18dp"
-                android:layout_marginEnd="8dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+                android:layout_height="wrap_content"
+                android:text="📱 Shake to toggle sort order"
+                android:textColor="@color/gray_400"
+                android:textSize="11sp"
+                android:layout_marginBottom="14dp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_filter_finished"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="Finished"
-                android:textColor="#666666"
-                android:backgroundTint="#E0E0E0"
-                app:cornerRadius="18dp"
-                android:layout_marginEnd="8dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <!-- Status Filter Buttons -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:layout_marginBottom="12dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_filter_rejected"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="Rejected"
-                android:textColor="#666666"
-                android:backgroundTint="#E0E0E0"
-                app:cornerRadius="18dp"
-                android:layout_marginEnd="8dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_filter_canceled"
+                    <TextView
+                        android:id="@+id/btn_filter_all"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:text="All"
+                        android:textColor="@color/black"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:gravity="center"
+                        android:background="@color/yellow_500"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btn_filter_pending"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:text="Pending"
+                        android:textColor="@color/gray_400"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:background="@color/gray_900"
+                        android:paddingHorizontal="14dp"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btn_filter_accepted"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:text="Accepted"
+                        android:textColor="@color/gray_400"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:background="@color/gray_900"
+                        android:paddingHorizontal="14dp"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btn_filter_finished"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:text="Finished"
+                        android:textColor="@color/gray_400"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:background="@color/gray_900"
+                        android:paddingHorizontal="14dp"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btn_filter_rejected"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:text="Rejected"
+                        android:textColor="@color/gray_400"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:background="@color/gray_900"
+                        android:paddingHorizontal="14dp"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/btn_filter_cancelled"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:text="Cancelled"
+                        android:textColor="@color/gray_400"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:background="@color/gray_900"
+                        android:paddingHorizontal="14dp" />
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- Date Filters -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="From:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_from_date"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:hint="Start date"
+                    android:textColorHint="@color/gray_400"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card"
+                    android:layout_marginEnd="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="To:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_to_date"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:hint="End date"
+                    android:textColorHint="@color/gray_400"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card" />
+
+                <ImageView
+                    android:id="@+id/btn_clear_dates"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    app:tint="@color/gray_400"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_marginStart="8dp"
+                    android:padding="4dp" />
+            </LinearLayout>
+
+            <!-- Sort Controls -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sort by:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="8dp" />
+
+                <Spinner
+                    android:id="@+id/spinner_sort"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card"
+                    android:popupBackground="@color/gray_800"
+                    android:paddingHorizontal="8dp" />
+
+                <TextView
+                    android:id="@+id/btn_sort_direction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="↓ DESC"
+                    android:textColor="@color/yellow_500"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card"
+                    android:paddingHorizontal="12dp"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
+
+            <!-- Ride Count -->
+            <TextView
+                android:id="@+id/tv_ride_count"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="Canceled"
-                android:textColor="#666666"
-                android:backgroundTint="#E0E0E0"
-                app:cornerRadius="18dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/gray_300"
+                android:textSize="12sp"
+                android:background="@drawable/bg_badge_pill"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="5dp"
+                android:layout_marginBottom="10dp" />
+
+            <!-- Loading Indicator -->
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                android:indeterminateTint="@color/yellow_500" />
+
+            <!-- Empty State -->
+            <TextView
+                android:id="@+id/tv_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No rides found"
+                android:textColor="@color/gray_400"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:padding="32dp"
+                android:visibility="gone" />
+
+            <!-- Rides List -->
+            <ListView
+                android:id="@+id/rides_list_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:divider="@null"
+                android:dividerHeight="0dp"
+                android:nestedScrollingEnabled="true" />
+
+            <!-- Load More Button -->
+            <TextView
+                android:id="@+id/btn_load_more"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:text="Load More"
+                android:textColor="@color/yellow_500"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/bg_card"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
         </LinearLayout>
-    </HorizontalScrollView>
-
-    <!-- RecyclerView for Rides -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_rides"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:padding="12dp"
-        android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/filter_container"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:listitem="@layout/item_ride_history"/>
-
-    <!-- Empty State -->
-    <LinearLayout
-        android:id="@+id/empty_state"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="No rides found"
-            android:textSize="18sp"
-            android:textColor="#666666"/>
-    </LinearLayout>
-
-    <!-- Loading Progress -->
-    <ProgressBar
-        android:id="@+id/progress_bar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:indeterminateTint="#FFC107"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
+</LinearLayout>
