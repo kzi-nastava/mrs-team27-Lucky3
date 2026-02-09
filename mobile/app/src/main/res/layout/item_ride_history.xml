@@ -1,189 +1,157 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:paddingVertical="12dp"
-    android:paddingHorizontal="8dp">
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
+    android:backgroundTint="#FFFFFF">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <!-- Start Time -->
+        <!-- Header: Status and Date -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1.2"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
             <TextView
-                android:id="@+id/start_date"
+                android:id="@+id/tv_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="21/12/2025"
-                android:textColor="@color/white"
+                android:text="FINISHED"
                 android:textSize="12sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold"
+                android:textColor="#4CAF50"
+                android:background="@drawable/bg_status_badge"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp"/>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
+
             <TextView
-                android:id="@+id/start_time"
+                android:id="@+id/tv_date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="4:00 PM"
-                android:textColor="@color/gray_400"
-                android:textSize="12sp"/>
+                android:text="Feb 8, 2026"
+                android:textSize="12sp"
+                android:textColor="#666666"/>
         </LinearLayout>
 
-        <!-- End Time -->
+        <!-- Route Information -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1.2"
-            android:orientation="vertical">
-            <TextView
-                android:id="@+id/end_date"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="21/12/2025"
-                android:textColor="@color/white"
-                android:textSize="12sp"
-                android:textStyle="bold"/>
-            <TextView
-                android:id="@+id/end_time"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="4:25 PM"
-                android:textColor="@color/gray_400"
-                android:textSize="12sp"/>
-        </LinearLayout>
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
 
-        <!-- Route -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="2.5"
-            android:orientation="vertical">
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:layout_marginEnd="12dp">
+
                 <View
-                    android:layout_width="6dp"
-                    android:layout_height="6dp"
-                    android:background="@drawable/bg_dot_yellow"
-                    android:layout_marginEnd="4dp"/>
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_dot_green"/>
+
+                <View
+                    android:layout_width="2dp"
+                    android:layout_height="20dp"
+                    android:background="#CCCCCC"/>
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_dot_red"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
                 <TextView
-                    android:id="@+id/pickup_address"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/tv_departure"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    tools:text="111 Pine St..."
-                    android:textColor="@color/gray_300"
-                    android:textSize="12sp"
+                    android:text="Departure Location"
+                    android:textSize="14sp"
+                    android:textColor="#000000"
+                    android:maxLines="1"
+                    android:ellipsize="end"/>
+
+                <TextView
+                    android:id="@+id/tv_destination"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Destination Location"
+                    android:textSize="14sp"
+                    android:textColor="#000000"
+                    android:layout_marginTop="16dp"
                     android:maxLines="1"
                     android:ellipsize="end"/>
             </LinearLayout>
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="2dp">
-                <View
-                    android:layout_width="6dp"
-                    android:layout_height="6dp"
-                    android:background="@drawable/bg_dot_red"
-                    android:layout_marginEnd="4dp"/>
-                <TextView
-                    android:id="@+id/dropoff_address"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="222 Oak St..."
-                    android:textColor="@color/gray_300"
-                    android:textSize="12sp"
-                    android:maxLines="1"
-                    android:ellipsize="end"/>
-            </LinearLayout>
         </LinearLayout>
 
-        <!-- Passengers -->
+        <!-- Ride Details -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="0.8"
-            android:gravity="center_vertical">
-            <ImageView
-                android:layout_width="12dp"
-                android:layout_height="12dp"
-                android:src="@android:drawable/ic_menu_myplaces"
-                app:tint="@color/gray_400"
-                android:layout_marginEnd="4dp"/>
-            <TextView
-                android:id="@+id/passenger_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="1"
-                android:textColor="@color/gray_300"
-                android:textSize="12sp"/>
-        </LinearLayout>
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
 
-        <!-- Distance -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.9"
-            android:orientation="vertical"
-            android:gravity="end">
             <TextView
-                android:id="@+id/distance"
-                android:layout_width="wrap_content"
+                android:id="@+id/tv_vehicle_info"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                tools:text="6.3 km"
-                android:textColor="@color/white"
+                android:layout_weight="1"
+                android:text="Model • Plates"
                 android:textSize="12sp"
-                android:textStyle="bold"/>
-            <LinearLayout
+                android:textColor="#666666"/>
+
+            <TextView
+                android:id="@+id/tv_cost"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-                <ImageView
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
-                    android:src="@android:drawable/ic_menu_recent_history"
-                    app:tint="@color/gray_400"
-                    android:layout_marginEnd="2dp"/>
-                <TextView
-                    android:id="@+id/duration"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="25 min"
-                    android:textColor="@color/gray_400"
-                    android:textSize="10sp"/>
-            </LinearLayout>
+                android:text="$25.50"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#000000"/>
         </LinearLayout>
-        
-        <!-- Price -->
+
+        <!-- Driver Name -->
         <TextView
-            android:id="@+id/price"
-            android:layout_width="0dp"
+            android:id="@+id/tv_driver_name"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="0.9"
-            tools:text="250.00 RSD"
-            android:textColor="@color/yellow_500"
+            android:text="Driver: John Doe"
             android:textSize="12sp"
-            android:textStyle="bold"
-            android:gravity="end"/>
+            android:textColor="#666666"
+            android:layout_marginTop="4dp"/>
 
+        <!-- Rejection Reason (if applicable) -->
+        <TextView
+            android:id="@+id/tv_rejection_reason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Rejection reason"
+            android:textSize="12sp"
+            android:textColor="#F44336"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"/>
     </LinearLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/gray_800"
-        android:layout_marginTop="12dp"/>
-
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>
