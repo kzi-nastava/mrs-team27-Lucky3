@@ -195,6 +195,12 @@ public class AdminRideDetailFragment extends Fragment {
             } else if (ride.isCancelled()) {
                 rideStatus.setBackgroundResource(R.drawable.bg_badge_cancelled);
                 rideStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_500));
+            } else if (ride.isInProgress()) {
+                rideStatus.setBackgroundResource(R.drawable.bg_badge_blue);
+                rideStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.blue_500));
+            } else if (ride.isScheduled()) {
+                rideStatus.setBackgroundResource(R.drawable.bg_badge_gray);
+                rideStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray_400));
             } else if ("PANIC".equals(ride.getStatus())) {
                 rideStatus.setBackgroundResource(R.drawable.bg_badge_panic);
                 rideStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_500));
