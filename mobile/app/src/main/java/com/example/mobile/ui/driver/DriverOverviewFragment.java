@@ -10,7 +10,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.Navigation;
 
 import android.widget.ListView;
 
@@ -60,9 +59,6 @@ public class DriverOverviewFragment extends Fragment {
     // Status filter: all, completed, cancelled
     private String statusFilter = "all";
 
-    // Active ride tracking
-    private RideResponse activeRide = null;
-
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentDriverOverviewBinding.inflate(inflater, container, false);
@@ -85,93 +81,8 @@ public class DriverOverviewFragment extends Fragment {
         
         loadDriverStats();
         loadRides();
-        checkForActiveRide();
 
         return root;
-    }
-
-    private void checkForActiveRide() {
-        Long userId = preferencesManager.getUserId();
-        if (userId == null || userId <= 0) return;
-
-        String token = "Bearer " + preferencesManager.getToken();
-
-        ClientUtils.rideService.getActiveRides(userId, null, "ACCEPTED", 0, 1, token)
-                .enqueue(new Callback<PageResponse<RideResponse>>() {
-                    @Override
-                    public void onResponse(Call<PageResponse<RideResponse>> call,
-                                           Response<PageResponse<RideResponse>> response) {
-                        if (!isAdded()) return;
-                        if (response.isSuccessful() && response.body() != null
-                                && response.body().getContent() != null
-                                && !response.body().getContent().isEmpty()) {
-                            activeRide = response.body().getContent().get(0);
-                            showActiveRideCard();
-                            return;
-                        }
-                        checkForPendingRide(userId, token);
-                    }
-
-                    @Override
-                    public void onFailure(Call<PageResponse<RideResponse>> call, Throwable t) {
-                        Log.e(TAG, "Failed to check active rides", t);
-                    }
-                });
-    }
-
-    private void checkForPendingRide(Long userId, String token) {
-        ClientUtils.rideService.getActiveRides(userId, null, "PENDING", 0, 1, token)
-                .enqueue(new Callback<PageResponse<RideResponse>>() {
-                    @Override
-                    public void onResponse(Call<PageResponse<RideResponse>> call,
-                                           Response<PageResponse<RideResponse>> response) {
-                        if (!isAdded()) return;
-                        if (response.isSuccessful() && response.body() != null
-                                && response.body().getContent() != null
-                                && !response.body().getContent().isEmpty()) {
-                            activeRide = response.body().getContent().get(0);
-                            showActiveRideCard();
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<PageResponse<RideResponse>> call, Throwable t) {
-                        Log.e(TAG, "Failed to check pending rides", t);
-                    }
-                });
-    }
-
-    private void showActiveRideCard() {
-        if (binding == null || activeRide == null) return;
-        View root = binding.getRoot();
-
-        View card = root.findViewById(R.id.active_ride_card);
-        if (card == null) return;
-        card.setVisibility(View.VISIBLE);
-
-        TextView statusView = root.findViewById(R.id.active_ride_status);
-        if (statusView != null) {
-            statusView.setText(activeRide.getDisplayStatus().toUpperCase());
-        }
-
-        TextView routeView = root.findViewById(R.id.active_ride_route);
-        if (routeView != null) {
-            String from = activeRide.getEffectiveStartLocation() != null
-                    ? activeRide.getEffectiveStartLocation().getAddress() : "—";
-            String to = activeRide.getEffectiveEndLocation() != null
-                    ? activeRide.getEffectiveEndLocation().getAddress() : "—";
-            routeView.setText(truncate(from, 25) + " → " + truncate(to, 25));
-        }
-
-        View btn = root.findViewById(R.id.btn_view_active_ride);
-        if (btn != null) {
-            btn.setOnClickListener(v -> {
-                Bundle args = new Bundle();
-                args.putLong("rideId", activeRide.getId());
-                Navigation.findNavController(v)
-                        .navigate(R.id.action_nav_driver_dashboard_to_nav_active_ride, args);
-            });
-        }
     }
     
     private void setupStatusFilterButtons() {

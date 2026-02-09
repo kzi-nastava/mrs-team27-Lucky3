@@ -1,6 +1,7 @@
 package com.example.mobile.services;
 
 import com.example.mobile.models.CreateRideRequest;
+import com.example.mobile.models.InconsistencyRequest;
 import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.RideCancellationRequest;
 import com.example.mobile.models.RideEstimationResponse;
@@ -50,6 +51,20 @@ public interface RideService {
         @Query("status") String status,
         @Query("page") Integer page,
         @Query("size") Integer size,
+        @Header("Authorization") String token
+    );
+
+    @PUT("api/rides/{id}/stop/{stopIndex}/complete")
+    Call<RideResponse> completeStop(
+        @Path("id") long rideId,
+        @Path("stopIndex") int stopIndex,
+        @Header("Authorization") String token
+    );
+
+    @POST("api/rides/{id}/inconsistencies")
+    Call<Void> reportInconsistency(
+        @Path("id") long rideId,
+        @Body InconsistencyRequest request,
         @Header("Authorization") String token
     );
 }
