@@ -158,7 +158,10 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
 
     private void setupFilterButtons() {
         btnFilterAll.setOnClickListener(v -> applyStatusFilter(btnFilterAll, null));
-        btnFilterPending.setOnClickListener(v -> applyStatusFilter(btnFilterPending, "PENDING"));
+        // Mapped 'IN PROGRESS' button to "IN_PROGRESS" status instead of pending, 
+        // to handle user request "When In progress Accepted etc ... it is not working"
+        // Also assuming backend returns IN_PROGRESS for active rides
+        btnFilterPending.setOnClickListener(v -> applyStatusFilter(btnFilterPending, "IN_PROGRESS"));
         btnFilterAccepted.setOnClickListener(v -> applyStatusFilter(btnFilterAccepted, "ACCEPTED"));
         btnFilterFinished.setOnClickListener(v -> applyStatusFilter(btnFilterFinished, "FINISHED"));
         btnFilterRejected.setOnClickListener(v -> applyStatusFilter(btnFilterRejected, "REJECTED"));
@@ -181,12 +184,12 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
     }
 
     private void setActiveFilterButton(TextView button) {
-        button.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.yellow_500));
+        button.setBackgroundResource(R.drawable.bg_filter_selected);
         button.setTextColor(ContextCompat.getColor(requireContext(), R.color.black));
     }
 
     private void resetFilterButton(TextView button) {
-        button.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.gray_900));
+        button.setBackgroundResource(R.drawable.bg_filter_unselected);
         button.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray_400));
     }
 

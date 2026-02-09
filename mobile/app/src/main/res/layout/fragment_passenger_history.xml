@@ -63,7 +63,7 @@
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:gravity="center"
-                        android:background="@color/yellow_500"
+                        android:background="@drawable/bg_filter_selected"
                         android:paddingHorizontal="16dp"
                         android:layout_marginEnd="6dp" />
 
@@ -71,11 +71,11 @@
                         android:id="@+id/btn_filter_pending"
                         android:layout_width="wrap_content"
                         android:layout_height="34dp"
-                        android:text="Pending"
+                        android:text="In Progress"
                         android:textColor="@color/gray_400"
                         android:textSize="12sp"
                         android:gravity="center"
-                        android:background="@color/gray_900"
+                        android:background="@drawable/bg_filter_unselected"
                         android:paddingHorizontal="14dp"
                         android:layout_marginEnd="6dp" />
 
@@ -87,7 +87,7 @@
                         android:textColor="@color/gray_400"
                         android:textSize="12sp"
                         android:gravity="center"
-                        android:background="@color/gray_900"
+                        android:background="@drawable/bg_filter_unselected"
                         android:paddingHorizontal="14dp"
                         android:layout_marginEnd="6dp" />
 
@@ -99,7 +99,7 @@
                         android:textColor="@color/gray_400"
                         android:textSize="12sp"
                         android:gravity="center"
-                        android:background="@color/gray_900"
+                        android:background="@drawable/bg_filter_unselected"
                         android:paddingHorizontal="14dp"
                         android:layout_marginEnd="6dp" />
 
@@ -111,7 +111,7 @@
                         android:textColor="@color/gray_400"
                         android:textSize="12sp"
                         android:gravity="center"
-                        android:background="@color/gray_900"
+                        android:background="@drawable/bg_filter_unselected"
                         android:paddingHorizontal="14dp"
                         android:layout_marginEnd="6dp" />
 
@@ -123,7 +123,7 @@
                         android:textColor="@color/gray_400"
                         android:textSize="12sp"
                         android:gravity="center"
-                        android:background="@color/gray_900"
+                        android:background="@drawable/bg_filter_unselected"
                         android:paddingHorizontal="14dp" />
                 </LinearLayout>
             </HorizontalScrollView>
@@ -177,15 +177,18 @@
                     android:gravity="center"
                     android:background="@drawable/bg_card" />
 
-                <ImageView
+                <TextView
                     android:id="@+id/btn_clear_dates"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:src="@android:drawable/ic_menu_close_clear_cancel"
-                    app:tint="@color/gray_400"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="CLEAR"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card"
                     android:layout_marginStart="8dp"
-                    android:padding="4dp" />
+                    android:paddingHorizontal="12dp" />
             </LinearLayout>
 
             <!-- Sort Controls -->

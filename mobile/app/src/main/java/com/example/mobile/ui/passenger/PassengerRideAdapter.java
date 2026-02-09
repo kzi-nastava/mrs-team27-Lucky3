@@ -45,7 +45,11 @@ public class PassengerRideAdapter extends RecyclerView.Adapter<PassengerRideAdap
         RideResponse ride = rides.get(position);
 
         // Status badge
-        holder.tvStatus.setText(ride.getDisplayStatus().toUpperCase());
+        String displayStatus = ride.getDisplayStatus();
+        if ("Pending".equalsIgnoreCase(displayStatus)) {
+            displayStatus = "In Progress";
+        }
+        holder.tvStatus.setText(displayStatus.toUpperCase());
 
         // Date
         Date startDate = parseDate(ride.getStartTime());
