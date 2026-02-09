@@ -2,7 +2,9 @@ package com.example.mobile.models;
 
 import com.google.gson.annotations.SerializedName;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * DTO for ride response from the backend.
@@ -58,6 +60,9 @@ public class RideResponse {
     private String rejectionReason;
     private Boolean passengersExited;
     private Boolean paid;
+    
+    // Stop tracking
+    private Set<Integer> completedStopIndexes;
     
     // Nested classes
     public static class DriverInfo {
@@ -246,6 +251,13 @@ public class RideResponse {
     
     public Boolean getPaid() { return paid; }
     public void setPaid(Boolean paid) { this.paid = paid; }
+    
+    public Set<Integer> getCompletedStopIndexes() {
+        return completedStopIndexes != null ? completedStopIndexes : new HashSet<>();
+    }
+    public void setCompletedStopIndexes(Set<Integer> completedStopIndexes) {
+        this.completedStopIndexes = completedStopIndexes;
+    }
     
     // Helper methods to get locations with fallbacks (like web app)
     public LocationDto getEffectiveStartLocation() {
