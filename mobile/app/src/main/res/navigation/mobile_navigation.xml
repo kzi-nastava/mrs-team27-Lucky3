@@ -101,6 +101,13 @@
         <action
             android:id="@+id/action_nav_driver_overview_to_nav_ride_details"
             app:destination="@id/nav_ride_details" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_driver_dashboard"
+        android:name="com.example.mobile.ui.driver.DriverDashboardFragment"
+        android:label="Dashboard"
+        tools:layout="@layout/fragment_driver_dashboard">
         <action
             android:id="@+id/action_nav_driver_dashboard_to_nav_active_ride"
             app:destination="@id/nav_active_ride" />
@@ -237,6 +244,12 @@
         android:name="com.example.mobile.ui.support.SupportFragment"
         android:label="Support"
         tools:layout="@layout/fragment_support" />
+
+    <fragment
+        android:id="@+id/nav_passenger_favorites"
+        android:name="com.example.mobile.ui.passenger.PassengerFavoritesFragment"
+        android:label="Favorites"
+        tools:layout="@layout/fragment_passenger_favorites" />
 
     <fragment
         android:id="@+id/nav_driver_support"
