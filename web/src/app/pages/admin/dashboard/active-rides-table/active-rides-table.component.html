@@ -1,0 +1,144 @@
+<div class="rounded-2xl border border-gray-800 bg-gray-900/40 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left">
+      <thead>
+        <tr class="border-b border-gray-800 bg-gray-900/50">
+          <!-- Driver -->
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('driver')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Driver
+              <span *ngIf="sortField !== 'driver'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'driver'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+          <!-- Vehicle -->
+          <th class="p-4 font-semibold text-gray-300">
+            Vehicle
+          </th>
+          <!-- Status -->
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('status')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Status
+              <span *ngIf="sortField !== 'status'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'status'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+          <!-- Passengers -->
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('passengerCount')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Passengers
+              <span *ngIf="sortField !== 'passengerCount'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'passengerCount'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+          <!-- Rating -->
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('rating')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Rating
+              <span *ngIf="sortField !== 'rating'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'rating'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+          <!-- Time Active -->
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('timeActive')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Time Active
+              <span *ngIf="sortField !== 'timeActive'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'timeActive'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+          <!-- Estimated Time -->
+          <th class="p-4 font-semibold text-gray-300">
+            <button (click)="handleSort('estimatedTime')" class="flex items-center gap-2 hover:text-white transition-colors">
+              Est. Time Left
+              <span *ngIf="sortField !== 'estimatedTime'" class="opacity-30">▼</span>
+              <span *ngIf="sortField === 'estimatedTime'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+            </button>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="rides.length === 0">
+          <td colspan="7" class="p-8 text-center text-gray-500">
+            No active rides found
+          </td>
+        </tr>
+        <tr 
+          *ngFor="let ride of rides"
+          (click)="onRowClick(ride)"
+          class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors cursor-pointer"
+          [ngClass]="{'outline outline-2 outline-red-500 z-10': ride.panicPressed}"
+        >
+          <!-- Driver -->
+          <td class="p-4">
+            <div class="flex items-center gap-3">
+              <img 
+                *ngIf="ride.driver?.id"
+                [src]="getDriverImageUrl(ride)" 
+                alt="Driver" 
+                class="w-10 h-10 rounded-full object-cover border-2 border-gray-700"
+                (error)="$any($event.target).src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23666%22><circle cx=%2212%22 cy=%227%22 r=%224%22/><path d=%22M12 14c-5 0-8 2.5-8 5v2h16v-2c0-2.5-3-5-8-5z%22/></svg>'"
+              >
+              <div *ngIf="!ride.driver?.id" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="flex flex-col">
+                <span class="font-medium text-white">{{ getDriverName(ride) }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Vehicle -->
+          <td class="p-4">
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center gap-2">
+                <span>{{ getVehicleTypeIcon(ride) }}</span>
+                <span class="font-medium text-white">{{ getVehicleInfo(ride) }}</span>
+              </div>
+              <div class="flex items-center gap-2 text-gray-400 text-xs">
+                <span class="bg-gray-800 px-2 py-0.5 rounded">{{ getVehiclePlates(ride) }}</span>
+                <span class="text-gray-500">{{ getVehicleType(ride) }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Status -->
+          <td class="p-4">
+            <span 
+              class="px-3 py-1 rounded-full text-xs font-semibold border"
+              [ngClass]="getStatusClass(ride.status)"
+            >
+              {{ getStatusLabel(ride.status) }}
+            </span>
+          </td>
+
+          <!-- Passengers -->
+          <td class="p-4">
+            <div class="flex items-center gap-2 text-gray-300">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span class="font-medium">{{ getPassengerCount(ride) }}</span>
+            </div>
+          </td>
+
+          <!-- Rating -->
+          <td class="p-4">
+            <div class="flex items-center gap-1 text-gray-300">
+              <span class="text-yellow-500">⭐</span>
+              <span>{{ getDriverRating(ride) }}</span>
+            </div>
+          </td>
+
+          <!-- Time Active -->
+          <td class="p-4">
+            <span class="text-gray-300">{{ getTimeActive(ride) }}</span>
+          </td>
+
+          <!-- Estimated Time Left -->
+          <td class="p-4">
+            <span class="text-gray-300">{{ getEstimatedTimeLeft(ride) }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

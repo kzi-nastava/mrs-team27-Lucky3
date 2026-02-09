@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -21,7 +20,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Header: Earnings & History + Time Filters -->
+            <!-- Welcome Header + Status Toggle -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -29,67 +28,86 @@
                 android:gravity="center_vertical"
                 android:layout_marginBottom="16dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Earnings &amp; History"
-                    android:textColor="@color/white"
-                    android:textSize="24sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical">
 
+                    <TextView
+                        android:id="@+id/welcome_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Welcome back"
+                        android:textColor="@color/white"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/status_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="You are currently offline"
+                        android:textColor="@color/gray_400"
+                        android:textSize="14sp"
+                        android:layout_marginTop="4dp" />
+                </LinearLayout>
+
+                <!-- Online/Offline Toggle -->
                 <LinearLayout
+                    android:id="@+id/status_toggle_container"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:background="@drawable/bg_filter_container"
-                    android:padding="4dp"
-                    android:orientation="horizontal">
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="8dp">
+
+                    <View
+                        android:id="@+id/status_dot"
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/bg_dot_red" />
 
                     <TextView
-                        android:id="@+id/filter_today"
+                        android:id="@+id/status_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Today"
-                        android:textColor="@color/gray_400"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:textSize="12sp"
-                        android:textStyle="bold"/>
+                        android:text="Offline"
+                        android:textColor="@color/red_500"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="6dp"
+                        android:layout_marginEnd="8dp" />
 
-                    <TextView
-                        android:id="@+id/filter_week"
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/status_switch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Week"
-                        android:textColor="@color/gray_400"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:textSize="12sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:id="@+id/filter_month"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Month"
-                        android:textColor="@color/gray_400"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:textSize="12sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:id="@+id/filter_all"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="All"
-                        android:textColor="@color/black"
-                        android:background="@drawable/bg_filter_selected"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:textSize="12sp"
-                        android:textStyle="bold"/>
+                        android:checked="false" />
                 </LinearLayout>
+            </LinearLayout>
+
+            <!-- Working Hours Warning (hidden by default) -->
+            <LinearLayout
+                android:id="@+id/hours_warning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_badge_cancelled"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/hours_warning_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Working hours limit exceeded. You cannot go online."
+                    android:textColor="@color/red_500"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <!-- Stats Grid -->
@@ -99,9 +117,10 @@
                 android:columnCount="2"
                 android:rowCount="2"
                 android:alignmentMode="alignMargins"
-                android:columnOrderPreserved="false">
+                android:columnOrderPreserved="false"
+                android:layout_marginBottom="16dp">
 
-                <!-- Total Earnings -->
+                <!-- Today's Earnings -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -121,48 +140,29 @@
                             android:layout_width="16dp"
                             android:layout_height="16dp"
                             android:src="@android:drawable/ic_menu_save"
-                            app:tint="@color/gray_400"/>
+                            app:tint="@color/gray_400"
+                            android:contentDescription="Earnings" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Total Earnings"
+                            android:text="Today's Earnings"
                             android:textColor="@color/gray_400"
                             android:textSize="12sp"
-                            android:layout_marginStart="8dp"/>
+                            android:layout_marginStart="8dp" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/total_earnings"
+                        android:id="@+id/stat_earnings"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="$121.25"
+                        android:text="0.00 RSD"
                         android:textColor="@color/white"
-                        android:textSize="24sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="4dp">
-                        <ImageView
-                            android:layout_width="12dp"
-                            android:layout_height="12dp"
-                            android:src="@android:drawable/arrow_up_float"
-                            app:tint="@color/green_500"/>
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="+12% from last all"
-                            android:textColor="@color/green_500"
-                            android:textSize="10sp"
-                            android:layout_marginStart="4dp"/>
-                    </LinearLayout>
+                        android:layout_marginTop="8dp" />
                 </LinearLayout>
 
-                <!-- Total Rides -->
+                <!-- Rides Completed -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -182,37 +182,29 @@
                             android:layout_width="16dp"
                             android:layout_height="16dp"
                             android:src="@android:drawable/ic_menu_sort_by_size"
-                            app:tint="@color/gray_400"/>
+                            app:tint="@color/gray_400"
+                            android:contentDescription="Rides" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Total Rides"
+                            android:text="Rides Completed"
                             android:textColor="@color/gray_400"
                             android:textSize="12sp"
-                            android:layout_marginStart="8dp"/>
+                            android:layout_marginStart="8dp" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/total_rides"
+                        android:id="@+id/stat_rides"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="5"
+                        android:text="0"
                         android:textColor="@color/white"
-                        android:textSize="24sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
-
-                    <TextView
-                        android:id="@+id/avg_per_ride"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Avg $24.25/ride"
-                        android:textColor="@color/gray_400"
-                        android:textSize="10sp"
-                        android:layout_marginTop="4dp"/>
+                        android:layout_marginTop="8dp" />
                 </LinearLayout>
 
-                <!-- Average Rating -->
+                <!-- Rating -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -231,37 +223,38 @@
                             android:layout_width="16dp"
                             android:layout_height="16dp"
                             android:src="@android:drawable/star_on"
-                            app:tint="@color/yellow_500"/>
+                            app:tint="@color/yellow_500"
+                            android:contentDescription="Rating" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Average Rating"
+                            android:text="Rating"
                             android:textColor="@color/gray_400"
                             android:textSize="12sp"
-                            android:layout_marginStart="8dp"/>
+                            android:layout_marginStart="8dp" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/avg_rating"
+                        android:id="@+id/stat_rating"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="4.90"
+                        android:text="0.00"
                         android:textColor="@color/white"
-                        android:textSize="24sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
+                        android:layout_marginTop="8dp" />
 
                     <TextView
-                        android:id="@+id/rating_count"
+                        android:id="@+id/stat_rating_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="1198 ratings"
+                        android:text="0 ratings"
                         android:textColor="@color/gray_400"
                         android:textSize="10sp"
-                        android:layout_marginTop="4dp"/>
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
 
-                <!-- Distance -->
+                <!-- Online Hours -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -279,218 +272,207 @@
                         <ImageView
                             android:layout_width="16dp"
                             android:layout_height="16dp"
-                            android:src="@android:drawable/ic_menu_myplaces"
-                            app:tint="@color/gray_400"/>
+                            android:src="@android:drawable/ic_menu_recent_history"
+                            app:tint="@color/gray_400"
+                            android:contentDescription="Hours" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Distance"
+                            android:text="Online Hours"
                             android:textColor="@color/gray_400"
                             android:textSize="12sp"
-                            android:layout_marginStart="8dp"/>
+                            android:layout_marginStart="8dp" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/total_distance"
+                        android:id="@+id/stat_hours"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="29.8km"
+                        android:text="0h 0m"
                         android:textColor="@color/white"
-                        android:textSize="24sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
-
-                    <TextView
-                        android:id="@+id/avg_distance"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Avg 6.0km/ride"
-                        android:textColor="@color/gray_400"
-                        android:textSize="10sp"
-                        android:layout_marginTop="4dp"/>
+                        android:layout_marginTop="8dp" />
                 </LinearLayout>
-
             </GridLayout>
 
-            <!-- Ride History Header -->
+            <!-- Active Ride Card (hidden by default) -->
             <LinearLayout
+                android:id="@+id/active_ride_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="16dp">
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="20dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/bg_dot_green" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Active Ride"
+                        android:textColor="@color/green_500"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/active_ride_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="PENDING"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textAllCaps="true"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="3dp"
+                        android:background="@drawable/bg_badge_active"
+                        android:textColor="@color/yellow_500" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/active_ride_route"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/gray_400"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/active_ride_passenger"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="12dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_view_active_ride"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="View Ride"
+                    android:textColor="@color/black"
+                    android:textStyle="bold"
+                    android:backgroundTint="@color/yellow_500"
+                    app:cornerRadius="10dp" />
+            </LinearLayout>
+
+            <!-- Map Section -->
+            <LinearLayout
+                android:id="@+id/map_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ride History"
+                    android:text="Live Map"
                     android:textColor="@color/white"
-                    android:textSize="20sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
-                    android:layout_marginEnd="16dp"/>
+                    android:layout_marginBottom="8dp" />
 
-                <HorizontalScrollView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:scrollbars="none">
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="250dp"
+                    android:background="@drawable/bg_card">
 
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <!-- Date Filter -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/bg_filter_container"
-                            android:paddingHorizontal="12dp"
-                            android:paddingVertical="6dp"
-                            android:layout_marginEnd="8dp"
-                            android:gravity="center_vertical">
-                            <ImageView
-                                android:layout_width="16dp"
-                                android:layout_height="16dp"
-                                android:src="@android:drawable/ic_menu_my_calendar"
-                                app:tint="@color/gray_400"
-                                android:layout_marginEnd="8dp"
-                                android:contentDescription="Calendar"/>
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="mm/dd/yyyy"
-                                android:textColor="@color/gray_400"
-                                android:textSize="12sp"/>
-                        </LinearLayout>
-
-                        <!-- Status Filters -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/bg_filter_container"
-                            android:padding="4dp"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:id="@+id/status_all"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="All"
-                                android:textColor="@color/black"
-                                android:background="@drawable/bg_filter_selected"
-                                android:paddingHorizontal="12dp"
-                                android:paddingVertical="6dp"
-                                android:textSize="12sp"
-                                android:textStyle="bold"/>
-
-                            <TextView
-                                android:id="@+id/status_completed"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Completed"
-                                android:textColor="@color/gray_400"
-                                android:paddingHorizontal="12dp"
-                                android:paddingVertical="6dp"
-                                android:textSize="12sp"
-                                android:textStyle="bold"/>
-
-                            <TextView
-                                android:id="@+id/status_cancelled"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Cancelled"
-                                android:textColor="@color/gray_400"
-                                android:paddingHorizontal="12dp"
-                                android:paddingVertical="6dp"
-                                android:textSize="12sp"
-                                android:textStyle="bold"/>
-                        </LinearLayout>
-                    </LinearLayout>
-                </HorizontalScrollView>
+                    <org.osmdroid.views.MapView
+                        android:id="@+id/map_view"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                </FrameLayout>
             </LinearLayout>
 
-            <!-- Table Scroll Container -->
-            <HorizontalScrollView
+            <!-- Scheduled Rides Section -->
+            <LinearLayout
+                android:id="@+id/scheduled_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:scrollbars="none">
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:minWidth="800dp">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
 
-                    <!-- Table Header -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingVertical="8dp"
-                        android:paddingHorizontal="8dp">
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1.2"
-                            android:text="Start Time"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1.2"
-                            android:text="End Time"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="2.5"
-                            android:text="Route"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="0.8"
-                            android:text="Passengers"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Distance"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:gravity="end"/>
-                    </LinearLayout>
+                        android:layout_weight="1"
+                        android:text="Scheduled Rides"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/gray_800"
-                        android:layout_marginBottom="8dp"/>
-
-                    <!-- Ride History List -->
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/ride_history_recycler"
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:id="@+id/scheduled_count"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:nestedScrollingEnabled="false"
-                        tools:listitem="@layout/item_ride_history"
-                        tools:itemCount="3"/>
+                        android:text="0"
+                        android:textColor="@color/gray_400"
+                        android:textSize="14sp"
+                        android:background="@drawable/bg_filter_container"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp" />
                 </LinearLayout>
-            </HorizontalScrollView>
+
+                <!-- Empty state -->
+                <TextView
+                    android:id="@+id/no_scheduled_rides"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No upcoming scheduled rides"
+                    android:textColor="@color/gray_400"
+                    android:textSize="14sp"
+                    android:gravity="center"
+                    android:padding="24dp"
+                    android:background="@drawable/bg_card" />
+
+                <ListView
+                    android:id="@+id/scheduled_rides_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:divider="@null"
+                    android:dividerHeight="0dp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_all_scheduled"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="Show all future rides"
+                    android:textColor="@color/yellow_500"
+                    android:textSize="13sp"
+                    android:backgroundTint="@android:color/transparent"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    app:strokeColor="@color/gray_700"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="10dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
+

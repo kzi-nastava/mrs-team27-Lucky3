@@ -5,9 +5,25 @@
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="5" y1="12" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
       Back
     </button>
+    <h1 class="text-xl font-bold text-white" *ngIf="ride">Ride #{{ ride.id }}</h1>
   </div>
 
-  <div *ngIf="ride" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-16">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mb-4"></div>
+    <p class="text-gray-400">Loading ride details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="errorMessage && !isLoading" class="flex flex-col items-center justify-center py-16">
+    <div class="text-red-500 text-xl mb-2">⚠️</div>
+    <p class="text-red-400">{{ errorMessage }}</p>
+    <button (click)="goBack()" class="mt-4 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors">
+      Go Back
+    </button>
+  </div>
+
+  <div *ngIf="ride && !isLoading" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Left Column -->
     <div class="space-y-6">
       <!-- Ride Summary Card -->
@@ -23,7 +39,7 @@
     <!-- Right Column -->
     <div class="space-y-6">
       <!-- Map -->
-      <app-ride-map [ride]="ride"></app-ride-map>
+      <app-ride-map [ride]="ride" [mapData]="mapData"></app-ride-map>
 
       <!-- Vehicle Info -->
       <app-ride-vehicle [ride]="ride"></app-ride-vehicle>

@@ -37,7 +37,7 @@
         android:id="@+id/vehicle_model"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Toyota Camry"
+        android:text=""
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="bold"
@@ -70,13 +70,13 @@
                 android:id="@+id/vehicle_plate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ABC-1234"
+                android:text=""
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"/>
         </LinearLayout>
 
-        <!-- Color -->
+        <!-- Vehicle Type -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -86,20 +86,20 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Color"
+                android:text="Type"
                 android:textColor="@color/gray_400"
                 android:textSize="12sp"/>
             <TextView
-                android:id="@+id/vehicle_color"
+                android:id="@+id/vehicle_type"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Silver"
+                android:text=""
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"/>
         </LinearLayout>
 
-        <!-- Year -->
+        <!-- Transport -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -108,14 +108,14 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Year"
+                android:text="Transport"
                 android:textColor="@color/gray_400"
                 android:textSize="12sp"/>
             <TextView
-                android:id="@+id/vehicle_year"
+                android:id="@+id/vehicle_transport"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="2022"
+                android:text=""
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"/>
@@ -137,7 +137,7 @@
                 android:id="@+id/vehicle_capacity"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="4 passengers"
+                android:text=""
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"/>

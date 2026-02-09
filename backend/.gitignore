@@ -71,3 +71,6 @@ debug/
 debug-*.txt
 npm-debug.log
 pnpm-debug.log
+
+### uploads folder ###
+uploads/

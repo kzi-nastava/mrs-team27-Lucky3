@@ -20,12 +20,23 @@
     <!-- Pickup -->
     <div class="relative flex gap-4">
       <div class="mt-1">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
       </div>
       <div>
         <p class="text-label mb-1">Pickup Location</p>
         <p class="text-value mb-1">{{ ride.pickup.address }}</p>
-        <p *ngIf="ride.status !== 'cancelled'" class="text-xs text-gray-500">Picked up at {{ formatTime(ride.startedAt || ride.requestedAt) }}</p>
+        <p *ngIf="ride.status !== 'Cancelled'" class="text-xs text-gray-500">Picked up at {{ formatTime(ride.startedAt || ride.requestedAt) }}</p>
+      </div>
+    </div>
+
+    <!-- Intermediate Stops -->
+    <div *ngFor="let stop of ride.stops; let i = index" class="relative flex gap-4">
+      <div class="mt-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div>
+        <p class="text-label mb-1">Stop {{ i + 1 }}</p>
+        <p class="text-value mb-1">{{ stop.address }}</p>
       </div>
     </div>
 
@@ -37,12 +48,12 @@
       <div>
         <p class="text-label mb-1">Destination</p>
         <p class="text-value mb-1">{{ ride.destination.address }}</p>
-        <p *ngIf="ride.status !== 'cancelled'" class="text-xs text-gray-500">Arrived at {{ formatTime(ride.completedAt) }}</p>
+        <p *ngIf="ride.status !== 'Cancelled'" class="text-xs text-gray-500">Arrived at {{ formatTime(ride.completedAt) }}</p>
       </div>
     </div>
   </div>
 
-  <div *ngIf="ride.status === 'cancelled'" class="mt-8 pt-6 border-t border-gray-800">
+  <div *ngIf="ride.status === 'Cancelled'" class="mt-8 pt-6 border-t border-gray-800">
     <p class="text-red-500 font-medium">
       Cancelled by {{ ride.cancelledBy === 'driver' ? 'Driver' : 'Passenger' }}
     </p>

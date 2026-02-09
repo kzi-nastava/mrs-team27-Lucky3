@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/gray_900"
+    android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/titleAddDriver"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add New Driver"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <!-- Name -->
+    <EditText
+        android:id="@+id/input_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Name"
+        style="@style/Style.App.AuthInput"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/titleAddDriver"/>
+
+    <!-- Surname -->
+    <EditText
+        android:id="@+id/input_surname"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Surname"
+        style="@style/Style.App.AuthInput"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/input_name"/>
+
+    <!-- Address -->
+    <EditText
+        android:id="@+id/input_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Address"
+        style="@style/Style.App.AuthInput"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/input_surname"/>
+
+    <!-- Email -->
+    <EditText
+        android:id="@+id/input_email"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Email"
+        android:inputType="textEmailAddress"
+        style="@style/Style.App.AuthInput"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/input_address"/>
+
+    <!-- Phone -->
+    <EditText
+        android:id="@+id/input_phone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Phone number"
+        android:inputType="phone"
+        style="@style/Style.App.AuthInput"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/input_email"/>
+
+    <!-- Vehicle model -->
+    <EditText
+        android:id="@+id/input_vehicle_model"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Vehicle model"
+        style="@style/Style.App.AuthInput"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/input_phone"/>
+
+    <!-- License plate -->
+    <EditText
+        android:id="@+id/input_license_plate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="License plate"
+        style="@style/Style.App.AuthInput"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/input_vehicle_model"/>
+
+    <!-- Type (Standard / Luxury / Van) -->
+    <Spinner
+        android:id="@+id/input_vehicle_type"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_card2"
+        android:padding="8dp"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/input_license_plate"/>
+
+    <!-- Seats -->
+    <EditText
+        android:id="@+id/input_seats"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Number of seats"
+        android:inputType="number"
+        style="@style/Style.App.AuthInput"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/input_vehicle_type"/>
+
+    <!-- Baby & Pet transport -->
+    <LinearLayout
+        android:id="@+id/layout_flags"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/input_seats">
+
+        <CheckBox
+            android:id="@+id/input_baby"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Baby transport"
+            android:textColor="@color/white"/>
+
+        <CheckBox
+            android:id="@+id/input_pet"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Pet transport"
+            android:textColor="@color/white"/>
+    </LinearLayout>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_submit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Create driver"
+        style="@style/Style.App.AuthButton"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/layout_flags"/>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_close"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Close"
+        style="@style/Style.App.AuthButton"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/btn_submit"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

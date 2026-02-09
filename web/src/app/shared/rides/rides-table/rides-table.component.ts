@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Ride } from '../../data/mock-data';
+import { Ride } from '../../data/ride.model';
+
+export type RideSortField = 'startTime' | 'endTime' | 'distance' | 'departure' | 'passengerCount' | 'totalCost';
 
 @Component({
   selector: 'app-rides-table',
@@ -11,13 +13,16 @@ import { Ride } from '../../data/mock-data';
 })
 export class RidesTableComponent {
   @Input() rides: Ride[] = [];
-  @Input() sortField: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers' = 'startDate';
+  @Input() sortField: RideSortField = 'startTime';
   @Input() sortDirection: 'asc' | 'desc' = 'desc';
   
-  @Output() sortChange = new EventEmitter<'startDate' | 'endDate' | 'distance' | 'route' | 'passengers'>();
+  @Output() sortChange = new EventEmitter<RideSortField>();
   @Output() viewDetails = new EventEmitter<string>();
+  
+  @Output() rideSelected = new EventEmitter<Ride>();
+  selectedRide: Ride | null = null;
 
-  handleSort(field: 'startDate' | 'endDate' | 'distance' | 'route' | 'passengers') {
+  handleSort(field: RideSortField) {
     this.sortChange.emit(field);
   }
 
@@ -49,5 +54,24 @@ export class RidesTableComponent {
     const endTime = new Date(end).getTime();
     const diff = Math.round((endTime - startTime) / 60000);
     return `${diff} min`;
+  }
+
+  formatPrice(price: number): string {
+    if (price == null) return '—';
+    return price.toFixed(2);
+  }
+
+  formatDistance(distance: number): string {
+    if (distance == null) return '—';
+    return distance.toFixed(2);
+  }
+
+  selectRide(ride: Ride) {
+    this.selectedRide = ride;
+    this.rideSelected.emit(ride);
+  }
+  
+  isSelected(ride: Ride): boolean {
+    return this.selectedRide?.id === ride.id;
   }
 }

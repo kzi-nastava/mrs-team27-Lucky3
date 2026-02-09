@@ -7,6 +7,7 @@
     android:orientation="vertical"
     android:background="@color/black">
 
+
     <include
         android:id="@+id/navbar"
         layout="@layout/view_custom_navbar" />
@@ -22,13 +23,14 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/tvPageTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
                 android:text="User Profile"
                 android:textColor="@color/white"
                 android:textSize="24sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="24dp"/>
+                android:textStyle="bold" />
 
             <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 android:id="@+id/profileHeaderRoot"

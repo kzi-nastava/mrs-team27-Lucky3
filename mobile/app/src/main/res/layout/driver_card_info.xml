@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    card_view:cardUseCompatPadding="true"
+    card_view:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_card">
+
+        <!-- Column 1: avatar + name/email -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <!-- Circle image (use CircleImageView library or CardView-circle) -->
+            <!-- Left: avatar -->
+            <ImageView
+                android:id="@+id/ivHeaderAvatar"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:src="@drawable/avatar"
+                android:scaleType="centerCrop"
+                android:background="@drawable/bg_badge"
+                android:outlineProvider="background"
+                android:clipToOutline="true" />
+
+                <TextView
+                    android:id="@+id/tvDriverName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="John Doe"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"/>
+
+                <TextView
+                    android:id="@+id/tvDriverEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="john.doe@example.com"
+                    android:textSize="12sp"
+                    android:textColor="@color/gray_400" />
+           
+        </LinearLayout>
+
+        <!-- Column 2: vehicle model + plate -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:id="@+id/tvVehicleModel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Toyota Prius"
+                android:textStyle="bold"
+                android:textColor="@color/white"/>
+
+            <TextView
+                android:id="@+id/tvVehiclePlate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="KG-123-AB"
+                android:textSize="12sp"
+                android:textColor="@color/gray_400" />
+        </LinearLayout>
+
+        <!-- Column 3: multiple statuses stacked -->
+        <LinearLayout
+            android:id="@+id/layoutStatuses"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <!-- You will add/remove these in adapter depending on statuses -->
+            <TextView
+                android:id="@+id/tvStatus1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Active"
+                android:textSize="12sp"
+                android:textColor="@color/gray_400"/>
+
+            <TextView
+                android:id="@+id/tvStatus2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Online"
+                android:textSize="12sp"
+                android:textColor="@color/gray_400"/>
+        </LinearLayout>
+
+        <!-- Column 4: stars (always 5) -->
+        <RatingBar
+            android:id="@+id/ratingBar"
+            style="?android:attr/ratingBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:numStars="5"
+            android:stepSize="1"
+            android:isIndicator="true"
+            android:rating="4"
+            android:progressTint="@color/yellow_400"
+            android:secondaryProgressTint="@color/yellow_400"
+            android:progressBackgroundTint="@color/yellow_500_20"/>
+
+        <!-- Column 5: total rides -->
+        <TextView
+            android:id="@+id/tvTotalRides"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="120"
+            android:textColor="@color/white"/>
+
+        <!-- Column 6: earnings -->
+        <TextView
+            android:id="@+id/tvEarnings"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:text="45120 RSD"
+            android:textColor="@color/white"/>
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
