@@ -23,6 +23,12 @@
 
     <style name="Theme.Mobile.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
+    <!-- DatePicker theme -->
+    <style name="DatePickerTheme" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorPrimary">@color/yellow_500</item>
+        <item name="colorOnPrimary">@color/black</item>
+    </style>
+
     <!-- Dialog theme for modern dialogs -->
     <style name="Theme.Mobile.Dialog" parent="Theme.Material3.DayNight.Dialog">
         <item name="android:windowBackground">@android:color/transparent</item>

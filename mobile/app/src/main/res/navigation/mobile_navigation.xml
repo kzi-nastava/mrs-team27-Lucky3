@@ -152,6 +152,27 @@
         tools:layout="@layout/fragment_admin_dashboard" />
 
     <fragment
+        android:id="@+id/nav_admin_ride_history"
+        android:name="com.example.mobile.ui.admin.AdminRideHistoryFragment"
+        android:label="Ride History"
+        tools:layout="@layout/fragment_admin_ride_history">
+        <action
+            android:id="@+id/action_admin_ride_history_to_admin_ride_detail"
+            app:destination="@id/nav_admin_ride_detail" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_admin_ride_detail"
+        android:name="com.example.mobile.ui.admin.AdminRideDetailFragment"
+        android:label="Ride Details"
+        tools:layout="@layout/fragment_admin_ride_detail">
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
         android:id="@+id/nav_passenger_home"
         android:name="com.example.mobile.ui.passenger.PassengerHomeFragment"
         android:label="Passenger Home"

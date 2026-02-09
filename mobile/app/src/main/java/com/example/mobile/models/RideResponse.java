@@ -64,7 +64,49 @@ public class RideResponse {
     // Stop tracking
     private Set<Integer> completedStopIndexes;
     
+    // Route points from backend
+    private List<RoutePointResponse> routePoints;
+    
+    // Reviews and inconsistency reports
+    private List<ReviewInfo> reviews;
+    private List<InconsistencyInfo> inconsistencyReports;
+    
     // Nested classes
+    
+    public static class ReviewInfo {
+        private Long id;
+        private Long rideId;
+        private Long passengerId;
+        private Integer driverRating;
+        private Integer vehicleRating;
+        private String comment;
+        private String createdAt;
+        
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        public Long getRideId() { return rideId; }
+        public void setRideId(Long rideId) { this.rideId = rideId; }
+        public Long getPassengerId() { return passengerId; }
+        public void setPassengerId(Long passengerId) { this.passengerId = passengerId; }
+        public Integer getDriverRating() { return driverRating; }
+        public void setDriverRating(Integer driverRating) { this.driverRating = driverRating; }
+        public Integer getVehicleRating() { return vehicleRating; }
+        public void setVehicleRating(Integer vehicleRating) { this.vehicleRating = vehicleRating; }
+        public String getComment() { return comment; }
+        public void setComment(String comment) { this.comment = comment; }
+        public String getCreatedAt() { return createdAt; }
+        public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    }
+    
+    public static class InconsistencyInfo {
+        private String description;
+        private String timestamp;
+        
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        public String getTimestamp() { return timestamp; }
+        public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
+    }
     public static class DriverInfo {
         private Long id;
         private String name;
@@ -259,6 +301,15 @@ public class RideResponse {
         this.completedStopIndexes = completedStopIndexes;
     }
     
+    public List<RoutePointResponse> getRoutePoints() { return routePoints; }
+    public void setRoutePoints(List<RoutePointResponse> routePoints) { this.routePoints = routePoints; }
+    
+    public List<ReviewInfo> getReviews() { return reviews; }
+    public void setReviews(List<ReviewInfo> reviews) { this.reviews = reviews; }
+    
+    public List<InconsistencyInfo> getInconsistencyReports() { return inconsistencyReports; }
+    public void setInconsistencyReports(List<InconsistencyInfo> inconsistencyReports) { this.inconsistencyReports = inconsistencyReports; }
+    
     // Helper methods to get locations with fallbacks (like web app)
     public LocationDto getEffectiveStartLocation() {
         if (departure != null) return departure;
@@ -307,7 +358,19 @@ public class RideResponse {
             case "ACCEPTED": return "Accepted";
             case "IN_PROGRESS": return "In Progress";
             case "REJECTED": return "Rejected";
+            case "PANIC": return "Panic";
+            case "SCHEDULED": return "Scheduled";
             default: return status;
+        }
+    }
+    
+    public String getCancelledBy() {
+        if (status == null) return "";
+        switch (status) {
+            case "CANCELLED_BY_DRIVER": return "Driver";
+            case "CANCELLED_BY_PASSENGER": return "Passenger";
+            case "CANCELLED": return "System";
+            default: return "";
         }
     }
 }
