@@ -346,10 +346,18 @@ public class RideResponse {
         return status != null && status.equals("FINISHED");
     }
     
+    public boolean isInProgress() {
+        return status != null && (status.equals("IN_PROGRESS") || status.equals("ACCEPTED"));
+    }
+    
+    public boolean isScheduled() {
+        return status != null && (status.equals("SCHEDULED") || status.equals("PENDING"));
+    }
+    
     public String getDisplayStatus() {
         if (status == null) return "Unknown";
         switch (status) {
-            case "FINISHED": return "Completed";
+            case "FINISHED": return "Finished";
             case "CANCELLED": 
             case "CANCELLED_BY_DRIVER": 
             case "CANCELLED_BY_PASSENGER": 

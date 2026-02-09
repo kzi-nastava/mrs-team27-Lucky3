@@ -97,10 +97,22 @@
                     android:textSize="13sp"
                     android:gravity="center"
                     android:background="@color/yellow_500"
-                    android:paddingHorizontal="20dp" />
+                    android:paddingHorizontal="16dp" />
+
+                <TextView
+                    android:id="@+id/btn_show_all"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:text="Clear"
+                    android:textColor="@color/gray_400"
+                    android:textSize="13sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card"
+                    android:paddingHorizontal="14dp"
+                    android:layout_marginStart="6dp" />
             </LinearLayout>
 
-            <!-- User Info Banner (shows after search) -->
+            <!-- User Info Banner (visible by default with "All Rides") -->
             <LinearLayout
                 android:id="@+id/user_info_banner"
                 android:layout_width="match_parent"
@@ -110,7 +122,17 @@
                 android:padding="12dp"
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp"
-                android:visibility="gone">
+                android:visibility="visible">
+
+                <ImageView
+                    android:id="@+id/iv_banner_icon"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    android:background="@drawable/bg_icon_circle_gray"
+                    app:tint="@color/gray_300"
+                    android:padding="8dp"
+                    android:layout_marginEnd="12dp" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -141,10 +163,12 @@
                     android:id="@+id/tv_ride_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="12 rides"
-                    android:textColor="@color/yellow_500"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
+                    android:text=""
+                    android:textColor="@color/gray_300"
+                    android:textSize="12sp"
+                    android:background="@drawable/bg_badge_pill"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="5dp" />
             </LinearLayout>
 
             <!-- Date Filters -->
