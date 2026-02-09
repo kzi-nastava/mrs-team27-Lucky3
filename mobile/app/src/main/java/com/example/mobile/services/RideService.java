@@ -22,7 +22,7 @@ public interface RideService {
     Call<RideEstimationResponse> estimateRide(@Body CreateRideRequest request);
 
     @POST("api/rides")
-    Call<RideResponse> createRide(@Body CreateRideRequest request);
+    Call<RideResponse> createRide(@Body CreateRideRequest request, @Header("Authorization") String token);
 
     @GET("api/rides/{id}")
     Call<RideResponse> getRide(@Path("id") long id, @Header("Authorization") String token);
