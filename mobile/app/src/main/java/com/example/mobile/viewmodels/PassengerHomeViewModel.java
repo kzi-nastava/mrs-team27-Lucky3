@@ -42,6 +42,7 @@ public class PassengerHomeViewModel extends ViewModel {
     // LiveData for loading and errors
     private final MutableLiveData<Boolean> isLoadingLiveData = new MutableLiveData<>(false);
     private final MutableLiveData<String> errorMessageLiveData = new MutableLiveData<>();
+    private MutableLiveData<Boolean> rideRejected = new MutableLiveData<>();
 
     public PassengerHomeViewModel(SharedPreferencesManager preferencesManager) {
         this.preferencesManager = preferencesManager;
@@ -76,6 +77,10 @@ public class PassengerHomeViewModel extends ViewModel {
 
     public LiveData<String> getErrorMessage() {
         return errorMessageLiveData;
+    }
+
+    public LiveData<Boolean> getRideRejected() {
+        return rideRejected;
     }
 
     // Fetch active vehicles
@@ -193,9 +198,13 @@ public class PassengerHomeViewModel extends ViewModel {
 
                 if (response.isSuccessful() && response.body() != null) {
                     RideResponse ride = response.body();
-                    rideCreationStateLiveData.postValue(Resource.success(ride));
-                    activeRideLiveData.postValue(ride);
-                    hasActiveRideLiveData.postValue(true);
+                    if ("REJECTED".equalsIgnoreCase(ride.getStatus())) {
+                        rideRejected.postValue(true);
+                    } else {
+                        rideCreationStateLiveData.postValue(Resource.success(ride));
+                        activeRideLiveData.postValue(ride);
+                        hasActiveRideLiveData.postValue(true);
+                    }
                 } else {
                     String error = "Failed to create ride: " + response.code();
                     rideCreationStateLiveData.postValue(Resource.error(error, null));

@@ -27,6 +27,7 @@ import com.example.mobile.models.VehicleLocationResponse;
 import com.example.mobile.ui.maps.RideMapRenderer;
 import com.example.mobile.utils.SharedPreferencesManager;
 import com.example.mobile.viewmodels.PassengerHomeViewModel;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
@@ -153,22 +154,51 @@ public class PassengerHomeFragment extends Fragment {
             }
         });
 
-        // Observe ride creation state
-        viewModel.getRideCreationState().observe(getViewLifecycleOwner(), resource -> {
-            if (resource == null) return;
+        // Observe successful ride creation
+        viewModel.getRideCreationState().observe(getViewLifecycleOwner(), response -> {
+            Log.d(TAG, "=== RIDE CREATION STATE OBSERVER ===");
+            Log.d(TAG, "Resource status: " + (response != null ? response.getStatus() : "NULL"));
 
-            switch (resource.getStatus()) {
-                case SUCCESS:
-                    handleRideCreationSuccess(resource.getData());
-                    break;
-                case ERROR:
-                    handleRideCreationError(resource.getMessage());
-                    break;
-                case LOADING:
-                    showLoading(true);
-                    break;
+            if (response == null) return;
+
+            String resourceStatus = String.valueOf(response.getStatus());
+
+            if ("LOADING".equals(resourceStatus)) {
+                showLoading(true);
+                return;
+            }
+
+            showLoading(false);
+
+            if ("SUCCESS".equals(resourceStatus)) {
+                RideResponse ride = response.getData();
+
+                if (ride != null) {
+                    String rideStatus = ride.getStatus();
+                    Log.d(TAG, "Ride status from response: " + rideStatus);
+
+                    if ("REJECTED".equalsIgnoreCase(rideStatus)) {
+                        showRideRejectedDialog();
+                    } else if ("PENDING".equalsIgnoreCase(rideStatus) ||
+                            "ACCEPTED".equalsIgnoreCase(rideStatus)) {
+                        handleRideCreationSuccess(ride);
+                    }
+                }
+            } else if ("ERROR".equals(resourceStatus)) {
+                String errorMsg = response.getMessage();
+                showError(errorMsg != null ? errorMsg : "Failed to create ride");
             }
         });
+
+        // Observe ride rejection (separate observer)
+        viewModel.getRideRejected().observe(getViewLifecycleOwner(), isRejected -> {
+            showLoading(false);
+
+            if (isRejected != null && isRejected) {
+                showRideRejectedDialog();
+            }
+        });
+
 
         // Observe loading state
         viewModel.getIsLoading().observe(getViewLifecycleOwner(), this::showLoading);
@@ -180,7 +210,6 @@ public class PassengerHomeFragment extends Fragment {
             }
         });
     }
-
     private void setupVehicleRefresh() {
         refreshHandler = new Handler(Looper.getMainLooper());
         refreshRunnable = new Runnable() {
@@ -289,11 +318,11 @@ public class PassengerHomeFragment extends Fragment {
             scheduleOffsetMinutes = offsetMinutes;
             scheduledTimeMillis = scheduledTime;
 
+
             mapRenderer.showRideByAddresses(rideLocations);
             createRideRequest();
         }
     }
-
 
     private void handleRideOrderResultLegacy(Bundle bundle) {
         ArrayList<String> locations = bundle.getStringArrayList(RequestRideFormDialog.KEY_LOCATIONS);
@@ -429,17 +458,35 @@ public class PassengerHomeFragment extends Fragment {
         }).start();
     }
 
-
-
     private void handleRideCreationSuccess(RideResponse ride) {
         showLoading(false);
 
         if (ride != null) {
+            Log.d(TAG, "=== RIDE CREATION SUCCESS ===");
+
+            // Show route from RideResponse
+            if (ride.getStart() != null && ride.getDestination() != null) {
+                ArrayList<String> routeAddresses = new ArrayList<>();
+                routeAddresses.add(ride.getStart().getAddress());
+
+                if (ride.getStops() != null && !ride.getStops().isEmpty()) {
+                    for (LocationDto stop : ride.getStops()) {
+                        routeAddresses.add(stop.getAddress());
+                    }
+                }
+
+                routeAddresses.add(ride.getDestination().getAddress());
+
+                Log.d(TAG, "Showing route with " + routeAddresses.size() + " locations");
+                //mapRenderer.showRideByAddresses(routeAddresses);
+            }
+
             double price = ride.getEstimatedCost() != null ? ride.getEstimatedCost() : 0.0;
             showRideCreatedDialog(price);
             Toast.makeText(requireContext(), "Ride created successfully!", Toast.LENGTH_SHORT).show();
         }
     }
+
 
     private void handleRideCreationError(String errorMessage) {
         showLoading(false);
@@ -515,4 +562,40 @@ public class PassengerHomeFragment extends Fragment {
 
         binding = null;
     }
+
+    private void showRideRejectedDialog() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Ride Rejected")
+                .setMessage("Your ride request was rejected. Please try ordering a different ride.")
+                .setIcon(R.drawable.ic_error)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    // Clear the rejected ride state
+                    clearRideState();
+                    dialog.dismiss();
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    private void clearRideState() {
+        // Clear ride data
+        rideLocations = null;
+        vehicleType = null;
+        babyTransport = false;
+        petTransport = false;
+        isScheduled = false;
+        scheduleOffsetMinutes = 0;
+        scheduledTimeMillis = 0L;
+
+        // Clear map
+        if (mapRenderer != null) {
+            mapRenderer.clearMap();
+        }
+
+        // Hide any loading states
+        showLoading(false);
+
+        Log.d(TAG, "Ride state cleared after rejection");
+    }
+
 }
