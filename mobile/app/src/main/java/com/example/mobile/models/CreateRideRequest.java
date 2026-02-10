@@ -1,5 +1,8 @@
 package com.example.mobile.models;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 public class CreateRideRequest {
@@ -7,6 +10,7 @@ public class CreateRideRequest {
     private LocationDto destination;
     private List<LocationDto> stops;
     private List<String> passengerEmails;
+    private LocalDateTime scheduledTime;
     private RideRequirements requirements;
 
     public CreateRideRequest(LocationDto start, LocationDto destination) {
@@ -15,6 +19,7 @@ public class CreateRideRequest {
         this.stops = new java.util.ArrayList<>();
         this.passengerEmails = new java.util.ArrayList<>();
         this.requirements = new RideRequirements("STANDARD", false, false);
+        this.scheduledTime = null; // null means immediate ride
     }
 
     public LocationDto getStart() {
@@ -47,6 +52,24 @@ public class CreateRideRequest {
 
     public void setPassengerEmails(List<String> passengerEmails) {
         this.passengerEmails = passengerEmails;
+    }
+
+    public LocalDateTime getScheduledTime() {
+        return scheduledTime;
+    }
+
+    public void setScheduledTime(LocalDateTime scheduledTime) {
+        this.scheduledTime = scheduledTime;
+    }
+
+    /**
+     * Convenience method to set scheduled time from milliseconds timestamp
+     */
+    public void setScheduledTimeFromMillis(long millis) {
+        this.scheduledTime = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(millis),
+                ZoneId.systemDefault()
+        );
     }
 
     public RideRequirements getRequirements() {
