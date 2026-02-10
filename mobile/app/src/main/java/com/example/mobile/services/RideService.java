@@ -1,14 +1,19 @@
 package com.example.mobile.services;
 
 import com.example.mobile.models.CreateRideRequest;
+import com.example.mobile.models.FavoriteRouteRequest;
+import com.example.mobile.models.FavoriteRouteResponse;
 import com.example.mobile.models.InconsistencyRequest;
 import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.RideCancellationRequest;
 import com.example.mobile.models.RideEstimationResponse;
 import com.example.mobile.models.RideResponse;
 
+import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.POST;
@@ -66,5 +71,26 @@ public interface RideService {
         @Path("id") long rideId,
         @Body InconsistencyRequest request,
         @Header("Authorization") String token
+    );
+
+    // Add these methods to the interface
+    @GET("api/rides/{id}/favourite-routes")
+    Call<List<FavoriteRouteResponse>> getFavoriteRoutes(
+            @Path("id") Long passengerId,
+            @Header("Authorization") String token
+    );
+
+    @POST("api/rides/{id}/favourite-route")
+    Call<Void> addFavouriteRoute(
+            @Path("id") Long passengerId,
+            @Body FavoriteRouteRequest request,
+            @Header("Authorization") String token
+    );
+
+    @DELETE("api/rides/{passengerId}/favourite-routes/{favouriteRouteId}")
+    Call<Void> removeFavouriteRoute(
+            @Path("passengerId") Long passengerId,
+            @Path("favouriteRouteId") Long favouriteRouteId,
+            @Header("Authorization") String token
     );
 }
