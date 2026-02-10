@@ -1,112 +1,185 @@
-// LinkPassengersDialogFragment.java
 package com.example.mobile.ui.passenger;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.view.Window;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
 
 import com.example.mobile.R;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
-public class LinkPassengersDialog extends DialogFragment {
+/**
+ * Modern dialog for linking passengers matching the web version design.
+ * Allows users to add multiple passenger emails to share a ride.
+ */
+public class LinkPassengersNewDialog extends DialogFragment {
 
     public static final String REQUEST_KEY = "link_passengers_result";
     public static final String KEY_EMAILS = "emails";
 
-    private final ArrayList<String> emails = new ArrayList<>();
-    private ArrayAdapter<String> adapter;
-    private EditText etEmail;
+    private LinearLayout emailsContainer;
+    private LinearLayout btnAddEmail;
+    private MaterialButton btnCancel;
+    private MaterialButton btnLink;
+    private ImageButton btnClose;
+
+    private final ArrayList<View> emailViews = new ArrayList<>();
+
+    public static LinkPassengersNewDialog newInstance() {
+        return new LinkPassengersNewDialog();
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setStyle(DialogFragment.STYLE_NO_FRAME, R.style.Theme_Mobile_Dialog);
+    }
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.dialog_link_passengers, container, false);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        // Initialize views
+        emailsContainer = view.findViewById(R.id.emails_container);
+        btnAddEmail = view.findViewById(R.id.btn_add_email);
+        btnCancel = view.findViewById(R.id.btn_cancel);
+        btnLink = view.findViewById(R.id.btn_link);
+        btnClose = view.findViewById(R.id.btn_close);
+
+        // Add initial email field
+        addEmailField();
+
+        // Setup listeners
+        setupListeners();
+    }
 
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        Dialog dialog = super.onCreateDialog(savedInstanceState);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+        return dialog;
+    }
 
-        LayoutInflater inflater = requireActivity().getLayoutInflater();
-        View root = inflater.inflate(R.layout.dialog_link_passengers, null);
+    @Override
+    public void onStart() {
+        super.onStart();
+        Dialog dialog = getDialog();
+        if (dialog != null && dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
 
-        etEmail = root.findViewById(R.id.etEmail);
-        Button btnAdd = root.findViewById(R.id.btnAddEmail);
-        Button btnCancel = root.findViewById(R.id.btnCancel);
-        Button btnFinish = root.findViewById(R.id.btnFinish);
-        ListView lvEmails = root.findViewById(R.id.lvEmails);
+    private void setupListeners() {
+        // Close button
+        btnClose.setOnClickListener(v -> dismiss());
 
-        adapter = new ArrayAdapter<String>(
-                requireContext(),
-                android.R.layout.simple_list_item_1,
-                emails
-        ) {
-            @NonNull
-            @Override
-            public View getView(int position, @Nullable View convertView,
-                                @NonNull ViewGroup parent) {
-                View view = super.getView(position, convertView, parent);
-                TextView text = view.findViewById(android.R.id.text1);
-                text.setTextColor(getResources().getColor(R.color.white));
-                return view;
-            }
-        };
-        lvEmails.setAdapter(adapter);
-
-        // Add email
-        btnAdd.setOnClickListener(v -> addPassengerByEmail());
-
-        // Remove email on click
-        lvEmails.setOnItemClickListener((parent, view, position, id) -> {
-            String removed = emails.remove(position);
-            adapter.notifyDataSetChanged();
-            Toast.makeText(requireContext(), "Removed: " + removed, Toast.LENGTH_SHORT).show();
-        });
-
+        // Cancel button
         btnCancel.setOnClickListener(v -> dismiss());
 
-        btnFinish.setOnClickListener(v -> {
-            Bundle result = new Bundle();
-            result.putStringArrayList(KEY_EMAILS, emails);
-            getParentFragmentManager().setFragmentResult(REQUEST_KEY, result);
-            dismiss();
+        // Add email button
+        btnAddEmail.setOnClickListener(v -> addEmailField());
+
+        // Link button
+        btnLink.setOnClickListener(v -> submitEmails());
+    }
+
+    private void addEmailField() {
+        View emailView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.item_email_input, emailsContainer, false);
+
+        TextInputEditText etEmail = emailView.findViewById(R.id.et_email);
+        ImageButton btnRemove = emailView.findViewById(R.id.btn_remove);
+
+        // Disable remove button if this is the only email field
+        updateRemoveButtonsState();
+
+        btnRemove.setOnClickListener(v -> {
+            if (emailViews.size() > 1) {
+                emailsContainer.removeView(emailView);
+                emailViews.remove(emailView);
+                updateRemoveButtonsState();
+            }
         });
 
-        builder.setView(root);
-        return builder.create();
+        emailViews.add(emailView);
+        emailsContainer.addView(emailView);
+        updateRemoveButtonsState();
     }
 
-    private void addPassengerByEmail(){
-        String email = etEmail.getText().toString().trim();
-        if (email.isEmpty()) {
-            Toast.makeText(requireContext(), "Enter email", Toast.LENGTH_SHORT).show();
-            return;
+    private void updateRemoveButtonsState() {
+        boolean canRemove = emailViews.size() > 1;
+        for (View emailView : emailViews) {
+            ImageButton btnRemove = emailView.findViewById(R.id.btn_remove);
+            btnRemove.setEnabled(canRemove);
+            btnRemove.setAlpha(canRemove ? 1.0f : 0.3f);
         }
-        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            Toast.makeText(requireContext(), "Invalid email", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (emails.contains(email)) {
-            Toast.makeText(requireContext(), "Email already added", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        emails.add(email);
-        adapter.notifyDataSetChanged();
-        etEmail.setText("");
     }
 
-    public static LinkPassengersDialog newInstance() {
-        return new LinkPassengersDialog();
+    private void submitEmails() {
+        ArrayList<String> validEmails = new ArrayList<>();
+        boolean hasError = false;
+
+        for (View emailView : emailViews) {
+            TextInputEditText etEmail = emailView.findViewById(R.id.et_email);
+            TextInputLayout inputLayout = (TextInputLayout) etEmail.getParent().getParent();
+            
+            String email = Objects.requireNonNull(etEmail.getText()).toString().trim();
+            
+            if (!email.isEmpty()) {
+                if (Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                    if (!validEmails.contains(email)) {
+                        validEmails.add(email);
+                        inputLayout.setError(null);
+                    } else {
+                        inputLayout.setError("Duplicate email");
+                        hasError = true;
+                    }
+                } else {
+                    inputLayout.setError("Please enter a valid email address");
+                    hasError = true;
+                }
+            }
+        }
+
+        if (hasError) {
+            return;
+        }
+
+        // Build result bundle
+        Bundle result = new Bundle();
+        result.putStringArrayList(KEY_EMAILS, validEmails);
+
+        getParentFragmentManager().setFragmentResult(REQUEST_KEY, result);
+        dismiss();
     }
 }

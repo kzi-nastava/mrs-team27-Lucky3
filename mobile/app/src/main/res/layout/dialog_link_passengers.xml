@@ -1,110 +1,110 @@
-<!-- res/layout/dialog_link_passengers.xml -->
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="@color/gray_900">
+    android:background="@drawable/bg_bottom_sheet"
+    android:padding="20dp">
 
-    <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Link passengers"
-        android:textColor="@color/white"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
-
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <!-- search filter -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_weight="1"
-            android:padding="12dp"
-            android:gravity="center_vertical"
-            android:background="@drawable/bg_card2"
-            android:layout_margin="6dp">
-
-            <ImageView
-                android:id="@+id/ivSearch"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_mail_icon"
-                android:clickable="true" />
-
-            <EditText
-                android:id="@+id/etEmail"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_weight="1"
-                android:hint="Enter passenger email"
-                android:inputType="textEmailAddress"
-                android:textColor="@color/white"
-                android:textColorHint="@color/gray_400"
-                android:textSize="14sp"
-                android:background="@android:color/transparent" />
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/btnAddEmail"
-            android:layout_margin="6dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Add"
-            style="@style/Style.App.AuthButton"
-            android:padding="5dp" />
-    </LinearLayout>
-
-
-
-
-    <TextView
-        android:id="@+id/tvListHint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Tap an email to remove it"
-        android:textColor="@color/gray_300"
-        android:textSize="20sp"
-        android:layout_marginTop="8dp" />
-
-    <ListView
-        android:id="@+id/lvEmails"
-        android:layout_width="match_parent"
-        android:layout_height="150dp"
-        android:divider="@color/gray_700"
-        android:dividerHeight="1dp"
-        android:layout_marginTop="4dp" />
-
+    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_header_gradient"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
 
-        <Button
-            android:id="@+id/btnCancel"
+        <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:text="Link Passengers"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btn_close"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_error"
+            app:tint="@color/gray_400"
+            android:contentDescription="Close" />
+    </LinearLayout>
+
+    <!-- Email list container -->
+    <LinearLayout
+        android:id="@+id/emails_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <!-- Add Email Button -->
+    <LinearLayout
+        android:id="@+id/btn_add_email"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@drawable/bg_card2"
+        android:padding="14dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_add_photo"
+            app:tint="@color/gray_300" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Add Another Email"
+            android:textColor="@color/gray_300"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="16dp"
+        android:background="@drawable/bg_divider_top">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
             android:text="Cancel"
-            style="@style/Style.App.AuthButton" />
+            android:textColor="@color/gray_300"
+            android:textAllCaps="false"
+            app:backgroundTint="@color/gray_800"
+            app:cornerRadius="12dp"
+            app:strokeColor="@color/gray_700"
+            app:strokeWidth="1dp" />
 
-        <Button
-            android:id="@+id/btnFinish"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_link"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="52dp"
             android:layout_weight="1"
-            android:text="Finish"
-            style="@style/Style.App.AuthButton"
-            android:layout_marginStart="8dp" />
+            android:layout_marginStart="8dp"
+            android:text="Link Passengers"
+            android:textColor="@color/black"
+            android:textAllCaps="false"
+            android:textStyle="bold"
+            app:backgroundTint="@color/yellow_500"
+            app:cornerRadius="12dp" />
     </LinearLayout>
 
 </LinearLayout>
