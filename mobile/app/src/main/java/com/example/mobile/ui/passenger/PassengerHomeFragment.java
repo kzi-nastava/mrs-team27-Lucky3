@@ -14,7 +14,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 
 import com.example.mobile.R;
@@ -30,7 +29,6 @@ import com.example.mobile.viewmodels.PassengerHomeViewModel;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.osmdroid.util.GeoPoint;
-import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 
 import java.text.SimpleDateFormat;
@@ -123,7 +121,7 @@ public class PassengerHomeFragment extends Fragment {
 
         // Listen for emails from LinkPassengersNewDialog
         getParentFragmentManager().setFragmentResultListener(
-                LinkPassengersNewDialog.REQUEST_KEY,
+                LinkPassengersDialog.REQUEST_KEY,
                 getViewLifecycleOwner(),
                 (requestKey, bundle) -> handleLinkPassengersResult(bundle)
         );
@@ -342,7 +340,7 @@ public class PassengerHomeFragment extends Fragment {
     }
 
     private void handleLinkPassengersResult(Bundle bundle) {
-        ArrayList<String> emails = bundle.getStringArrayList(LinkPassengersNewDialog.KEY_EMAILS);
+        ArrayList<String> emails = bundle.getStringArrayList(LinkPassengersDialog.KEY_EMAILS);
         if (emails != null) {
             passengerEmails = emails;
             Toast.makeText(requireContext(),
@@ -513,7 +511,7 @@ public class PassengerHomeFragment extends Fragment {
     }
 
     private void openLinkPassengersDialog() {
-        LinkPassengersNewDialog dialog = LinkPassengersNewDialog.newInstance();
+        LinkPassengersDialog dialog = LinkPassengersDialog.newInstance();
         dialog.show(getParentFragmentManager(), "LinkPassengersDialog");
     }
 

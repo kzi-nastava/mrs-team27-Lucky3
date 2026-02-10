@@ -28,7 +28,7 @@ import java.util.Objects;
  * Modern dialog for linking passengers matching the web version design.
  * Allows users to add multiple passenger emails to share a ride.
  */
-public class LinkPassengersNewDialog extends DialogFragment {
+public class LinkPassengersDialog extends DialogFragment {
 
     public static final String REQUEST_KEY = "link_passengers_result";
     public static final String KEY_EMAILS = "emails";
@@ -41,8 +41,8 @@ public class LinkPassengersNewDialog extends DialogFragment {
 
     private final ArrayList<View> emailViews = new ArrayList<>();
 
-    public static LinkPassengersNewDialog newInstance() {
-        return new LinkPassengersNewDialog();
+    public static LinkPassengersDialog newInstance() {
+        return new LinkPassengersDialog();
     }
 
     @Override
