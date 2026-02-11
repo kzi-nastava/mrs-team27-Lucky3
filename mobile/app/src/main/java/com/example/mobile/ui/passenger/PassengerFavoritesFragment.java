@@ -214,9 +214,11 @@ public class PassengerFavoritesFragment extends Fragment {
                     args.putDouble("endLng", route.getEndLocation().getLongitude());
                 }
 
+                //TODO: fix this
+
                 // Navigate to ride creation screen
-                Navigation.findNavController(requireView())
-                        .navigate(R.id.action_passenger_favorites_to_order_ride, args);
+                //Navigation.findNavController(requireView())
+                //        .navigate(R.id.action_passenger_favorites_to_order_ride, args);
             });
 
             // Remove button
