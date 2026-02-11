@@ -39,6 +39,10 @@ public class OrderRideDialog extends DialogFragment {
     public static final String KEY_VEHICLE_TYPE = "vehicle_type";
     public static final String KEY_BABY_TRANSPORT = "baby_transport";
     public static final String KEY_PET_TRANSPORT = "pet_transport";
+    public static final String KEY_SCHEDULED = "scheduled";
+    public static final String KEY_SCHEDULE_OFFSET_MIN = "schedule_offset_min";
+    public static final String KEY_SCHEDULE_TIME_MILLIS = "schedule_time_millis";
+
 
     private EditText etPickup;
     private EditText etDestination;
@@ -57,6 +61,13 @@ public class OrderRideDialog extends DialogFragment {
     private MaterialButton btnOrder;
     private ImageButton btnClose;
 
+    private RadioGroup rgWhen;
+    private RadioButton rbNow;
+    private RadioButton rbLater;
+    private LinearLayout containerLaterOptions;
+    private TextView tvWhenSummary;
+
+    private Integer selectedOffsetMinutes = null;
     private final ArrayList<EditText> stopEditTexts = new ArrayList<>();
 
     public static OrderRideDialog newInstance() {
@@ -97,9 +108,80 @@ public class OrderRideDialog extends DialogFragment {
         btnCancel = view.findViewById(R.id.btn_cancel);
         btnOrder = view.findViewById(R.id.btn_order);
         btnClose = view.findViewById(R.id.btn_close);
+        rgWhen = view.findViewById(R.id.rg_when);
+        rbNow = view.findViewById(R.id.rb_now);
+        rbLater = view.findViewById(R.id.rb_later);
+        containerLaterOptions = view.findViewById(R.id.container_later_options);
+        tvWhenSummary = view.findViewById(R.id.tv_when_summary);
+
+        // Initialize card containers for vehicle selection
+        LinearLayout cardStandard = view.findViewById(R.id.card_standard);
+        LinearLayout cardLuxury = view.findViewById(R.id.card_luxury);
+        LinearLayout cardVan = view.findViewById(R.id.card_van);
+
+        // Make entire card clickable and ensure only one radio button is selected
+        cardStandard.setOnClickListener(v -> {
+            rbStandard.setChecked(true);
+            rbLuxury.setChecked(false);
+            rbVan.setChecked(false);
+        });
+
+        cardLuxury.setOnClickListener(v -> {
+            rbStandard.setChecked(false);
+            rbLuxury.setChecked(true);
+            rbVan.setChecked(false);
+        });
+
+        cardVan.setOnClickListener(v -> {
+            rbStandard.setChecked(false);
+            rbLuxury.setChecked(false);
+            rbVan.setChecked(true);
+        });
 
         // Setup listeners
         setupListeners();
+
+        // When: Now vs Later toggle
+        rgWhen.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rb_now) {
+                containerLaterOptions.setVisibility(View.GONE);
+                selectedOffsetMinutes = null;
+                tvWhenSummary.setText("Ride will start immediately");
+            } else if (checkedId == R.id.rb_later) {
+                containerLaterOptions.setVisibility(View.VISIBLE);
+                if (selectedOffsetMinutes == null) {
+                    tvWhenSummary.setText("Select when the ride should start");
+                }
+            }
+        });
+
+        // Time preset chips
+        View.OnClickListener chipClickListener = v -> {
+            int minutes = 0;
+            int id = v.getId();
+
+            if (id == R.id.chip_15) minutes = 15;
+            else if (id == R.id.chip_30) minutes = 30;
+            else if (id == R.id.chip_45) minutes = 45;
+            else if (id == R.id.chip_60) minutes = 60;
+            else if (id == R.id.chip_120) minutes = 120;
+            else if (id == R.id.chip_180) minutes = 180;
+            else if (id == R.id.chip_240) minutes = 240;
+            else if (id == R.id.chip_300) minutes = 300;
+
+            selectedOffsetMinutes = minutes;
+            highlightSelectedChip(v);
+            updateWhenSummary();
+        };
+
+        view.findViewById(R.id.chip_15).setOnClickListener(chipClickListener);
+        view.findViewById(R.id.chip_30).setOnClickListener(chipClickListener);
+        view.findViewById(R.id.chip_45).setOnClickListener(chipClickListener);
+        view.findViewById(R.id.chip_60).setOnClickListener(chipClickListener);
+        view.findViewById(R.id.chip_120).setOnClickListener(chipClickListener);
+        view.findViewById(R.id.chip_180).setOnClickListener(chipClickListener);
+        view.findViewById(R.id.chip_240).setOnClickListener(chipClickListener);
+        view.findViewById(R.id.chip_300).setOnClickListener(chipClickListener);
     }
 
     @NonNull
@@ -152,6 +234,7 @@ public class OrderRideDialog extends DialogFragment {
         etDestination.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) hideError();
         });
+
     }
 
     private void addStopField() {
@@ -204,6 +287,12 @@ public class OrderRideDialog extends DialogFragment {
             return;
         }
 
+        // Validate scheduling
+        if (rbLater.isChecked() && selectedOffsetMinutes == null) {
+            showError("Please select when the ride should start");
+            return;
+        }
+
         // Collect stops
         ArrayList<String> stops = new ArrayList<>();
         stops.add(pickup); // First location is pickup
@@ -227,10 +316,58 @@ public class OrderRideDialog extends DialogFragment {
         result.putString(KEY_VEHICLE_TYPE, vehicleType);
         result.putBoolean(KEY_PET_TRANSPORT, petTransport);
         result.putBoolean(KEY_BABY_TRANSPORT, babyTransport);
+        // Add scheduling info
+        result.putBoolean(KEY_SCHEDULED, rbLater.isChecked());
+        if (rbLater.isChecked() && selectedOffsetMinutes != null) {
+            result.putInt(KEY_SCHEDULE_OFFSET_MIN, selectedOffsetMinutes);
+
+            long scheduledTimeMillis = System.currentTimeMillis() + (selectedOffsetMinutes * 60L * 1000L);
+            result.putLong(KEY_SCHEDULE_TIME_MILLIS, scheduledTimeMillis);
+
+        }
 
         getParentFragmentManager().setFragmentResult(REQUEST_KEY, result);
         dismiss();
     }
+
+    private void highlightSelectedChip(View selectedView) {
+        // Reset all chips
+        resetChipBackground(R.id.chip_15);
+        resetChipBackground(R.id.chip_30);
+        resetChipBackground(R.id.chip_45);
+        resetChipBackground(R.id.chip_60);
+        resetChipBackground(R.id.chip_120);
+        resetChipBackground(R.id.chip_180);
+        resetChipBackground(R.id.chip_240);
+        resetChipBackground(R.id.chip_300);
+
+        // Highlight selected
+        selectedView.setBackgroundColor(Color.parseColor("#FFC107")); // yellow_500
+        ((TextView) selectedView).setTextColor(Color.BLACK);
+    }
+
+    private void resetChipBackground(int chipId) {
+        View chip = getView().findViewById(chipId);
+        if (chip != null) {
+            chip.setBackgroundResource(R.drawable.bg_card2);
+            ((TextView) chip).setTextColor(getResources().getColor(R.color.gray_300));
+        }
+    }
+
+    private void updateWhenSummary() {
+        if (selectedOffsetMinutes == null) {
+            tvWhenSummary.setText("Select when the ride should start");
+            return;
+        }
+
+        if (selectedOffsetMinutes < 60) {
+            tvWhenSummary.setText("Ride will start in " + selectedOffsetMinutes + " minutes");
+        } else {
+            int hours = selectedOffsetMinutes / 60;
+            tvWhenSummary.setText("Ride will start in " + hours + (hours == 1 ? " hour" : " hours"));
+        }
+    }
+
 
     private String getSelectedVehicleType() {
         if (rbStandard.isChecked()) return "STANDARD";

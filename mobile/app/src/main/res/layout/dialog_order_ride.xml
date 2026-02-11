@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_bottom_sheet"
+    android:background="@color/gray_600"
     android:fillViewport="true">
 
     <LinearLayout
@@ -34,8 +34,8 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:background="@android:color/transparent"
-                android:src="@drawable/ic_error"
-                app:tint="@color/gray_400"
+                android:src="@drawable/ic_close"
+                app:tint="@color/red_500"
                 android:contentDescription="Close" />
         </LinearLayout>
 
@@ -173,6 +173,7 @@
 
                 <!-- Standard Option -->
                 <LinearLayout
+                    android:id="@+id/card_standard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
@@ -181,7 +182,7 @@
                     android:padding="12dp"
                     android:layout_marginBottom="8dp">
 
-                    <RadioButton
+                    <android.widget.RadioButton
                         android:id="@+id/rb_standard"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -221,6 +222,7 @@
 
                 <!-- Luxury Option -->
                 <LinearLayout
+                    android:id="@+id/card_luxury"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
@@ -229,7 +231,7 @@
                     android:padding="12dp"
                     android:layout_marginBottom="8dp">
 
-                    <RadioButton
+                    <android.widget.RadioButton
                         android:id="@+id/rb_luxury"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -269,6 +271,7 @@
 
                 <!-- Van Option -->
                 <LinearLayout
+                    android:id="@+id/card_van"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
@@ -276,7 +279,7 @@
                     android:background="@drawable/bg_card2"
                     android:padding="12dp">
 
-                    <RadioButton
+                    <android.widget.RadioButton
                         android:id="@+id/rb_van"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -327,6 +330,7 @@
                 android:text="Please select a vehicle type" />
         </LinearLayout>
 
+
         <!-- Additional Options Section -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -345,7 +349,7 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
 
-            <CheckBox
+            <android.widget.CheckBox
                 android:id="@+id/cb_pet_transport"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -354,7 +358,7 @@
                 android:buttonTint="@color/yellow_500"
                 android:paddingVertical="8dp" />
 
-            <CheckBox
+            <android.widget.CheckBox
                 android:id="@+id/cb_baby_transport"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -362,6 +366,219 @@
                 android:textColor="@color/gray_300"
                 android:buttonTint="@color/yellow_500"
                 android:paddingVertical="8dp" />
+
+        </LinearLayout>
+        <!-- When Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="When"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Now / Later choice -->
+            <RadioGroup
+                android:id="@+id/rg_when"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <android.widget.RadioButton
+                    android:id="@+id/rb_now"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Now"
+                    android:textColor="@color/gray_300"
+                    android:checked="true"
+                    android:buttonTint="@color/yellow_500" />
+
+                <android.widget.RadioButton
+                    android:id="@+id/rb_later"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Schedule for Later"
+                    android:textColor="@color/gray_300"
+                    android:buttonTint="@color/yellow_500" />
+            </RadioGroup>
+
+            <!-- Time presets container (hidden by default) -->
+            <LinearLayout
+                android:id="@+id/container_later_options"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Select time"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- First row: 15, 30, 45, 60 min -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:id="@+id/chip_15"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="15 min"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_30"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="30 min"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_45"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="45 min"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_60"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="1 hr"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+                </LinearLayout>
+
+                <!-- Second row: 2, 3, 4, 5 hours -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/chip_120"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="2 hrs"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_180"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="3 hrs"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_240"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="4 hrs"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chip_300"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="5 hrs"
+                        android:textColor="@color/gray_300"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_card2"
+                        android:clickable="true"
+                        android:focusable="true" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Summary text -->
+            <TextView
+                android:id="@+id/tv_when_summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ride will start immediately"
+                android:textColor="@color/gray_400"
+                android:textSize="12sp"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
 
         <!-- Error Container -->
