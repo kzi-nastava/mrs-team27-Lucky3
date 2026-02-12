@@ -152,8 +152,6 @@ public class PassengerFavoritesFragment extends Fragment {
                 holder.tvRouteName = convertView.findViewById(R.id.tv_route_name);
                 holder.tvDeparture = convertView.findViewById(R.id.tv_departure);
                 holder.tvDestination = convertView.findViewById(R.id.tv_destination);
-                holder.tvDistance = convertView.findViewById(R.id.tv_distance);
-                holder.tvEstimatedTime = convertView.findViewById(R.id.tv_estimated_time);
                 holder.btnOrder = convertView.findViewById(R.id.btn_order);
                 holder.btnRemove = convertView.findViewById(R.id.btn_remove);
                 convertView.setTag(holder);
@@ -183,20 +181,6 @@ public class PassengerFavoritesFragment extends Fragment {
                 holder.tvDestination.setText(route.getEndLocation().getAddress());
             } else {
                 holder.tvDestination.setText("—");
-            }
-
-            // Distance
-            if (route.getDistance() != null) {
-                holder.tvDistance.setText(String.format(Locale.US, "%.1f km", route.getDistance()));
-            } else {
-                holder.tvDistance.setText("—");
-            }
-
-            // Estimated time
-            if (route.getEstimatedTime() != null) {
-                holder.tvEstimatedTime.setText(String.format(Locale.US, "~%.0f min", route.getEstimatedTime()));
-            } else {
-                holder.tvEstimatedTime.setText("—");
             }
 
             // Order button

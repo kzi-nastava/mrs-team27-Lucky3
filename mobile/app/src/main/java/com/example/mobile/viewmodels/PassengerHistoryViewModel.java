@@ -1,4 +1,4 @@
-package com.example.mobile.ui.passenger;
+package com.example.mobile.viewmodels;
 
 import android.app.Application;
 import android.util.Log;
