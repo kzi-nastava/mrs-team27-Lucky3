@@ -388,6 +388,27 @@
                 android:layout_marginBottom="8dp"
                 android:visibility="gone" />
 
+            <!-- PANIC Activated Banner (shown after panic is pressed) -->
+            <LinearLayout
+                android:id="@+id/panic_banner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="#DC2626"
+                android:padding="14dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="\uD83D\uDEA8 PANIC ACTIVATED — Help is on the way"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
             <!-- Driver Cancel Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_driver_cancel"

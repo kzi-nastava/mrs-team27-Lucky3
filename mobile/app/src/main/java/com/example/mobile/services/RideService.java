@@ -7,6 +7,7 @@ import com.example.mobile.models.InconsistencyRequest;
 import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.RideCancellationRequest;
 import com.example.mobile.models.RideEstimationResponse;
+import com.example.mobile.models.RidePanicRequest;
 import com.example.mobile.models.RideResponse;
 
 import java.util.List;
@@ -95,5 +96,16 @@ public interface RideService {
             @Path("passengerId") Long passengerId,
             @Path("favouriteRouteId") Long favouriteRouteId,
             @Header("Authorization") String token
+    );
+
+    /**
+     * Trigger PANIC button for a ride (driver or passenger).
+     * PUT /api/rides/{id}/panic
+     */
+    @PUT("api/rides/{id}/panic")
+    Call<RideResponse> panicRide(
+        @Path("id") long id,
+        @Body RidePanicRequest request,
+        @Header("Authorization") String token
     );
 }
