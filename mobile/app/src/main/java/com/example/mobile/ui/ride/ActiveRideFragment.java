@@ -72,6 +72,10 @@ public class ActiveRideFragment extends Fragment {
     // Stop auto-completion
     private final Set<Integer> pendingStopCompletions = new HashSet<>();
 
+    // Panic state
+    private boolean panicActivated = false;
+    private LinearLayout panicBanner;
+
     // Remaining distance/time from OSRM route data (updated in drawRoutes)
     private volatile double remainingDistanceKm = -1;
     private volatile double remainingTimeMin = -1;
@@ -105,6 +109,7 @@ public class ActiveRideFragment extends Fragment {
         setupMap(root);
         setupBackButton(root);
         setupCancelDialogListeners();
+        setupPanicDialogListener();
 
         if (getArguments() != null) {
             rideId = getArguments().getLong("rideId", -1);
@@ -146,6 +151,9 @@ public class ActiveRideFragment extends Fragment {
 
         // Set PANIC button text with emoji
         btnPanic.setText("\uD83E\uDD2F PANIC");
+
+        // Panic banner (shown when panic is active)
+        panicBanner = root.findViewById(R.id.panic_banner);
     }
 
     private void setupMap(View root) {
@@ -177,6 +185,35 @@ public class ActiveRideFragment extends Fragment {
                 });
     }
 
+    private void setupPanicDialogListener() {
+        getParentFragmentManager().setFragmentResultListener(
+                PanicDialog.REQUEST_KEY, this, (requestKey, result) -> {
+                    if (result.getBoolean(PanicDialog.KEY_PANIC_ACTIVATED, false)) {
+                        onPanicActivated();
+                    }
+                });
+    }
+
+    private void onPanicActivated() {
+        panicActivated = true;
+        if (ride != null) {
+            ride.setPanicPressed(true);
+        }
+        // Hide panic button, show banner
+        btnPanic.setVisibility(View.GONE);
+        if (panicBanner != null) {
+            panicBanner.setVisibility(View.VISIBLE);
+        }
+        // Switch map to panic mode (red routes + red vehicle marker)
+        applyPanicMapMode();
+        Toast.makeText(getContext(), "\uD83D\uDEA8 Panic alert sent to administrators!", Toast.LENGTH_LONG).show();
+    }
+
+    private void openPanicDialog() {
+        PanicDialog dialog = PanicDialog.newInstance(rideId);
+        dialog.show(getParentFragmentManager(), "panic_dialog");
+    }
+
     private void loadRide() {
         String token = "Bearer " + preferencesManager.getToken();
         ClientUtils.rideService.getRide(rideId, token).enqueue(new Callback<RideResponse>() {
@@ -185,6 +222,10 @@ public class ActiveRideFragment extends Fragment {
                 if (!isAdded()) return;
                 if (response.isSuccessful() && response.body() != null) {
                     ride = response.body();
+                    // Check if panic was already activated
+                    if (Boolean.TRUE.equals(ride.getPanicPressed())) {
+                        panicActivated = true;
+                    }
                     updateUI();
                 } else {
                     Log.e(TAG, "Failed to load ride: " + response.code());
@@ -215,14 +256,20 @@ public class ActiveRideFragment extends Fragment {
     private void updateHeader() {
         String status = ride.getStatus();
         if (status != null) {
-            tvStatusBadge.setText(ride.getDisplayStatus().toUpperCase());
-            if (ride.isCancelled()) {
+            if (panicActivated) {
+                tvStatusBadge.setText("\uD83D\uDEA8 PANIC");
+                tvStatusBadge.setBackgroundColor(Color.parseColor("#DC2626"));
+                tvStatusBadge.setTextColor(Color.WHITE);
+            } else if (ride.isCancelled()) {
+                tvStatusBadge.setText(ride.getDisplayStatus().toUpperCase());
                 tvStatusBadge.setBackgroundResource(R.drawable.bg_badge_cancelled);
                 tvStatusBadge.setTextColor(getResources().getColor(R.color.red_500, null));
             } else if ("FINISHED".equals(status)) {
+                tvStatusBadge.setText(ride.getDisplayStatus().toUpperCase());
                 tvStatusBadge.setBackgroundResource(R.drawable.bg_badge_completed);
                 tvStatusBadge.setTextColor(getResources().getColor(R.color.green_500, null));
             } else {
+                tvStatusBadge.setText(ride.getDisplayStatus().toUpperCase());
                 tvStatusBadge.setBackgroundResource(R.drawable.bg_badge_active);
                 tvStatusBadge.setTextColor(getResources().getColor(R.color.yellow_500, null));
             }
@@ -496,6 +543,10 @@ public class ActiveRideFragment extends Fragment {
                 if (!isAdded()) return;
                 if (response.isSuccessful() && response.body() != null) {
                     ride = response.body();
+                    // Check if panic was activated from backend
+                    if (Boolean.TRUE.equals(ride.getPanicPressed()) && !panicActivated) {
+                        panicActivated = true;
+                    }
                     updateHeader();
                     updateRoute();
                     updateActionButtons();
@@ -580,6 +631,30 @@ public class ActiveRideFragment extends Fragment {
 
     // ========== Vehicle location + routes ==========
 
+    /**
+     * Applies panic visual mode to the map:
+     * - Changes vehicle marker to red
+     * - Changes all route overlays to red
+     */
+    private void applyPanicMapMode() {
+        if (mapView == null || !isAdded()) return;
+
+        // Change vehicle marker to red
+        if (vehicleMarker != null) {
+            vehicleMarker.setIcon(requireContext().getDrawable(R.drawable.ic_dot_red));
+        }
+
+        // Change route overlays to red
+        if (approachRoute != null) {
+            approachRoute.setColor(Color.parseColor("#ef4444"));
+        }
+        if (rideRouteOverlay != null) {
+            rideRouteOverlay.setColor(Color.parseColor("#ef4444"));
+        }
+
+        mapView.invalidate();
+    }
+
     private void pollVehicleLocation() {
         if (ride == null || mapView == null) return;
         Long userId = preferencesManager.getUserId();
@@ -628,8 +703,11 @@ public class ActiveRideFragment extends Fragment {
             vehicleMarker = new Marker(mapView);
             vehicleMarker.setTitle("Vehicle");
             vehicleMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
-            vehicleMarker.setIcon(requireContext().getDrawable(R.drawable.ic_dot_blue));
+            vehicleMarker.setIcon(requireContext().getDrawable(
+                    panicActivated ? R.drawable.ic_dot_red : R.drawable.ic_dot_blue));
             mapView.getOverlays().add(vehicleMarker);
+        } else if (panicActivated) {
+            vehicleMarker.setIcon(requireContext().getDrawable(R.drawable.ic_dot_red));
         }
 
         vehicleMarker.setPosition(vehiclePoint);
@@ -709,7 +787,7 @@ public class ActiveRideFragment extends Fragment {
                     Road blueRoad = roadManager.getRoad(blueWaypoints);
                     if (blueRoad.mStatus == Road.STATUS_OK) {
                         blueOverlay = RoadManager.buildRoadOverlay(blueRoad);
-                        blueOverlay.setColor(Color.parseColor("#3b82f6"));
+                        blueOverlay.setColor(Color.parseColor(panicActivated ? "#ef4444" : "#3b82f6"));
                         blueOverlay.setWidth(10f);
                         blueDistKm = blueRoad.mLength;
                     }
@@ -721,7 +799,7 @@ public class ActiveRideFragment extends Fragment {
                     Road yellowRoad = roadManager.getRoad(yellowWaypoints);
                     if (yellowRoad.mStatus == Road.STATUS_OK) {
                         yellowOverlay = RoadManager.buildRoadOverlay(yellowRoad);
-                        yellowOverlay.setColor(Color.parseColor("#eab308"));
+                        yellowOverlay.setColor(Color.parseColor(panicActivated ? "#ef4444" : "#eab308"));
                         yellowOverlay.setWidth(12f);
                         Paint paint = yellowOverlay.getOutlinePaint();
                         paint.setPathEffect(new DashPathEffect(new float[]{30, 20}, 0));
@@ -993,9 +1071,17 @@ public class ActiveRideFragment extends Fragment {
 
         // IN_PROGRESS: show Report Inconsistency (passenger only) + PANIC (both roles)
         if ("IN_PROGRESS".equals(status)) {
-            // PANIC button for both roles
-            btnPanic.setVisibility(View.VISIBLE);
-            // PANIC does nothing (just a button stub as requested)
+            // PANIC button for both roles (hide if already activated)
+            if (panicActivated) {
+                btnPanic.setVisibility(View.GONE);
+                if (panicBanner != null) {
+                    panicBanner.setVisibility(View.VISIBLE);
+                }
+                applyPanicMapMode();
+            } else {
+                btnPanic.setVisibility(View.VISIBLE);
+                btnPanic.setOnClickListener(v -> openPanicDialog());
+            }
 
             // Report Inconsistency for passengers only
             if ("PASSENGER".equals(role) && isCurrentUserPassenger()) {
