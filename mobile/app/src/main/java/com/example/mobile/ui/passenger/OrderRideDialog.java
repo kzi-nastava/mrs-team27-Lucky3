@@ -70,6 +70,19 @@ public class OrderRideDialog extends DialogFragment {
     private Integer selectedOffsetMinutes = null;
     private final ArrayList<EditText> stopEditTexts = new ArrayList<>();
 
+    private String prefilledPickup = null;
+    private String prefilledDestination = null;
+
+
+    public static OrderRideDialog newInstanceWithData(String pickup, String destination) {
+        OrderRideDialog dialog = new OrderRideDialog();
+        Bundle args = new Bundle();
+        args.putString("prefilled_pickup", pickup);
+        args.putString("prefilled_destination", destination);
+        dialog.setArguments(args);
+        return dialog;
+    }
+
     public static OrderRideDialog newInstance() {
         return new OrderRideDialog();
     }
@@ -113,6 +126,20 @@ public class OrderRideDialog extends DialogFragment {
         rbLater = view.findViewById(R.id.rb_later);
         containerLaterOptions = view.findViewById(R.id.container_later_options);
         tvWhenSummary = view.findViewById(R.id.tv_when_summary);
+
+        // Check for prefilled data from arguments
+        Bundle args = getArguments();
+        if (args != null) {
+            prefilledPickup = args.getString("prefilled_pickup");
+            prefilledDestination = args.getString("prefilled_destination");
+
+            if (prefilledPickup != null) {
+                etPickup.setText(prefilledPickup);
+            }
+            if (prefilledDestination != null) {
+                etDestination.setText(prefilledDestination);
+            }
+        }
 
         // Initialize card containers for vehicle selection
         LinearLayout cardStandard = view.findViewById(R.id.card_standard);

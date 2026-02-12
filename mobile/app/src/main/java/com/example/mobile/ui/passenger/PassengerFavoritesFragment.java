@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavOptions;
 import androidx.navigation.Navigation;
 
 import com.example.mobile.R;
@@ -185,25 +186,29 @@ public class PassengerFavoritesFragment extends Fragment {
 
             // Order button
             holder.btnOrder.setOnClickListener(v -> {
-                // Navigate to order ride with pre-filled data
                 Bundle args = new Bundle();
+
                 if (route.getStartLocation() != null) {
                     args.putString("startAddress", route.getStartLocation().getAddress());
                     args.putDouble("startLat", route.getStartLocation().getLatitude());
                     args.putDouble("startLng", route.getStartLocation().getLongitude());
                 }
+
                 if (route.getEndLocation() != null) {
                     args.putString("endAddress", route.getEndLocation().getAddress());
                     args.putDouble("endLat", route.getEndLocation().getLatitude());
                     args.putDouble("endLng", route.getEndLocation().getLongitude());
                 }
 
-                //TODO: fix this
+                // Navigate with popUpTo to remove Favorites from back stack
+                NavOptions navOptions = new NavOptions.Builder()
+                        .setPopUpTo(R.id.nav_passenger_favorites, true)
+                        .build();
 
-                // Navigate to ride creation screen
-                //Navigation.findNavController(requireView())
-                //        .navigate(R.id.action_passenger_favorites_to_order_ride, args);
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.nav_passenger_home, args, navOptions);
             });
+
 
             // Remove button
             holder.btnRemove.setOnClickListener(v -> {

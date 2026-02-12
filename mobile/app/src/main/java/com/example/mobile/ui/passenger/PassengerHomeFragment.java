@@ -79,9 +79,32 @@ public class PassengerHomeFragment extends Fragment {
         observeViewModel();
         setupVehicleRefresh();
 
+        // Check if we have prefilled data from favorite route
+        checkForPrefilledData();
+
         // Initial data load
         viewModel.checkForActiveRide();
         viewModel.fetchActiveVehicles();
+    }
+
+    private void checkForPrefilledData() {
+        Bundle args = getArguments();
+        if (args != null && args.containsKey("startAddress") && args.containsKey("endAddress")) {
+            String startAddress = args.getString("startAddress");
+            String endAddress = args.getString("endAddress");
+
+            if (startAddress != null && endAddress != null) {
+                // Open the OrderRideDialog with prefilled data
+                OrderRideDialog dialog = OrderRideDialog.newInstanceWithData(
+                        startAddress,
+                        endAddress
+                );
+                dialog.show(getParentFragmentManager(), "OrderRideDialog");
+
+                // Clear the arguments so it doesn't reopen on configuration changes
+                getArguments().clear();
+            }
+        }
     }
 
     private void initViewModel() {
