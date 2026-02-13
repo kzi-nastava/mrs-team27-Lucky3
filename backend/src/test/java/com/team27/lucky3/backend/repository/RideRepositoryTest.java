@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for RideRepository custom query methods.
@@ -106,7 +106,7 @@ class RideRepositoryTest {
         boolean result = rideRepository.existsByDriverIdAndStatusIn(
                 driver.getId(), List.of(RideStatus.IN_PROGRESS, RideStatus.ACTIVE));
 
-        assertThat(result).isTrue();
+        assertTrue(result);
     }
 
     @Test
@@ -118,7 +118,7 @@ class RideRepositoryTest {
         boolean result = rideRepository.existsByDriverIdAndStatusIn(
                 driver.getId(), List.of(RideStatus.IN_PROGRESS, RideStatus.ACTIVE));
 
-        assertThat(result).isFalse();
+        assertFalse(result);
     }
 
     @Test
@@ -127,7 +127,7 @@ class RideRepositoryTest {
         boolean result = rideRepository.existsByDriverIdAndStatusIn(
                 driver.getId(), List.of(RideStatus.IN_PROGRESS));
 
-        assertThat(result).isFalse();
+        assertFalse(result);
     }
 
     @Test
@@ -136,7 +136,7 @@ class RideRepositoryTest {
         boolean result = rideRepository.existsByDriverIdAndStatusIn(
                 99999L, List.of(RideStatus.IN_PROGRESS));
 
-        assertThat(result).isFalse();
+        assertFalse(result);
     }
 
     @Test
@@ -147,7 +147,7 @@ class RideRepositoryTest {
         boolean result = rideRepository.existsByDriverIdAndStatusIn(
                 driver.getId(), List.of(RideStatus.IN_PROGRESS));
 
-        assertThat(result).isFalse();
+        assertFalse(result);
     }
 
     @Test
@@ -158,7 +158,7 @@ class RideRepositoryTest {
         boolean result = rideRepository.existsByDriverIdAndStatusIn(
                 driver.getId(), List.of(RideStatus.ACCEPTED, RideStatus.IN_PROGRESS, RideStatus.ACTIVE));
 
-        assertThat(result).isTrue();
+        assertTrue(result);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -176,10 +176,10 @@ class RideRepositoryTest {
         List<Ride> result = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
                 driver.getId(), List.of(RideStatus.SCHEDULED, RideStatus.PENDING));
 
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getStatus()).isEqualTo(RideStatus.PENDING);
-        assertThat(result.get(1).getStatus()).isEqualTo(RideStatus.SCHEDULED);
-        assertThat(result.get(0).getStartTime()).isBefore(result.get(1).getStartTime());
+        assertEquals(2, result.size());
+        assertEquals(RideStatus.PENDING, result.get(0).getStatus());
+        assertEquals(RideStatus.SCHEDULED, result.get(1).getStatus());
+        assertTrue(result.get(0).getStartTime().isBefore(result.get(1).getStartTime()));
     }
 
     @Test
@@ -191,7 +191,7 @@ class RideRepositoryTest {
         List<Ride> result = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
                 driver.getId(), List.of(RideStatus.SCHEDULED, RideStatus.PENDING));
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 
     @Test
@@ -200,7 +200,7 @@ class RideRepositoryTest {
         List<Ride> result = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
                 99999L, List.of(RideStatus.SCHEDULED));
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -216,8 +216,8 @@ class RideRepositoryTest {
 
         List<Ride> result = rideRepository.findFinishedRidesByDriverSince(driver.getId(), now.minusHours(24));
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getTotalCost()).isEqualTo(200.0);
+        assertEquals(1, result.size());
+        assertEquals(200.0, result.get(0).getTotalCost());
     }
 
     @Test
@@ -229,7 +229,7 @@ class RideRepositoryTest {
 
         List<Ride> result = rideRepository.findFinishedRidesByDriverSince(driver.getId(), now.minusHours(24));
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 
     @Test
@@ -237,7 +237,7 @@ class RideRepositoryTest {
     void findFinishedRidesByDriverSince_nonExistentDriver_returnsEmpty() {
         List<Ride> result = rideRepository.findFinishedRidesByDriverSince(99999L, LocalDateTime.now().minusHours(24));
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -253,7 +253,7 @@ class RideRepositoryTest {
         List<Long> result = rideRepository.findDriversWithRidesInTimeRange(
                 List.of(driver.getId()), now.plusMinutes(30), now.plusHours(2));
 
-        assertThat(result).contains(driver.getId());
+        assertTrue(result.contains(driver.getId()));
     }
 
     @Test
@@ -265,7 +265,7 @@ class RideRepositoryTest {
         List<Long> result = rideRepository.findDriversWithRidesInTimeRange(
                 List.of(driver.getId()), now.plusMinutes(30), now.plusHours(2));
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 
     @Test
@@ -277,7 +277,7 @@ class RideRepositoryTest {
         List<Long> result = rideRepository.findDriversWithRidesInTimeRange(
                 List.of(driver.getId()), now.plusHours(2), now.plusHours(3));
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 
     @Test
@@ -290,7 +290,9 @@ class RideRepositoryTest {
         List<Long> result = rideRepository.findDriversWithRidesInTimeRange(
                 List.of(driver.getId(), driver2.getId()), now.plusMinutes(30), now.plusHours(2));
 
-        assertThat(result).containsExactlyInAnyOrder(driver.getId(), driver2.getId());
+        assertEquals(2, result.size());
+        assertTrue(result.contains(driver.getId()));
+        assertTrue(result.contains(driver2.getId()));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -307,9 +309,10 @@ class RideRepositoryTest {
 
         List<Ride> result = rideRepository.findAllInProgressRides();
 
-        assertThat(result).hasSize(2);
-        assertThat(result).allMatch(r ->
-                r.getStatus() == RideStatus.IN_PROGRESS || r.getStatus() == RideStatus.ACTIVE);
+        assertEquals(2, result.size());
+        for (Ride r : result) {
+            assertTrue(r.getStatus() == RideStatus.IN_PROGRESS || r.getStatus() == RideStatus.ACTIVE);
+        }
     }
 
     @Test
@@ -321,7 +324,7 @@ class RideRepositoryTest {
 
         List<Ride> result = rideRepository.findAllInProgressRides();
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 
     @Test
@@ -339,7 +342,7 @@ class RideRepositoryTest {
 
         List<Ride> result = rideRepository.findAllInProgressRides();
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -357,7 +360,7 @@ class RideRepositoryTest {
 
         Integer count = rideRepository.countCompletedRidesByDriverId(driver.getId());
 
-        assertThat(count).isEqualTo(2);
+        assertEquals(2, count);
     }
 
     @Test
@@ -367,7 +370,7 @@ class RideRepositoryTest {
 
         Integer count = rideRepository.countCompletedRidesByDriverId(driver.getId());
 
-        assertThat(count).isEqualTo(0);
+        assertEquals(0, count);
     }
 
     @Test
@@ -375,7 +378,7 @@ class RideRepositoryTest {
     void countCompletedRidesByDriverId_nonExistentDriver_returnsZero() {
         Integer count = rideRepository.countCompletedRidesByDriverId(99999L);
 
-        assertThat(count).isEqualTo(0);
+        assertEquals(0, count);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -392,7 +395,7 @@ class RideRepositoryTest {
 
         Double total = rideRepository.sumTotalEarningsByDriverId(driver.getId());
 
-        assertThat(total).isEqualTo(350.0);
+        assertEquals(350.0, total);
     }
 
     @Test
@@ -402,7 +405,7 @@ class RideRepositoryTest {
 
         Double total = rideRepository.sumTotalEarningsByDriverId(driver.getId());
 
-        assertThat(total).isEqualTo(0.0);
+        assertEquals(0.0, total);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -420,7 +423,7 @@ class RideRepositoryTest {
 
         Integer count = rideRepository.countActiveRides();
 
-        assertThat(count).isEqualTo(3);
+        assertEquals(3, count);
     }
 
     @Test
@@ -431,7 +434,7 @@ class RideRepositoryTest {
 
         Integer count = rideRepository.countActiveRides();
 
-        assertThat(count).isEqualTo(0);
+        assertEquals(0, count);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -447,7 +450,7 @@ class RideRepositoryTest {
 
         List<Ride> result = rideRepository.findAllActiveRidesForPassengerCount();
 
-        assertThat(result).hasSize(2);
+        assertEquals(2, result.size());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -471,7 +474,7 @@ class RideRepositoryTest {
         List<Ride> result = rideRepository.findByScheduledTimeBetweenAndStatusIn(
                 now, now.plusMinutes(15), List.of(RideStatus.SCHEDULED));
 
-        assertThat(result).hasSize(1);
+        assertEquals(1, result.size());
     }
 
     @Test
@@ -491,7 +494,7 @@ class RideRepositoryTest {
         List<Ride> result = rideRepository.findByScheduledTimeBetweenAndStatusIn(
                 now, now.plusMinutes(15), List.of(RideStatus.SCHEDULED));
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -509,8 +512,8 @@ class RideRepositoryTest {
         List<Ride> result = rideRepository.findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(
                 driver.getId(), RideStatus.SCHEDULED, now);
 
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getStartTime()).isBefore(result.get(1).getStartTime());
+        assertEquals(2, result.size());
+        assertTrue(result.get(0).getStartTime().isBefore(result.get(1).getStartTime()));
     }
 
     @Test
@@ -521,6 +524,6 @@ class RideRepositoryTest {
         List<Ride> result = rideRepository.findByDriverIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(
                 driver.getId(), RideStatus.SCHEDULED, LocalDateTime.now());
 
-        assertThat(result).isEmpty();
+        assertTrue(result.isEmpty());
     }
 }

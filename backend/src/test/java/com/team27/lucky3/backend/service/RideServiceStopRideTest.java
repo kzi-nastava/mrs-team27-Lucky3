@@ -30,7 +30,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.time.LocalDateTime;
 import java.util.*;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -179,13 +179,13 @@ class RideServiceStopRideTest {
 
         RideResponse result = rideService.stopRide(1L, validStopRequest);
 
-        assertThat(result).isNotNull();
-        assertThat(result.getStatus()).isEqualTo(RideStatus.FINISHED);
-        assertThat(result.getPaid()).isTrue();
-        assertThat(result.getPassengersExited()).isTrue();
-        assertThat(result.getEndTime()).isNotNull();
-        assertThat(result.getDestination()).isNotNull();
-        assertThat(result.getDestination().getAddress()).isEqualTo("New Stop Address");
+        assertNotNull(result);
+        assertEquals(RideStatus.FINISHED, result.getStatus());
+        assertTrue(result.getPaid());
+        assertTrue(result.getPassengersExited());
+        assertNotNull(result.getEndTime());
+        assertNotNull(result.getDestination());
+        assertEquals("New Stop Address", result.getDestination().getAddress());
     }
 
     @Test
@@ -201,8 +201,8 @@ class RideServiceStopRideTest {
 
         RideResponse result = rideService.stopRide(1L, validStopRequest);
 
-        assertThat(result).isNotNull();
-        assertThat(result.getStatus()).isEqualTo(RideStatus.FINISHED);
+        assertNotNull(result);
+        assertEquals(RideStatus.FINISHED, result.getStatus());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -218,9 +218,8 @@ class RideServiceStopRideTest {
         mockSecurityContext(driverUser);
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
 
-        assertThatThrownBy(() -> rideService.stopRide(1L, validStopRequest))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("not in progress");
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> rideService.stopRide(1L, validStopRequest));
+        assertTrue(ex.getMessage().contains("not in progress"));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -236,9 +235,8 @@ class RideServiceStopRideTest {
 
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
 
-        assertThatThrownBy(() -> rideService.stopRide(1L, validStopRequest))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("authenticated");
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> rideService.stopRide(1L, validStopRequest));
+        assertTrue(ex.getMessage().contains("authenticated"));
     }
 
     @Test
@@ -247,9 +245,8 @@ class RideServiceStopRideTest {
         mockSecurityContext(otherDriver);
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
 
-        assertThatThrownBy(() -> rideService.stopRide(1L, validStopRequest))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("assigned driver");
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> rideService.stopRide(1L, validStopRequest));
+        assertTrue(ex.getMessage().contains("assigned driver"));
     }
 
     @Test
@@ -258,9 +255,8 @@ class RideServiceStopRideTest {
         mockSecurityContext(passengerUser);
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
 
-        assertThatThrownBy(() -> rideService.stopRide(1L, validStopRequest))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("assigned driver");
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> rideService.stopRide(1L, validStopRequest));
+        assertTrue(ex.getMessage().contains("assigned driver"));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -272,9 +268,8 @@ class RideServiceStopRideTest {
     void stopRide_rideNotFound_throwsResourceNotFound() {
         when(rideRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> rideService.stopRide(999L, validStopRequest))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Ride not found");
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> rideService.stopRide(999L, validStopRequest));
+        assertTrue(ex.getMessage().contains("Ride not found"));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -288,9 +283,8 @@ class RideServiceStopRideTest {
         mockSecurityContext(driverUser);
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
 
-        assertThatThrownBy(() -> rideService.stopRide(1L, validStopRequest))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("assigned driver");
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> rideService.stopRide(1L, validStopRequest));
+        assertTrue(ex.getMessage().contains("assigned driver"));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -313,9 +307,9 @@ class RideServiceStopRideTest {
         verify(rideRepository).save(rideCaptor.capture());
         Ride saved = rideCaptor.getValue();
 
-        assertThat(saved.getEndLocation().getAddress()).isEqualTo("New Stop Address");
-        assertThat(saved.getEndLocation().getLatitude()).isEqualTo(45.2600);
-        assertThat(saved.getEndLocation().getLongitude()).isEqualTo(19.8400);
+        assertEquals("New Stop Address", saved.getEndLocation().getAddress());
+        assertEquals(45.2600, saved.getEndLocation().getLatitude());
+        assertEquals(19.8400, saved.getEndLocation().getLongitude());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -340,8 +334,8 @@ class RideServiceStopRideTest {
         verify(rideRepository).save(rideCaptor.capture());
         Ride saved = rideCaptor.getValue();
 
-        assertThat(saved.getEndTime()).isAfterOrEqualTo(before);
-        assertThat(saved.getEndTime()).isBeforeOrEqualTo(after);
+        assertFalse(saved.getEndTime().isBefore(before));
+        assertFalse(saved.getEndTime().isAfter(after));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -363,7 +357,7 @@ class RideServiceStopRideTest {
         ArgumentCaptor<Ride> rideCaptor = ArgumentCaptor.forClass(Ride.class);
         verify(rideRepository).save(rideCaptor.capture());
 
-        assertThat(rideCaptor.getValue().getStatus()).isEqualTo(RideStatus.FINISHED);
+        assertEquals(RideStatus.FINISHED, rideCaptor.getValue().getStatus());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -387,9 +381,9 @@ class RideServiceStopRideTest {
         Ride saved = rideCaptor.getValue();
 
         // Distance should be > 0 (Haversine from start to new end)
-        assertThat(saved.getDistance()).isGreaterThan(0.0);
+        assertTrue(saved.getDistance() > 0.0);
         // Should not be the original distance since end location changed
-        assertThat(saved.getDistance()).isNotEqualTo(5.0);
+        assertNotEquals(5.0, saved.getDistance());
     }
 
     @Test
@@ -415,7 +409,7 @@ class RideServiceStopRideTest {
         Ride saved = rideCaptor.getValue();
 
         // With intermediate stops, distance should be >= direct distance
-        assertThat(saved.getDistance()).isGreaterThan(0.0);
+        assertTrue(saved.getDistance() > 0.0);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -440,7 +434,7 @@ class RideServiceStopRideTest {
 
         // totalCost = 120 (base) + distance * 120 (perKm)
         double expectedCost = Math.round((120.0 + (saved.getDistance() * 120.0)) * 100.0) / 100.0;
-        assertThat(saved.getTotalCost()).isEqualTo(expectedCost);
+        assertEquals(expectedCost, saved.getTotalCost());
     }
 
     @Test
@@ -466,7 +460,7 @@ class RideServiceStopRideTest {
         ArgumentCaptor<Ride> rideCaptor = ArgumentCaptor.forClass(Ride.class);
         verify(rideRepository).save(rideCaptor.capture());
 
-        assertThat(rideCaptor.getValue().getTotalCost()).isGreaterThan(0.0);
+        assertTrue(rideCaptor.getValue().getTotalCost() > 0.0);
     }
 
     @Test
@@ -488,7 +482,7 @@ class RideServiceStopRideTest {
         int decimalIndex = costStr.indexOf('.');
         if (decimalIndex >= 0) {
             int decimalPlaces = costStr.length() - decimalIndex - 1;
-            assertThat(decimalPlaces).isLessThanOrEqualTo(2);
+            assertTrue(decimalPlaces <= 2);
         }
     }
 
@@ -512,8 +506,8 @@ class RideServiceStopRideTest {
         verify(rideRepository).save(rideCaptor.capture());
         Ride saved = rideCaptor.getValue();
 
-        assertThat(saved.isPassengersExited()).isTrue();
-        assertThat(saved.isPaid()).isTrue();
+        assertTrue(saved.isPassengersExited());
+        assertTrue(saved.isPaid());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -585,8 +579,8 @@ class RideServiceStopRideTest {
         verify(vehicleRepository).save(vehicleCaptor.capture());
         Vehicle savedVehicle = vehicleCaptor.getValue();
 
-        assertThat(savedVehicle.getStatus()).isEqualTo(VehicleStatus.FREE);
-        assertThat(savedVehicle.isCurrentPanic()).isFalse();
+        assertEquals(VehicleStatus.FREE, savedVehicle.getStatus());
+        assertFalse(savedVehicle.isCurrentPanic());
     }
 
     @Test
@@ -608,7 +602,7 @@ class RideServiceStopRideTest {
         ArgumentCaptor<Vehicle> vehicleCaptor = ArgumentCaptor.forClass(Vehicle.class);
         verify(vehicleRepository).save(vehicleCaptor.capture());
 
-        assertThat(vehicleCaptor.getValue().getStatus()).isEqualTo(VehicleStatus.BUSY);
+        assertEquals(VehicleStatus.BUSY, vehicleCaptor.getValue().getStatus());
     }
 
     @Test
@@ -627,7 +621,7 @@ class RideServiceStopRideTest {
         ArgumentCaptor<Vehicle> vehicleCaptor = ArgumentCaptor.forClass(Vehicle.class);
         verify(vehicleRepository).save(vehicleCaptor.capture());
 
-        assertThat(vehicleCaptor.getValue().isCurrentPanic()).isFalse();
+        assertFalse(vehicleCaptor.getValue().isCurrentPanic());
     }
 
     @Test
@@ -643,8 +637,8 @@ class RideServiceStopRideTest {
         // Should not throw even if vehicle is not found
         RideResponse result = rideService.stopRide(1L, validStopRequest);
 
-        assertThat(result).isNotNull();
-        assertThat(result.getStatus()).isEqualTo(RideStatus.FINISHED);
+        assertNotNull(result);
+        assertEquals(RideStatus.FINISHED, result.getStatus());
         verify(vehicleRepository, never()).save(any(Vehicle.class));
     }
 
@@ -693,8 +687,8 @@ class RideServiceStopRideTest {
 
         rideService.stopRide(1L, validStopRequest);
 
-        assertThat(driverUser.isActive()).isFalse();
-        assertThat(driverUser.isInactiveRequested()).isFalse();
+        assertFalse(driverUser.isActive());
+        assertFalse(driverUser.isInactiveRequested());
         verify(userRepository).save(driverUser);
     }
 
@@ -715,7 +709,7 @@ class RideServiceStopRideTest {
 
         rideService.stopRide(1L, validStopRequest);
 
-        assertThat(driverUser.isActive()).isTrue();
+        assertTrue(driverUser.isActive());
         verify(userRepository, never()).save(driverUser);
     }
 
@@ -742,9 +736,9 @@ class RideServiceStopRideTest {
         Ride saved = rideCaptor.getValue();
 
         // Distance should be 0 or very close to 0
-        assertThat(saved.getDistance()).isLessThanOrEqualTo(0.01);
+        assertTrue(saved.getDistance() <= 0.01);
         // Cost should be just the base fare
-        assertThat(saved.getTotalCost()).isEqualTo(120.0);
+        assertEquals(120.0, saved.getTotalCost());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -770,7 +764,7 @@ class RideServiceStopRideTest {
         ArgumentCaptor<Ride> rideCaptor = ArgumentCaptor.forClass(Ride.class);
         verify(rideRepository).save(rideCaptor.capture());
         // Base fare should be 360 (LUXURY) not 120 (STANDARD)
-        assertThat(rideCaptor.getValue().getTotalCost()).isGreaterThan(360.0);
+        assertTrue(rideCaptor.getValue().getTotalCost() > 360.0);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -789,9 +783,9 @@ class RideServiceStopRideTest {
 
         RideResponse result = rideService.stopRide(1L, validStopRequest);
 
-        assertThat(result.getDriver()).isNotNull();
-        assertThat(result.getDriver().getId()).isEqualTo(driverUser.getId());
-        assertThat(result.getDriver().getName()).isEqualTo("John");
+        assertNotNull(result.getDriver());
+        assertEquals(driverUser.getId(), result.getDriver().getId());
+        assertEquals("John", result.getDriver().getName());
     }
 
     @Test
@@ -806,9 +800,9 @@ class RideServiceStopRideTest {
 
         RideResponse result = rideService.stopRide(1L, validStopRequest);
 
-        assertThat(result.getPassengers()).isNotNull();
-        assertThat(result.getPassengers()).hasSize(1);
-        assertThat(result.getPassengers().get(0).getEmail()).isEqualTo("passenger@example.com");
+        assertNotNull(result.getPassengers());
+        assertEquals(1, result.getPassengers().size());
+        assertEquals("passenger@example.com", result.getPassengers().get(0).getEmail());
     }
 
     @Test
@@ -823,10 +817,10 @@ class RideServiceStopRideTest {
 
         RideResponse result = rideService.stopRide(1L, validStopRequest);
 
-        assertThat(result.getTotalCost()).isNotNull();
-        assertThat(result.getTotalCost()).isGreaterThan(0.0);
-        assertThat(result.getDistanceKm()).isNotNull();
-        assertThat(result.getDistanceKm()).isGreaterThan(0.0);
+        assertNotNull(result.getTotalCost());
+        assertTrue(result.getTotalCost() > 0.0);
+        assertNotNull(result.getDistanceKm());
+        assertTrue(result.getDistanceKm() > 0.0);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -847,8 +841,8 @@ class RideServiceStopRideTest {
 
         RideResponse result = rideService.stopRide(1L, validStopRequest);
 
-        assertThat(result).isNotNull();
-        assertThat(result.getStatus()).isEqualTo(RideStatus.FINISHED);
+        assertNotNull(result);
+        assertEquals(RideStatus.FINISHED, result.getStatus());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -869,7 +863,7 @@ class RideServiceStopRideTest {
 
         RideResponse result = rideService.stopRide(1L, validStopRequest);
 
-        assertThat(result.getStatus()).isEqualTo(RideStatus.FINISHED);
+        assertEquals(RideStatus.FINISHED, result.getStatus());
     }
 
     @Test
@@ -886,6 +880,6 @@ class RideServiceStopRideTest {
 
         RideResponse result = rideService.stopRide(1L, validStopRequest);
 
-        assertThat(result.getStatus()).isEqualTo(RideStatus.FINISHED);
+        assertEquals(RideStatus.FINISHED, result.getStatus());
     }
 }

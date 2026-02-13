@@ -206,25 +206,25 @@ class RideControllerStopRideTest {
 
         @Test
         @WithMockUser(roles = "PASSENGER")
-        @DisplayName("PUT /api/rides/{id}/stop - denied for PASSENGER role (caught by generic handler as 500)")
+        @DisplayName("PUT /api/rides/{id}/stop - 403 Forbidden for PASSENGER role")
         void stopRide_passenger_deniedAccess() throws Exception {
             mockMvc.perform(put("/api/rides/1/stop")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(validRequest)))
-                    .andExpect(status().isInternalServerError())
+                    .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.message", containsString("Access Denied")));
         }
 
         @Test
         @WithMockUser(roles = "ADMIN")
-        @DisplayName("PUT /api/rides/{id}/stop - denied for ADMIN role (caught by generic handler as 500)")
+        @DisplayName("PUT /api/rides/{id}/stop - 403 Forbidden for ADMIN role")
         void stopRide_admin_deniedAccess() throws Exception {
             mockMvc.perform(put("/api/rides/1/stop")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(validRequest)))
-                    .andExpect(status().isInternalServerError())
+                    .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.message", containsString("Access Denied")));
         }
     }
@@ -691,24 +691,24 @@ class RideControllerStopRideTest {
 
     @Test
     @WithMockUser(roles = "DRIVER")
-    @DisplayName("POST /api/rides/{id}/stop - returns 500 (method not supported, caught by generic handler)")
-    void stopRide_postMethod_returns500() throws Exception {
+    @DisplayName("POST /api/rides/{id}/stop - returns 405 Method Not Allowed")
+    void stopRide_postMethod_returns405() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/rides/1/stop")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validRequest)))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.message", containsString("not supported")));
     }
 
     @Test
     @WithMockUser(roles = "DRIVER")
-    @DisplayName("DELETE /api/rides/{id}/stop - returns 500 (method not supported, caught by generic handler)")
-    void stopRide_deleteMethod_returns500() throws Exception {
+    @DisplayName("DELETE /api/rides/{id}/stop - returns 405 Method Not Allowed")
+    void stopRide_deleteMethod_returns405() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/rides/1/stop")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.message", containsString("not supported")));
     }
 
@@ -740,7 +740,7 @@ class RideControllerStopRideTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validRequest)))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message", containsString("Access Denied")));
 
         verify(rideService, never()).stopRide(anyLong(), any(RideStopRequest.class));
