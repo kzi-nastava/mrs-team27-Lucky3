@@ -19,6 +19,7 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
 import com.example.mobile.R;
+import com.example.mobile.models.FavoriteRouteRequest;
 import com.example.mobile.models.LocationDto;
 import com.example.mobile.models.RideResponse;
 import com.example.mobile.models.RoutePointResponse;
@@ -587,8 +588,16 @@ public class PassengerRideDetailFragment extends Fragment {
     // ==================== ACTION BUTTONS ====================
 
     private void setupActionButtons(View root) {
+        TextView btnAddToFavorites = root.findViewById(R.id.btn_add_to_favorites);
         TextView btnOrderAgain = root.findViewById(R.id.btn_order_again);
         TextView btnScheduleLater = root.findViewById(R.id.btn_schedule_later);
+
+        // Add to Favorites button
+        btnAddToFavorites.setOnClickListener(v -> {
+            if (ride != null && rideId > 0) {
+                addRideToFavorites();
+            }
+        });
 
         btnOrderAgain.setOnClickListener(v -> {
             if (ride != null) {
@@ -642,6 +651,147 @@ public class PassengerRideDetailFragment extends Fragment {
             }
         });
     }
+
+    private void addRideToFavorites() {
+        // Get location details from the ride
+        LocationDto start = ride.getEffectiveStartLocation();
+        LocationDto end = ride.getEffectiveEndLocation();
+
+        if (start == null || end == null) {
+            Toast.makeText(getContext(), "Invalid route information", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Show dialog to name the route
+        showNameRouteDialog(start, end);
+    }
+
+    private void showNameRouteDialog(LocationDto start, LocationDto end) {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext(), R.style.DarkDialogTheme);
+        builder.setTitle("Name This Favorite Route");
+
+        // Create input field with proper styling
+        final android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setHint("e.g., Home to Work");
+        input.setTextColor(ContextCompat.getColor(requireContext(), R.color.white));
+        input.setHintTextColor(ContextCompat.getColor(requireContext(), R.color.gray_400));
+        input.setBackgroundResource(R.drawable.bg_edit_text);
+
+        // Add padding to the input
+        int paddingDp = 16;
+        float density = getResources().getDisplayMetrics().density;
+        int paddingPx = (int) (paddingDp * density);
+        input.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
+
+        // Set default name
+        String defaultName;
+        if (start.getAddress() != null && end.getAddress() != null) {
+            String startShort = getShortAddress(start.getAddress());
+            String endShort = getShortAddress(end.getAddress());
+            defaultName = startShort + " → " + endShort;
+        } else {
+            defaultName = "Ride #" + ride.getId();
+        }
+        input.setText(defaultName);
+        input.selectAll();
+
+        // Add margin around the input
+        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
+        android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(paddingPx, paddingPx / 2, paddingPx, 0);
+        input.setLayoutParams(params);
+        container.addView(input);
+
+        builder.setView(container);
+
+        builder.setPositiveButton("Save", null); // Set null initially
+        builder.setNegativeButton("Cancel", null);
+
+        android.app.AlertDialog dialog = builder.create();
+        dialog.show();
+
+        // Style the buttons after showing
+        android.widget.Button positiveButton = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+        android.widget.Button negativeButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE);
+
+        if (positiveButton != null) {
+            positiveButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.yellow_500));
+            positiveButton.setTypeface(null, android.graphics.Typeface.BOLD);
+            positiveButton.setOnClickListener(v -> {
+                String routeName = input.getText().toString().trim();
+                if (routeName.isEmpty()) {
+                    routeName = defaultName;
+                }
+                saveFavoriteRoute(start, end, routeName);
+                dialog.dismiss();
+            });
+        }
+
+        if (negativeButton != null) {
+            negativeButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray_400));
+        }
+    }
+
+
+    private String getShortAddress(String fullAddress) {
+        if (fullAddress == null) return "";
+        // Take first part before comma or first 30 chars
+        String[] parts = fullAddress.split(",");
+        String short_addr = parts[0].trim();
+        if (short_addr.length() > 30) {
+            return short_addr.substring(0, 27) + "...";
+        }
+        return short_addr;
+    }
+
+    private void saveFavoriteRoute(LocationDto start, LocationDto end, String routeName) {
+        String token = "Bearer " + preferencesManager.getToken();
+        Long passengerId = preferencesManager.getUserId(); // Make sure you have this method
+
+        // Create the request body
+        FavoriteRouteRequest request = new FavoriteRouteRequest(
+                start.getAddress(),
+                end.getAddress(),
+                routeName
+        );
+
+        ClientUtils.rideService.addFavouriteRoute(passengerId, request, token)
+                .enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        if (response.isSuccessful()) {
+                            if (getContext() != null) {
+                                Toast.makeText(getContext(),
+                                        "\"" + routeName + "\" added to favorites!",
+                                        Toast.LENGTH_SHORT).show();
+                            }
+                        } else {
+                            Log.e(TAG, "Failed to add to favorites: " + response.code());
+                            if (getContext() != null) {
+                                String errorMsg = "Failed to add to favorites";
+                                if (response.code() == 409) {
+                                    errorMsg = "Route already in favorites";
+                                }
+                                Toast.makeText(getContext(), errorMsg, Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        Log.e(TAG, "Failed to add to favorites", t);
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(),
+                                    "Network error",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+    }
+
 
     private String getRouteDescription() {
         String from = "?";
