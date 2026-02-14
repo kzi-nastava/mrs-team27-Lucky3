@@ -8,13 +8,14 @@
     </div>
 
     <!-- Search Controls -->
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
+    <div id="search-controls" class="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
       <div class="flex flex-wrap items-end gap-4">
         <!-- Search Type -->
         <div class="flex flex-col gap-1.5">
           <label class="text-xs text-gray-400 uppercase tracking-wider">Search By</label>
           <div class="flex gap-2 bg-gray-800 p-1 rounded-lg">
             <button
+              id="search-type-driver"
               (click)="searchType = 'driver'"
               class="px-4 py-1.5 rounded-md text-sm font-medium transition-all"
               [ngClass]="{
@@ -23,6 +24,7 @@
               }"
             >Driver</button>
             <button
+              id="search-type-passenger"
               (click)="searchType = 'passenger'"
               class="px-4 py-1.5 rounded-md text-sm font-medium transition-all"
               [ngClass]="{
@@ -37,6 +39,7 @@
         <div class="flex flex-col gap-1.5">
           <label class="text-xs text-gray-400 uppercase tracking-wider">{{ searchType === 'driver' ? 'Driver' : 'Passenger' }} ID</label>
           <input
+            id="search-id-input"
             type="number"
             [(ngModel)]="searchId"
             (keyup.enter)="onSearch()"
@@ -47,6 +50,7 @@
 
         <!-- Search Button -->
         <button
+          id="search-btn"
           (click)="onSearch()"
           class="px-6 py-2 bg-yellow-500 text-black rounded-lg text-sm font-medium hover:bg-yellow-400 transition-colors"
         >
@@ -55,6 +59,7 @@
 
         <!-- Clear Button -->
         <button
+          id="clear-search-btn"
           *ngIf="searchId"
           (click)="clearSearch()"
           class="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
@@ -70,6 +75,7 @@
           <div class="relative flex items-center gap-2">
             <div class="relative">
               <input
+                id="date-filter-input"
                 type="date"
                 [(ngModel)]="dateFilter"
                 (change)="loadRides()"
@@ -94,6 +100,7 @@
               </svg>
             </div>
             <button
+              id="clear-date-btn"
               *ngIf="dateFilter"
               (click)="dateFilter = ''; loadRides()"
               class="p-2 hover:bg-gray-700 rounded-lg transition-colors"
@@ -108,6 +115,7 @@
         <div class="flex flex-col gap-1.5">
           <label class="text-xs text-gray-400 uppercase tracking-wider">Status</label>
           <select
+            id="status-filter"
             [(ngModel)]="statusFilter"
             (change)="loadRides()"
             class="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
@@ -128,7 +136,7 @@
           <p class="text-sm font-medium text-white">{{ selectedUserName }}</p>
           <p class="text-xs text-gray-400">{{ selectedUserEmail }}</p>
         </div>
-        <div class="ml-4 px-3 py-1 rounded-full bg-gray-800 border border-gray-700 text-xs text-gray-300">
+        <div id="rides-count" class="ml-4 px-3 py-1 rounded-full bg-gray-800 border border-gray-700 text-xs text-gray-300">
           {{ rides.length }} ride{{ rides.length !== 1 ? 's' : '' }} found
         </div>
       </div>
@@ -142,7 +150,7 @@
           <p class="text-sm font-medium text-white">All Rides</p>
           <p class="text-xs text-gray-400">Showing all ride history</p>
         </div>
-        <div class="ml-4 px-3 py-1 rounded-full bg-gray-800 border border-gray-700 text-xs text-gray-300">
+        <div id="all-rides-count" class="ml-4 px-3 py-1 rounded-full bg-gray-800 border border-gray-700 text-xs text-gray-300">
           {{ rides.length }} ride{{ rides.length !== 1 ? 's' : '' }} found
         </div>
       </div>
@@ -339,55 +347,55 @@
     </div>
 
     <!-- Rides Table -->
-    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div id="rides-table-container" class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left">
+        <table id="rides-table" class="w-full text-sm text-left">
           <thead>
             <tr class="border-b border-gray-800 bg-gray-900/50">
               <th class="p-4 font-semibold text-gray-300">
-                <button (click)="handleSort('startTime')" class="flex items-center gap-2 hover:text-white transition-colors">
+                <button id="sort-start-time" (click)="handleSort('startTime')" class="flex items-center gap-2 hover:text-white transition-colors">
                   Start Time
                   <span *ngIf="sortField !== 'startTime'" class="opacity-30">▼</span>
                   <span *ngIf="sortField === 'startTime'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </button>
               </th>
               <th class="p-4 font-semibold text-gray-300">
-                <button (click)="handleSort('endTime')" class="flex items-center gap-2 hover:text-white transition-colors">
+                <button id="sort-end-time" (click)="handleSort('endTime')" class="flex items-center gap-2 hover:text-white transition-colors">
                   End Time
                   <span *ngIf="sortField !== 'endTime'" class="opacity-30">▼</span>
                   <span *ngIf="sortField === 'endTime'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </button>
               </th>
               <th class="p-4 font-semibold text-gray-300">
-                <button (click)="handleSort('departure')" class="flex items-center gap-2 hover:text-white transition-colors">
+                <button id="sort-route" (click)="handleSort('departure')" class="flex items-center gap-2 hover:text-white transition-colors">
                   Route
                   <span *ngIf="sortField !== 'departure'" class="opacity-30">▼</span>
                   <span *ngIf="sortField === 'departure'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </button>
               </th>
               <th class="p-4 font-semibold text-gray-300">
-                <button (click)="handleSort('status')" class="flex items-center gap-2 hover:text-white transition-colors">
+                <button id="sort-status" (click)="handleSort('status')" class="flex items-center gap-2 hover:text-white transition-colors">
                   Status
                   <span *ngIf="sortField !== 'status'" class="opacity-30">▼</span>
                   <span *ngIf="sortField === 'status'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </button>
               </th>
               <th class="p-4 font-semibold text-gray-300">
-                <button (click)="handleSort('totalCost')" class="flex items-center gap-2 hover:text-white transition-colors">
+                <button id="sort-cost" (click)="handleSort('totalCost')" class="flex items-center gap-2 hover:text-white transition-colors">
                   Cost
                   <span *ngIf="sortField !== 'totalCost'" class="opacity-30">▼</span>
                   <span *ngIf="sortField === 'totalCost'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </button>
               </th>
               <th class="p-4 font-semibold text-gray-300">
-                <button (click)="handleSort('cancelledBy')" class="flex items-center gap-2 hover:text-white transition-colors">
+                <button id="sort-cancelled-by" (click)="handleSort('cancelledBy')" class="flex items-center gap-2 hover:text-white transition-colors">
                   Cancelled By
                   <span *ngIf="sortField !== 'cancelledBy'" class="opacity-30">▼</span>
                   <span *ngIf="sortField === 'cancelledBy'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                 </button>
               </th>
               <th class="p-4 font-semibold text-gray-300">
-                <button (click)="handleSort('panic')" class="flex items-center gap-2 hover:text-white transition-colors">
+                <button id="sort-panic" (click)="handleSort('panic')" class="flex items-center gap-2 hover:text-white transition-colors">
                   PANIC
                   <span *ngIf="sortField !== 'panic'" class="opacity-30">▼</span>
                   <span *ngIf="sortField === 'panic'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
@@ -397,12 +405,13 @@
           </thead>
           <tbody>
             <tr *ngIf="rides.length === 0">
-              <td colspan="7" class="p-8 text-center text-gray-500">
+              <td id="no-rides-message" colspan="7" class="p-8 text-center text-gray-500">
                 No rides found
               </td>
             </tr>
             <tr 
-              *ngFor="let ride of rides"
+              *ngFor="let ride of rides; let i = index"
+              [attr.id]="'ride-row-' + i"
               (click)="onRideSelected(ride)"
               class="border-b border-gray-800 hover:bg-gray-800/50 cursor-pointer transition-colors relative"
               [ngClass]="{
@@ -413,16 +422,16 @@
               <!-- Start Time -->
               <td class="p-4">
                 <div class="flex flex-col">
-                  <span class="font-medium text-white">{{ formatShortDate(ride.startTime) }}</span>
-                  <span class="text-gray-400">{{ formatTime(ride.startTime) }}</span>
+                  <span class="font-medium text-white ride-start-date">{{ formatShortDate(ride.startTime) }}</span>
+                  <span class="text-gray-400 ride-start-time">{{ formatTime(ride.startTime) }}</span>
                 </div>
               </td>
 
               <!-- End Time -->
               <td class="p-4">
                 <div class="flex flex-col">
-                  <span class="font-medium text-white">{{ formatShortDate(ride.endTime) }}</span>
-                  <span class="text-gray-400">{{ formatTime(ride.endTime) }}</span>
+                  <span class="font-medium text-white ride-end-date">{{ formatShortDate(ride.endTime) }}</span>
+                  <span class="text-gray-400 ride-end-time">{{ formatTime(ride.endTime) }}</span>
                 </div>
               </td>
 
@@ -431,38 +440,38 @@
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-2">
                     <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                    <span class="text-white text-xs truncate">{{ getLocationAddress(ride, 'start') }}</span>
+                    <span class="text-white text-xs truncate ride-pickup">{{ getLocationAddress(ride, 'start') }}</span>
                   </div>
                   <div class="flex items-center gap-2">
                     <div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                    <span class="text-gray-400 text-xs truncate">{{ getLocationAddress(ride, 'end') }}</span>
+                    <span class="text-gray-400 text-xs truncate ride-destination">{{ getLocationAddress(ride, 'end') }}</span>
                   </div>
                 </div>
               </td>
 
               <!-- Status -->
               <td class="p-4">
-                <span class="text-xs px-2 py-1 rounded border" [ngClass]="getStatusClass(ride.status)">
+                <span class="text-xs px-2 py-1 rounded border ride-status" [ngClass]="getStatusClass(ride.status)">
                   {{ formatStatus(ride.status) }}
                 </span>
               </td>
 
               <!-- Cost -->
               <td class="p-4">
-                <span class="text-yellow-500 font-medium">{{ formatPrice(ride.totalCost) }}</span>
+                <span class="text-yellow-500 font-medium ride-cost">{{ formatPrice(ride.totalCost) }}</span>
               </td>
 
               <!-- Cancelled By -->
               <td class="p-4">
-                <span class="text-gray-400 text-xs">{{ getCancelledBy(ride) }}</span>
+                <span class="text-gray-400 text-xs ride-cancelled-by">{{ getCancelledBy(ride) }}</span>
               </td>
 
               <!-- PANIC -->
               <td class="p-4">
-                <span *ngIf="ride.panicPressed" class="text-xs px-2 py-1 rounded bg-red-600/30 text-red-300 border border-red-600/50">
+                <span *ngIf="ride.panicPressed" class="text-xs px-2 py-1 rounded bg-red-600/30 text-red-300 border border-red-600/50 ride-panic">
                   YES
                 </span>
-                <span *ngIf="!ride.panicPressed" class="text-gray-600 text-xs">—</span>
+                <span *ngIf="!ride.panicPressed" class="text-gray-600 text-xs ride-panic">—</span>
               </td>
             </tr>
           </tbody>
