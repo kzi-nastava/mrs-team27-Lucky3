@@ -14,23 +14,23 @@ describe('RegisterComponent', () => {
   let router: Router;
 
   const validFormData = {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Main Street, City',
-    password: 'Password123!',
-    confirmPassword: 'Password123!'
+    firstName: 'Milan',
+    lastName: 'Pleb',
+    email: 'milanthepleb@gmail.com',
+    phone: '0694523210',
+    address: 'Beogradska 23, Petrovaradin',
+    password: 'Sifra123!',
+    confirmPassword: 'Sifra123!'
   };
 
   const expectedRegistrationRequest: PassengerRegistrationRequest = {
-    name: 'John',
-    surname: 'Doe',
-    email: 'john.doe@example.com',
-    phoneNumber: '+1 (555) 123-4567',
-    address: '123 Main Street, City',
-    password: 'Password123!',
-    confirmPassword: 'Password123!'
+    name: 'Milan',
+    surname: 'Pleb',
+    email: 'milanthepleb@gmail.com',
+    phoneNumber: '0694523210',
+    address: 'Beogradska 23, Petrovaradin',
+    password: 'Sifra123!',
+    confirmPassword: 'Sifra123!'
   };
 
   beforeEach(async () => {
@@ -122,19 +122,19 @@ describe('RegisterComponent', () => {
 
     it('should be invalid when shorter than 2 characters', () => {
       const control = component.registerForm.get('firstName')!;
-      control.setValue('J');
+      control.setValue('M');
       expect(control.hasError('minlength')).toBeTrue();
     });
 
     it('should be valid with 2 characters', () => {
       const control = component.registerForm.get('firstName')!;
-      control.setValue('Jo');
+      control.setValue('Mi');
       expect(control.valid).toBeTrue();
     });
 
     it('should be valid with a proper name', () => {
       const control = component.registerForm.get('firstName')!;
-      control.setValue('John');
+      control.setValue('Milan');
       expect(control.valid).toBeTrue();
     });
   });
@@ -151,19 +151,19 @@ describe('RegisterComponent', () => {
 
     it('should be invalid when shorter than 2 characters', () => {
       const control = component.registerForm.get('lastName')!;
-      control.setValue('D');
+      control.setValue('P');
       expect(control.hasError('minlength')).toBeTrue();
     });
 
     it('should be valid with 2 characters', () => {
       const control = component.registerForm.get('lastName')!;
-      control.setValue('Do');
+      control.setValue('Pl');
       expect(control.valid).toBeTrue();
     });
 
     it('should be valid with a proper surname', () => {
       const control = component.registerForm.get('lastName')!;
-      control.setValue('Doe');
+      control.setValue('Pleb');
       expect(control.valid).toBeTrue();
     });
   });
@@ -192,7 +192,7 @@ describe('RegisterComponent', () => {
 
     it('should be valid with proper email format', () => {
       const control = component.registerForm.get('email')!;
-      control.setValue('john.doe@example.com');
+      control.setValue('milanthepleb@gmail.com');
       expect(control.valid).toBeTrue();
     });
   });
@@ -221,13 +221,13 @@ describe('RegisterComponent', () => {
 
     it('should be valid with 10+ digit number', () => {
       const control = component.registerForm.get('phone')!;
-      control.setValue('1234567890');
+      control.setValue('0694523210');
       expect(control.valid).toBeTrue();
     });
 
     it('should be valid with international format', () => {
       const control = component.registerForm.get('phone')!;
-      control.setValue('+1 (555) 123-4567');
+      control.setValue('+381 69 452-3210');
       expect(control.valid).toBeTrue();
     });
   });
@@ -244,19 +244,19 @@ describe('RegisterComponent', () => {
 
     it('should be invalid when shorter than 5 characters', () => {
       const control = component.registerForm.get('address')!;
-      control.setValue('Main');
+      control.setValue('Zmaj');
       expect(control.hasError('minlength')).toBeTrue();
     });
 
     it('should be valid with 5 characters', () => {
       const control = component.registerForm.get('address')!;
-      control.setValue('123 M');
+      control.setValue('NS 21');
       expect(control.valid).toBeTrue();
     });
 
     it('should be valid with a full address', () => {
       const control = component.registerForm.get('address')!;
-      control.setValue('123 Main Street, City');
+      control.setValue('Beogradska 23, Petrovaradin');
       expect(control.valid).toBeTrue();
     });
   });
@@ -273,19 +273,19 @@ describe('RegisterComponent', () => {
 
     it('should be invalid when shorter than 8 characters', () => {
       const control = component.registerForm.get('password')!;
-      control.setValue('Pass1!');
+      control.setValue('Sif1!');
       expect(control.hasError('minlength')).toBeTrue();
     });
 
     it('should be valid with exactly 8 characters', () => {
       const control = component.registerForm.get('password')!;
-      control.setValue('Pass123!');
+      control.setValue('Sifra12!');
       expect(control.valid).toBeTrue();
     });
 
     it('should be valid with a strong password', () => {
       const control = component.registerForm.get('password')!;
-      control.setValue('Password123!');
+      control.setValue('Sifra123!');
       expect(control.valid).toBeTrue();
     });
   });
@@ -312,25 +312,25 @@ describe('RegisterComponent', () => {
   // =========================================================================
   describe('Password Match Validator (cross-field)', () => {
     it('should set passwordMismatch error when passwords differ', () => {
-      component.registerForm.get('password')!.setValue('Password123!');
-      component.registerForm.get('confirmPassword')!.setValue('DifferentPass1!');
+      component.registerForm.get('password')!.setValue('Sifra123!');
+      component.registerForm.get('confirmPassword')!.setValue('DrugaSifra1!');
       expect(component.registerForm.hasError('passwordMismatch')).toBeTrue();
     });
 
     it('should not set passwordMismatch error when passwords match', () => {
-      component.registerForm.get('password')!.setValue('Password123!');
-      component.registerForm.get('confirmPassword')!.setValue('Password123!');
+      component.registerForm.get('password')!.setValue('Sifra123!');
+      component.registerForm.get('confirmPassword')!.setValue('Sifra123!');
       expect(component.registerForm.hasError('passwordMismatch')).toBeFalse();
     });
 
     it('should not set passwordMismatch error when password is empty', () => {
       component.registerForm.get('password')!.setValue('');
-      component.registerForm.get('confirmPassword')!.setValue('Something1!');
+      component.registerForm.get('confirmPassword')!.setValue('Nesto123!');
       expect(component.registerForm.hasError('passwordMismatch')).toBeFalse();
     });
 
     it('should not set passwordMismatch error when confirmPassword is empty', () => {
-      component.registerForm.get('password')!.setValue('Password123!');
+      component.registerForm.get('password')!.setValue('Sifra123!');
       component.registerForm.get('confirmPassword')!.setValue('');
       expect(component.registerForm.hasError('passwordMismatch')).toBeFalse();
     });
@@ -352,7 +352,7 @@ describe('RegisterComponent', () => {
     });
 
     it('should be invalid when passwords do not match', () => {
-      component.registerForm.patchValue({ ...validFormData, confirmPassword: 'Mismatch1!' });
+      component.registerForm.patchValue({ ...validFormData, confirmPassword: 'Pogresna1!' });
       expect(component.registerForm.valid).toBeFalse();
     });
   });
@@ -530,7 +530,7 @@ describe('RegisterComponent', () => {
 
       expect(localStorage.setItem).toHaveBeenCalledWith(
         'pendingActivationEmail',
-        'john.doe@example.com'
+        'milanthepleb@gmail.com'
       );
     });
 
@@ -541,7 +541,7 @@ describe('RegisterComponent', () => {
       expect(router.navigate).toHaveBeenCalledOnceWith(
         ['/register-verification-sent'],
         {
-          queryParams: { email: 'john.doe@example.com' },
+          queryParams: { email: 'milanthepleb@gmail.com' },
           state: { registered: true }
         }
       );
@@ -571,7 +571,7 @@ describe('RegisterComponent', () => {
       component.onSubmit();
 
       const callArg = authServiceSpy.register.calls.mostRecent().args[0];
-      expect(callArg.name).toBe('John');
+      expect(callArg.name).toBe('Milan');
     });
 
     it('should map lastName to surname in the DTO', () => {
@@ -580,7 +580,7 @@ describe('RegisterComponent', () => {
       component.onSubmit();
 
       const callArg = authServiceSpy.register.calls.mostRecent().args[0];
-      expect(callArg.surname).toBe('Doe');
+      expect(callArg.surname).toBe('Pleb');
     });
 
     it('should map phone to phoneNumber in the DTO', () => {
@@ -589,7 +589,7 @@ describe('RegisterComponent', () => {
       component.onSubmit();
 
       const callArg = authServiceSpy.register.calls.mostRecent().args[0];
-      expect(callArg.phoneNumber).toBe('+1 (555) 123-4567');
+      expect(callArg.phoneNumber).toBe('0694523210');
     });
 
     it('should map email directly to DTO email', () => {
@@ -598,7 +598,7 @@ describe('RegisterComponent', () => {
       component.onSubmit();
 
       const callArg = authServiceSpy.register.calls.mostRecent().args[0];
-      expect(callArg.email).toBe('john.doe@example.com');
+      expect(callArg.email).toBe('milanthepleb@gmail.com');
     });
 
     it('should map address directly to DTO address', () => {
@@ -607,7 +607,7 @@ describe('RegisterComponent', () => {
       component.onSubmit();
 
       const callArg = authServiceSpy.register.calls.mostRecent().args[0];
-      expect(callArg.address).toBe('123 Main Street, City');
+      expect(callArg.address).toBe('Beogradska 23, Petrovaradin');
     });
 
     it('should map password directly to DTO password', () => {
@@ -616,7 +616,7 @@ describe('RegisterComponent', () => {
       component.onSubmit();
 
       const callArg = authServiceSpy.register.calls.mostRecent().args[0];
-      expect(callArg.password).toBe('Password123!');
+      expect(callArg.password).toBe('Sifra123!');
     });
 
     it('should include confirmPassword in the DTO', () => {
@@ -625,7 +625,7 @@ describe('RegisterComponent', () => {
       component.onSubmit();
 
       const callArg = authServiceSpy.register.calls.mostRecent().args[0];
-      expect(callArg.confirmPassword).toBe('Password123!');
+      expect(callArg.confirmPassword).toBe('Sifra123!');
     });
   });
 
@@ -755,11 +755,11 @@ describe('RegisterComponent', () => {
 
     it('should display selected file name when a file is selected', () => {
       const freshFixture = TestBed.createComponent(RegisterComponent);
-      freshFixture.componentInstance.selectedFile = new File([''], 'my-photo.png', { type: 'image/png' });
+      freshFixture.componentInstance.selectedFile = new File([''], 'profilna-slika.png', { type: 'image/png' });
       freshFixture.detectChanges();
 
       const compiled = freshFixture.nativeElement as HTMLElement;
-      expect(compiled.textContent).toContain('my-photo.png');
+      expect(compiled.textContent).toContain('profilna-slika.png');
       freshFixture.destroy();
     });
   });
@@ -778,7 +778,7 @@ describe('RegisterComponent', () => {
 
     it('should show minlength error for firstName when value is 1 char and touched', () => {
       const control = component.registerForm.get('firstName')!;
-      control.setValue('J');
+      control.setValue('M');
       control.markAsTouched();
       fixture.detectChanges();
 
@@ -840,7 +840,7 @@ describe('RegisterComponent', () => {
 
     it('should show "Address is too short" when address is under 5 chars and touched', () => {
       const control = component.registerForm.get('address')!;
-      control.setValue('Main');
+      control.setValue('Zmaj');
       control.markAsTouched();
       fixture.detectChanges();
 
@@ -875,8 +875,8 @@ describe('RegisterComponent', () => {
     });
 
     it('should show "Passwords do not match" when mismatch and confirmPassword is touched', () => {
-      component.registerForm.get('password')!.setValue('Password123!');
-      component.registerForm.get('confirmPassword')!.setValue('DifferentPass1');
+      component.registerForm.get('password')!.setValue('Sifra123!');
+      component.registerForm.get('confirmPassword')!.setValue('DrugaSifra1!');
       component.registerForm.get('confirmPassword')!.markAsTouched();
       fixture.detectChanges();
 
