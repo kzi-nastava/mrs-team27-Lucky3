@@ -26,9 +26,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -71,6 +69,9 @@ public class RideServiceImpl implements RideService {
 
         // Construct coordinates string: start;stop1;stop2;end
         StringBuilder coords = new StringBuilder();
+        if(start == null || end == null) {
+            throw new IllegalArgumentException("Start and destination locations must be provided");
+        }
         coords.append(start.getLongitude()).append(",").append(start.getLatitude());
 
         if (request.getStops() != null) {
@@ -254,6 +255,19 @@ public class RideServiceImpl implements RideService {
             throw new IllegalStateException("User must be logged in to create a ride");
         }
 
+        if(request.getRequirements() == null) {
+            throw new IllegalArgumentException("Ride requirements must be provided");
+        }
+
+        LocalDateTime scheduled = request.getScheduledTime();
+        if (scheduled != null) {
+            LocalDateTime limit = LocalDateTime.now().plusHours(5);
+            if (scheduled.isAfter(limit)) {
+                throw new IllegalArgumentException("scheduledTime must be within the next 5 hours");
+            }
+        }
+
+
         // Calculate estimation first (needed for ride duration and route)
         RideEstimationResponse estimation = estimateRide(request);
 
@@ -315,7 +329,7 @@ public class RideServiceImpl implements RideService {
             ride.setEndTime(rideStartTime.plusMinutes(estimation.getEstimatedTimeInMinutes()));
             ride.setTotalCost(estimation.getEstimatedCost());
         } else {
-            // No driver assigned - ride is pending
+            // No driver assigned - ride is rejected
             ride.setDriver(null);
             ride.setStatus(RideStatus.REJECTED);
             ride.setStartTime(null);
@@ -343,93 +357,118 @@ public class RideServiceImpl implements RideService {
      * Returns null if no suitable driver is found.
      */
     private Vehicle findBestAvailableDriver(CreateRideRequest request, RideEstimationResponse estimation) {
-        // 1. Get all active vehicles (drivers who are online/active)
+        // 1. Get all active vehicles
         List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
-        System.out.println("[DEBUG] Active vehicles count: " + activeVehicles.size());
-        if (activeVehicles.isEmpty()) {
-            System.out.println("[DEBUG] No active vehicles found!");
-            return null; // No active drivers at all
-        }
+        if (activeVehicles.isEmpty()) return null;
 
-        // 2. Filter by vehicle type if specified
-        VehicleType requestedType = request.getRequirements() != null 
-                ? request.getRequirements().getVehicleType() 
-                : null;
-        System.out.println("[DEBUG] Requested vehicle type: " + requestedType);
-        System.out.println("[DEBUG] Baby transport required: " + request.getRequirements().isBabyTransport());
-        System.out.println("[DEBUG] Pet transport required: " + request.getRequirements().isPetTransport());
-        
-        for (Vehicle v : activeVehicles) {
-            System.out.println("[DEBUG] Vehicle ID=" + v.getId() + 
-                    ", type=" + v.getVehicleType() + 
-                    ", baby=" + v.isBabyTransport() + 
-                    ", pet=" + v.isPetTransport() +
-                    ", hasLocation=" + (v.getCurrentLocation() != null));
-        }
-        
+        // 2. Filter by requirements (Type, Pet, Baby)
+        VehicleType requestedType = request.getRequirements().getVehicleType();
+        boolean isBaby = request.getRequirements().isBabyTransport();
+        boolean isPet = request.getRequirements().isPetTransport();
+
         List<Vehicle> compatibleVehicles = activeVehicles.stream()
                 .filter(v -> requestedType == null || v.getVehicleType() == requestedType)
-                .filter(v -> !request.getRequirements().isBabyTransport() || v.isBabyTransport())
-                .filter(v -> !request.getRequirements().isPetTransport() || v.isPetTransport())
-                .filter(v -> !v.getDriver().isInactiveRequested())
+                .filter(v -> !isBaby || v.isBabyTransport())
+                .filter(v -> !isPet || v.isPetTransport())
                 .collect(Collectors.toList());
 
-        System.out.println("[DEBUG] Compatible vehicles after filtering: " + compatibleVehicles.size());
-        if (compatibleVehicles.isEmpty()) {
-            System.out.println("[DEBUG] No compatible vehicles after type/baby/pet filter!");
-            return null; // No compatible vehicles
+        if (compatibleVehicles.isEmpty()) return null;
+
+        // 3. Check Availability (Free vs Busy logic) AND Working Hours
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime rideStart = request.getScheduledTime() != null ? request.getScheduledTime() : now;
+        // Default duration 30 min if estimation fails
+        int duration = estimation.getEstimatedTimeInMinutes() > 0 ? estimation.getEstimatedTimeInMinutes() : 30;
+        LocalDateTime rideEnd = rideStart.plusMinutes(duration);
+
+        List<Vehicle> availableVehicles = new ArrayList<>();
+
+        for (Vehicle v : compatibleVehicles) {
+            // --- NEW: Check Working Hours (Max 8 hours in last 24h) ---
+            LocalDateTime twentyFourHoursAgo = now.minusHours(24);
+            List<DriverActivitySession> sessions = activitySessionRepository.findSessionsSince(v.getDriver().getId(), twentyFourHoursAgo);
+
+            long totalSeconds = 0;
+            for (DriverActivitySession session : sessions) {
+                LocalDateTime start = session.getStartTime().isBefore(twentyFourHoursAgo) ? twentyFourHoursAgo : session.getStartTime();
+                LocalDateTime end = (session.getEndTime() == null) ? now : session.getEndTime();
+
+                if (end.isAfter(start)) {
+                    totalSeconds += java.time.Duration.between(start, end).getSeconds();
+                }
+            }
+
+            double totalHours = totalSeconds / 3600.0;
+            if (totalHours > 8.0) {
+                continue; // Skip this driver, they are overworked
+            }
+            // -----------------------------------------------------------
+
+            // A. Handle Scheduled Ride in Future (> 20 mins from now)
+            if (request.getScheduledTime() != null && request.getScheduledTime().isAfter(now.plusMinutes(20))) {
+                // Check if driver has ANY ride overlapping with the future time slot
+                List<Long> busyIds = rideRepository.findDriversWithRidesInTimeRange(
+                        Collections.singletonList(v.getDriver().getId()), rideStart, rideEnd
+                );
+                if (busyIds.isEmpty()) {
+                    availableVehicles.add(v);
+                }
+                continue;
+            }
+
+            // B. Handle Immediate Ride (or very soon)
+            if (v.getStatus() == VehicleStatus.FREE) {
+                // Driver is FREE. Check if they have a scheduled ride starting soon that would conflict.
+                List<Long> conflictingIds = rideRepository.findDriversWithRidesInTimeRange(
+                        Collections.singletonList(v.getDriver().getId()), rideStart, rideEnd
+                );
+                if (conflictingIds.isEmpty()) {
+                    availableVehicles.add(v);
+                }
+            }
+            else if (v.getStatus() == VehicleStatus.BUSY) {
+                // Driver is BUSY. Check if they finish soon (e.g., within 15 mins).
+                List<RideStatus> activeStatuses = Arrays.asList(RideStatus.IN_PROGRESS, RideStatus.ACTIVE);
+
+                // Get their current active ride(s)
+                List<Ride> currentRides = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
+                        v.getDriver().getId(), activeStatuses
+                );
+
+                if (!currentRides.isEmpty()) {
+                    Ride currentRide = currentRides.get(0);
+                    // Allow if finishing in < 15 mins AND new ride fits after
+                    if (currentRide.getEndTime() != null &&
+                            currentRide.getEndTime().isBefore(now.plusMinutes(15))) {
+                        availableVehicles.add(v);
+                    }
+                }
+            }
         }
 
-        // 3. Calculate ride time window
-        LocalDateTime rideStartTime = request.getScheduledTime() != null 
-                ? request.getScheduledTime() 
-                : LocalDateTime.now();
-        LocalDateTime rideEndTime = rideStartTime.plusMinutes(
-                estimation.getEstimatedTimeInMinutes() > 0 ? estimation.getEstimatedTimeInMinutes() : 30
-        );
+        if (availableVehicles.isEmpty()) return null;
 
-        // 4. Get driver IDs and find which ones have overlapping rides
-        List<Long> driverIds = compatibleVehicles.stream()
-                .map(v -> v.getDriver().getId())
-                .collect(Collectors.toList());
-
-        List<Long> busyDriverIds = rideRepository.findDriversWithRidesInTimeRange(
-                driverIds, rideStartTime, rideEndTime
-        );
-        System.out.println("[DEBUG] Busy driver IDs: " + busyDriverIds);
-
-        // 5. Filter out busy drivers
-        List<Vehicle> availableVehicles = compatibleVehicles.stream()
-                .filter(v -> !busyDriverIds.contains(v.getDriver().getId()))
-                .collect(Collectors.toList());
-
-        System.out.println("[DEBUG] Available vehicles after busy filter: " + availableVehicles.size());
-        if (availableVehicles.isEmpty()) {
-            System.out.println("[DEBUG] All compatible drivers are busy!");
-            return null; // All compatible drivers are busy
-        }
-
-        // 6. Find the closest available driver
+        // 4. Find the closest available driver
         Location rideStartLocation = mapLocation(request.getStart());
         Vehicle closestVehicle = null;
         double minDistance = Double.MAX_VALUE;
 
         for (Vehicle v : availableVehicles) {
             if (v.getCurrentLocation() != null) {
+                // Manual distance calc or use RouteService if available
                 double dist = calculateHaversineDistance(rideStartLocation, v.getCurrentLocation());
-                System.out.println("[DEBUG] Vehicle ID=" + v.getId() + " distance=" + dist);
+
                 if (dist < minDistance) {
                     minDistance = dist;
                     closestVehicle = v;
                 }
-            } else {
-                System.out.println("[DEBUG] Vehicle ID=" + v.getId() + " has NO currentLocation!");
             }
         }
 
-        System.out.println("[DEBUG] Closest vehicle: " + (closestVehicle != null ? closestVehicle.getId() : "NONE"));
         return closestVehicle;
     }
+
+
 
     @Override
     @Transactional
