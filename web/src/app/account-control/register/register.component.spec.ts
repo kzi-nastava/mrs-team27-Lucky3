@@ -1,7 +1,8 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { provideRouter, Router } from '@angular/router';
 import { of, Subject } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { RegisterComponent } from './register.component';
 import { AuthService } from '../../infrastructure/auth/auth.service';
 import { PassengerRegistrationRequest } from '../../model/registration.model';
@@ -374,6 +375,19 @@ describe('RegisterComponent', () => {
       component.onFileSelected(event);
       expect(component.selectedFile).toBeNull();
     });
+
+    it('should preserve the previously selected file if the user cancels selection (sends empty list)', () => {
+      // Arrange: Set an initial file
+      const initialFile = new File([''], 'initial.png');
+      component.selectedFile = initialFile;
+
+      // Act: Simulate cancelling (target.files is empty)
+      const event = { target: { files: [] } };
+      component.onFileSelected(event);
+
+      // Assert: It should NOT be null, it should still be the initial file
+      expect(component.selectedFile).toBe(initialFile);
+    });
   });
 
   // =========================================================================
@@ -432,6 +446,16 @@ describe('RegisterComponent', () => {
       expect(component.registerForm.markAllAsTouched).toHaveBeenCalled();
     });
 
+    it('should show validation errors in UI when submitting invalid form', () => {
+      // Form is empty/invalid
+      component.onSubmit();
+      fixture.detectChanges();
+
+      // Check for visible validation error messages in the DOM
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).toContain('First name is required');
+    });
+
     it('should not call authService.register when already loading', () => {
       component.loading = true;
       component.registerForm.patchValue(validFormData);
@@ -448,13 +472,32 @@ describe('RegisterComponent', () => {
       component.registerForm.patchValue(validFormData);
     });
 
-    it('should set loading to true when submit starts', () => {
-      authServiceSpy.register.and.returnValue(of({}));
+    it('should disable submit button and show loading text WHILE request is pending', fakeAsync(() => {
+      // Simulate a network request that takes 1 second
+      authServiceSpy.register.and.returnValue(of({}).pipe(delay(1000)));
+
       component.onSubmit();
-      // After subscribe completes synchronously with of({}), finalize runs
-      // So we verify register was called (loading was set before call)
-      expect(authServiceSpy.register).toHaveBeenCalled();
-    });
+
+      // Trigger change detection to update the view based on 'loading = true'
+      fixture.detectChanges();
+
+      // Assert: CHECK THE INTERMEDIATE STATE
+      expect(component.loading).toBeTrue();
+
+      const submitBtn = fixture.debugElement.nativeElement.querySelector('button[type="submit"]');
+      expect(submitBtn.disabled).toBeTrue();
+      expect(submitBtn.textContent).toContain('Creating Account...');
+
+      // Fast-forward time by 1 second
+      tick(1000);
+
+      // Finalize happens, loading becomes false
+      fixture.detectChanges();
+
+      // Assert: CHECK THE FINAL STATE
+      expect(component.loading).toBeFalse();
+      expect(submitBtn.disabled).toBeFalse();
+    }));
 
     it('should call authService.register with correct registration data and no file', () => {
       authServiceSpy.register.and.returnValue(of({}));
