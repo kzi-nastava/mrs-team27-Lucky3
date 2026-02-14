@@ -464,6 +464,47 @@ The test suite provides a high degree of confidence that:
 
 ---
 
+## 11. Coverage Summary Explained
+
+Running `ng test --code-coverage` produces the following **aggregate** summary:
+
+| Metric     | Covered | Total | Percentage |
+|------------|---------|-------|------------|
+| Statements | 48      | 207   | 23.18%     |
+| Branches   | 20      | 103   | 19.41%     |
+| Functions  | 10      | 57    | 17.54%     |
+| Lines      | 46      | 180   | 25.55%     |
+
+These numbers appear low but are **expected and correct**. The aggregate includes every source file compiled into the test bundle — not just the component under test. The per-file breakdown from the Istanbul HTML report reveals the true picture:
+
+### Per-File Breakdown
+
+| File | Statements | Branches | Functions | Lines |
+|------|-----------|----------|-----------|-------|
+| `register.component.ts` | **100%** (46/46) | **95.23%** (20/21) | **100%** (10/10) | **100%** (44/44) |
+| `auth.service.ts` | 0.62% (1/160) | 0% (0/82) | 0% (0/47) | 0.74% (1/135) |
+| `environment.ts` | 100% (1/1) | 100% (0/0) | 100% (0/0) | 100% (1/1) |
+
+### Why `auth.service.ts` Shows 0%
+
+`AuthService` is **intentionally mocked** via `jasmine.createSpyObj` — its real code never executes during component tests. This is correct unit test isolation: we test `RegisterComponent` in isolation, not its dependencies. `AuthService` would receive its own dedicated `auth.service.spec.ts` with separate tests. Istanbul still instruments the file because it is compiled into the bundle, but this does not reflect a gap in test quality.
+
+### The 1 Uncovered Branch (95.23%)
+
+The single uncovered branch is the `|| ''` fallback on this line in `onSubmit()`:
+
+```ts
+localStorage.setItem('pendingActivationEmail', (registrationData.email || '').trim());
+```
+
+This fallback can never fire during normal operation because the form's `Validators.required` and `Validators.email` constraints guarantee that `email` has a non-empty value before `onSubmit()` executes. It is a **defensive null-coalesce** — unreachable under valid form state. Forcing coverage would require hacking the DTO after validation, which is not a realistic user scenario.
+
+### Conclusion
+
+The component under test achieves **100% statement, function, and line coverage** with **95.23% branch coverage**. The low aggregate percentage is purely an artifact of bundle-level instrumentation and does not indicate missing test coverage.
+
+---
+
 **Sign-off:**
 
 | Developer                     | Project                     |
