@@ -1,8 +1,8 @@
-package com.team27.lucky3.backend.e2e.tests;
+package com.team27.lucky3.e2e.tests;
 
-import com.team27.lucky3.backend.e2e.pages.AdminRideHistoryPage;
-import com.team27.lucky3.backend.e2e.pages.LoginPage;
-import com.team27.lucky3.backend.e2e.pages.SidebarComponent;
+import com.team27.lucky3.e2e.pages.AdminRideHistoryPage;
+import com.team27.lucky3.e2e.pages.LoginPage;
+import com.team27.lucky3.e2e.pages.SidebarComponent;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -12,7 +12,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;

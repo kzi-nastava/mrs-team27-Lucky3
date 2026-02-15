@@ -1,8 +1,7 @@
-package com.team27.lucky3.backend.e2e.pages;
+package com.team27.lucky3.e2e.pages;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.Keys;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;

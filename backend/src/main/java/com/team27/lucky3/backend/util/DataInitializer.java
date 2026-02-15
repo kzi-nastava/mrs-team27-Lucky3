@@ -392,7 +392,30 @@ public class DataInitializer implements CommandLineRunner {
         ridePanicHistory.setRatePricePerKm(120.0);
         rideRepository.save(ridePanicHistory);
 
-        // Ride 10: CANCELLED_BY_DRIVER (6 days ago) - Driver 2 cancelled
+        // Ride 10: FINISHED (yesterday, 6 hours ago) — NO REVIEWS (reserved for E2E testing)
+        Ride rideE2ETest = new Ride();
+        rideE2ETest.setDriver(driver);
+        rideE2ETest.setPassengers(Collections.singleton(passenger3));
+        rideE2ETest.setStatus(RideStatus.FINISHED);
+        rideE2ETest.setStartLocation(new Location("Bulevar Oslobodjenja 50, Novi Sad", 45.2500, 19.8400));
+        rideE2ETest.setEndLocation(new Location("Futoski Park, Novi Sad", 45.2620, 19.8310));
+        rideE2ETest.setStartTime(LocalDateTime.now().minusHours(7));
+        rideE2ETest.setEndTime(LocalDateTime.now().minusHours(6));
+        rideE2ETest.setTotalCost(240.00);
+        rideE2ETest.setEstimatedCost(240.00);
+        rideE2ETest.setDistance(1.0);
+        rideE2ETest.setRequestedVehicleType(VehicleType.STANDARD);
+        rideE2ETest.setPanicPressed(false);
+        rideE2ETest.setPaid(true);
+        rideE2ETest.setPassengersExited(true);
+        rideE2ETest.setDistanceTraveled(1.0);
+        rideE2ETest.setPetTransport(false);
+        rideE2ETest.setBabyTransport(false);
+        rideE2ETest.setRateBaseFare(120.0);
+        rideE2ETest.setRatePricePerKm(120.0);
+        rideRepository.save(rideE2ETest);
+
+        // Ride 11: CANCELLED_BY_DRIVER (6 days ago) - Driver 2 cancelled
         Ride rideCancelledByDriver = new Ride();
         rideCancelledByDriver.setDriver(driver2);
         rideCancelledByDriver.setPassengers(Collections.singleton(passenger));
@@ -416,7 +439,7 @@ public class DataInitializer implements CommandLineRunner {
         rideCancelledByDriver.setRatePricePerKm(120.0);
         rideRepository.save(rideCancelledByDriver);
 
-        // Ride 11: CANCELLED_BY_PASSENGER (7 days ago) - passenger2 cancelled
+        // Ride 12: CANCELLED_BY_PASSENGER (7 days ago) - passenger2 cancelled
         Ride rideCancelledByPassenger = new Ride();
         rideCancelledByPassenger.setDriver(driver);
         rideCancelledByPassenger.setPassengers(Collections.singleton(passenger2));
@@ -440,7 +463,7 @@ public class DataInitializer implements CommandLineRunner {
         rideCancelledByPassenger.setRatePricePerKm(120.0);
         rideRepository.save(rideCancelledByPassenger);
 
-        // Ride 12: FINISHED (10 days ago) - older ride for date range testing
+        // Ride 13: FINISHED (10 days ago) - older ride for date range testing
         Ride rideOldFinished1 = new Ride();
         rideOldFinished1.setDriver(driver);
         rideOldFinished1.setPassengers(Collections.singleton(passenger3));
@@ -463,7 +486,7 @@ public class DataInitializer implements CommandLineRunner {
         rideOldFinished1.setRatePricePerKm(120.0);
         rideRepository.save(rideOldFinished1);
 
-        // Ride 13: FINISHED (14 days ago) - for pagination & date filtering
+        // Ride 14: FINISHED (14 days ago) - for pagination & date filtering
         Ride rideOldFinished2 = new Ride();
         rideOldFinished2.setDriver(driver2);
         rideOldFinished2.setPassengers(Collections.singleton(passenger2));
@@ -486,7 +509,7 @@ public class DataInitializer implements CommandLineRunner {
         rideOldFinished2.setRatePricePerKm(120.0);
         rideRepository.save(rideOldFinished2);
 
-        // Ride 14: CANCELLED (20 days ago) - old cancelled ride for date range edge case
+        // Ride 15: CANCELLED (20 days ago) - old cancelled ride for date range edge case
         Ride rideOldCancelled = new Ride();
         rideOldCancelled.setDriver(driver);
         rideOldCancelled.setPassengers(Collections.singleton(passenger));
@@ -683,7 +706,7 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("  Active (IN_PROGRESS) Ride ID: " + rideActive.getId() + " - Start completed, heading to stop 1");
         System.out.println("  Scheduled Ride (Later Today) ID: " + ridePending.getId());
         System.out.println("  Scheduled Ride (Tomorrow) ID: " + rideScheduled.getId());
-        System.out.println("  Finished Rides: " + rideFinished.getId() + ", " + rideFinished2.getId() + ", " + rideFinished3.getId() + ", " + rideMultiPassenger.getId() + ", " + ridePanicHistory.getId() + " (panic), " + rideOldFinished1.getId() + ", " + rideOldFinished2.getId());
+        System.out.println("  Finished Rides: " + rideFinished.getId() + ", " + rideFinished2.getId() + ", " + rideFinished3.getId() + ", " + rideMultiPassenger.getId() + ", " + ridePanicHistory.getId() + " (panic), " + rideE2ETest.getId() + " (E2E test - no reviews), " + rideOldFinished1.getId() + ", " + rideOldFinished2.getId());
         System.out.println("  Cancelled Ride ID: " + rideCancelled.getId() + ", " + rideOldCancelled.getId());
         System.out.println("  Cancelled By Driver Ride ID: " + rideCancelledByDriver.getId());
         System.out.println("  Cancelled By Passenger Ride ID: " + rideCancelledByPassenger.getId());
