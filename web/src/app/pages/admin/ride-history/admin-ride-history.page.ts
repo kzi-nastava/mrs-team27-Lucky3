@@ -43,7 +43,7 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
   private map: L.Map | undefined;
 
-  readonly statusOptions = ['all', 'PENDING', 'ACCEPTED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_PASSENGER', 'REJECTED', 'PANIC'];
+  readonly statusOptions = ['all', 'FINISHED', 'CANCELLED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_PASSENGER'];
 
   constructor(
     private router: Router,
@@ -128,11 +128,15 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
       }
     }
 
+    const historyStatusList = ['FINISHED', 'CANCELLED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_PASSENGER'];
+
     this.rideService.getRidesHistory(params)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {
-          this.rides = page.content || [];
+          // Filter to only history-relevant statuses (finished/cancelled)
+          const allRides = page.content || [];
+          this.rides = allRides.filter(r => historyStatusList.includes(r.status as string));
           // Only set user info when searching by specific ID
           if (this.searchId && this.rides.length > 0) {
             if (this.searchType === 'driver' && this.rides[0].driver) {
