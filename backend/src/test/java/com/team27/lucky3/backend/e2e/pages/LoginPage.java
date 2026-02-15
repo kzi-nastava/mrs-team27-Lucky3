@@ -1,4 +1,4 @@
-package com.team27.lucky3.e2e.pages;
+package com.team27.lucky3.backend.e2e.pages;
 
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
