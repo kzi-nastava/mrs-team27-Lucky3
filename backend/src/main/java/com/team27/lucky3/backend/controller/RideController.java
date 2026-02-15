@@ -64,7 +64,7 @@ public class RideController {
     }
 
     // 2.9.2 & 2.9.3 Admin ride history + detailed ride view (admin)
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}") // Only match if 'id' consists of digits
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RideResponse> getRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.getRideDetails(id));
