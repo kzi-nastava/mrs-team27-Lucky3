@@ -1,6 +1,7 @@
 package com.team27.lucky3.e2e.pages;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
@@ -43,14 +44,34 @@ public class AdminRideHistoryPage {
 
     // ----- Filters -----
 
-    @FindBy(id = "date-filter-input")
-    private WebElement dateFilterInput;
+    @FindBy(id = "date-from-input")
+    private WebElement dateFromInput;
+
+    @FindBy(id = "date-to-input")
+    private WebElement dateToInput;
 
     @FindBy(id = "clear-date-btn")
     private WebElement clearDateBtn;
 
     @FindBy(id = "status-filter")
     private WebElement statusFilterSelect;
+
+    // ----- Pagination -----
+
+    @FindBy(id = "page-first")
+    private WebElement pageFirstBtn;
+
+    @FindBy(id = "page-prev")
+    private WebElement pagePrevBtn;
+
+    @FindBy(id = "page-next")
+    private WebElement pageNextBtn;
+
+    @FindBy(id = "page-last")
+    private WebElement pageLastBtn;
+
+    @FindBy(id = "pagination-controls")
+    private WebElement paginationControls;
 
     // ----- Sort Headers -----
 
@@ -205,14 +226,45 @@ public class AdminRideHistoryPage {
 
     // ========== Filter Actions ==========
 
-    public void setDateFilter(String date) {
-        wait.until(ExpectedConditions.visibilityOf(dateFilterInput));
-        // Clear existing value using keyboard
-        dateFilterInput.click();
-        dateFilterInput.sendKeys(Keys.chord(Keys.CONTROL, "a"));
-        dateFilterInput.sendKeys(date);
-        dateFilterInput.sendKeys(Keys.TAB); // trigger change event
+    /**
+     * Set a date input value using JavaScript for reliable cross-browser behavior.
+     * Uses yyyy-MM-dd format (HTML5 date input standard value format).
+     * Dispatches 'input' and 'change' events so Angular ngModel picks up the change.
+     */
+    private void setDateInputValue(WebElement input, String date) {
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        js.executeScript(
+                "arguments[0].value = arguments[1];" +
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));" +
+                "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
+                input, date);
+    }
+
+    public void setDateFromFilter(String date) {
+        wait.until(ExpectedConditions.visibilityOf(dateFromInput));
+        setDateInputValue(dateFromInput, date);
         waitForDataRefresh();
+    }
+
+    public void setDateToFilter(String date) {
+        wait.until(ExpectedConditions.visibilityOf(dateToInput));
+        setDateInputValue(dateToInput, date);
+        waitForDataRefresh();
+    }
+
+    /**
+     * Set both From and To date filters.
+     */
+    public void setDateRange(String from, String to) {
+        setDateFromFilter(from);
+        setDateToFilter(to);
+    }
+
+    /**
+     * Legacy method — sets the From date filter for backward compatibility.
+     */
+    public void setDateFilter(String date) {
+        setDateFromFilter(date);
     }
 
     public void clearDateFilter() {
@@ -232,6 +284,131 @@ public class AdminRideHistoryPage {
         wait.until(ExpectedConditions.visibilityOf(statusFilterSelect));
         Select select = new Select(statusFilterSelect);
         return select.getFirstSelectedOption().getAttribute("value");
+    }
+
+    // ========== Pagination Actions ==========
+
+    private static final By PAGINATION_LOCATOR = By.id("pagination-controls");
+
+    /**
+     * Check if pagination controls are visible (rendered when totalPages > 1).
+     */
+    public boolean isPaginationVisible() {
+        try {
+            return driver.findElement(PAGINATION_LOCATOR).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Click a specific page number button (0-based page index).
+     */
+    public void goToPage(int pageIndex) {
+        WebElement btn = wait.until(
+                ExpectedConditions.elementToBeClickable(By.id("page-btn-" + pageIndex)));
+        btn.click();
+        waitForDataRefresh();
+    }
+
+    public void clickNextPage() {
+        wait.until(ExpectedConditions.elementToBeClickable(pageNextBtn));
+        pageNextBtn.click();
+        waitForDataRefresh();
+    }
+
+    public void clickPrevPage() {
+        wait.until(ExpectedConditions.elementToBeClickable(pagePrevBtn));
+        pagePrevBtn.click();
+        waitForDataRefresh();
+    }
+
+    public void clickFirstPage() {
+        wait.until(ExpectedConditions.elementToBeClickable(pageFirstBtn));
+        pageFirstBtn.click();
+        waitForDataRefresh();
+    }
+
+    public void clickLastPage() {
+        wait.until(ExpectedConditions.elementToBeClickable(pageLastBtn));
+        pageLastBtn.click();
+        waitForDataRefresh();
+    }
+
+    /**
+     * Check if the Next button is disabled.
+     */
+    public boolean isNextPageDisabled() {
+        return "true".equals(pageNextBtn.getAttribute("disabled"));
+    }
+
+    /**
+     * Check if the Prev button is disabled.
+     */
+    public boolean isPrevPageDisabled() {
+        return "true".equals(pagePrevBtn.getAttribute("disabled"));
+    }
+
+    /**
+     * Check if the First button is disabled.
+     */
+    public boolean isFirstPageDisabled() {
+        return "true".equals(pageFirstBtn.getAttribute("disabled"));
+    }
+
+    /**
+     * Check if the Last button is disabled.
+     */
+    public boolean isLastPageDisabled() {
+        return "true".equals(pageLastBtn.getAttribute("disabled"));
+    }
+
+    /**
+     * Get the active (highlighted) page number (1-based display text).
+     */
+    public int getActivePageNumber() {
+        List<WebElement> pageButtons = driver.findElements(By.cssSelector("#pagination-controls button[id^='page-btn-']"));
+        for (WebElement btn : pageButtons) {
+            if (btn.getAttribute("class").contains("bg-yellow-500")) {
+                return Integer.parseInt(btn.getText().trim());
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Get the pagination info text (e.g., "Showing 1 – 5 of 11").
+     */
+    public String getPaginationInfoText() {
+        try {
+            WebElement infoDiv = driver.findElement(By.cssSelector("#pagination-controls .text-sm"));
+            return infoDiv.getText().trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * Get list of all visible page button numbers (1-based display text).
+     */
+    public List<Integer> getVisiblePageNumbers() {
+        List<WebElement> pageButtons = driver.findElements(By.cssSelector("#pagination-controls button[id^='page-btn-']"));
+        List<Integer> pages = new ArrayList<>();
+        for (WebElement btn : pageButtons) {
+            pages.add(Integer.parseInt(btn.getText().trim()));
+        }
+        return pages;
+    }
+
+    /**
+     * Check if a specific page button exists (0-based index).
+     */
+    public boolean isPageButtonPresent(int pageIndex) {
+        try {
+            return driver.findElement(By.id("page-btn-" + pageIndex)).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     // ========== Sort Actions ==========
@@ -341,9 +518,11 @@ public class AdminRideHistoryPage {
 
     /**
      * Parse cost value as double from a ride row.
+     * Returns 0.0 for rides displaying "—" (no cost, e.g. cancelled rides).
      */
     public double getRideCostValue(int rowIndex) {
         String costText = getRideCost(rowIndex);
+        if (costText.equals("\u2014") || costText.equals("—")) return 0.0;
         return Double.parseDouble(costText.replace("$", "").replace(",", ""));
     }
 
@@ -391,12 +570,14 @@ public class AdminRideHistoryPage {
 
     /**
      * Get all cost values from all visible ride rows.
+     * Returns 0.0 for rides displaying "—" (no cost, e.g. cancelled rides).
      */
     public List<Double> getAllRideCostValues() {
         List<WebElement> rows = getRideRows();
         return rows.stream()
                 .map(row -> {
                     String costText = row.findElement(By.cssSelector(".ride-cost")).getText().trim();
+                    if (costText.equals("\u2014") || costText.equals("—")) return 0.0;
                     return Double.parseDouble(costText.replace("$", "").replace(",", ""));
                 })
                 .collect(Collectors.toList());
@@ -487,10 +668,24 @@ public class AdminRideHistoryPage {
     }
 
     /**
-     * Get the date filter input value.
+     * Get the date From filter input value.
+     */
+    public String getDateFromFilterValue() {
+        return dateFromInput.getAttribute("value");
+    }
+
+    /**
+     * Get the date To filter input value.
+     */
+    public String getDateToFilterValue() {
+        return dateToInput.getAttribute("value");
+    }
+
+    /**
+     * Get the date filter input value (from input - backward compatibility).
      */
     public String getDateFilterValue() {
-        return dateFilterInput.getAttribute("value");
+        return getDateFromFilterValue();
     }
 
     /**

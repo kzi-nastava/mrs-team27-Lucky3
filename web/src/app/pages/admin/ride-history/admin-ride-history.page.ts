@@ -180,7 +180,7 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
       case 'totalCost': return 'totalCost';
       case 'departure': return 'startLocation.address';
       case 'status': return 'status';
-      case 'cancelledBy': return 'cancelledBy';
+      case 'cancelledBy': return 'status';
       case 'panic': return 'panicPressed';
       default: return 'startTime';
     }
