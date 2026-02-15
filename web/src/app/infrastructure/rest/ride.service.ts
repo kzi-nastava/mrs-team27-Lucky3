@@ -67,7 +67,7 @@ export class RideService {
     if (params.toDate) queryParams.toDate = params.toDate;
     if (params.driverId) queryParams.driverId = params.driverId.toString();
     if (params.passengerId) queryParams.passengerId = params.passengerId.toString();
-    if (params.status && params.status !== 'all') queryParams.status = params.status;
+    if (params.status) queryParams.status = params.status;
 
     return this.http.get<PageResponse<RideResponse>>(this.apiUrl, { params: queryParams });
   }

@@ -1136,7 +1136,15 @@ public class RideServiceImpl implements RideService {
                 predicates.add(cb.equal(passengers.get("id"), passengerId));
             }
             if (status != null) {
-                predicates.add(cb.equal(root.get("status"), RideStatus.valueOf(status)));
+                if (status.contains(",")) {
+                    List<RideStatus> statuses = Arrays.stream(status.split(","))
+                            .map(String::trim)
+                            .map(RideStatus::valueOf)
+                            .collect(Collectors.toList());
+                    predicates.add(root.get("status").in(statuses));
+                } else {
+                    predicates.add(cb.equal(root.get("status"), RideStatus.valueOf(status)));
+                }
             }
             if (fromDate != null) {
                 // Use COALESCE to compare against startTime OR scheduledTime for date filtering
