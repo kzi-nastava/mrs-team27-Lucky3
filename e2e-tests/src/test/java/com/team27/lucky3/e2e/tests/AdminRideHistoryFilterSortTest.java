@@ -12,6 +12,8 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -354,39 +356,53 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
 
     @Test
     @Order(53)
-    @DisplayName("HP-53: Sort by status groups rides by status")
+    @DisplayName("HP-53: Sort by status groups rides by status alphabetically")
     public void testSortByStatus() {
-        historyPage.sortByStatus();
+        historyPage.sortByStatus(); // First click: desc
 
         List<String> statuses = historyPage.getAllRideStatuses();
-        assertTrue(statuses.size() > 0, "Should have rides to sort");
+        assertTrue(statuses.size() > 1, "Should have multiple rides to sort");
 
-        // Verify statuses are sorted (alphabetically or by enum order depending on backend)
-        // At minimum, identical statuses should be grouped together
-        // We just verify no error occurred and data is displayed
+        // Verify statuses are in descending alphabetical order
+        List<String> expectedOrder = new ArrayList<>(statuses);
+        expectedOrder.sort(Collections.reverseOrder());
+        assertEquals(expectedOrder, statuses,
+                "Statuses should be sorted in descending alphabetical order");
     }
 
     @Test
     @Order(54)
-    @DisplayName("HP-54: Sort by panic groups panic rides")
+    @DisplayName("HP-54: Sort by panic groups panic rides at the top")
     public void testSortByPanic() {
-        historyPage.sortByPanic();
+        historyPage.sortByPanic(); // First click: desc
 
         List<String> panics = historyPage.getAllRidePanics();
         assertTrue(panics.size() > 0, "Should have rides");
 
         // At least one ride should have panic = YES (ride 9 from DataInitializer)
         assertTrue(panics.contains("YES"), "At least one ride should have PANIC = YES");
+
+        // Verify descending sort: YES values should come before NO values
+        List<String> expectedOrder = new ArrayList<>(panics);
+        expectedOrder.sort(Collections.reverseOrder());
+        assertEquals(expectedOrder, panics,
+                "Panic values should be sorted descending (YES before NO)");
     }
 
     @Test
     @Order(55)
-    @DisplayName("HP-55: Sort by cancelled-by")
+    @DisplayName("HP-55: Sort by cancelled-by groups rides correctly")
     public void testSortByCancelledBy() {
-        historyPage.sortByCancelledBy();
+        historyPage.sortByCancelledBy(); // First click: desc
 
         List<String> cancelledBys = historyPage.getAllRideCancelledBys();
         assertTrue(cancelledBys.size() > 0, "Should have rides");
+
+        // Verify descending alphabetical sort order
+        List<String> expectedOrder = new ArrayList<>(cancelledBys);
+        expectedOrder.sort(Collections.reverseOrder());
+        assertEquals(expectedOrder, cancelledBys,
+                "Cancelled-by values should be sorted in descending alphabetical order");
     }
 
     @Test
@@ -421,14 +437,20 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
 
     @Test
     @Order(58)
-    @DisplayName("HP-58: Sort by route (departure address)")
+    @DisplayName("HP-58: Sort by route (departure address) sorts alphabetically")
     public void testSortByRoute() {
-        historyPage.sortByRoute();
+        historyPage.sortByRoute(); // First click: desc
         String indicator = historyPage.getSortIndicatorText("sort-route");
         assertEquals("▼", indicator, "Route sort should show descending indicator");
 
-        int rideCount = historyPage.getRideCount();
-        assertTrue(rideCount > 0, "Should still have rides after sorting by route");
+        List<String> pickups = historyPage.getAllRidePickups();
+        assertTrue(pickups.size() > 1, "Should have multiple rides to verify route sort");
+
+        // Verify descending alphabetical sort on pickup addresses
+        List<String> expectedOrder = new ArrayList<>(pickups);
+        expectedOrder.sort(String.CASE_INSENSITIVE_ORDER.reversed());
+        assertEquals(expectedOrder, pickups,
+                "Pickup addresses should be sorted in descending alphabetical order");
     }
 
     // =====================================================================
@@ -869,11 +891,209 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
     }
 
     // =====================================================================
+    // HAPPY PATH: Ride Detail View (Requirement 2.9.3)
+    // =====================================================================
+
+    @Test
+    @Order(140)
+    @DisplayName("HP-70: Clicking a ride row opens the detail panel with map")
+    public void testClickRideRowOpensDetailPanel() {
+        historyPage.openRideDetails(0);
+
+        assertTrue(historyPage.isDetailPanelVisible(),
+                "Detail panel should be visible after clicking a ride row");
+        assertTrue(historyPage.isDetailMapVisible(),
+                "Map should be rendered inside the detail panel");
+    }
+
+    @Test
+    @Order(141)
+    @DisplayName("HP-71: Detail panel displays ride status")
+    public void testDetailPanelShowsStatus() {
+        historyPage.openRideDetails(0);
+
+        String detailStatus = historyPage.getDetailStatus();
+        assertNotNull(detailStatus, "Detail panel should show ride status");
+        assertFalse(detailStatus.isEmpty(), "Detail panel status should not be empty");
+    }
+
+    @Test
+    @Order(142)
+    @DisplayName("HP-72: Detail panel displays pickup and destination addresses")
+    public void testDetailPanelShowsRoute() {
+        historyPage.openRideDetails(0);
+
+        String pickup = historyPage.getDetailPickupAddress();
+        assertNotNull(pickup, "Detail panel should show pickup address");
+        assertFalse(pickup.isEmpty(), "Pickup address should not be empty");
+
+        String destination = historyPage.getDetailDestinationAddress();
+        assertNotNull(destination, "Detail panel should show destination address");
+        assertFalse(destination.isEmpty(), "Destination address should not be empty");
+    }
+
+    @Test
+    @Order(143)
+    @DisplayName("HP-73: Detail panel displays cost and distance")
+    public void testDetailPanelShowsCostAndDistance() {
+        historyPage.openRideDetails(0);
+
+        String cost = historyPage.getDetailCost();
+        assertNotNull(cost, "Detail panel should show cost");
+        assertFalse(cost.isEmpty(), "Cost should not be empty");
+        assertTrue(cost.contains("$"), "Cost should contain dollar sign");
+
+        String distance = historyPage.getDetailDistance();
+        assertNotNull(distance, "Detail panel should show distance");
+        assertFalse(distance.isEmpty(), "Distance should not be empty");
+        assertTrue(distance.contains("km"), "Distance should contain 'km'");
+    }
+
+    @Test
+    @Order(144)
+    @DisplayName("HP-74: Detail panel displays driver information")
+    public void testDetailPanelShowsDriverInfo() {
+        historyPage.openRideDetails(0);
+
+        assertTrue(historyPage.isDetailDriverSectionVisible(),
+                "Driver section should be visible in detail panel");
+
+        String driverName = historyPage.getDetailDriverName();
+        assertNotNull(driverName, "Driver name should be displayed");
+        assertFalse(driverName.isEmpty(), "Driver name should not be empty");
+
+        String driverEmail = historyPage.getDetailDriverEmail();
+        assertNotNull(driverEmail, "Driver email should be displayed");
+        assertTrue(driverEmail.contains("@"), "Driver email should be a valid email");
+    }
+
+    @Test
+    @Order(145)
+    @DisplayName("HP-75: Detail panel displays passenger information")
+    public void testDetailPanelShowsPassengerInfo() {
+        historyPage.openRideDetails(0);
+
+        assertTrue(historyPage.isDetailPassengersSectionVisible(),
+                "Passengers section should be visible in detail panel");
+
+        int passengerCount = historyPage.getDetailPassengerCount();
+        assertTrue(passengerCount >= 1, "Should show at least 1 passenger");
+    }
+
+    @Test
+    @Order(146)
+    @DisplayName("HP-76: Detail panel for finished ride displays ratings")
+    public void testDetailPanelShowsRatingsForFinishedRide() {
+        // Filter to FINISHED rides which have reviews
+        historyPage.selectStatus("FINISHED");
+
+        int rideCount = historyPage.getRideCount();
+        assertTrue(rideCount > 0, "Should have finished rides");
+
+        // Open the first finished ride detail
+        historyPage.openRideDetails(0);
+
+        // At least some finished rides have reviews (rides 3, 4, 5, 8 from DataInitializer)
+        if (historyPage.isDetailReviewsSectionVisible()) {
+            int reviewCount = historyPage.getDetailReviewCount();
+            assertTrue(reviewCount > 0, "Should display at least one review");
+
+            List<String> driverRatings = historyPage.getDetailDriverRatings();
+            assertFalse(driverRatings.isEmpty(), "Should have driver ratings");
+            for (String rating : driverRatings) {
+                int ratingValue = Integer.parseInt(rating);
+                assertTrue(ratingValue >= 1 && ratingValue <= 5,
+                        "Driver rating should be between 1 and 5, got: " + ratingValue);
+            }
+
+            List<String> vehicleRatings = historyPage.getDetailVehicleRatings();
+            assertFalse(vehicleRatings.isEmpty(), "Should have vehicle ratings");
+            for (String rating : vehicleRatings) {
+                int ratingValue = Integer.parseInt(rating);
+                assertTrue(ratingValue >= 1 && ratingValue <= 5,
+                        "Vehicle rating should be between 1 and 5, got: " + ratingValue);
+            }
+        }
+    }
+
+    @Test
+    @Order(147)
+    @DisplayName("HP-77: Closing the detail panel hides it")
+    public void testCloseDetailPanel() {
+        historyPage.openRideDetails(0);
+        assertTrue(historyPage.isDetailPanelVisible(), "Detail panel should be visible");
+
+        historyPage.closeRideDetails();
+        assertFalse(historyPage.isDetailPanelVisible(),
+                "Detail panel should be hidden after closing");
+    }
+
+    @Test
+    @Order(148)
+    @DisplayName("HP-78: Panic ride detail shows PANIC badge")
+    public void testPanicRideDetailShowsPanicBadge() {
+        // Search for driver 2 who has the panic ride (ride 9)
+        historyPage.searchByDriverId("2");
+
+        // Find the ride with PANIC = YES
+        List<String> panics = historyPage.getAllRidePanics();
+        int panicIndex = panics.indexOf("YES");
+        assertTrue(panicIndex >= 0, "Driver 2 should have a panic ride");
+
+        historyPage.openRideDetails(panicIndex);
+
+        assertTrue(historyPage.isDetailPanicBadgeVisible(),
+                "PANIC badge should be visible in detail panel for panic ride");
+    }
+
+    @Test
+    @Order(149)
+    @DisplayName("HP-79: Detail panel status matches table row status")
+    public void testDetailStatusMatchesTableRow() {
+        // Get the status from the table row
+        String tableStatus = historyPage.getRideStatus(0);
+
+        // Open detail panel
+        historyPage.openRideDetails(0);
+
+        // Get the status from the detail panel
+        String detailStatus = historyPage.getDetailStatus();
+
+        assertEquals(tableStatus, detailStatus,
+                "Status in detail panel should match the status in the table row");
+    }
+
+    @Test
+    @Order(150)
+    @DisplayName("HP-80: Switching between ride details updates the panel")
+    public void testSwitchBetweenRideDetails() {
+        int rideCount = historyPage.getRideCount();
+        assertTrue(rideCount >= 2, "Need at least 2 rides to test switching");
+
+        // Open first ride
+        historyPage.openRideDetails(0);
+        String firstCost = historyPage.getDetailCost();
+        String firstPickup = historyPage.getDetailPickupAddress();
+
+        // Close and open second ride
+        historyPage.closeRideDetails();
+        historyPage.openRideDetails(1);
+        String secondCost = historyPage.getDetailCost();
+        String secondPickup = historyPage.getDetailPickupAddress();
+
+        // At least one field should differ between rides
+        boolean costDiffers = !firstCost.equals(secondCost);
+        boolean pickupDiffers = !firstPickup.equals(secondPickup);
+        assertTrue(costDiffers || pickupDiffers,
+                "Different rides should display different details");
+    }
+
+    // =====================================================================
     // EDGE/ERROR CASE: Authentication
     // =====================================================================
 
     @Test
-    @Order(130)
+    @Order(160)
     @DisplayName("ERR-01: Accessing ride history without login redirects to login")
     public void testAccessWithoutLoginRedirects() {
         // Open a new browser session without login

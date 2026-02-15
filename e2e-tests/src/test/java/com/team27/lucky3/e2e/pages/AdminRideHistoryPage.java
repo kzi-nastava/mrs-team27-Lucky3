@@ -2,6 +2,7 @@ package com.team27.lucky3.e2e.pages;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -11,6 +12,7 @@ import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,6 +20,7 @@ public class AdminRideHistoryPage {
 
     private WebDriver driver;
     private WebDriverWait wait;
+    private WebDriverWait shortWait;
 
     private static final String URL = "http://localhost:4200/admin/ride-history";
 
@@ -91,6 +94,7 @@ public class AdminRideHistoryPage {
     public AdminRideHistoryPage(WebDriver driver) {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        this.shortWait = new WebDriverWait(driver, Duration.ofSeconds(3));
         PageFactory.initElements(driver, this);
     }
 
@@ -101,15 +105,55 @@ public class AdminRideHistoryPage {
 
     // ========== Wait Helpers ==========
 
+    private static final By RIDE_ROW_LOCATOR = By.cssSelector("#rides-table tbody tr[id^='ride-row-']");
+    private static final By NO_RIDES_LOCATOR = By.id("no-rides-message");
+    private static final By TABLE_ROW_LOCATOR = By.cssSelector("#rides-table tbody tr");
+
     public void waitForTableToLoad() {
         wait.until(ExpectedConditions.visibilityOf(ridesTable));
-        // Short pause for data to populate via API
-        try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+        waitForTableContent();
     }
 
+    /**
+     * Wait for either ride rows or the "No rides found" message to be present.
+     * Uses ExpectedConditions.or to wait for either condition.
+     */
+    private void waitForTableContent() {
+        wait.until(ExpectedConditions.or(
+                ExpectedConditions.presenceOfElementLocated(RIDE_ROW_LOCATOR),
+                ExpectedConditions.presenceOfElementLocated(NO_RIDES_LOCATOR)
+        ));
+    }
+
+    /**
+     * Wait for the table data to refresh after a user action (filter, sort, search).
+     * Captures a reference to the first visible row, waits for it to become stale
+     * (Angular re-renders on data change), then waits for new content to appear.
+     *
+     * Uses a short timeout (3s) for staleness check as a non-fatal fast path:
+     * if Angular re-renders identical data the DOM may not become stale,
+     * so we fall through and simply wait for content to be present.
+     */
     private void waitForDataRefresh() {
-        // Wait after an action that triggers loadRides()
-        try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+        List<WebElement> currentRows = driver.findElements(TABLE_ROW_LOCATOR);
+
+        if (!currentRows.isEmpty()) {
+            WebElement firstRow = currentRows.get(0);
+            try {
+                // Short timeout: if Angular re-renders, row goes stale quickly.
+                // If data is identical, Angular may reuse the DOM — TimeoutException is non-fatal.
+                shortWait.until(ExpectedConditions.stalenessOf(firstRow));
+            } catch (TimeoutException ignored) {
+                // Row did not become stale — Angular may have kept the same DOM nodes.
+                // Fall through to content check below.
+            }
+        }
+
+        // After staleness (or timeout), wait for new content to appear
+        wait.until(ExpectedConditions.or(
+                ExpectedConditions.presenceOfElementLocated(RIDE_ROW_LOCATOR),
+                ExpectedConditions.presenceOfElementLocated(NO_RIDES_LOCATOR)
+        ));
     }
 
     // ========== Search Actions ==========
@@ -479,5 +523,251 @@ public class AdminRideHistoryPage {
         return rows.stream()
                 .map(row -> row.findElement(By.cssSelector(".ride-start-date")).getText().trim())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all route texts (pickup addresses) from the table for sort verification.
+     */
+    public List<String> getAllRidePickups() {
+        List<WebElement> rows = getRideRows();
+        return rows.stream()
+                .map(row -> row.findElement(By.cssSelector(".ride-pickup")).getText().trim())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all end time texts from the table for sort verification.
+     */
+    public List<String> getAllRideEndTimes() {
+        List<WebElement> rows = getRideRows();
+        return rows.stream()
+                .map(row -> {
+                    String date = row.findElement(By.cssSelector(".ride-end-date")).getText().trim();
+                    String time = row.findElement(By.cssSelector(".ride-end-time")).getText().trim();
+                    return date + " " + time;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // ========== Ride Detail Panel ==========
+
+    private static final By DETAIL_PANEL_LOCATOR = By.id("ride-detail-panel");
+    private static final By DETAIL_MAP_LOCATOR = By.id("admin-history-map");
+
+    /**
+     * Click a ride row and wait for the detail panel to appear.
+     */
+    public void openRideDetails(int rowIndex) {
+        clickRideRow(rowIndex);
+        wait.until(ExpectedConditions.visibilityOfElementLocated(DETAIL_PANEL_LOCATOR));
+    }
+
+    /**
+     * Check if the ride detail panel is currently visible.
+     */
+    public boolean isDetailPanelVisible() {
+        try {
+            return driver.findElement(By.id("ride-detail-panel")).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Close the ride detail panel by clicking the close button.
+     */
+    public void closeRideDetails() {
+        WebElement closeBtn = driver.findElement(By.id("ride-detail-close"));
+        wait.until(ExpectedConditions.elementToBeClickable(closeBtn));
+        closeBtn.click();
+        wait.until(ExpectedConditions.invisibilityOfElementLocated(DETAIL_PANEL_LOCATOR));
+    }
+
+    /**
+     * Check if the map is rendered inside the detail panel.
+     */
+    public boolean isDetailMapVisible() {
+        try {
+            WebElement map = driver.findElement(By.id("admin-history-map"));
+            return map.isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get the status text shown in the detail panel header.
+     */
+    public String getDetailStatus() {
+        WebElement statusEl = driver.findElement(By.id("ride-detail-status"));
+        wait.until(ExpectedConditions.visibilityOf(statusEl));
+        return statusEl.getText().trim();
+    }
+
+    /**
+     * Check if the PANIC badge is visible in the detail panel header.
+     */
+    public boolean isDetailPanicBadgeVisible() {
+        try {
+            return driver.findElement(By.id("ride-detail-panic-badge")).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get the pickup address shown in the detail panel.
+     */
+    public String getDetailPickupAddress() {
+        WebElement el = driver.findElement(By.id("ride-detail-pickup"));
+        wait.until(ExpectedConditions.visibilityOf(el));
+        return el.getText().trim();
+    }
+
+    /**
+     * Get the destination address shown in the detail panel.
+     */
+    public String getDetailDestinationAddress() {
+        WebElement el = driver.findElement(By.id("ride-detail-destination"));
+        wait.until(ExpectedConditions.visibilityOf(el));
+        return el.getText().trim();
+    }
+
+    /**
+     * Get the cost text shown in the detail panel.
+     */
+    public String getDetailCost() {
+        WebElement el = driver.findElement(By.id("ride-detail-cost"));
+        wait.until(ExpectedConditions.visibilityOf(el));
+        return el.getText().trim();
+    }
+
+    /**
+     * Get the distance text shown in the detail panel.
+     */
+    public String getDetailDistance() {
+        WebElement el = driver.findElement(By.id("ride-detail-distance"));
+        wait.until(ExpectedConditions.visibilityOf(el));
+        return el.getText().trim();
+    }
+
+    /**
+     * Check if the driver section is visible in the detail panel.
+     */
+    public boolean isDetailDriverSectionVisible() {
+        try {
+            return driver.findElement(By.id("ride-detail-driver-section")).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get the driver name shown in the detail panel.
+     */
+    public String getDetailDriverName() {
+        WebElement el = driver.findElement(By.id("ride-detail-driver-name"));
+        wait.until(ExpectedConditions.visibilityOf(el));
+        return el.getText().trim();
+    }
+
+    /**
+     * Get the driver email shown in the detail panel.
+     */
+    public String getDetailDriverEmail() {
+        WebElement el = driver.findElement(By.id("ride-detail-driver-email"));
+        wait.until(ExpectedConditions.visibilityOf(el));
+        return el.getText().trim();
+    }
+
+    /**
+     * Check if the passengers section is visible in the detail panel.
+     */
+    public boolean isDetailPassengersSectionVisible() {
+        try {
+            return driver.findElement(By.id("ride-detail-passengers-section")).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get the number of passenger entries shown in the detail panel.
+     */
+    public int getDetailPassengerCount() {
+        try {
+            WebElement section = driver.findElement(By.id("ride-detail-passengers-section"));
+            List<WebElement> passengers = section.findElements(By.cssSelector(".bg-gray-800\\/30"));
+            return passengers.size();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Check if the reviews section is visible in the detail panel.
+     */
+    public boolean isDetailReviewsSectionVisible() {
+        try {
+            return driver.findElement(By.id("ride-detail-reviews-section")).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get the number of review cards shown in the detail panel.
+     */
+    public int getDetailReviewCount() {
+        try {
+            WebElement section = driver.findElement(By.id("ride-detail-reviews-section"));
+            List<WebElement> reviews = section.findElements(By.cssSelector(".review-card"));
+            return reviews.size();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get the driver rating values from all reviews in the detail panel.
+     */
+    public List<String> getDetailDriverRatings() {
+        List<String> ratings = new ArrayList<>();
+        try {
+            WebElement section = driver.findElement(By.id("ride-detail-reviews-section"));
+            List<WebElement> reviewCards = section.findElements(By.cssSelector(".review-card"));
+            for (WebElement card : reviewCards) {
+                // The driver rating is the first badge with "DRIVER" label
+                List<WebElement> badges = card.findElements(By.cssSelector(".bg-yellow-500\\/10"));
+                if (!badges.isEmpty()) {
+                    String ratingText = badges.get(0).findElement(By.cssSelector(".text-xs.font-bold")).getText().trim();
+                    ratings.add(ratingText);
+                }
+            }
+        } catch (Exception e) {
+            // Return empty list
+        }
+        return ratings;
+    }
+
+    /**
+     * Get the vehicle rating values from all reviews in the detail panel.
+     */
+    public List<String> getDetailVehicleRatings() {
+        List<String> ratings = new ArrayList<>();
+        try {
+            WebElement section = driver.findElement(By.id("ride-detail-reviews-section"));
+            List<WebElement> reviewCards = section.findElements(By.cssSelector(".review-card"));
+            for (WebElement card : reviewCards) {
+                List<WebElement> badges = card.findElements(By.cssSelector(".bg-yellow-500\\/10"));
+                if (badges.size() > 1) {
+                    String ratingText = badges.get(1).findElement(By.cssSelector(".text-xs.font-bold")).getText().trim();
+                    ratings.add(ratingText);
+                }
+            }
+        } catch (Exception e) {
+            // Return empty list
+        }
+        return ratings;
     }
 }

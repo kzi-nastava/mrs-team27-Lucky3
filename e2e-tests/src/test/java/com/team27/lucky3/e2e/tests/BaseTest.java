@@ -20,6 +20,8 @@ public class BaseTest {
         options.addArguments("--start-maximized");
         options.addArguments("--disable-notifications");
         options.addArguments("--remote-allow-origins=*");
+        // Force English locale to ensure consistent date formats (MM/dd/yyyy) across environments
+        options.addArguments("--lang=en-US");
         driver = new ChromeDriver(options);
         driver.manage().window().maximize();
         driver.get(BASE_URL);

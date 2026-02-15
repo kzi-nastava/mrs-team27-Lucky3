@@ -157,18 +157,18 @@
     </div>
 
     <!-- Selected Ride Details -->
-    <div *ngIf="selectedRide" class="mb-6 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+    <div *ngIf="selectedRide" id="ride-detail-panel" class="mb-6 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
       <div class="p-4 border-b border-gray-800 flex flex-col sm:flex-row justify-between items-center bg-gray-800/50 gap-4">
         <div class="flex items-center gap-3">
-          <h3 class="text-lg font-semibold text-white">Ride Details</h3>
-          <span class="text-xs px-2 py-1 rounded border" [ngClass]="getStatusClass(selectedRide.status)">
+          <h3 id="ride-detail-title" class="text-lg font-semibold text-white">Ride Details</h3>
+          <span id="ride-detail-status" class="text-xs px-2 py-1 rounded border" [ngClass]="getStatusClass(selectedRide.status)">
             {{ formatStatus(selectedRide.status) }}
           </span>
-          <span *ngIf="selectedRide.panicPressed" class="text-xs px-2 py-1 rounded bg-red-600/30 text-red-300 border border-red-600/50 flex items-center gap-1">
+          <span *ngIf="selectedRide.panicPressed" id="ride-detail-panic-badge" class="text-xs px-2 py-1 rounded bg-red-600/30 text-red-300 border border-red-600/50 flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             PANIC
           </span>
-          <button (click)="closeDetails()" class="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors" title="Close">
+          <button id="ride-detail-close" (click)="closeDetails()" class="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors" title="Close">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
         </div>
@@ -193,7 +193,7 @@
               <div class="mt-1.5 w-2 h-2 rounded-full bg-green-500 shrink-0 shadow-[0_0_8px_#22c55e]"></div>
               <div>
                 <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Pickup</p>
-                <p class="text-sm font-medium text-white">{{ getLocationAddress(selectedRide, 'start') }}</p>
+                <p id="ride-detail-pickup" class="text-sm font-medium text-white">{{ getLocationAddress(selectedRide, 'start') }}</p>
                 <p class="text-xs text-gray-500 mt-0.5">{{ formatDate(selectedRide.startTime) }}</p>
               </div>
             </div>
@@ -201,7 +201,7 @@
               <div class="mt-1.5 w-2 h-2 rounded-full bg-red-500 shrink-0 shadow-[0_0_8px_#ef4444]"></div>
               <div>
                 <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Destination</p>
-                <p class="text-sm font-medium text-white">{{ getLocationAddress(selectedRide, 'end') }}</p>
+                <p id="ride-detail-destination" class="text-sm font-medium text-white">{{ getLocationAddress(selectedRide, 'end') }}</p>
                 <p class="text-xs text-gray-500 mt-0.5">{{ formatDate(selectedRide.endTime) }}</p>
               </div>
             </div>
@@ -211,11 +211,11 @@
           <div class="grid grid-cols-2 gap-3">
             <div class="p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
               <p class="text-[10px] text-gray-500 uppercase tracking-wider">Cost</p>
-              <p class="text-lg font-bold text-yellow-500">{{ formatPrice(selectedRide.totalCost) }}</p>
+              <p id="ride-detail-cost" class="text-lg font-bold text-yellow-500">{{ formatPrice(selectedRide.totalCost) }}</p>
             </div>
             <div class="p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
               <p class="text-[10px] text-gray-500 uppercase tracking-wider">Distance</p>
-              <p class="text-lg font-bold text-white">{{ formatDistance(selectedRide.distanceKm || selectedRide.estimatedDistance) }}</p>
+              <p id="ride-detail-distance" class="text-lg font-bold text-white">{{ formatDistance(selectedRide.distanceKm || selectedRide.estimatedDistance) }}</p>
             </div>
           </div>
 
@@ -240,7 +240,7 @@
           <div class="w-full h-px bg-gray-800"></div>
 
           <!-- Driver -->
-          <div *ngIf="selectedRide.driver" class="space-y-4">
+          <div *ngIf="selectedRide.driver" id="ride-detail-driver-section" class="space-y-4">
             <h4 class="text-sm font-medium text-gray-300 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Driver
@@ -251,8 +251,8 @@
                 <span *ngIf="!selectedRide.driver.profilePictureUrl" class="text-lg font-bold text-yellow-500">{{ selectedRide.driver.name?.charAt(0) }}</span>
               </div>
               <div class="flex-1">
-                <p class="text-sm font-semibold text-white">{{ selectedRide.driver.name }} {{ selectedRide.driver.surname }}</p>
-                <p class="text-xs text-gray-400">{{ selectedRide.driver.email }}</p>
+                <p id="ride-detail-driver-name" class="text-sm font-semibold text-white">{{ selectedRide.driver.name }} {{ selectedRide.driver.surname }}</p>
+                <p id="ride-detail-driver-email" class="text-xs text-gray-400">{{ selectedRide.driver.email }}</p>
                 <p *ngIf="selectedRide.driver.phoneNumber" class="text-xs text-gray-500">{{ selectedRide.driver.phoneNumber }}</p>
               </div>
             </div>
@@ -285,7 +285,7 @@
           </div>
 
           <!-- Passengers -->
-          <div *ngIf="selectedRide.passengers?.length" class="space-y-3">
+          <div *ngIf="selectedRide.passengers?.length" id="ride-detail-passengers-section" class="space-y-3">
             <h4 class="text-sm font-medium text-gray-300 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Passengers ({{ selectedRide.passengers?.length || 0 }})
@@ -317,13 +317,13 @@
           </div>
 
           <!-- Reviews -->
-          <div *ngIf="selectedRide.reviews?.length" class="space-y-3">
+          <div *ngIf="selectedRide.reviews?.length" id="ride-detail-reviews-section" class="space-y-3">
             <h4 class="text-sm font-medium text-gray-300 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               Ratings
             </h4>
             <div class="space-y-2">
-              <div *ngFor="let review of selectedRide.reviews" class="p-3 border border-gray-800 rounded-lg bg-gray-800/20">
+              <div *ngFor="let review of selectedRide.reviews" class="review-card p-3 border border-gray-800 rounded-lg bg-gray-800/20">
                 <div class="flex justify-between items-start mb-2">
                   <div class="flex items-center gap-2">
                     <div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded text-yellow-500 border border-yellow-500/20">
