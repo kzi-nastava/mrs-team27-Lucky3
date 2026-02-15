@@ -1,4 +1,4 @@
-package com.team27.lucky3.backend.e2e.tests;
+package com.team27.lucky3.e2e.tests;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.junit.jupiter.api.AfterEach;
