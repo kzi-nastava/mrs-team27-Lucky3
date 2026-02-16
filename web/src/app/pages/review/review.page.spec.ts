@@ -637,4 +637,403 @@ describe('ReviewPage', () => {
       expect(heading.nativeElement.textContent).toContain('Rate Your Ride');
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Authenticated Mode (logged-in passenger submits via rideId)
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('Authenticated Mode', () => {
+    beforeEach(async () => {
+      authServiceSpy.isLoggedIn.and.returnValue(true);
+      await createComponent(null, '42');
+      fixture.detectChanges();
+    });
+
+    it('should enter authenticated mode when rideId param is present and user is logged in', () => {
+      expect(component.isAuthenticatedMode).toBeTrue();
+      expect(component.rideId).toBe(42);
+      expect(component.isLoading).toBeFalse();
+    });
+
+    it('should NOT call validateReviewToken in authenticated mode', () => {
+      expect(reviewServiceSpy.validateReviewToken).not.toHaveBeenCalled();
+    });
+
+    it('should display the review form in authenticated mode', () => {
+      const form = fixture.debugElement.query(By.css('[data-testid="review-form"]'));
+      expect(form).toBeTruthy();
+    });
+
+    it('should display "Rate Your Ride" heading in authenticated mode', () => {
+      const heading = fixture.debugElement.query(By.css('h1'));
+      expect(heading.nativeElement.textContent).toContain('Rate Your Ride');
+    });
+
+    it('should call submitReview (not submitReviewWithToken) on submission', () => {
+      clickDriverStar(4);
+      clickVehicleStar(3);
+      component.comment = 'Great driver!';
+      component.submitReview();
+
+      expect(reviewServiceSpy.submitReview).toHaveBeenCalledOnceWith({
+        rideId: 42,
+        driverRating: 4,
+        vehicleRating: 3,
+        comment: 'Great driver!'
+      } as ReviewRequest);
+      expect(reviewServiceSpy.submitReviewWithToken).not.toHaveBeenCalled();
+    });
+
+    it('should send undefined comment when comment is empty in authenticated mode', () => {
+      clickDriverStar(5);
+      clickVehicleStar(4);
+      component.comment = '';
+      component.submitReview();
+
+      expect(reviewServiceSpy.submitReview).toHaveBeenCalledOnceWith(
+        jasmine.objectContaining({ comment: undefined })
+      );
+    });
+
+    it('should trim whitespace from comment before submitting in authenticated mode', () => {
+      clickDriverStar(5);
+      clickVehicleStar(4);
+      component.comment = '  Nice ride  ';
+      component.submitReview();
+
+      expect(reviewServiceSpy.submitReview).toHaveBeenCalledOnceWith(
+        jasmine.objectContaining({ comment: 'Nice ride' })
+      );
+    });
+
+    it('should set success after authenticated submission', () => {
+      clickDriverStar(5);
+      clickVehicleStar(4);
+      component.submitReview();
+      expect(component.success).toBeTrue();
+      expect(component.isSubmitting).toBeFalse();
+    });
+
+    it('should show "Thank You!" after successful authenticated submission', () => {
+      clickDriverStar(5);
+      clickVehicleStar(4);
+      component.submitReview();
+      fixture.detectChanges();
+      const heading = fixture.debugElement.query(By.css('h1'));
+      expect(heading.nativeElement.textContent).toContain('Thank You!');
+    });
+
+    it('should handle 409 duplicate review in authenticated mode', () => {
+      reviewServiceSpy.submitReview.and.returnValue(
+        throwError(() => ({ status: 409 }))
+      );
+      clickDriverStar(5);
+      clickVehicleStar(4);
+      component.submitReview();
+      expect(component.error).toBe('You have already submitted a review for this ride.');
+      expect(component.isSubmitting).toBeFalse();
+    });
+
+    it('should handle server error in authenticated mode', () => {
+      reviewServiceSpy.submitReview.and.returnValue(
+        throwError(() => ({ status: 500, error: { message: 'Internal error' } }))
+      );
+      clickDriverStar(5);
+      clickVehicleStar(4);
+      component.submitReview();
+      expect(component.error).toBe('Internal error');
+    });
+
+    it('should show fallback error when server provides no message in authenticated mode', () => {
+      reviewServiceSpy.submitReview.and.returnValue(
+        throwError(() => ({ status: 500 }))
+      );
+      clickDriverStar(5);
+      clickVehicleStar(4);
+      component.submitReview();
+      expect(component.error).toBe('Failed to submit review. Please try again.');
+    });
+
+    it('should complete full authenticated flow: rate, comment, submit, success', fakeAsync(() => {
+      clickDriverStar(3);
+      clickVehicleStar(5);
+
+      const textarea = fixture.debugElement.query(By.css('[data-testid="comment-input"]')).nativeElement;
+      textarea.value = 'Smooth ride!';
+      textarea.dispatchEvent(new Event('input'));
+      tick();
+      fixture.detectChanges();
+
+      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      submitBtn.nativeElement.click();
+      fixture.detectChanges();
+
+      expect(reviewServiceSpy.submitReview).toHaveBeenCalledOnceWith(
+        jasmine.objectContaining({
+          rideId: 42,
+          driverRating: 3,
+          vehicleRating: 5,
+          comment: 'Smooth ride!'
+        })
+      );
+      expect(component.success).toBeTrue();
+      const heading = fixture.debugElement.query(By.css('h1'));
+      expect(heading.nativeElement.textContent).toContain('Thank You!');
+    }));
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Star Hover Effects
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('Star Hover Effects', () => {
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
+      fixture.detectChanges();
+    });
+
+    it('should highlight driver stars up to the hovered star', () => {
+      const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const starButtons = driverSection.queryAll(By.css('button'));
+
+      starButtons[2].nativeElement.dispatchEvent(new Event('mouseenter'));
+      fixture.detectChanges();
+
+      const stars = driverSection.queryAll(By.css('svg'));
+      expect(stars[0].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
+      expect(stars[1].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
+      expect(stars[2].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
+      expect(stars[3].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+      expect(stars[4].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+    });
+
+    it('should remove driver hover highlight on mouseleave', () => {
+      const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const starButtons = driverSection.queryAll(By.css('button'));
+
+      starButtons[2].nativeElement.dispatchEvent(new Event('mouseenter'));
+      fixture.detectChanges();
+      starButtons[2].nativeElement.dispatchEvent(new Event('mouseleave'));
+      fixture.detectChanges();
+
+      // No rating set, all should be gray
+      const stars = driverSection.queryAll(By.css('svg'));
+      expect(stars[0].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+      expect(stars[2].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+    });
+
+    it('should highlight all 5 vehicle stars when hovering the last one', () => {
+      const vehicleSection = fixture.debugElement.query(By.css('[data-testid="vehicle-stars"]'));
+      const starButtons = vehicleSection.queryAll(By.css('button'));
+
+      starButtons[4].nativeElement.dispatchEvent(new Event('mouseenter'));
+      fixture.detectChanges();
+
+      const stars = vehicleSection.queryAll(By.css('svg'));
+      for (let i = 0; i < 5; i++) {
+        expect(stars[i].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
+      }
+    });
+
+    it('should override existing rating with hover highlight', () => {
+      // Set rating to 2, then hover over star 4
+      clickDriverStar(2);
+      const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const starButtons = driverSection.queryAll(By.css('button'));
+
+      starButtons[3].nativeElement.dispatchEvent(new Event('mouseenter'));
+      fixture.detectChanges();
+
+      const stars = driverSection.queryAll(By.css('svg'));
+      // Hover (4) overrides rating (2), so first 4 stars should be yellow
+      expect(stars[0].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
+      expect(stars[3].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
+      expect(stars[4].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+    });
+
+    it('should revert to rating highlight after mouseleave', () => {
+      clickDriverStar(2);
+      const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const starButtons = driverSection.queryAll(By.css('button'));
+
+      starButtons[3].nativeElement.dispatchEvent(new Event('mouseenter'));
+      fixture.detectChanges();
+      starButtons[3].nativeElement.dispatchEvent(new Event('mouseleave'));
+      fixture.detectChanges();
+
+      // Should revert to rating of 2
+      const stars = driverSection.queryAll(By.css('svg'));
+      expect(stars[0].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
+      expect(stars[1].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
+      expect(stars[2].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Cancel / Go Back
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('Cancel Button', () => {
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
+      fixture.detectChanges();
+    });
+
+    it('should call location.back() when Cancel button is clicked', () => {
+      const cancelBtn = fixture.debugElement.queryAll(By.css('button')).find(
+        btn => btn.nativeElement.textContent.includes('Cancel')
+      );
+      expect(cancelBtn).toBeTruthy();
+      cancelBtn!.nativeElement.click();
+      expect(locationSpy.back).toHaveBeenCalled();
+    });
+
+    it('should call goBack() which delegates to location.back()', () => {
+      component.goBack();
+      expect(locationSpy.back).toHaveBeenCalled();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Submitting State UI
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('Submitting State', () => {
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
+      fixture.detectChanges();
+    });
+
+    it('should show "Submitting..." text while request is in flight', () => {
+      clickDriverStar(5);
+      clickVehicleStar(4);
+
+      const subject = new Subject<ReviewResponse>();
+      reviewServiceSpy.submitReviewWithToken.and.returnValue(subject.asObservable());
+
+      component.submitReview();
+      fixture.detectChanges();
+
+      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      expect(submitBtn.nativeElement.textContent).toContain('Submitting...');
+      expect(component.isSubmitting).toBeTrue();
+    });
+
+    it('should disable submit button while request is in flight', () => {
+      clickDriverStar(5);
+      clickVehicleStar(4);
+
+      const subject = new Subject<ReviewResponse>();
+      reviewServiceSpy.submitReviewWithToken.and.returnValue(subject.asObservable());
+
+      component.submitReview();
+      fixture.detectChanges();
+
+      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      expect(submitBtn.nativeElement.disabled).toBeTrue();
+    });
+
+    it('should show spinner animation while submitting', () => {
+      clickDriverStar(5);
+      clickVehicleStar(4);
+
+      const subject = new Subject<ReviewResponse>();
+      reviewServiceSpy.submitReviewWithToken.and.returnValue(subject.asObservable());
+
+      component.submitReview();
+      fixture.detectChanges();
+
+      const spinner = fixture.debugElement.query(By.css('[data-testid="submit-button"] .animate-spin'));
+      expect(spinner).toBeTruthy();
+    });
+
+    it('should hide validation message while submitting', () => {
+      clickDriverStar(5);
+      clickVehicleStar(4);
+
+      const subject = new Subject<ReviewResponse>();
+      reviewServiceSpy.submitReviewWithToken.and.returnValue(subject.asObservable());
+
+      component.submitReview();
+      fixture.detectChanges();
+
+      const validationMsg = fixture.debugElement.query(By.css('[data-testid="validation-message"]'));
+      expect(validationMsg).toBeNull();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Form Structure (data-testid anchors)
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('Form Structure', () => {
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
+      fixture.detectChanges();
+    });
+
+    it('should render the review-form container', () => {
+      expect(fixture.debugElement.query(By.css('[data-testid="review-form"]'))).toBeTruthy();
+    });
+
+    it('should render driver-rating-section with label "Rate the Driver"', () => {
+      const section = fixture.debugElement.query(By.css('[data-testid="driver-rating-section"]'));
+      expect(section).toBeTruthy();
+      expect(section.nativeElement.textContent).toContain('Rate the Driver');
+    });
+
+    it('should render vehicle-rating-section with label "Rate the Vehicle"', () => {
+      const section = fixture.debugElement.query(By.css('[data-testid="vehicle-rating-section"]'));
+      expect(section).toBeTruthy();
+      expect(section.nativeElement.textContent).toContain('Rate the Vehicle');
+    });
+
+    it('should render exactly 5 driver star buttons', () => {
+      const stars = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      expect(stars.queryAll(By.css('button')).length).toBe(5);
+    });
+
+    it('should render exactly 5 vehicle star buttons', () => {
+      const stars = fixture.debugElement.query(By.css('[data-testid="vehicle-stars"]'));
+      expect(stars.queryAll(By.css('button')).length).toBe(5);
+    });
+
+    it('should render comment textarea with placeholder "Share your experience..."', () => {
+      const textarea = fixture.debugElement.query(By.css('[data-testid="comment-input"]'));
+      expect(textarea).toBeTruthy();
+      expect(textarea.nativeElement.getAttribute('placeholder')).toBe('Share your experience...');
+    });
+
+    it('should render submit button with text "Submit Review"', () => {
+      const btn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      expect(btn).toBeTruthy();
+      expect(btn.nativeElement.textContent).toContain('Submit Review');
+    });
+
+    it('should show validation message when form is incomplete', () => {
+      const msg = fixture.debugElement.query(By.css('[data-testid="validation-message"]'));
+      expect(msg).toBeTruthy();
+      expect(msg.nativeElement.textContent).toContain('Please rate both the driver and vehicle');
+    });
+
+    it('should hide validation message once both ratings are set', () => {
+      clickDriverStar(3);
+      clickVehicleStar(2);
+      const msg = fixture.debugElement.query(By.css('[data-testid="validation-message"]'));
+      expect(msg).toBeNull();
+    });
+
+    it('should show error message container when error is set', () => {
+      component.error = 'Something went wrong';
+      fixture.detectChanges();
+      const errorEl = fixture.debugElement.query(By.css('[data-testid="error-message"]'));
+      expect(errorEl).toBeTruthy();
+      expect(errorEl.nativeElement.textContent).toContain('Something went wrong');
+    });
+
+    it('should not show error message container when no error', () => {
+      const errorEl = fixture.debugElement.query(By.css('[data-testid="error-message"]'));
+      expect(errorEl).toBeNull();
+    });
+  });
 });
