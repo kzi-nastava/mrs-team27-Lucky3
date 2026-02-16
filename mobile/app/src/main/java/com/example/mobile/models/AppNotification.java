@@ -10,8 +10,12 @@ import java.io.Serializable;
 public class AppNotification implements Serializable {
 
     public enum Type {
-        RIDE_STATUS,        // Ride accepted, started, finished, cancelled
+        RIDE_STATUS,        // Ride accepted, started
         RIDE_INVITE,        // Invited to join a ride
+        RIDE_FINISHED,      // Ride completed
+        RIDE_CANCELLED,     // Ride cancelled
+        RIDE_CREATED,       // Ride created (for creator + driver)
+        DRIVER_ASSIGNED,    // Driver assigned to ride
         PANIC_ALERT,        // Panic button pressed (admin)
         SUPPORT_MESSAGE,    // New support chat message
         GENERAL             // Fallback

@@ -505,6 +505,19 @@ public class MainActivity extends AppCompatActivity {
                         navController.navigate(R.id.nav_active_ride, args);
                     }
                     break;
+                case "ride_history":
+                    long histRideId = intent.getLongExtra("rideId", -1L);
+                    if (histRideId > 0) {
+                        Bundle histArgs = new Bundle();
+                        histArgs.putLong("rideId", histRideId);
+                        // Navigate to role-specific ride detail
+                        if ("DRIVER".equals(currentRole)) {
+                            navController.navigate(R.id.nav_ride_details, histArgs);
+                        } else {
+                            navController.navigate(R.id.nav_passenger_ride_detail, histArgs);
+                        }
+                    }
+                    break;
                 case "admin_panic":
                     navController.navigate(R.id.nav_admin_panic);
                     break;

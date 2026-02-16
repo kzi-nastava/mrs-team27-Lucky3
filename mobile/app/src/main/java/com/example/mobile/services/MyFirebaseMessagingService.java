@@ -170,10 +170,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             case "PANIC":
                 notifType = AppNotification.Type.PANIC_ALERT;
                 break;
+            case "RIDE_FINISHED":
+                notifType = AppNotification.Type.RIDE_FINISHED;
+                break;
+            case "RIDE_CANCELLED":
+                notifType = AppNotification.Type.RIDE_CANCELLED;
+                break;
+            case "RIDE_CREATED":
+                notifType = AppNotification.Type.RIDE_CREATED;
+                break;
+            case "DRIVER_ASSIGNMENT":
+                notifType = AppNotification.Type.DRIVER_ASSIGNED;
+                break;
             case "RIDE_STATUS":
             case "RIDE_INVITE":
-            case "RIDE_FINISHED":
-            case "DRIVER_ASSIGNMENT":
                 notifType = AppNotification.Type.RIDE_STATUS;
                 break;
             case "SUPPORT":
@@ -223,18 +233,26 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             return intent;
         }
 
+        if ("PANIC".equals(type)) {
+            intent.putExtra("navigate_to", "admin_panic");
+            return intent;
+        }
+
+        // Ride-related deep-links
         if (rideIdStr != null && !rideIdStr.isEmpty()) {
             try {
                 long rideId = Long.parseLong(rideIdStr);
-                intent.putExtra("navigate_to", "active_ride");
                 intent.putExtra("rideId", rideId);
+
+                // Finished/cancelled rides → ride history detail, others → active ride
+                if ("RIDE_FINISHED".equals(type) || "RIDE_CANCELLED".equals(type)) {
+                    intent.putExtra("navigate_to", "ride_history");
+                } else {
+                    intent.putExtra("navigate_to", "active_ride");
+                }
             } catch (NumberFormatException e) {
                 Log.w(TAG, "Invalid rideId in FCM data: " + rideIdStr);
             }
-        }
-
-        if ("PANIC".equals(type)) {
-            intent.putExtra("navigate_to", "admin_panic");
         }
 
         return intent;
