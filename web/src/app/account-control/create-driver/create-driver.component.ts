@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';  // Add this
 import { Router } from '@angular/router';             // Add this
 import { RegularExpressionLiteralExpr } from '@angular/compiler';
+import { DriverService } from '../../infrastructure/rest/driver.service';
 
 export enum VehicleType {
   LUXURY = 'LUXURY',
@@ -27,7 +28,7 @@ export class CreateDriverComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private http: HttpClient,  // Add
+    private driverService: DriverService,
     private router: Router     // Add if missing
   ) {}
 
@@ -107,7 +108,7 @@ export class CreateDriverComponent implements OnInit {
         formData.append('profileImage', this.selectedFile);
     }
 
-    this.http.post('http://localhost:8081/api/drivers', formData).subscribe({
+    this.driverService.createDriver(formData).subscribe({
         next: (response) => {
             console.log('Success:', response);
             this.loading = false;
