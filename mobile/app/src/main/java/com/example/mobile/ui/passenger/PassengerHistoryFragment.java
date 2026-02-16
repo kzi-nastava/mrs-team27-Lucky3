@@ -14,7 +14,6 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
@@ -58,16 +57,18 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
 
     // UI elements
     private TextView btnFromDate, btnToDate, btnSortDirection, btnLoadMore, tvEmpty, tvRideCount;
-    private TextView btnFilterAll, btnFilterPending, btnFilterAccepted, btnFilterFinished;
-    private TextView btnFilterRejected, btnFilterCancelled;
-    private Spinner spinnerSort;
+    private Spinner spinnerSort, spinnerStatus;
     private ProgressBar progressBar;
     private ListView ridesListView;
+
+    // Default: only finished & cancelled rides
+    private static final String DEFAULT_STATUS_FILTER =
+            "FINISHED,CANCELLED,CANCELLED_BY_DRIVER,CANCELLED_BY_PASSENGER";
 
     // State
     private String fromDate = null;
     private String toDate = null;
-    private String statusFilter = null;
+    private String statusFilter = DEFAULT_STATUS_FILTER;
     private String sortField = "startTime";
     private boolean sortAsc = false;
 
@@ -83,10 +84,15 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
 
     // Sort options
     private static final String[] SORT_OPTIONS = {
-            "Start Time", "End Time", "Total Cost", "Distance"
+            "Start Time", "End Time", "Total Cost", "Distance", "Panic"
     };
     private static final String[] SORT_FIELDS = {
-            "startTime", "endTime", "totalCost", "distanceKm"
+            "startTime", "endTime", "totalCost", "distanceKm", "panicPressed"
+    };
+
+    // Status filter options (matching admin)
+    private static final String[] STATUS_OPTIONS = {
+            "All", "FINISHED", "CANCELLED", "CANCELLED_BY_DRIVER", "CANCELLED_BY_PASSENGER"
     };
 
     // Shake sensor
@@ -95,9 +101,6 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
     private long lastShakeTime = 0;
     private static final int SHAKE_THRESHOLD = 12;
     private static final int SHAKE_COOLDOWN_MS = 1000;
-
-    // Currently selected filter button
-    private TextView activeFilterButton;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -108,7 +111,7 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
 
         initViews(root);
         setupNavbar(root);
-        setupFilterButtons();
+        setupStatusSpinner();
         setupDatePickers();
         setupSortSpinner();
         setupSortDirection();
@@ -123,13 +126,6 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
     }
 
     private void initViews(View root) {
-        btnFilterAll = root.findViewById(R.id.btn_filter_all);
-        btnFilterPending = root.findViewById(R.id.btn_filter_pending);
-        btnFilterAccepted = root.findViewById(R.id.btn_filter_accepted);
-        btnFilterFinished = root.findViewById(R.id.btn_filter_finished);
-        btnFilterRejected = root.findViewById(R.id.btn_filter_rejected);
-        btnFilterCancelled = root.findViewById(R.id.btn_filter_cancelled);
-
         btnFromDate = root.findViewById(R.id.btn_from_date);
         btnToDate = root.findViewById(R.id.btn_to_date);
         btnSortDirection = root.findViewById(R.id.btn_sort_direction);
@@ -137,12 +133,14 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
         tvEmpty = root.findViewById(R.id.tv_empty);
         tvRideCount = root.findViewById(R.id.tv_ride_count);
         spinnerSort = root.findViewById(R.id.spinner_sort);
+        spinnerStatus = root.findViewById(R.id.spinner_status);
         progressBar = root.findViewById(R.id.progress_bar);
         ridesListView = root.findViewById(R.id.rides_list_view);
 
         root.findViewById(R.id.btn_clear_dates).setOnClickListener(v -> clearDates());
-
-        activeFilterButton = btnFilterAll;
+        root.findViewById(R.id.btn_clear_status).setOnClickListener(v -> {
+            spinnerStatus.setSelection(0);
+        });
     }
 
     private void setupNavbar(View root) {
@@ -154,43 +152,27 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
         }
     }
 
-    // ==================== FILTER BUTTONS ====================
+    // ==================== STATUS SPINNER ====================
 
-    private void setupFilterButtons() {
-        btnFilterAll.setOnClickListener(v -> applyStatusFilter(btnFilterAll, null));
-        // Mapped 'IN PROGRESS' button to "IN_PROGRESS" status instead of pending, 
-        // to handle user request "When In progress Accepted etc ... it is not working"
-        // Also assuming backend returns IN_PROGRESS for active rides
-        btnFilterPending.setOnClickListener(v -> applyStatusFilter(btnFilterPending, "IN_PROGRESS"));
-        btnFilterAccepted.setOnClickListener(v -> applyStatusFilter(btnFilterAccepted, "ACCEPTED"));
-        btnFilterFinished.setOnClickListener(v -> applyStatusFilter(btnFilterFinished, "FINISHED"));
-        btnFilterRejected.setOnClickListener(v -> applyStatusFilter(btnFilterRejected, "REJECTED"));
-        btnFilterCancelled.setOnClickListener(v -> applyStatusFilter(btnFilterCancelled, "CANCELLED"));
-    }
+    private void setupStatusSpinner() {
+        ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(requireContext(),
+                R.layout.spinner_item_dark, STATUS_OPTIONS);
+        statusAdapter.setDropDownViewResource(R.layout.spinner_dropdown_dark);
+        spinnerStatus.setAdapter(statusAdapter);
+        spinnerStatus.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                statusFilter = position == 0 ? DEFAULT_STATUS_FILTER : STATUS_OPTIONS[position];
+                currentPage = 0;
+                hasMorePages = true;
+                rides.clear();
+                adapter.notifyDataSetChanged();
+                loadRides();
+            }
 
-    private void applyStatusFilter(TextView button, String status) {
-        // Update UI
-        resetFilterButton(activeFilterButton);
-        setActiveFilterButton(button);
-        activeFilterButton = button;
-
-        // Apply filter
-        statusFilter = status;
-        currentPage = 0;
-        hasMorePages = true;
-        rides.clear();
-        adapter.notifyDataSetChanged();
-        loadRides();
-    }
-
-    private void setActiveFilterButton(TextView button) {
-        button.setBackgroundResource(R.drawable.bg_filter_selected);
-        button.setTextColor(ContextCompat.getColor(requireContext(), R.color.black));
-    }
-
-    private void resetFilterButton(TextView button) {
-        button.setBackgroundResource(R.drawable.bg_filter_unselected);
-        button.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray_400));
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
     }
 
     // ==================== DATE PICKERS ====================
@@ -506,6 +488,7 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
                         .inflate(R.layout.item_passenger_ride, parent, false);
                 holder = new ViewHolder();
                 holder.tvStatus = convertView.findViewById(R.id.tv_status);
+                holder.tvPanic = convertView.findViewById(R.id.tv_panic);
                 holder.tvDate = convertView.findViewById(R.id.tv_date);
                 holder.tvDeparture = convertView.findViewById(R.id.tv_departure);
                 holder.tvDestination = convertView.findViewById(R.id.tv_destination);
@@ -514,7 +497,9 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
                 holder.tvCost = convertView.findViewById(R.id.tv_cost);
                 holder.tvDriverName = convertView.findViewById(R.id.tv_driver_name);
                 holder.tvDistance = convertView.findViewById(R.id.tv_distance);
+                holder.tvCancelledBy = convertView.findViewById(R.id.tv_cancelled_by);
                 holder.btnLeaveReview = convertView.findViewById(R.id.btn_leave_review);
+                holder.panicOverlay = convertView.findViewById(R.id.panic_overlay);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
@@ -543,6 +528,26 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
             } else {
                 holder.tvStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.yellow_500));
                 holder.tvStatus.setBackgroundResource(R.drawable.bg_badge_active);
+            }
+
+            // Panic indicator
+            boolean isPanic = "PANIC".equals(ride.getStatus()) ||
+                    (ride.getPanicPressed() != null && ride.getPanicPressed());
+            holder.tvPanic.setVisibility(isPanic ? View.VISIBLE : View.GONE);
+            if (holder.panicOverlay != null) {
+                holder.panicOverlay.setVisibility(isPanic ? View.VISIBLE : View.GONE);
+            }
+
+            // Cancelled by
+            String status = ride.getStatus();
+            if ("CANCELLED_BY_DRIVER".equals(status)) {
+                holder.tvCancelledBy.setText("Cancelled by Driver");
+                holder.tvCancelledBy.setVisibility(View.VISIBLE);
+            } else if ("CANCELLED_BY_PASSENGER".equals(status)) {
+                holder.tvCancelledBy.setText("Cancelled by Passenger");
+                holder.tvCancelledBy.setVisibility(View.VISIBLE);
+            } else {
+                holder.tvCancelledBy.setVisibility(View.GONE);
             }
 
             // Date
@@ -657,9 +662,10 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
         }
 
         class ViewHolder {
-            TextView tvStatus, tvDate, tvDeparture, tvDestination;
+            TextView tvStatus, tvPanic, tvDate, tvDeparture, tvDestination;
             TextView tvStartTime, tvEndTime, tvCost, tvDriverName, tvDistance;
-            TextView btnLeaveReview;
+            TextView tvCancelledBy, btnLeaveReview;
+            View panicOverlay;
         }
     }
 }
