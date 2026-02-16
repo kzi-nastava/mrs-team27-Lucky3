@@ -560,14 +560,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onNewIntent(android.content.Intent intent) {
-        super.onNewIntent(intent);
-        // Handle deep links when the app is already running
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        navController.handleDeepLink(intent);
-    }
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
         stopActiveRidePolling();
@@ -580,6 +572,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        // Handle Navigation Component deep links (e.g., lucky3://review?token=...)
+        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+        navController.handleDeepLink(intent);
+        // Handle FCM notification deep links
         handleFcmDeepLink(intent);
     }
 
