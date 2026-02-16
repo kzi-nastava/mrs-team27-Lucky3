@@ -9,10 +9,11 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 /**
- * Base test class for all E2E tests.
- * Sets up Chrome in incognito mode with consistent English locale.
+ * Foundation for our E2E suite. Sets up Chrome with the right flags 
+ * and handles the browser lifecycle.
  *
- * Set the environment variable E2E_HEADLESS=true to run in headless mode (useful for CI).
+ * Pro tip: Set E2E_HEADLESS=true in your environment if you want to run 
+ * these in CI without a visible browser window.
  */
 @Tag("e2e")
 public class BaseTest {
@@ -28,10 +29,11 @@ public class BaseTest {
         options.addArguments("--start-maximized");
         options.addArguments("--disable-notifications");
         options.addArguments("--remote-allow-origins=*");
-        // Force English locale to ensure consistent date formats (MM/dd/yyyy) across environments
+        // We force US English so that date formats (like 12/31/2025) stay 
+        // consistent no matter where the test is running.
         options.addArguments("--lang=en-US");
 
-        // Support headless mode for CI environments
+        // CI-friendly headless mode.
         if ("true".equalsIgnoreCase(System.getenv("E2E_HEADLESS"))
                 || "true".equalsIgnoreCase(System.getProperty("e2e.headless"))) {
             options.addArguments("--headless=new");

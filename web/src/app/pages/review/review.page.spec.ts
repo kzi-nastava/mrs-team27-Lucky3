@@ -4,6 +4,7 @@ import { ReviewService, ReviewTokenData, ReviewRequest, ReviewResponse } from '.
 import { AuthService } from '../../infrastructure/auth/auth.service';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Location } from '@angular/common';
 import { By } from '@angular/platform-browser';
 import { of, throwError, Subject } from 'rxjs';
 
@@ -13,7 +14,9 @@ describe('ReviewPage', () => {
   let reviewServiceSpy: jasmine.SpyObj<ReviewService>;
   let authServiceSpy: jasmine.SpyObj<AuthService>;
   let routerSpy: jasmine.SpyObj<Router>;
+  let locationSpy: jasmine.SpyObj<Location>;
 
+  // Dummy data for token validation.
   const mockTokenData: ReviewTokenData = {
     valid: true,
     rideId: 1,
@@ -24,6 +27,7 @@ describe('ReviewPage', () => {
     dropoffAddress: '456 End Ave'
   };
 
+  // Dummy data for a successful submission response.
   const mockReviewResponse: ReviewResponse = {
     id: 1,
     rideId: 1,
@@ -34,18 +38,27 @@ describe('ReviewPage', () => {
     createdAt: '2026-02-14T12:00:00'
   };
 
-  async function createComponent(token: string | null = 'valid-test-token') {
+  /**
+   * Shared setup: compiles the component with the given query params.
+   * Pass a token for the email-link flow, or a rideId for the authenticated flow.
+   */
+  async function createComponent(token: string | null = 'valid-test-token', rideId: string | null = null) {
+    const params: Record<string, string> = {};
+    if (token) params['token'] = token;
+    if (rideId) params['rideId'] = rideId;
+
     await TestBed.configureTestingModule({
       imports: [ReviewPage, FormsModule],
       providers: [
         { provide: ReviewService, useValue: reviewServiceSpy },
         { provide: AuthService, useValue: authServiceSpy },
         { provide: Router, useValue: routerSpy },
+        { provide: Location, useValue: locationSpy },
         {
           provide: ActivatedRoute,
           useValue: {
             snapshot: {
-              queryParamMap: convertToParamMap(token ? { token } : {})
+              queryParamMap: convertToParamMap(params)
             }
           }
         }
@@ -56,7 +69,7 @@ describe('ReviewPage', () => {
     component = fixture.componentInstance;
   }
 
-  /** Click the Nth driver star (1-based) via DOM */
+  /** Hits the Nth driver star in the DOM (1-based) */
   function clickDriverStar(n: number): void {
     const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
     const starButtons = driverSection.queryAll(By.css('button'));
@@ -64,7 +77,7 @@ describe('ReviewPage', () => {
     fixture.detectChanges();
   }
 
-  /** Click the Nth vehicle star (1-based) via DOM */
+  /** Hits the Nth vehicle star in the DOM (1-based) */
   function clickVehicleStar(n: number): void {
     const vehicleSection = fixture.debugElement.query(By.css('[data-testid="vehicle-stars"]'));
     const starButtons = vehicleSection.queryAll(By.css('button'));
@@ -73,12 +86,14 @@ describe('ReviewPage', () => {
   }
 
   beforeEach(() => {
-    reviewServiceSpy = jasmine.createSpyObj('ReviewService', ['validateReviewToken', 'submitReviewWithToken']);
+    reviewServiceSpy = jasmine.createSpyObj('ReviewService', ['validateReviewToken', 'submitReviewWithToken', 'submitReview']);
     authServiceSpy = jasmine.createSpyObj('AuthService', ['isLoggedIn', 'getRole']);
     routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    locationSpy = jasmine.createSpyObj('Location', ['back']);
 
     reviewServiceSpy.validateReviewToken.and.returnValue(of(mockTokenData));
     reviewServiceSpy.submitReviewWithToken.and.returnValue(of(mockReviewResponse));
+    reviewServiceSpy.submitReview.and.returnValue(of(mockReviewResponse));
     authServiceSpy.isLoggedIn.and.returnValue(false);
   });
 

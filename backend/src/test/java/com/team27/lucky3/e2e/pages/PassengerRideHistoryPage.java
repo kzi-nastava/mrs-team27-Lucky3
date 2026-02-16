@@ -13,11 +13,12 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * Page object for the passenger ride history page at /passenger/ride-history.
- * Handles ride table interactions, reviewable ride detection, and the "Leave a Review" button.
+ * Represents the passenger ride history view at /passenger/ride-history.
+ * It takes care of scrolling through the table, spotting rides you can 
+ * actually review, and handling the detail panel.
  *
- * Note: The ride-history page uses an inline table (not the shared app-rides-table component),
- * so selectors target the table via data-testid="ride-history-table".
+ * Note: This page doesn't use the shared ride table component; it has its 
+ * own implementation, so we target it specifically using the data-testid.
  */
 public class PassengerRideHistoryPage {
 
@@ -29,11 +30,11 @@ public class PassengerRideHistoryPage {
     private static final String ROW_SELECTOR = TABLE_SELECTOR + " tbody tr";
     private static final String REVIEWABLE_ROW_SELECTOR = ROW_SELECTOR + ".reviewable-row";
 
-    // Status filter dropdown
+    // The dropdown for filtering by status (All, Finished, etc.)
     @FindBy(css = "[data-testid='status-filter']")
     private WebElement statusFilterSelect;
 
-    // Close details button
+    // The little 'X' button to close the side panel.
     @FindBy(css = "[data-testid='ride-details-close-button']")
     private WebElement closeDetailsButton;
 
@@ -44,7 +45,7 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Navigates directly to the ride history page.
+     * Jump straight to the history page and wait for the rows to show up.
      */
     public void navigateTo() {
         driver.get(URL);
@@ -52,7 +53,7 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Waits until the ride table is visible and has at least one row rendered.
+     * Makes sure the table is visible and has at least one row rendered.
      */
     public void waitForTableToLoad() {
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(TABLE_SELECTOR)));
@@ -60,7 +61,7 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Returns all ride rows in the table.
+     * Grabs every single ride row currently in the table.
      */
     public List<WebElement> getRideRows() {
         wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector(ROW_SELECTOR)));
@@ -68,45 +69,46 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Returns only the reviewable ride rows (those with the reviewable-row CSS class).
+     * Filters for rows that have the 'reviewable-row' highlight. 
+     * These are the ones where the passenger is allowed to leave a review.
      */
     public List<WebElement> getReviewableRideRows() {
         return driver.findElements(By.cssSelector(REVIEWABLE_ROW_SELECTOR));
     }
 
     /**
-     * Checks if there are any reviewable rides in the table.
+     * Quick check to see if there's anything selectable for review right now.
      */
     public boolean hasReviewableRides() {
         return !getReviewableRideRows().isEmpty();
     }
 
     /**
-     * Clicks on the first reviewable ride row in the table.
+     * Clicks the first highlighted ride in the list. Throws an error if none are found.
      */
     public void clickFirstReviewableRide() {
         wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(REVIEWABLE_ROW_SELECTOR)));
         List<WebElement> reviewable = getReviewableRideRows();
         if (reviewable.isEmpty()) {
-            throw new IllegalStateException("No reviewable rides found in the table.");
+            throw new IllegalStateException("Couldn't find any highlighted rides to review.");
         }
         reviewable.get(0).click();
     }
 
     /**
-     * Clicks on a specific ride row by index (0-based).
+     * Selects a ride by its position in the list (0 is the top one).
      */
     public void clickRideRow(int index) {
         List<WebElement> rows = getRideRows();
         if (index >= rows.size()) {
             throw new IndexOutOfBoundsException(
-                    "Ride row index " + index + " is out of bounds (total: " + rows.size() + ")");
+                    "Tried to click ride at index " + index + " but only have " + rows.size() + " rows.");
         }
         rows.get(index).click();
     }
 
     /**
-     * Checks if the ride detail panel is currently visible.
+     * Looks for the 'Ride Details' heading to confirm the side panel popped up.
      */
     public boolean isDetailPanelVisible() {
         try {
@@ -119,7 +121,7 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Waits for the ride detail panel to appear after clicking a ride.
+     * Blocks until the ride detail panel is fully rendered.
      */
     public void waitForDetailPanel() {
         wait.until(ExpectedConditions.visibilityOfElementLocated(
@@ -127,8 +129,8 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Checks if the "Leave a Review" button is visible in the detail panel.
-     * Uses a shorter timeout (3s) to avoid long waits when the button is expected to be absent.
+     * Checks if the button to start a review is present in the details view.
+     * We use a snappy timeout here because we often check this when we expect it to be gone.
      */
     public boolean isLeaveReviewButtonVisible() {
         try {
@@ -142,8 +144,7 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Clicks the "Leave a Review" button in the ride detail panel.
-     * This navigates to /review?rideId=<id> in authenticated mode.
+     * Hits the 'Leave a Review' button. This should take the user to the review form.
      */
     public void clickLeaveReview() {
         WebElement btn = wait.until(ExpectedConditions.elementToBeClickable(
@@ -152,40 +153,40 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Selects a status filter option by its visible text (e.g., "All Statuses", "Finished").
-     * The ride-history page uses a &lt;select&gt; dropdown, not buttons.
+     * Switches the status filter using the dropdown. Since it's a standard HTML select,
+     * we use the Selenium Select helper. We wait for the table to refresh afterwards.
      */
     public void clickStatusFilter(String status) {
         wait.until(ExpectedConditions.visibilityOf(statusFilterSelect));
         Select select = new Select(statusFilterSelect);
-        // Try matching by visible text (case-insensitive partial match)
+        // We try to be flexible with the text match (case-insensitive).
         for (WebElement option : select.getOptions()) {
             if (option.getText().trim().equalsIgnoreCase(status)
                     || option.getText().trim().toLowerCase().contains(status.toLowerCase())) {
                 select.selectByVisibleText(option.getText().trim());
-                // Wait for the table to reload after the filter change
+                // Crucial: wait for the new results to actually hit the DOM.
                 wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector(ROW_SELECTOR)));
                 return;
             }
         }
-        throw new IllegalArgumentException("Status filter option not found: " + status);
+        throw new IllegalArgumentException("Couldn't find a filter option matching: " + status);
     }
 
     /**
-     * Closes the ride detail panel.
+     * Tries to close the side panel if it's there.
      */
     public void closeDetails() {
         try {
             wait.until(ExpectedConditions.elementToBeClickable(closeDetailsButton));
             closeDetailsButton.click();
         } catch (Exception e) {
-            // Panel may not be open
+            // Probably already closed, no big deal.
         }
     }
 
     /**
-     * Gets the number of ride rows in the table.
-     * Returns 0 if the only row is the "No rides found" placeholder.
+     * Counts the actual rides in the table. 
+     * Returns 0 if we see the 'No rides found' placeholder instead of data.
      */
     public int getRideCount() {
         List<WebElement> rows = getRideRows();
@@ -197,7 +198,7 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Checks if a specific ride row is reviewable (has the reviewable-row class).
+     * Checks if a specific row has the blue 'reviewable' highlight.
      */
     public boolean isRideRowReviewable(int index) {
         List<WebElement> rows = getRideRows();
@@ -207,7 +208,7 @@ public class PassengerRideHistoryPage {
     }
 
     /**
-     * Waits for the URL to change to the review page.
+     * Waits for the browser to finish navigating to the review form.
      */
     public void waitForReviewPageNavigation() {
         wait.until(ExpectedConditions.urlContains("/review"));

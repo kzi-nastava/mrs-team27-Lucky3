@@ -15,13 +15,11 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * E2E tests for the review feature accessed through the passenger ride history page.
- * The passenger logs in, navigates to ride history, clicks on a reviewable ride,
- * then uses the "Leave a Review" button to submit a review.
+ * Tests the end-to-end flow of reviewing a ride through the passenger's 
+ * history page. A passenger logs in, finds a recent ride, and leaves feedback.
  *
- * These tests run FIRST (before the headless token-based tests) with a visible browser.
- * Ride 10 is reserved for E2E testing — it belongs to passenger3 (ID 5), has no reviews,
- * and ended ~6 hours ago (well within the 3-day review window).
+ * We use Ride 10 for these tests. It belongs to 'passenger3', finished recently, 
+ * and starts without any reviews so we have a clean state to work with.
  */
 @Tag("e2e")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -36,22 +34,22 @@ public class ReviewFromHistoryTest extends BaseTest {
     @BeforeAll
     static void setupClass() throws Exception {
         Map<String, String> env = E2ETestUtils.loadEnvFile("DB_URL", "DB_USERNAME", "DB_PASSWORD");
-        // Clean up any leftover reviews from previous runs so tests are repeatable.
+        // Sweep the DB clean before we start so the tests are repeatable.
         E2ETestUtils.cleanupReviewsForRide(env, E2E_RIDE_ID);
     }
 
     /**
-     * Helper: Logs in as passenger3, navigates to ride history, and waits for the table to load.
+     * Helper to get the passenger logged in and landed on the history page.
      */
     private PassengerRideHistoryPage loginAndGoToRideHistory() {
         LoginPage loginPage = new LoginPage(driver);
         loginPage.loginAs(PASSENGER3_EMAIL, PASSENGER3_PASSWORD);
 
-        // Wait for post-login navigation to complete (passenger home page)
+        // Wait for the redirect to the dashboard.
         new WebDriverWait(driver, Duration.ofSeconds(10))
                 .until(ExpectedConditions.urlContains("/passenger"));
 
-        // Navigate to ride history via sidebar
+        // Navigate to history via the sidebar.
         SidebarComponent sidebar = new SidebarComponent(driver);
         sidebar.navigateToRideHistory();
 
@@ -73,9 +71,9 @@ public class ReviewFromHistoryTest extends BaseTest {
     void testRideHistoryShowsReviewableRides() {
         PassengerRideHistoryPage historyPage = loginAndGoToRideHistory();
 
-        // Ride 10 ended ~6h ago with no reviews, so it should show as reviewable.
+        // Ride 10 should be begging for a review right now.
         assertTrue(historyPage.hasReviewableRides(),
-                "There should be at least one reviewable ride (ride 10) in the table.");
+                "Ride 10 should be highlighted as reviewable in the table.");
     }
 
     @Test
@@ -88,9 +86,9 @@ public class ReviewFromHistoryTest extends BaseTest {
         historyPage.waitForDetailPanel();
 
         assertTrue(historyPage.isDetailPanelVisible(),
-                "The ride detail panel should appear after clicking a ride.");
+                "The ride details should pop up after clicking.");
         assertTrue(historyPage.isLeaveReviewButtonVisible(),
-                "The 'Leave a Review' button should be visible for a reviewable ride.");
+                "We expect to see the 'Leave a Review' button for this ride.");
     }
 
     @Test
@@ -103,11 +101,11 @@ public class ReviewFromHistoryTest extends BaseTest {
         historyPage.waitForDetailPanel();
         historyPage.clickLeaveReview();
 
-        // Should navigate to /review?rideId=<id>
+        // Check if we landed on the review form with the right ID in the URL.
         historyPage.waitForReviewPageNavigation();
         String currentUrl = driver.getCurrentUrl();
-        assertTrue(currentUrl.contains("/review"), "Should navigate to the review page.");
-        assertTrue(currentUrl.contains("rideId="), "URL should contain rideId query parameter.");
+        assertTrue(currentUrl.contains("/review"), "Should have navigated to the review page.");
+        assertTrue(currentUrl.contains("rideId="), "The URL should specify which ride we're reviewing.");
     }
 
     @Test
@@ -125,7 +123,7 @@ public class ReviewFromHistoryTest extends BaseTest {
         reviewPage.waitForPageToLoad();
 
         assertTrue(reviewPage.isReviewFormVisible(),
-                "The review form should be visible in authenticated mode.");
+                "The form should be visible for an authenticated passenger.");
         assertEquals("Rate Your Ride", reviewPage.getPageHeadingText());
     }
 
@@ -143,19 +141,19 @@ public class ReviewFromHistoryTest extends BaseTest {
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
 
-        // Initially disabled
+        // Button should be off initially.
         assertFalse(reviewPage.isSubmitButtonEnabled(),
-                "Submit should be disabled with no ratings.");
+                "Submit shouldn't be allowed without any ratings.");
 
-        // Only driver rating
+        // Just one rating isn't enough.
         reviewPage.setDriverRating(4);
         assertFalse(reviewPage.isSubmitButtonEnabled(),
-                "Submit should still be disabled with only driver rating.");
+                "We still need the vehicle rating before we can submit.");
 
-        // Both ratings set
+        // Both ratings set: green light.
         reviewPage.setVehicleRating(3);
         assertTrue(reviewPage.isSubmitButtonEnabled(),
-                "Submit should be enabled once both ratings are set.");
+                "Submit should be ready now that both ratings are in.");
     }
 
     @Test
@@ -173,16 +171,16 @@ public class ReviewFromHistoryTest extends BaseTest {
         reviewPage.waitForPageToLoad();
 
         assertTrue(reviewPage.isReviewFormVisible(),
-                "The review form should be visible before cancelling.");
+                "Form should be there before we hit cancel.");
 
-        // Click the cancel button — should go back to ride history
         reviewPage.clickCancel();
 
+        // Should drop us back where we came from.
         new WebDriverWait(driver, Duration.ofSeconds(10))
                 .until(ExpectedConditions.urlContains("/passenger/ride-history"));
 
         assertTrue(driver.getCurrentUrl().contains("/passenger/ride-history"),
-                "Cancel should navigate back to ride history.");
+                "Cancel should take us back to the history list.");
     }
 
     @Test
@@ -199,7 +197,7 @@ public class ReviewFromHistoryTest extends BaseTest {
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
 
-        // Set ratings and comment but then cancel instead of submitting
+        // Fill out the form but change our mind.
         reviewPage.setDriverRating(5);
         reviewPage.setVehicleRating(4);
         reviewPage.enterComment("This should not be saved");
@@ -208,11 +206,11 @@ public class ReviewFromHistoryTest extends BaseTest {
         new WebDriverWait(driver, Duration.ofSeconds(10))
                 .until(ExpectedConditions.urlContains("/passenger/ride-history"));
 
-        // The ride should still be reviewable since we cancelled
+        // Confirm the ride is still highlighted as reviewable.
         historyPage = new PassengerRideHistoryPage(driver);
         historyPage.waitForTableToLoad();
         assertTrue(historyPage.hasReviewableRides(),
-                "Ride should still be reviewable after cancelling the review.");
+                "The ride should still be reviewable since we didn't submit.");
     }
 
     @Test
@@ -234,8 +232,9 @@ public class ReviewFromHistoryTest extends BaseTest {
         reviewPage.enterComment("Excellent ride from history page!");
         reviewPage.clickSubmit();
 
+        // Wait for the success state.
         assertTrue(reviewPage.isSuccessMessageVisible(),
-                "Should see a success message after submitting the review.");
+                "We should see the 'Thank You' screen after submission.");
         assertEquals("Thank You!", reviewPage.getSuccessHeadingText());
     }
 
@@ -243,23 +242,23 @@ public class ReviewFromHistoryTest extends BaseTest {
     @Order(9)
     @DisplayName("Negative: After submitting review, ride is no longer reviewable in history")
     void testRideNoLongerReviewableAfterSubmission() {
-        // At this point ride 10 was already reviewed in Order(8).
+        // Ride 10 was just polished off in the previous test.
         PassengerRideHistoryPage historyPage = loginAndGoToRideHistory();
 
-        // The "Finished" filter should show non-reviewable ride 10 since it now has a review.
+        // Switch to the 'Finished' view to find our ride.
         historyPage.clickStatusFilter("Finished");
 
-        // Ride 10 was just reviewed, so it should no longer appear as reviewable.
+        // It should no longer have the blue highlight.
         int reviewableCount = historyPage.getReviewableRideRows().size();
         assertEquals(0, reviewableCount,
-                "Ride 10 should no longer be reviewable after review submission.");
+                "Ride 10 should be a regular row now, no longer reviewable.");
 
-        // Also verify the detail panel doesn't show "Leave a Review" for the first finished ride.
+        // And the button in the side panel should be hidden.
         if (historyPage.getRideCount() > 0) {
             historyPage.clickRideRow(0);
             historyPage.waitForDetailPanel();
             assertFalse(historyPage.isLeaveReviewButtonVisible(),
-                    "Leave a Review button should not be visible for reviewed ride.");
+                    "The review button should be gone for this ride.");
         }
     }
 
@@ -267,54 +266,49 @@ public class ReviewFromHistoryTest extends BaseTest {
     @Order(10)
     @DisplayName("Negative: Duplicate review from history shows error")
     void testDuplicateReviewFromHistory() throws Exception {
-        // The review from Order(8) should still be there, so submitting again should fail.
+        // Ride 10 already has a review, but we'll try to force another one.
         LoginPage loginPage = new LoginPage(driver);
         loginPage.loginAs(PASSENGER3_EMAIL, PASSENGER3_PASSWORD);
 
         new WebDriverWait(driver, Duration.ofSeconds(10))
                 .until(ExpectedConditions.urlContains("/passenger"));
 
-        // Navigate directly to review page for ride 10 (it already has a review)
+        // Sneak direct to the review URL.
         driver.get(BASE_URL + "/review?rideId=" + E2E_RIDE_ID);
 
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
 
-        assertTrue(reviewPage.isReviewFormVisible(),
-                "Form should still be shown for authenticated user.");
+        assertTrue(reviewPage.isReviewFormVisible());
 
         reviewPage.setDriverRating(3);
         reviewPage.setVehicleRating(3);
         reviewPage.clickSubmit();
 
-        // Should get an error about already submitted review
+        // Verify the backend tells us 'No Way'.
         String errorText = reviewPage.getErrorMessageText();
         assertTrue(errorText.contains("already submitted"),
-                "Should show 'already submitted' error for duplicate review.");
+                "Should show an error preventing a second review.");
     }
 
     @Test
     @Order(11)
     @DisplayName("Negative: Non-reviewable ride (past 3-day window) does not show 'Leave a Review' button")
     void testNonReviewableRideHasNoReviewButton() {
-        // After Order(8), all of passenger3's finished rides are non-reviewable:
-        //   Ride 10 — already reviewed
-        //   Ride 9  — ended 5 days ago (past 3-day window)
-        //   Ride 13 — ended 10 days ago (past 3-day window)
+        // Passenger3 has some older rides that are way past the 3-day cutoff.
         PassengerRideHistoryPage historyPage = loginAndGoToRideHistory();
 
         historyPage.clickStatusFilter("Finished");
 
         int rideCount = historyPage.getRideCount();
-        assertTrue(rideCount > 0,
-                "There should be at least one finished ride to test.");
+        assertTrue(rideCount > 0, "Wait, where did the rides go?");
 
-        // Click the last (oldest) ride — well past the 3-day review window.
+        // Grab the oldest one in the list.
         historyPage.clickRideRow(rideCount - 1);
         historyPage.waitForDetailPanel();
 
         assertFalse(historyPage.isLeaveReviewButtonVisible(),
-                "Rides past the 3-day review window should not have a 'Leave a Review' button.");
+                "Old rides shouldn't have a review button.");
     }
 
     @Test
@@ -332,12 +326,14 @@ public class ReviewFromHistoryTest extends BaseTest {
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
 
+        // Blast it with text.
         String longText = "A".repeat(600);
         reviewPage.enterComment(longText);
 
+        // It should be chopped off at 500.
         String actualText = reviewPage.getCommentText();
         assertTrue(actualText.length() <= 500,
-                "Comment should be truncated to 500 characters by the maxlength attribute.");
+                "Text should be truncated by the HTML maxlength attribute.");
     }
 
     @Test
@@ -355,16 +351,16 @@ public class ReviewFromHistoryTest extends BaseTest {
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
 
-        assertTrue(reviewPage.isValidationMessageVisible(),
-                "Validation message should be visible when no ratings are set.");
+        // Should see the 'please rate' warning immediately.
+        assertTrue(reviewPage.isValidationMessageVisible());
         String msg = reviewPage.getValidationMessageText();
         assertTrue(msg.contains("rate both the driver and vehicle"),
-                "Validation message should mention rating both driver and vehicle.");
+                "The warning message should clearly state why they can't submit yet.");
     }
 
     @AfterAll
     static void cleanupAfterAll() throws Exception {
-        // Clean up the review created during tests so re-runs start fresh.
+        // Clean up our mess so we can run this again.
         Map<String, String> env = E2ETestUtils.loadEnvFile("DB_URL", "DB_USERNAME", "DB_PASSWORD");
         E2ETestUtils.cleanupReviewsForRide(env, E2E_RIDE_ID);
     }
