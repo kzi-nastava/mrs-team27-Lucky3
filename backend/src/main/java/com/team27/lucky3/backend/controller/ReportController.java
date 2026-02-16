@@ -27,7 +27,7 @@ public class ReportController {
     // Types: "RIDES", "KILOMETERS", "MONEY"
     @GetMapping("/{userId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReportResponse> getReport(
+    public ResponseEntity<ReportResponse> getReportForUser(
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
