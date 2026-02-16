@@ -308,13 +308,32 @@ public class AppNotificationManager {
                 break;
         }
 
-        AppNotification notification = new AppNotification(
-                AppNotification.Type.RIDE_STATUS, title, body);
+        AppNotification.Type notifType;
+        String navigateTo;
+
+        switch (status) {
+            case "FINISHED":
+                notifType = AppNotification.Type.RIDE_FINISHED;
+                navigateTo = "ride_history";
+                break;
+            case "CANCELLED":
+            case "CANCELLED_BY_DRIVER":
+            case "CANCELLED_BY_PASSENGER":
+                notifType = AppNotification.Type.RIDE_CANCELLED;
+                navigateTo = "ride_history";
+                break;
+            default:
+                notifType = AppNotification.Type.RIDE_STATUS;
+                navigateTo = "active_ride";
+                break;
+        }
+
+        AppNotification notification = new AppNotification(notifType, title, body);
         notification.setRideId(ride.getId());
 
         NotificationStore.getInstance().addNotification(notification);
         postSystemNotification(title, body, NotificationHelper.CHANNEL_RIDE_UPDATES,
-                "active_ride", ride.getId());
+                navigateTo, ride.getId());
     }
 
     private void onPanicAlert(PanicResponse panic) {
