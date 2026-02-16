@@ -30,15 +30,29 @@
                 android:orientation="vertical"
                 android:background="@drawable/bg_card"
                 android:padding="12dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:minWidth="110dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Active Rides"
-                    android:textColor="@color/gray_400"
-                    android:textSize="11sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="\uD83D\uDE97"
+                        android:textSize="13sp"
+                        android:layout_marginEnd="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Active Rides"
+                        android:textColor="@color/gray_400"
+                        android:textSize="11sp" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tv_stat_active_rides"
@@ -58,15 +72,29 @@
                 android:orientation="vertical"
                 android:background="@drawable/bg_card"
                 android:padding="12dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:minWidth="110dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Avg Rating"
-                    android:textColor="@color/gray_400"
-                    android:textSize="11sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="\u2B50"
+                        android:textSize="13sp"
+                        android:layout_marginEnd="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Avg Rating"
+                        android:textColor="@color/gray_400"
+                        android:textSize="11sp" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tv_stat_avg_rating"
@@ -86,15 +114,29 @@
                 android:orientation="vertical"
                 android:background="@drawable/bg_card"
                 android:padding="12dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:minWidth="110dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Drivers Online"
-                    android:textColor="@color/gray_400"
-                    android:textSize="11sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="\uD83D\uDC64"
+                        android:textSize="13sp"
+                        android:layout_marginEnd="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Drivers Online"
+                        android:textColor="@color/gray_400"
+                        android:textSize="11sp" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tv_stat_drivers_online"
@@ -116,12 +158,26 @@
                 android:padding="12dp"
                 android:minWidth="110dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Passengers"
-                    android:textColor="@color/gray_400"
-                    android:textSize="11sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="\uD83D\uDC65"
+                        android:textSize="13sp"
+                        android:layout_marginEnd="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Passengers"
+                        android:textColor="@color/gray_400"
+                        android:textSize="11sp" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tv_stat_passengers"

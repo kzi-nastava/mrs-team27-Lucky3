@@ -152,7 +152,7 @@
         tools:layout="@layout/fragment_admin_dashboard">
         <action
             android:id="@+id/action_admin_dashboard_to_admin_ride_detail"
-            app:destination="@id/nav_admin_ride_detail" />
+            app:destination="@id/nav_admin_active_ride_detail" />
     </fragment>
 
     <fragment
@@ -170,6 +170,17 @@
         android:name="com.example.mobile.ui.admin.AdminRideDetailFragment"
         android:label="Ride Details"
         tools:layout="@layout/fragment_admin_ride_detail">
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_admin_active_ride_detail"
+        android:name="com.example.mobile.ui.admin.AdminActiveRideDetailFragment"
+        android:label="Active Ride"
+        tools:layout="@layout/fragment_admin_active_ride_detail">
         <argument
             android:name="rideId"
             app:argType="long"

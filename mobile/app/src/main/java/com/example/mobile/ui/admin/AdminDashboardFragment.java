@@ -38,6 +38,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -66,7 +68,7 @@ public class AdminDashboardFragment extends Fragment {
     private String searchQuery = "";
     private String selectedStatus = null;       // null = All
     private String selectedVehicleType = null;   // null = All
-    private String sortField = "driver.name";
+    private String sortField = "status";
     private boolean sortAsc = true;
     private int currentPage = 0;
     private boolean spinnersInitialized = false;
@@ -79,8 +81,8 @@ public class AdminDashboardFragment extends Fragment {
     private static final String[] STATUS_VALUES = {null, "IN_PROGRESS", "PENDING", "SCHEDULED"};
     private static final String[] VEHICLE_LABELS = {"All Types", "Standard", "Luxury", "Van"};
     private static final String[] VEHICLE_VALUES = {null, "STANDARD", "LUXURY", "VAN"};
-    private static final String[] SORT_LABELS = {"Driver Name", "Passengers", "Est. Time Left"};
-    private static final String[] SORT_FIELDS = {"driver.name", "status", "estimatedTimeInMinutes"};
+    private static final String[] SORT_LABELS = {"Driver Name", "Status"};
+    private static final String[] SORT_FIELDS = {"driver.name", "status"};
 
     private static final long REFRESH_INTERVAL_MS = 60_000; // 60 seconds
 
@@ -159,6 +161,7 @@ public class AdminDashboardFragment extends Fragment {
                 R.layout.spinner_item_dark, SORT_LABELS);
         sortAdapter.setDropDownViewResource(R.layout.spinner_dropdown_dark);
         binding.spinnerSort.setAdapter(sortAdapter);
+        binding.spinnerSort.setSelection(1);
         binding.spinnerSort.setOnItemSelectedListener(new SimpleSpinnerListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -259,6 +262,9 @@ public class AdminDashboardFragment extends Fragment {
                 if (response.isSuccessful() && response.body() != null) {
                     rides.clear();
                     rides.addAll(response.body().getContent());
+                    if ("status".equals(sortField)) {
+                        sortRidesByStatus();
+                    }
                     adapter.notifyDataSetChanged();
                     fetchDriverRatings();
 
@@ -653,6 +659,24 @@ public class AdminDashboardFragment extends Fragment {
             tvTimeActive = v.findViewById(R.id.tv_time_active);
             tvPanic = v.findViewById(R.id.tv_panic);
         }
+    }
+
+    private static int statusSortOrder(String status) {
+        if (status == null) return 99;
+        switch (status) {
+            case "IN_PROGRESS": return 0;
+            case "PENDING":     return 1;
+            case "ACCEPTED":    return 2;
+            case "SCHEDULED":   return 3;
+            default:             return 99;
+        }
+    }
+
+    private void sortRidesByStatus() {
+        Collections.sort(rides, (a, b) -> {
+            int cmp = Integer.compare(statusSortOrder(a.getStatus()), statusSortOrder(b.getStatus()));
+            return sortAsc ? cmp : -cmp;
+        });
     }
 
     // Helper to avoid initial spinner fire
