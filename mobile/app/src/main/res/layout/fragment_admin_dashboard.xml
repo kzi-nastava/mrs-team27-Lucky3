@@ -301,6 +301,24 @@
         android:clipToPadding="false"
         android:paddingBottom="8dp" />
 
+    <!-- Load More button -->
+    <TextView
+        android:id="@+id/btn_load_more"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Load More"
+        android:textColor="@color/yellow_500"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingVertical="12dp"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_card"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+
     <!-- Empty state -->
     <TextView
         android:id="@+id/tv_empty"

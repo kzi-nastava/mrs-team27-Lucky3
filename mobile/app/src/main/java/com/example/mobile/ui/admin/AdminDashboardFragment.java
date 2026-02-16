@@ -75,6 +75,9 @@ public class AdminDashboardFragment extends Fragment {
     private int spinnerInitCount = 0;
     private static final int SPINNER_COUNT = 3;
     private static final int PAGE_SIZE = 50;
+    private static final int INITIAL_DISPLAY = 3;
+    private static final int LOAD_MORE_COUNT = 5;
+    private int displayLimit = INITIAL_DISPLAY;
 
     // Spinner labels
     private static final String[] STATUS_LABELS = {"All", "In Progress", "Pending", "Scheduled"};
@@ -214,6 +217,22 @@ public class AdminDashboardFragment extends Fragment {
     private void setupList() {
         adapter = new ActiveRidesAdapter();
         binding.lvActiveRides.setAdapter(adapter);
+
+        binding.btnLoadMore.setOnClickListener(v -> {
+            displayLimit += LOAD_MORE_COUNT;
+            adapter.notifyDataSetChanged();
+            updateLoadMoreVisibility();
+        });
+    }
+
+    private void updateLoadMoreVisibility() {
+        if (binding == null) return;
+        boolean hasMore = rides.size() > displayLimit;
+        binding.btnLoadMore.setVisibility(hasMore ? View.VISIBLE : View.GONE);
+        if (hasMore) {
+            int remaining = rides.size() - displayLimit;
+            binding.btnLoadMore.setText("Load More (" + remaining + " remaining)");
+        }
     }
 
     // ---- Data Loading ----
@@ -265,8 +284,10 @@ public class AdminDashboardFragment extends Fragment {
                     if ("status".equals(sortField)) {
                         sortRidesByStatus();
                     }
+                    displayLimit = INITIAL_DISPLAY;
                     adapter.notifyDataSetChanged();
                     fetchDriverRatings();
+                    updateLoadMoreVisibility();
 
                     boolean empty = rides.isEmpty();
                     binding.lvActiveRides.setVisibility(empty ? View.GONE : View.VISIBLE);
@@ -351,7 +372,7 @@ public class AdminDashboardFragment extends Fragment {
     private class ActiveRidesAdapter extends BaseAdapter {
 
         @Override
-        public int getCount() { return rides.size(); }
+        public int getCount() { return Math.min(displayLimit, rides.size()); }
 
         @Override
         public RideResponse getItem(int position) { return rides.get(position); }
