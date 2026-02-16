@@ -84,8 +84,8 @@ public class AdminDashboardFragment extends Fragment {
     private static final String[] STATUS_VALUES = {null, "IN_PROGRESS", "PENDING", "ACCEPTED", "SCHEDULED"};
     private static final String[] VEHICLE_LABELS = {"All Types", "Standard", "Luxury", "Van"};
     private static final String[] VEHICLE_VALUES = {null, "STANDARD", "LUXURY", "VAN"};
-    private static final String[] SORT_LABELS = {"Driver Name", "Status"};
-    private static final String[] SORT_FIELDS = {"driver.name", "status"};
+    private static final String[] SORT_LABELS = {"Driver Name", "Status", "Rating", "Passengers"};
+    private static final String[] SORT_FIELDS = {"driver.name", "status", "rating", "passengers"};
 
     private static final long REFRESH_INTERVAL_MS = 60_000; // 60 seconds
 
@@ -266,7 +266,10 @@ public class AdminDashboardFragment extends Fragment {
         binding.progressBar.setVisibility(View.VISIBLE);
 
         String token = "Bearer " + new SharedPreferencesManager(requireContext()).getToken();
-        String sortParam = sortField + "," + (sortAsc ? "asc" : "desc");
+        // Rating and passengers are client-side sorts; use a default server sort for them
+        String serverSortField = ("rating".equals(sortField) || "passengers".equals(sortField))
+                ? "id" : sortField;
+        String sortParam = serverSortField + "," + (sortAsc ? "asc" : "desc");
         String search = searchQuery.isEmpty() ? null : searchQuery;
 
         ClientUtils.rideService.getAllActiveRides(
@@ -281,9 +284,7 @@ public class AdminDashboardFragment extends Fragment {
                 if (response.isSuccessful() && response.body() != null) {
                     rides.clear();
                     rides.addAll(response.body().getContent());
-                    if ("status".equals(sortField)) {
-                        sortRidesByStatus();
-                    }
+                    applyClientSideSort();
                     displayLimit = INITIAL_DISPLAY;
                     adapter.notifyDataSetChanged();
                     fetchDriverRatings();
@@ -329,6 +330,9 @@ public class AdminDashboardFragment extends Fragment {
                     if (response.isSuccessful() && response.body() != null) {
                         Double avg = response.body().getAverageRating();
                         driverRatingCache.put(driverId, avg != null ? avg : 0.0);
+                        if ("rating".equals(sortField)) {
+                            applyClientSideSort();
+                        }
                         adapter.notifyDataSetChanged();
                     }
                 }
@@ -698,6 +702,40 @@ public class AdminDashboardFragment extends Fragment {
             int cmp = Integer.compare(statusSortOrder(a.getStatus()), statusSortOrder(b.getStatus()));
             return sortAsc ? cmp : -cmp;
         });
+    }
+
+    private void sortRidesByRating() {
+        Collections.sort(rides, (a, b) -> {
+            double ratingA = 0.0;
+            double ratingB = 0.0;
+            if (a.getDriver() != null && a.getDriver().getId() != null && driverRatingCache.containsKey(a.getDriver().getId())) {
+                ratingA = driverRatingCache.get(a.getDriver().getId());
+            }
+            if (b.getDriver() != null && b.getDriver().getId() != null && driverRatingCache.containsKey(b.getDriver().getId())) {
+                ratingB = driverRatingCache.get(b.getDriver().getId());
+            }
+            int cmp = Double.compare(ratingA, ratingB);
+            return sortAsc ? cmp : -cmp;
+        });
+    }
+
+    private void sortRidesByPassengers() {
+        Collections.sort(rides, (a, b) -> {
+            int countA = a.getPassengers() != null ? a.getPassengers().size() : 0;
+            int countB = b.getPassengers() != null ? b.getPassengers().size() : 0;
+            int cmp = Integer.compare(countA, countB);
+            return sortAsc ? cmp : -cmp;
+        });
+    }
+
+    private void applyClientSideSort() {
+        if ("status".equals(sortField)) {
+            sortRidesByStatus();
+        } else if ("rating".equals(sortField)) {
+            sortRidesByRating();
+        } else if ("passengers".equals(sortField)) {
+            sortRidesByPassengers();
+        }
     }
 
     // Helper to avoid initial spinner fire
