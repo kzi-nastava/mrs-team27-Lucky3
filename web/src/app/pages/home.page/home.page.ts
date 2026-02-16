@@ -300,8 +300,8 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   private async geocodeAddress(address: string): Promise<L.LatLng | null> {
     try {
       const encoded = encodeURIComponent(address);
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encoded}&limit=1`;
-      const data: any = await this.http.get(url).toPromise();
+      const url = `/nominatim/search?format=json&q=${encoded}&limit=1`;
+      const data: any = await this.http.get(url, { headers: { 'skip': 'true' } }).toPromise();
       
       if (data && data.length > 0) {
         return L.latLng(parseFloat(data[0].lat), parseFloat(data[0].lon));

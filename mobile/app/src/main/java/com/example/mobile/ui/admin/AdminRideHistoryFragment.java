@@ -1,6 +1,11 @@
 package com.example.mobile.ui.admin;
 
 import android.app.DatePickerDialog;
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -18,17 +23,16 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 
 import com.example.mobile.R;
-import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.RideResponse;
-import com.example.mobile.models.UserResponse;
-import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.ListViewHelper;
-import com.example.mobile.utils.SharedPreferencesManager;
+import com.example.mobile.viewmodels.AdminRideHistoryViewModel;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -36,23 +40,30 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.TimeZone;
-
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 /**
  * Admin Ride History Fragment.
  * Allows administrators to view ride history for any driver or passenger.
  * Features: search by driver/passenger ID, date filtering, status filtering,
- * sorting by any field, pagination.
+ * sorting by any field, pagination, and shake-to-toggle-sort.
+ *
+ * Uses AdminRideHistoryViewModel to survive configuration changes (e.g. orientation).
+ * Implements SensorEventListener to detect device shake events that toggle sort direction.
  */
-public class AdminRideHistoryFragment extends Fragment {
+public class AdminRideHistoryFragment extends Fragment implements SensorEventListener {
 
     private static final String TAG = "AdminRideHistory";
 
-    private SharedPreferencesManager preferencesManager;
+    // Shake detection thresholds
+    private static final float SHAKE_THRESHOLD = 12.0f;
+    private static final long SHAKE_COOLDOWN_MS = 1000;
+
+    private AdminRideHistoryViewModel viewModel;
+
+    // Sensor for shake detection
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private long lastShakeTime = 0;
 
     // UI elements
     private TextView btnSearchDriver, btnSearchPassenger, btnSearch, btnSortDirection, btnShowAll;
@@ -63,44 +74,32 @@ public class AdminRideHistoryFragment extends Fragment {
     private ListView ridesListView;
     private LinearLayout userInfoBanner;
     private TextView tvUserName, tvUserEmail, tvRideCount;
+    private TextView tvShakeHint;
 
-    // State
-    private String searchType = "driver"; // "driver" or "passenger"
-    private Long searchUserId = null;
-    private String fromDate = null;
-    private String toDate = null;
-    private String statusFilter = null;
-    private String sortField = "startTime";
-    private boolean sortAsc = false;
-
-    // Pagination
-    private int currentPage = 0;
-    private static final int PAGE_SIZE = 15;
-    private boolean hasMorePages = true;
-    private boolean isLoading = false;
-
-    // Data
-    private List<RideResponse> rides = new ArrayList<>();
+    // Adapter
     private AdminRidesAdapter adapter;
+    private List<RideResponse> adapterRides = new ArrayList<>();
 
-    // Sort/Status options
-    private static final String[] STATUS_OPTIONS = {
-            "All", "FINISHED", "CANCELLED", "CANCELLED_BY_DRIVER", "CANCELLED_BY_PASSENGER",
-            "PENDING", "ACCEPTED", "IN_PROGRESS", "REJECTED", "PANIC", "SCHEDULED"
-    };
-    private static final String[] SORT_OPTIONS = {
-            "Start Time", "End Time", "Total Cost", "Status", "Distance"
-    };
-    private static final String[] SORT_FIELDS = {
-            "startTime", "endTime", "totalCost", "status", "distanceKm"
-    };
+    // Prevent spinner callbacks during programmatic setup
+    private boolean suppressSpinnerCallbacks = true;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Initialize ViewModel scoped to this fragment — survives config changes
+        viewModel = new ViewModelProvider(this).get(AdminRideHistoryViewModel.class);
+
+        // Initialize shake sensor
+        sensorManager = (SensorManager) requireContext().getSystemService(Context.SENSOR_SERVICE);
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        }
+    }
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_admin_ride_history, container, false);
-
-        preferencesManager = new SharedPreferencesManager(requireContext());
 
         initViews(root);
         setupNavbar(root);
@@ -112,11 +111,80 @@ public class AdminRideHistoryFragment extends Fragment {
         setupLoadMore();
         setupListView();
 
-        // Load all rides by default
-        loadRides();
+        // Observe ViewModel LiveData
+        observeViewModel();
+
+        // Restore UI state from ViewModel (after config change)
+        restoreStateFromViewModel();
+
+        // Load rides only on first creation
+        if (!viewModel.isInitialLoadDone()) {
+            viewModel.resetAndLoad();
+        }
 
         return root;
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Register shake sensor listener
+        if (sensorManager != null && accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Unregister shake sensor listener to save battery
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(this);
+        }
+    }
+
+    // ========================== Shake Detection (SensorEventListener) ==========================
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) return;
+
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
+
+        // Calculate acceleration magnitude (minus gravity ~9.8)
+        double acceleration = Math.sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH;
+
+        if (acceleration > SHAKE_THRESHOLD) {
+            long now = System.currentTimeMillis();
+            if (now - lastShakeTime > SHAKE_COOLDOWN_MS) {
+                lastShakeTime = now;
+                onShakeDetected();
+            }
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // Not needed
+    }
+
+    /**
+     * Called when a shake event is detected.
+     * Toggles the sorting direction (ASC / DESC) by date and reloads rides.
+     */
+    private void onShakeDetected() {
+        if (getActivity() == null) return;
+        requireActivity().runOnUiThread(() -> {
+            viewModel.toggleSortDirection();
+            String direction = viewModel.isSortAsc() ? "Ascending" : "Descending";
+            Toast.makeText(getContext(),
+                    "Shake detected! Sort: " + direction, Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    // ========================== View Initialization ==========================
 
     private void initViews(View root) {
         btnSearchDriver = root.findViewById(R.id.btn_search_driver);
@@ -137,13 +205,9 @@ public class AdminRideHistoryFragment extends Fragment {
         tvUserEmail = root.findViewById(R.id.tv_user_email);
         tvRideCount = root.findViewById(R.id.tv_ride_count);
         btnShowAll = root.findViewById(R.id.btn_show_all);
+        tvShakeHint = root.findViewById(R.id.tv_shake_hint);
 
         root.findViewById(R.id.btn_clear_dates).setOnClickListener(v -> clearDates());
-
-        // Set default banner to "All Rides"
-        tvUserName.setText("All Rides");
-        tvUserEmail.setText("Showing all ride history");
-        userInfoBanner.setVisibility(View.VISIBLE);
     }
 
     private void setupNavbar(View root) {
@@ -155,14 +219,16 @@ public class AdminRideHistoryFragment extends Fragment {
         }
     }
 
+    // ========================== Search Type Toggle ==========================
+
     private void setupSearchTypeToggle() {
         btnSearchDriver.setOnClickListener(v -> {
-            searchType = "driver";
+            viewModel.setSearchType("driver");
             updateSearchTypeUI();
             etUserId.setHint("Enter Driver ID");
         });
         btnSearchPassenger.setOnClickListener(v -> {
-            searchType = "passenger";
+            viewModel.setSearchType("passenger");
             updateSearchTypeUI();
             etUserId.setHint("Enter Passenger ID");
         });
@@ -170,7 +236,7 @@ public class AdminRideHistoryFragment extends Fragment {
     }
 
     private void updateSearchTypeUI() {
-        if ("driver".equals(searchType)) {
+        if ("driver".equals(viewModel.getSearchType())) {
             btnSearchDriver.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.yellow_500));
             btnSearchDriver.setTextColor(ContextCompat.getColor(requireContext(), R.color.black));
             btnSearchPassenger.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.gray_900));
@@ -183,54 +249,44 @@ public class AdminRideHistoryFragment extends Fragment {
         }
     }
 
+    // ========================== Search Button ==========================
+
     private void setupSearchButton() {
         btnSearch.setOnClickListener(v -> {
             String idStr = etUserId.getText().toString().trim();
             if (idStr.isEmpty()) {
-                // Search all rides (no user filter)
-                searchUserId = null;
-                showAllRidesBanner();
+                viewModel.setSearchUserId(null);
             } else {
                 try {
-                    searchUserId = Long.parseLong(idStr);
+                    viewModel.setSearchUserId(Long.parseLong(idStr));
                 } catch (NumberFormatException e) {
                     Toast.makeText(getContext(), "Please enter a valid numeric ID", Toast.LENGTH_SHORT).show();
                     return;
                 }
             }
-            currentPage = 0;
-            hasMorePages = true;
-            rides.clear();
-            adapter.notifyDataSetChanged();
-            loadRides();
+            viewModel.resetAndLoad();
         });
 
-        // Show All button — clears user filter and resets
         if (btnShowAll != null) {
             btnShowAll.setOnClickListener(v -> {
-                searchUserId = null;
                 etUserId.setText("");
-                fromDate = null;
-                toDate = null;
                 btnFromDate.setText("");
                 btnToDate.setText("");
                 btnFromDate.setHint("Start date");
                 btnToDate.setHint("End date");
-                statusFilter = null;
+
+                suppressSpinnerCallbacks = true;
                 spinnerStatus.setSelection(0);
-                sortField = "startTime";
                 spinnerSort.setSelection(0);
-                sortAsc = false;
-                updateSortDirectionUI();
-                showAllRidesBanner();
-                currentPage = 0;
-                hasMorePages = true;
-                rides.clear();
-                adapter.notifyDataSetChanged();
-                loadRides();
+                suppressSpinnerCallbacks = false;
+
+                updateSortDirectionUI(false);
+                viewModel.clearAllFilters();
             });
         }
     }
+
+    // ========================== Date Pickers ==========================
 
     private void setupDatePickers() {
         btnFromDate.setOnClickListener(v -> showDatePicker(true));
@@ -250,21 +306,22 @@ public class AdminRideHistoryFragment extends Fragment {
                         selected.set(Calendar.HOUR_OF_DAY, 0);
                         selected.set(Calendar.MINUTE, 0);
                         selected.set(Calendar.SECOND, 0);
-                        fromDate = formatDateForApi(selected.getTime(), false);
-                        btnFromDate.setText(displayFormat.format(selected.getTime()));
+                        String apiDate = viewModel.formatDateForApi(selected.getTime(), false);
+                        String display = displayFormat.format(selected.getTime());
+                        viewModel.setFromDate(apiDate);
+                        viewModel.setFromDateDisplay(display);
+                        btnFromDate.setText(display);
                     } else {
                         selected.set(Calendar.HOUR_OF_DAY, 23);
                         selected.set(Calendar.MINUTE, 59);
                         selected.set(Calendar.SECOND, 59);
-                        toDate = formatDateForApi(selected.getTime(), true);
-                        btnToDate.setText(displayFormat.format(selected.getTime()));
+                        String apiDate = viewModel.formatDateForApi(selected.getTime(), true);
+                        String display = displayFormat.format(selected.getTime());
+                        viewModel.setToDate(apiDate);
+                        viewModel.setToDateDisplay(display);
+                        btnToDate.setText(display);
                     }
-                    // Auto-refresh
-                    currentPage = 0;
-                    hasMorePages = true;
-                    rides.clear();
-                    adapter.notifyDataSetChanged();
-                    loadRides();
+                    viewModel.resetAndLoad();
                 },
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH),
@@ -274,103 +331,82 @@ public class AdminRideHistoryFragment extends Fragment {
     }
 
     private void clearDates() {
-        fromDate = null;
-        toDate = null;
+        viewModel.setFromDate(null);
+        viewModel.setToDate(null);
+        viewModel.setFromDateDisplay(null);
+        viewModel.setToDateDisplay(null);
         btnFromDate.setText("");
         btnToDate.setText("");
         btnFromDate.setHint("Start date");
         btnToDate.setHint("End date");
-        // Refresh if already searched
-        if (searchUserId != null || !rides.isEmpty()) {
-            currentPage = 0;
-            hasMorePages = true;
-            rides.clear();
-            adapter.notifyDataSetChanged();
-            loadRides();
-        }
+        viewModel.resetAndLoad();
     }
+
+    // ========================== Spinners ==========================
 
     private void setupSpinners() {
         // Status spinner
         ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(requireContext(),
-                R.layout.spinner_item_dark, STATUS_OPTIONS);
+                R.layout.spinner_item_dark, AdminRideHistoryViewModel.STATUS_OPTIONS);
         statusAdapter.setDropDownViewResource(R.layout.spinner_dropdown_dark);
         spinnerStatus.setAdapter(statusAdapter);
         spinnerStatus.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                statusFilter = position == 0 ? null : STATUS_OPTIONS[position];
-                // Don't auto-search on initial spinner setup
-                if (searchUserId != null || !rides.isEmpty()) {
-                    currentPage = 0;
-                    hasMorePages = true;
-                    rides.clear();
-                    adapter.notifyDataSetChanged();
-                    loadRides();
-                }
+                if (suppressSpinnerCallbacks) return;
+                viewModel.setStatusSpinnerPosition(position);
+                viewModel.setStatusFilter(position == 0 ? null : AdminRideHistoryViewModel.STATUS_OPTIONS[position]);
+                viewModel.resetAndLoad();
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
 
         // Sort spinner
         ArrayAdapter<String> sortAdapter = new ArrayAdapter<>(requireContext(),
-                R.layout.spinner_item_dark, SORT_OPTIONS);
+                R.layout.spinner_item_dark, AdminRideHistoryViewModel.SORT_OPTIONS);
         sortAdapter.setDropDownViewResource(R.layout.spinner_dropdown_dark);
         spinnerSort.setAdapter(sortAdapter);
         spinnerSort.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                sortField = SORT_FIELDS[position];
-                if (searchUserId != null || !rides.isEmpty()) {
-                    currentPage = 0;
-                    hasMorePages = true;
-                    rides.clear();
-                    adapter.notifyDataSetChanged();
-                    loadRides();
-                }
+                if (suppressSpinnerCallbacks) return;
+                viewModel.setSortSpinnerPosition(position);
+                viewModel.setSortField(AdminRideHistoryViewModel.SORT_FIELDS[position]);
+                viewModel.resetAndLoad();
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
+
+    // ========================== Sort Direction ==========================
 
     private void setupSortDirection() {
-        updateSortDirectionUI();
-        btnSortDirection.setOnClickListener(v -> {
-            sortAsc = !sortAsc;
-            updateSortDirectionUI();
-            if (searchUserId != null || !rides.isEmpty()) {
-                currentPage = 0;
-                hasMorePages = true;
-                rides.clear();
-                adapter.notifyDataSetChanged();
-                loadRides();
-            }
-        });
+        updateSortDirectionUI(viewModel.isSortAsc());
+        btnSortDirection.setOnClickListener(v -> viewModel.toggleSortDirection());
     }
 
-    private void updateSortDirectionUI() {
-        btnSortDirection.setText(sortAsc ? "↑ ASC" : "↓ DESC");
+    private void updateSortDirectionUI(boolean asc) {
+        btnSortDirection.setText(asc ? "↑ ASC" : "↓ DESC");
     }
+
+    // ========================== Load More ==========================
 
     private void setupLoadMore() {
-        btnLoadMore.setOnClickListener(v -> {
-            currentPage++;
-            loadRides();
-        });
+        btnLoadMore.setOnClickListener(v -> viewModel.loadNextPage());
     }
 
+    // ========================== ListView ==========================
+
     private void setupListView() {
-        adapter = new AdminRidesAdapter(rides);
+        adapter = new AdminRidesAdapter(adapterRides);
         ridesListView.setAdapter(adapter);
         ridesListView.setOnItemClickListener((parent, view, position, id) -> {
-            if (position < rides.size()) {
-                RideResponse ride = rides.get(position);
+            if (position < adapterRides.size()) {
+                RideResponse ride = adapterRides.get(position);
                 Bundle args = new Bundle();
                 args.putLong("rideId", ride.getId());
                 Navigation.findNavController(requireView())
@@ -379,145 +415,106 @@ public class AdminRideHistoryFragment extends Fragment {
         });
     }
 
-    private void loadRides() {
-        if (isLoading) return;
-        isLoading = true;
-        showLoading(true);
+    // ========================== Observe ViewModel ==========================
 
-        String token = "Bearer " + preferencesManager.getToken();
-        Long driverId = "driver".equals(searchType) ? searchUserId : null;
-        Long passengerId = "passenger".equals(searchType) ? searchUserId : null;
-        String sortParam = sortField + "," + (sortAsc ? "asc" : "desc");
-
-        ClientUtils.rideService.getRidesHistory(
-                driverId,
-                passengerId,
-                statusFilter,
-                fromDate,
-                toDate,
-                currentPage,
-                PAGE_SIZE,
-                sortParam,
-                token
-        ).enqueue(new Callback<PageResponse<RideResponse>>() {
-            @Override
-            public void onResponse(Call<PageResponse<RideResponse>> call,
-                                   Response<PageResponse<RideResponse>> response) {
-                isLoading = false;
-                showLoading(false);
-
-                if (response.isSuccessful() && response.body() != null) {
-                    PageResponse<RideResponse> page = response.body();
-                    List<RideResponse> content = page.getContent();
-
-                    if (content != null) {
-                        if (currentPage == 0) {
-                            rides.clear();
-                        }
-                        rides.addAll(content);
-                        adapter.notifyDataSetChanged();
-                        ListViewHelper.setListViewHeightBasedOnChildren(ridesListView);
-
-                        hasMorePages = page.getNumber() != null && page.getTotalPages() != null
-                                && page.getNumber() < page.getTotalPages() - 1;
-                        btnLoadMore.setVisibility(hasMorePages ? View.VISIBLE : View.GONE);
-
-                        // Update ride count
-                        int total = page.getTotalElements() != null ? page.getTotalElements() : rides.size();
-                        tvRideCount.setText(total + " rides found");
-
-                        // Update user info banner
-                        if (searchUserId != null && !rides.isEmpty()) {
-                            updateUserInfoFromRides(driverId, passengerId);
-                        } else if (searchUserId == null) {
-                            showAllRidesBanner();
-                        }
-                    }
-
-                    // Show empty state
-                    tvEmpty.setVisibility(rides.isEmpty() ? View.VISIBLE : View.GONE);
-                    if (rides.isEmpty()) {
-                        tvEmpty.setText(searchUserId == null
-                                ? "No rides found"
-                                : "No rides found for this user");
-                    }
-                } else {
-                    Log.e(TAG, "Failed to load rides: " + response.code());
-                    if (getContext() != null) {
-                        Toast.makeText(getContext(), "Failed to load rides (Error " + response.code() + ")", Toast.LENGTH_SHORT).show();
-                    }
-                    tvEmpty.setVisibility(rides.isEmpty() ? View.VISIBLE : View.GONE);
-                    tvEmpty.setText("Failed to load rides");
-                }
+    private void observeViewModel() {
+        // Rides list
+        viewModel.getRides().observe(getViewLifecycleOwner(), rides -> {
+            adapterRides.clear();
+            if (rides != null) {
+                adapterRides.addAll(rides);
             }
+            adapter.notifyDataSetChanged();
+            ListViewHelper.setListViewHeightBasedOnChildren(ridesListView);
+        });
 
-            @Override
-            public void onFailure(Call<PageResponse<RideResponse>> call, Throwable t) {
-                isLoading = false;
-                showLoading(false);
-                Log.e(TAG, "Network error loading rides", t);
-                if (getContext() != null) {
-                    Toast.makeText(getContext(), "Network error", Toast.LENGTH_SHORT).show();
-                }
-                tvEmpty.setVisibility(rides.isEmpty() ? View.VISIBLE : View.GONE);
-                tvEmpty.setText("Network error. Please try again.");
+        // Loading state
+        viewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
+            progressBar.setVisibility(Boolean.TRUE.equals(loading) ? View.VISIBLE : View.GONE);
+        });
+
+        // More pages -> show/hide Load More button
+        viewModel.getMorePages().observe(getViewLifecycleOwner(), more -> {
+            btnLoadMore.setVisibility(Boolean.TRUE.equals(more) ? View.VISIBLE : View.GONE);
+        });
+
+        // Total elements -> ride count badge
+        viewModel.getTotalElements().observe(getViewLifecycleOwner(), total -> {
+            if (total != null) {
+                tvRideCount.setText(total + " rides found");
             }
+        });
+
+        // Error messages -> Toast
+        viewModel.getErrorMessage().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && getContext() != null) {
+                Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Empty state text
+        viewModel.getEmptyText().observe(getViewLifecycleOwner(), text -> {
+            if (text != null) {
+                tvEmpty.setVisibility(View.VISIBLE);
+                tvEmpty.setText(text);
+            } else {
+                tvEmpty.setVisibility(View.GONE);
+            }
+        });
+
+        // Sort direction changed (from shake or manual toggle)
+        viewModel.getSortDirectionChanged().observe(getViewLifecycleOwner(), asc -> {
+            if (asc != null) {
+                updateSortDirectionUI(asc);
+            }
+        });
+
+        // Banner name and email
+        viewModel.getBannerName().observe(getViewLifecycleOwner(), name -> {
+            tvUserName.setText(name != null ? name : "All Rides");
+            userInfoBanner.setVisibility(View.VISIBLE);
+        });
+        viewModel.getBannerEmail().observe(getViewLifecycleOwner(), email -> {
+            tvUserEmail.setText(email != null ? email : "");
         });
     }
 
-    private void updateUserInfoFromRides(Long driverId, Long passengerId) {
-        if (rides.isEmpty()) {
-            userInfoBanner.setVisibility(View.GONE);
-            return;
+    // ========================== Restore State After Config Change ==========================
+
+    /**
+     * Restores all UI widgets from ViewModel state after orientation change.
+     */
+    private void restoreStateFromViewModel() {
+        // Suppress spinner callbacks during restoration
+        suppressSpinnerCallbacks = true;
+
+        // Search type toggle
+        updateSearchTypeUI();
+        etUserId.setHint("driver".equals(viewModel.getSearchType())
+                ? "Enter Driver ID" : "Enter Passenger ID");
+
+        // User ID
+        if (viewModel.getSearchUserId() != null) {
+            etUserId.setText(String.valueOf(viewModel.getSearchUserId()));
         }
 
-        RideResponse firstRide = rides.get(0);
-        String name = "Unknown";
-        String email = "";
-
-        if (driverId != null && firstRide.getDriver() != null) {
-            RideResponse.DriverInfo driver = firstRide.getDriver();
-            name = (driver.getName() != null ? driver.getName() : "") + " " +
-                    (driver.getSurname() != null ? driver.getSurname() : "");
-            email = driver.getEmail() != null ? driver.getEmail() : "";
-        } else if (passengerId != null && firstRide.getPassengers() != null) {
-            for (RideResponse.PassengerInfo p : firstRide.getPassengers()) {
-                if (passengerId.equals(p.getId())) {
-                    name = p.getFullName();
-                    email = p.getEmail() != null ? p.getEmail() : "";
-                    break;
-                }
-            }
+        // Date displays
+        if (viewModel.getFromDateDisplay() != null) {
+            btnFromDate.setText(viewModel.getFromDateDisplay());
+        }
+        if (viewModel.getToDateDisplay() != null) {
+            btnToDate.setText(viewModel.getToDateDisplay());
         }
 
-        tvUserName.setText(name.trim());
-        tvUserEmail.setText(email);
-        userInfoBanner.setVisibility(View.VISIBLE);
-    }
+        // Spinner positions
+        spinnerStatus.setSelection(viewModel.getStatusSpinnerPosition());
+        spinnerSort.setSelection(viewModel.getSortSpinnerPosition());
 
-    private void showLoading(boolean show) {
-        if (progressBar != null) {
-            progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
-        }
-    }
+        // Sort direction
+        updateSortDirectionUI(viewModel.isSortAsc());
 
-    private void showAllRidesBanner() {
-        tvUserName.setText("All Rides");
-        tvUserEmail.setText("Showing all ride history");
-        userInfoBanner.setVisibility(View.VISIBLE);
-    }
-
-    private String formatDateForApi(Date date, boolean endOfDay) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(date);
-        if (endOfDay) {
-            cal.set(Calendar.HOUR_OF_DAY, 23);
-            cal.set(Calendar.MINUTE, 59);
-            cal.set(Calendar.SECOND, 59);
-        }
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return sdf.format(cal.getTime());
+        // Re-enable spinner callbacks after a short delay
+        spinnerStatus.post(() -> suppressSpinnerCallbacks = false);
     }
 
     @Override
@@ -608,28 +605,28 @@ public class AdminRideHistoryFragment extends Fragment {
             // Date
             Date startDate = parseDate(ride.getStartTime());
             if (startDate == null) startDate = parseDate(ride.getScheduledTime());
-            holder.tvDate.setText(startDate != null ? dateFormat.format(startDate) : "—");
+            holder.tvDate.setText(startDate != null ? dateFormat.format(startDate) : "\u2014");
 
             // Route
             if (ride.getEffectiveStartLocation() != null) {
                 String addr = ride.getEffectiveStartLocation().getAddress();
-                holder.tvDeparture.setText(addr != null ? addr : "—");
+                holder.tvDeparture.setText(addr != null ? addr : "\u2014");
             } else {
-                holder.tvDeparture.setText("—");
+                holder.tvDeparture.setText("\u2014");
             }
             if (ride.getEffectiveEndLocation() != null) {
                 String addr = ride.getEffectiveEndLocation().getAddress();
-                holder.tvDestination.setText(addr != null ? addr : "—");
+                holder.tvDestination.setText(addr != null ? addr : "\u2014");
             } else {
-                holder.tvDestination.setText("—");
+                holder.tvDestination.setText("\u2014");
             }
 
             // Times
             Date endDate = parseDate(ride.getEndTime());
             holder.tvStartTime.setText("Start: " +
-                    (startDate != null ? timeFormat.format(startDate) : "—"));
+                    (startDate != null ? timeFormat.format(startDate) : "\u2014"));
             holder.tvEndTime.setText("End: " +
-                    (endDate != null ? timeFormat.format(endDate) : "—"));
+                    (endDate != null ? timeFormat.format(endDate) : "\u2014"));
 
             // Cost
             double cost = ride.getEffectiveCost();
@@ -644,7 +641,7 @@ public class AdminRideHistoryFragment extends Fragment {
                 holder.tvCancelledBy.setVisibility(View.GONE);
             }
 
-            // Highlight panic rides with red border effect
+            // Highlight panic rides with red tint
             if (hasPanic) {
                 holder.cardContent.setBackgroundColor(
                         ContextCompat.getColor(requireContext(), R.color.red_500_10));
