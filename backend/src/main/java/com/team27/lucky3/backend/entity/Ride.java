@@ -104,6 +104,10 @@ public class Ride {
     @JoinColumn(name = "driver_id")
     private User driver;
 
+    @ManyToOne
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
+
     @ManyToMany
     @JoinTable(
             name = "ride_passengers",

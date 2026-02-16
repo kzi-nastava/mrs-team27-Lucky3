@@ -25,6 +25,7 @@ import com.example.mobile.models.RideResponse;
 import com.example.mobile.models.VehicleLocationResponse;
 import com.example.mobile.ui.maps.RideMapRenderer;
 import com.example.mobile.utils.SharedPreferencesManager;
+import com.example.mobile.utils.NotificationStore;
 import com.example.mobile.viewmodels.PassengerHomeViewModel;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -78,6 +79,7 @@ public class PassengerHomeFragment extends Fragment {
         setupFragmentResultListeners();
         observeViewModel();
         setupVehicleRefresh();
+        setupNotificationBell(view);
 
         // Check if we have prefilled data from favorite route
         checkForPrefilledData();
@@ -115,6 +117,32 @@ public class PassengerHomeFragment extends Fragment {
     private void setupMap() {
         mapRenderer = new RideMapRenderer(requireActivity(), binding.map);
         mapRenderer.initMap();
+    }
+
+    private void setupNotificationBell(View root) {
+        View btnNotifications = root.findViewById(R.id.btn_notifications);
+        if (btnNotifications != null) {
+            btnNotifications.setOnClickListener(v -> {
+                try {
+                    Navigation.findNavController(v).navigate(R.id.nav_notifications);
+                } catch (Exception e) {
+                    // Already on notifications or navigation error
+                }
+            });
+        }
+
+        android.widget.TextView tvBadge = root.findViewById(R.id.tv_notification_badge);
+        if (tvBadge != null) {
+            NotificationStore.getInstance().getUnreadCount().observe(
+                    getViewLifecycleOwner(), count -> {
+                        if (count != null && count > 0) {
+                            tvBadge.setText(count > 99 ? "99+" : String.valueOf(count));
+                            tvBadge.setVisibility(View.VISIBLE);
+                        } else {
+                            tvBadge.setVisibility(View.GONE);
+                        }
+                    });
+        }
     }
 
     private void setupListeners() {

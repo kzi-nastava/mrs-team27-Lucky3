@@ -136,14 +136,35 @@ public class NotificationPanelFragment extends Fragment {
 
     private void navigateToNotification(AppNotification notif) {
         try {
+            String role = new com.example.mobile.utils.SharedPreferencesManager(
+                    requireContext()).getUserRole();
+
             switch (notif.getType()) {
                 case RIDE_STATUS:
                 case RIDE_INVITE:
+                case RIDE_CREATED:
+                case DRIVER_ASSIGNED:
                     if (notif.getRideId() != null) {
                         Bundle args = new Bundle();
                         args.putLong("rideId", notif.getRideId());
                         Navigation.findNavController(requireView())
                                 .navigate(R.id.nav_active_ride, args);
+                    }
+                    break;
+
+                case RIDE_FINISHED:
+                case RIDE_CANCELLED:
+                    if (notif.getRideId() != null) {
+                        Bundle histArgs = new Bundle();
+                        histArgs.putLong("rideId", notif.getRideId());
+                        // Navigate to role-specific ride detail
+                        if ("DRIVER".equals(role)) {
+                            Navigation.findNavController(requireView())
+                                    .navigate(R.id.nav_ride_details, histArgs);
+                        } else {
+                            Navigation.findNavController(requireView())
+                                    .navigate(R.id.nav_passenger_ride_detail, histArgs);
+                        }
                     }
                     break;
 
