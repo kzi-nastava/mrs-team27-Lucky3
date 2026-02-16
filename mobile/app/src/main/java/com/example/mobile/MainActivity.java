@@ -552,6 +552,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        // Handle deep links when the app is already running
+        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+        navController.handleDeepLink(intent);
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         stopActiveRidePolling();

@@ -3,6 +3,7 @@ package com.example.mobile.utils;
 import com.example.mobile.BuildConfig;
 import com.example.mobile.services.DriverService;
 import com.example.mobile.services.PanicService;
+import com.example.mobile.services.ReviewService;
 import com.example.mobile.services.RideService;
 import com.example.mobile.services.UserService;
 import com.example.mobile.services.VehicleService;
@@ -121,6 +122,11 @@ public class ClientUtils {
      * PanicService instance (admin-only panic alerts).
      */
     public static final PanicService panicService = retrofit.create(PanicService.class);
+
+    /**
+     * ReviewService instance (ride reviews).
+     */
+    public static final ReviewService reviewService = retrofit.create(ReviewService.class);
 
     /**
      * Returns the base Retrofit instance.

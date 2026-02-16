@@ -275,6 +275,10 @@
             android:name="rideId"
             app:argType="long"
             android:defaultValue="-1L" />
+
+        <action
+            android:id="@+id/action_passenger_ride_detail_to_review"
+            app:destination="@id/nav_review" />
     </fragment>
 
     <fragment
@@ -300,4 +304,24 @@
         android:name="com.example.mobile.ui.support.SupportFragment"
         android:label="Support"
         tools:layout="@layout/fragment_support" />
+
+    <fragment
+        android:id="@+id/nav_review"
+        android:name="com.example.mobile.ui.passenger.ReviewFragment"
+        android:label="Review"
+        tools:layout="@layout/fragment_review">
+
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+
+        <argument
+            android:name="reviewToken"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <deep-link
+            app:uri="lucky3://review?token={reviewToken}" />
+    </fragment>
 </navigation>

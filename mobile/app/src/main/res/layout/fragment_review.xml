@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
+
+        <!-- ==================== LOADING STATE ==================== -->
+        <LinearLayout
+            android:id="@+id/loading_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <ProgressBar
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:indeterminateTint="@color/yellow_500"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Validating your review link..."
+                android:textColor="@color/gray_400"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- ==================== TOKEN EXPIRED STATE ==================== -->
+        <LinearLayout
+            android:id="@+id/expired_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_card"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <FrameLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/bg_review_error_circle"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="⚠"
+                    android:textSize="28sp" />
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Link Expired"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sorry, this review link has expired. Review links are valid for 3 days after your ride ends."
+                android:textColor="@color/gray_400"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:layout_marginBottom="24dp" />
+
+            <TextView
+                android:id="@+id/btn_expired_go_home"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Go to Home"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:background="@drawable/bg_auth_btn" />
+        </LinearLayout>
+
+        <!-- ==================== TOKEN INVALID STATE ==================== -->
+        <LinearLayout
+            android:id="@+id/invalid_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_card"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <FrameLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/bg_review_error_circle"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="✕"
+                    android:textColor="@color/red_500"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Invalid Link"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="This review link is invalid. Please check your email for the correct link."
+                android:textColor="@color/gray_400"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:layout_marginBottom="24dp" />
+
+            <TextView
+                android:id="@+id/btn_invalid_go_home"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Go to Home"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:background="@drawable/bg_auth_btn" />
+        </LinearLayout>
+
+        <!-- ==================== SUCCESS STATE ==================== -->
+        <LinearLayout
+            android:id="@+id/success_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_card"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <FrameLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/bg_review_success_circle"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="✓"
+                    android:textColor="@color/green_500"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thank You!"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Your review has been submitted successfully. We appreciate your feedback!"
+                android:textColor="@color/gray_400"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:layout_marginBottom="24dp" />
+
+            <TextView
+                android:id="@+id/btn_success_done"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Done"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:background="@drawable/bg_auth_btn" />
+        </LinearLayout>
+
+        <!-- ==================== REVIEW FORM ==================== -->
+        <LinearLayout
+            android:id="@+id/review_form_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="24dp"
+            android:visibility="gone">
+
+            <!-- Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginBottom="24dp">
+
+                <FrameLayout
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_review_icon_circle"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="★"
+                        android:textColor="@color/yellow_500"
+                        android:textSize="28sp" />
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Rate Your Ride"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="How was your experience?"
+                    android:textColor="@color/gray_400"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Error Message -->
+            <TextView
+                android:id="@+id/tv_error_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_review_error_banner"
+                android:padding="12dp"
+                android:textColor="@color/red_500"
+                android:textSize="13sp"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Driver Rating -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rate the Driver"
+                android:textColor="@color/gray_400"
+                android:textSize="13sp"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout
+                android:id="@+id/driver_stars_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="4dp">
+
+                <!-- Stars are added programmatically -->
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tv_driver_rating_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tap to rate"
+                android:textColor="@color/gray_500"
+                android:textSize="11sp"
+                android:textAlignment="center"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Vehicle Rating -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rate the Vehicle"
+                android:textColor="@color/gray_400"
+                android:textSize="13sp"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout
+                android:id="@+id/vehicle_stars_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="4dp">
+
+                <!-- Stars are added programmatically -->
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tv_vehicle_rating_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tap to rate"
+                android:textColor="@color/gray_500"
+                android:textSize="11sp"
+                android:textAlignment="center"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Comment -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Leave a Comment (Optional)"
+                android:textColor="@color/gray_400"
+                android:textSize="13sp"
+                android:layout_marginBottom="12dp" />
+
+            <EditText
+                android:id="@+id/et_comment"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minLines="4"
+                android:maxLines="6"
+                android:maxLength="500"
+                android:hint="Share your experience..."
+                android:textColor="@color/white"
+                android:textColorHint="@color/gray_600"
+                android:textSize="14sp"
+                android:background="@drawable/bg_card"
+                android:padding="16dp"
+                android:gravity="top|start"
+                android:inputType="textMultiLine"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tv_comment_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="0/500"
+                android:textColor="@color/gray_500"
+                android:textSize="11sp"
+                android:textAlignment="viewEnd"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Submit Button -->
+            <TextView
+                android:id="@+id/btn_submit_review"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Submit Review"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:gravity="center"
+                android:background="@drawable/bg_auth_btn"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Validation hint -->
+            <TextView
+                android:id="@+id/tv_validation_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Please rate both the driver and vehicle to submit"
+                android:textColor="@color/gray_500"
+                android:textSize="11sp"
+                android:textAlignment="center" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
