@@ -38,6 +38,9 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
   // Driver ratings cache: driverId -> averageRating
   driverRatings: Record<number, number> = {};
 
+  // Driver online hours cache: driverId -> onlineHoursToday string
+  driverOnlineHours: Record<number, string> = {};
+
   // Filters
   searchQuery = '';
   statusFilter: 'all' | 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'SCHEDULED' = 'all';
@@ -216,6 +219,7 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
       this.driverService.getStats(driverId).subscribe({
         next: (stats) => {
           this.driverRatings[driverId] = stats.averageRating || 0;
+          this.driverOnlineHours[driverId] = stats.onlineHoursToday || '—';
           this.cdr.detectChanges();
         },
         error: () => { /* silently ignore */ }

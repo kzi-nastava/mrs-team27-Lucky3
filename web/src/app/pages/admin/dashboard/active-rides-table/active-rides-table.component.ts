@@ -16,6 +16,7 @@ export class ActiveRidesTableComponent {
   @Input() sortField: ActiveRideSortField = 'status';
   @Input() sortDirection: 'asc' | 'desc' = 'desc';
   @Input() driverRatings: Record<number, number> = {};
+  @Input() driverOnlineHours: Record<number, string> = {};
   
   @Output() sortChange = new EventEmitter<ActiveRideSortField>();
 
@@ -134,9 +135,10 @@ export class ActiveRidesTableComponent {
     return '—';
   }
 
-  // For time active - would need from driver stats
   getTimeActive(ride: RideResponse): string {
-    // This would come from driver activity sessions - for now show placeholder
+    if (ride.driver?.id && this.driverOnlineHours[ride.driver.id]) {
+      return this.driverOnlineHours[ride.driver.id];
+    }
     return '—';
   }
 }
