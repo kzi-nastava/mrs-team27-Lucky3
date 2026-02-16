@@ -888,27 +888,20 @@ public class RideServiceImpl implements RideService {
         ride.setEndTime(LocalDateTime.now());
         ride.setStatus(RideStatus.FINISHED);
 
-        // Pickup => All Stops => New End
-        double totalDistance = 0.0;
-        Location currentPos = ride.getStartLocation();
+        // Use the already-tracked distance from RideCostTrackingService
+        // (which accumulates actual vehicle movement every 5s during the ride)
+        double trackedDistance = ride.getDistanceTraveled() != null ? ride.getDistanceTraveled() : 0.0;
+        ride.setDistance(trackedDistance);
 
-        if (ride.getStops() != null) {
-            for (Location stop : ride.getStops()) {
-                totalDistance += calculateHaversineDistance(currentPos, stop);
-                currentPos = stop;
-            }
-        }
-
-        totalDistance += calculateHaversineDistance(currentPos, newEndLocation);
-        ride.setDistance(totalDistance);
-
+        // Always recalculate totalCost from actual distance traveled
+        // (totalCost may still hold the original estimated cost from ride creation)
         double basePrice = ride.getRateBaseFare() != null
                 ? ride.getRateBaseFare()
                 : vehiclePriceService.getBaseFare(ride.getRequestedVehicleType());
         double perKm = ride.getRatePricePerKm() != null
                 ? ride.getRatePricePerKm()
                 : vehiclePriceService.getPricePerKm(ride.getRequestedVehicleType());
-        double newPrice = basePrice + (totalDistance * perKm);
+        double newPrice = basePrice + (trackedDistance * perKm);
         ride.setTotalCost(Math.round(newPrice * 100.0) / 100.0);
 
         ride.setPassengersExited(true);
