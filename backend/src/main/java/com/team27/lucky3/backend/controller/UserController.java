@@ -1,6 +1,7 @@
 package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.request.ChangePasswordRequest;
+import com.team27.lucky3.backend.dto.request.FcmTokenRequest;
 import com.team27.lucky3.backend.dto.request.VehicleInformation;
 import com.team27.lucky3.backend.dto.response.FavoriteRouteResponse;
 import com.team27.lucky3.backend.dto.response.UserProfile;
@@ -153,5 +154,20 @@ public class UserController {
     public ResponseEntity<List<String>> getNotes(@PathVariable @Min(1) Long id) {
         if (id == 404) throw new ResourceNotFoundException("User not found");
         return ResponseEntity.ok(List.of("User was rude.", "Cancelled too many rides."));
+    }
+
+    /**
+     * Register or update the user's FCM device token for push notifications.
+     * Called by the mobile client after login and whenever the FCM token refreshes.
+     *
+     * PUT /api/users/{id}/fcm-token
+     */
+    @PutMapping("/{id}/fcm-token")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> updateFcmToken(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody FcmTokenRequest request) {
+        userService.updateFcmToken(id, request.getToken());
+        return ResponseEntity.noContent().build();
     }
 }

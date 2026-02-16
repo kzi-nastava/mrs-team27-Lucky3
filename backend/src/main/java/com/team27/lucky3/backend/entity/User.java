@@ -59,6 +59,14 @@ public class User implements UserDetails {
     @Column(name = "last_password_reset_date")
     private Timestamp lastPasswordResetDate;
 
+    /**
+     * FCM device registration token for push notifications.
+     * Updated on login and whenever the token refreshes (via PUT /api/users/{id}/fcm-token).
+     * Nullable — null means push notifications are not available for this user.
+     */
+    @Column(name = "fcm_token", length = 512)
+    private String fcmToken;
+
     // UserDetails Implementation
     @JsonIgnore
     @Override
