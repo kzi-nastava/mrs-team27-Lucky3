@@ -48,7 +48,7 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
 
   // Sorting
   sortField: ActiveRideSortField = 'status';
-  sortDirection: 'asc' | 'desc' = 'desc';
+  sortDirection: 'asc' | 'desc' = 'asc';
 
   // Pagination
   currentPage = 0;
@@ -180,9 +180,7 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
         this.rides = page.content || [];
         this.totalElements = page.totalElements || 0;
         this.totalPages = page.totalPages || 0;
-        if (this.sortField === 'status') {
-          this.sortRidesByStatus();
-        }
+        this.applyClientSideSort();
         this.isLoading = false;
         this.fetchDriverRatings();
         this.cdr.detectChanges();
@@ -196,19 +194,37 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
   }
 
   private buildSortString(): string {
-    // Map frontend field names to backend entity field names
-    const fieldMap: Record<ActiveRideSortField, string> = {
+    // Only send backend-sortable fields; client-side sorted fields use a neutral backend sort
+    const backendSortable: Record<string, string> = {
       'driver': 'driver.name',
-      'vehicle': 'model',
-      'status': 'status',
-      'passengerCount': 'status', // Can't sort by collection size on backend
-      'rating': 'status', // Would need driver rating in ride entity
       'timeActive': 'startTime',
-      'estimatedTime': 'estimatedTimeInMinutes'
     };
-    
-    const backendField = fieldMap[this.sortField] || 'status';
-    return `${backendField},${this.sortDirection}`;
+
+    const backendField = backendSortable[this.sortField];
+    if (backendField) {
+      return `${backendField},${this.sortDirection}`;
+    }
+    // For client-side sorted fields (status, rating, passengerCount), use a neutral backend sort
+    return 'id,desc';
+  }
+
+  /** Apply client-side sorting for fields that the backend can't sort correctly */
+  private applyClientSideSort(): void {
+    const field = this.sortField;
+    const dir = this.sortDirection === 'asc' ? 1 : -1;
+
+    if (field === 'status') {
+      this.rides.sort((a, b) => dir * (this.statusSortOrder(a.status) - this.statusSortOrder(b.status)));
+    } else if (field === 'passengerCount') {
+      this.rides.sort((a, b) => dir * ((a.passengers?.length || 0) - (b.passengers?.length || 0)));
+    } else if (field === 'rating') {
+      this.rides.sort((a, b) => {
+        const rA = (a.driver?.id ? this.driverRatings[a.driver.id] : undefined) ?? -1;
+        const rB = (b.driver?.id ? this.driverRatings[b.driver.id] : undefined) ?? -1;
+        return dir * (rA - rB);
+      });
+    }
+    // driver and timeActive are already sorted by backend
   }
 
   private fetchDriverRatings(): void {
@@ -223,6 +239,7 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
         next: (stats) => {
           this.driverRatings[driverId] = stats.averageRating || 0;
           this.driverOnlineHours[driverId] = stats.onlineHoursToday || '—';
+          this.resortByRatingIfNeeded();
           this.cdr.detectChanges();
         },
         error: () => { /* silently ignore */ }
@@ -252,7 +269,8 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
       this.sortField = field;
-      this.sortDirection = 'desc';
+      // Default direction: status asc (IN_PROGRESS first), others desc
+      this.sortDirection = field === 'status' ? 'asc' : 'desc';
     }
     this.loadRides();
   }
@@ -315,6 +333,14 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
       const cmp = this.statusSortOrder(a.status) - this.statusSortOrder(b.status);
       return this.sortDirection === 'asc' ? cmp : -cmp;
     });
+  }
+
+  /** Re-sort rides by rating after ratings are fetched */
+  private resortByRatingIfNeeded(): void {
+    if (this.sortField === 'rating') {
+      this.applyClientSideSort();
+      this.cdr.detectChanges();
+    }
   }
 
   refresh(): void {

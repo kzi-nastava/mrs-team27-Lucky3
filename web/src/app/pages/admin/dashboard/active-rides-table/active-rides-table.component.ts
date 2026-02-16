@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { RideResponse } from '../../../../infrastructure/rest/model/ride-response.model';
 
-export type ActiveRideSortField = 'driver' | 'vehicle' | 'status' | 'passengerCount' | 'rating' | 'timeActive' | 'estimatedTime';
+export type ActiveRideSortField = 'driver' | 'vehicle' | 'status' | 'passengerCount' | 'rating' | 'timeActive';
 
 @Component({
   selector: 'app-active-rides-table',
