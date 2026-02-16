@@ -392,7 +392,7 @@ public class DataInitializer implements CommandLineRunner {
         ridePanicHistory.setRatePricePerKm(120.0);
         rideRepository.save(ridePanicHistory);
 
-        // Ride 10: FINISHED (yesterday, 6 hours ago) — NO REVIEWS (reserved for E2E testing)
+        // Ride 10: FINISHED (~6 hours ago) — NO REVIEWS (reserved for E2E testing)
         Ride rideE2ETest = new Ride();
         rideE2ETest.setDriver(driver);
         rideE2ETest.setPassengers(Collections.singleton(passenger3));

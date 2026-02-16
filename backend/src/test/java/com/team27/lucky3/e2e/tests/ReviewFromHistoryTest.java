@@ -5,18 +5,11 @@ import com.team27.lucky3.e2e.pages.PassengerRideHistoryPage;
 import com.team27.lucky3.e2e.pages.ReviewPage;
 import com.team27.lucky3.e2e.pages.SidebarComponent;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Ride 10 is reserved for E2E testing — it belongs to passenger3 (ID 5), has no reviews,
  * and ended ~6 hours ago (well within the 3-day review window).
  */
+@Tag("e2e")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Review via Ride History — Authenticated Flow")
 public class ReviewFromHistoryTest extends BaseTest {
@@ -41,60 +35,9 @@ public class ReviewFromHistoryTest extends BaseTest {
 
     @BeforeAll
     static void setupClass() throws Exception {
-        Map<String, String> env = loadEnvFile();
+        Map<String, String> env = E2ETestUtils.loadEnvFile("DB_URL", "DB_USERNAME", "DB_PASSWORD");
         // Clean up any leftover reviews from previous runs so tests are repeatable.
-        cleanupReviewsForRide(env, E2E_RIDE_ID);
-    }
-
-    /**
-     * Reads the .env file to get DB credentials.
-     */
-    private static Map<String, String> loadEnvFile() throws IOException {
-        Map<String, String> env = new HashMap<>();
-        Path envFile = Paths.get("").toAbsolutePath().resolve(".env");
-        if (!Files.exists(envFile)) {
-            envFile = Paths.get("").toAbsolutePath().getParent().resolve("backend").resolve(".env");
-        }
-        if (Files.exists(envFile)) {
-            for (String line : Files.readAllLines(envFile)) {
-                String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
-                int eq = trimmed.indexOf('=');
-                if (eq > 0) {
-                    env.put(trimmed.substring(0, eq).trim(), trimmed.substring(eq + 1).trim());
-                }
-            }
-        }
-        for (String key : new String[]{"DB_URL", "DB_USERNAME", "DB_PASSWORD"}) {
-            if (!env.containsKey(key) || env.get(key).isBlank()) {
-                String sysVal = System.getenv(key);
-                if (sysVal != null && !sysVal.isBlank()) {
-                    env.put(key, sysVal);
-                }
-            }
-        }
-        return env;
-    }
-
-    /**
-     * Removes reviews for a specific ride directly from the DB via JDBC.
-     */
-    private static void cleanupReviewsForRide(Map<String, String> env, long rideId) throws Exception {
-        String dbUrl = env.get("DB_URL");
-        String dbUser = env.get("DB_USERNAME");
-        String dbPass = env.get("DB_PASSWORD");
-        if (dbUrl == null || dbUser == null || dbPass == null) {
-            System.err.println("Database info is missing, skipping review cleanup.");
-            return;
-        }
-        try (Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPass);
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM review WHERE ride_id = ?")) {
-            ps.setLong(1, rideId);
-            int deleted = ps.executeUpdate();
-            if (deleted > 0) {
-                System.out.println("Deleted " + deleted + " old reviews for ride " + rideId);
-            }
-        }
+        E2ETestUtils.cleanupReviewsForRide(env, E2E_RIDE_ID);
     }
 
     /**
@@ -352,22 +295,26 @@ public class ReviewFromHistoryTest extends BaseTest {
 
     @Test
     @Order(11)
-    @DisplayName("Negative: Non-reviewable ride does not show 'Leave a Review' button")
+    @DisplayName("Negative: Non-reviewable ride (past 3-day window) does not show 'Leave a Review' button")
     void testNonReviewableRideHasNoReviewButton() {
+        // After Order(8), all of passenger3's finished rides are non-reviewable:
+        //   Ride 10 — already reviewed
+        //   Ride 9  — ended 5 days ago (past 3-day window)
+        //   Ride 13 — ended 10 days ago (past 3-day window)
         PassengerRideHistoryPage historyPage = loginAndGoToRideHistory();
 
-        // Filter to show cancelled rides — these should never be reviewable.
-        historyPage.clickStatusFilter("Cancelled");
+        historyPage.clickStatusFilter("Finished");
 
         int rideCount = historyPage.getRideCount();
         assertTrue(rideCount > 0,
-                "There should be at least one cancelled ride to test.");
+                "There should be at least one finished ride to test.");
 
-        historyPage.clickRideRow(0);
+        // Click the last (oldest) ride — well past the 3-day review window.
+        historyPage.clickRideRow(rideCount - 1);
         historyPage.waitForDetailPanel();
 
         assertFalse(historyPage.isLeaveReviewButtonVisible(),
-                "Cancelled rides should not have a 'Leave a Review' button.");
+                "Rides past the 3-day review window should not have a 'Leave a Review' button.");
     }
 
     @Test
@@ -418,7 +365,7 @@ public class ReviewFromHistoryTest extends BaseTest {
     @AfterAll
     static void cleanupAfterAll() throws Exception {
         // Clean up the review created during tests so re-runs start fresh.
-        Map<String, String> env = loadEnvFile();
-        cleanupReviewsForRide(env, E2E_RIDE_ID);
+        Map<String, String> env = E2ETestUtils.loadEnvFile("DB_URL", "DB_USERNAME", "DB_PASSWORD");
+        E2ETestUtils.cleanupReviewsForRide(env, E2E_RIDE_ID);
     }
 }

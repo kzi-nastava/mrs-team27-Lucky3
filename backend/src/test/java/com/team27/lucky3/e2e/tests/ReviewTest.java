@@ -5,21 +5,14 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.Key;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * These tests use direct URL access with review tokens and don't require any UI navigation or login flow.
  */
+@Tag("e2e")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Review via Token Link")
 public class ReviewTest extends BaseTest {
@@ -56,65 +50,13 @@ public class ReviewTest extends BaseTest {
 
     @BeforeAll
     static void setupClass() throws Exception {
-        Map<String, String> env = loadEnvFile();
+        Map<String, String> env = E2ETestUtils.loadEnvFile("JWT_SECRET", "DB_URL", "DB_USERNAME", "DB_PASSWORD");
         JWT_SECRET = env.get("JWT_SECRET");
         if (JWT_SECRET == null || JWT_SECRET.isBlank()) {
             throw new IllegalStateException("JWT_SECRET is missing from the env!");
         }
         // We clean up any existing reviews for ride 10 so the test is repeatable.
-        cleanupReviewsForRide(env, E2E_RIDE_ID);
-    }
-
-    /**
-     * Reads the .env file to get configuration like the secret and DB credentials.
-     */
-    private static Map<String, String> loadEnvFile() throws IOException {
-        Map<String, String> env = new HashMap<>();
-        Path envFile = Paths.get("").toAbsolutePath().resolve(".env");
-        if (!Files.exists(envFile)) {
-            envFile = Paths.get("").toAbsolutePath().getParent().resolve("backend").resolve(".env");
-        }
-        if (Files.exists(envFile)) {
-            for (String line : Files.readAllLines(envFile)) {
-                String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
-                int eq = trimmed.indexOf('=');
-                if (eq > 0) {
-                    env.put(trimmed.substring(0, eq).trim(), trimmed.substring(eq + 1).trim());
-                }
-            }
-        }
-        // Fall back to system environment variables if the file is missing or values are empty.
-        for (String key : new String[]{"JWT_SECRET", "DB_URL", "DB_USERNAME", "DB_PASSWORD"}) {
-            if (!env.containsKey(key) || env.get(key).isBlank()) {
-                String sysVal = System.getenv(key);
-                if (sysVal != null && !sysVal.isBlank()) {
-                    env.put(key, sysVal);
-                }
-            }
-        }
-        return env;
-    }
-
-    /**
-     * Removes reviews for a specific ride directly from the DB via JDBC.
-     */
-    private static void cleanupReviewsForRide(Map<String, String> env, long rideId) throws Exception {
-        String dbUrl = env.get("DB_URL");
-        String dbUser = env.get("DB_USERNAME");
-        String dbPass = env.get("DB_PASSWORD");
-        if (dbUrl == null || dbUser == null || dbPass == null) {
-            System.err.println("Database info is missing, skipping review cleanup.");
-            return;
-        }
-        try (Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPass);
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM review WHERE ride_id = ?")) {
-            ps.setLong(1, rideId);
-            int deleted = ps.executeUpdate();
-            if (deleted > 0) {
-                System.out.println("Deleted " + deleted + " old reviews for ride " + rideId);
-            }
-        }
+        E2ETestUtils.cleanupReviewsForRide(env, E2E_RIDE_ID);
     }
 
     /**
@@ -397,5 +339,12 @@ public class ReviewTest extends BaseTest {
         // We submitted too late, so the page should switch to the expired view.
         assertTrue(reviewPage.isTokenExpiredVisible());
         assertEquals("Link Expired", reviewPage.getPageHeadingText());
+    }
+
+    @AfterAll
+    static void cleanupAfterAll() throws Exception {
+        // Clean up the review created during tests so re-runs start fresh.
+        Map<String, String> env = E2ETestUtils.loadEnvFile("DB_URL", "DB_USERNAME", "DB_PASSWORD");
+        E2ETestUtils.cleanupReviewsForRide(env, E2E_RIDE_ID);
     }
 }

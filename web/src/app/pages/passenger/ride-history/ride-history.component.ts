@@ -21,6 +21,10 @@ export type PassengerRideSortField = 'startTime' | 'endTime' | 'distance' | 'dep
       background: transparent;
       border: none;
     }
+    .reviewable-row {
+      box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.5);
+      background-color: rgba(59, 130, 246, 0.05);
+    }
   `]
 })
 export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -410,6 +414,15 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Passenger-specific actions
+  isRideReviewable(ride: RideResponse): boolean {
+    if (!this.passengerId) return false;
+    if (ride.status !== 'FINISHED') return false;
+    if (!ride.endTime) return false;
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    if (Date.now() - new Date(ride.endTime).getTime() > threeDaysMs) return false;
+    return !ride.reviews?.some(rev => rev.passengerId === this.passengerId);
+  }
+
   canReviewSelectedRide(): boolean {
     if (!this.selectedRide || !this.passengerId) return false;
     if (this.selectedRide.status !== 'FINISHED') return false;

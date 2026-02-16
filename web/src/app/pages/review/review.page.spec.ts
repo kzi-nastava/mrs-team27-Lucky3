@@ -6,7 +6,6 @@ import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { of, throwError, Subject } from 'rxjs';
-import { ChangeDetectorRef } from '@angular/core';
 
 describe('ReviewPage', () => {
   let component: ReviewPage;
@@ -35,8 +34,8 @@ describe('ReviewPage', () => {
     createdAt: '2026-02-14T12:00:00'
   };
 
-  function createComponent(token: string | null = 'valid-test-token') {
-    TestBed.configureTestingModule({
+  async function createComponent(token: string | null = 'valid-test-token') {
+    await TestBed.configureTestingModule({
       imports: [ReviewPage, FormsModule],
       providers: [
         { provide: ReviewService, useValue: reviewServiceSpy },
@@ -59,7 +58,7 @@ describe('ReviewPage', () => {
 
   /** Click the Nth driver star (1-based) via DOM */
   function clickDriverStar(n: number): void {
-    const driverSection = fixture.debugElement.queryAll(By.css('.mb-6'))[0];
+    const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
     const starButtons = driverSection.queryAll(By.css('button'));
     starButtons[n - 1].nativeElement.click();
     fixture.detectChanges();
@@ -67,7 +66,7 @@ describe('ReviewPage', () => {
 
   /** Click the Nth vehicle star (1-based) via DOM */
   function clickVehicleStar(n: number): void {
-    const vehicleSection = fixture.debugElement.queryAll(By.css('.mb-6'))[1];
+    const vehicleSection = fixture.debugElement.query(By.css('[data-testid="vehicle-stars"]'));
     const starButtons = vehicleSection.queryAll(By.css('button'));
     starButtons[n - 1].nativeElement.click();
     fixture.detectChanges();
@@ -88,58 +87,58 @@ describe('ReviewPage', () => {
   // ═══════════════════════════════════════════════════════════════
 
   describe('Initialization', () => {
-    it('should create the component', () => {
-      createComponent();
+    it('should create the component', async () => {
+      await createComponent();
       fixture.detectChanges();
       expect(component).toBeTruthy();
     });
 
-    it('should call validateReviewToken on ngOnInit when token is present', () => {
-      createComponent('valid-test-token');
+    it('should call validateReviewToken on ngOnInit when token is present', async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
       expect(reviewServiceSpy.validateReviewToken).toHaveBeenCalledWith('valid-test-token');
     });
 
-    it('should set tokenData after successful validation', () => {
-      createComponent('valid-test-token');
+    it('should set tokenData after successful validation', async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
       expect(component.tokenData).toEqual(mockTokenData);
       expect(component.isLoading).toBeFalse();
     });
 
-    it('should set tokenInvalid when no token in query params', () => {
-      createComponent(null);
+    it('should set tokenInvalid when no token in query params', async () => {
+      await createComponent(null);
       fixture.detectChanges();
       expect(component.tokenInvalid).toBeTrue();
       expect(component.isLoading).toBeFalse();
       expect(reviewServiceSpy.validateReviewToken).not.toHaveBeenCalled();
     });
 
-    it('should set tokenExpired when validation returns 410', () => {
+    it('should set tokenExpired when validation returns 410', async () => {
       reviewServiceSpy.validateReviewToken.and.returnValue(
         throwError(() => ({ status: 410 }))
       );
-      createComponent('expired-token');
+      await createComponent('expired-token');
       fixture.detectChanges();
       expect(component.tokenExpired).toBeTrue();
       expect(component.isLoading).toBeFalse();
     });
 
-    it('should set tokenInvalid when validation returns non-410 error', () => {
+    it('should set tokenInvalid when validation returns non-410 error', async () => {
       reviewServiceSpy.validateReviewToken.and.returnValue(
         throwError(() => ({ status: 400 }))
       );
-      createComponent('bad-token');
+      await createComponent('bad-token');
       fixture.detectChanges();
       expect(component.tokenInvalid).toBeTrue();
       expect(component.isLoading).toBeFalse();
     });
 
-    it('should display loading spinner while isLoading is true', () => {
+    it('should display loading spinner while isLoading is true', async () => {
       // Use a Subject so the observable never completes immediately
       const subject = new Subject<ReviewTokenData>();
       reviewServiceSpy.validateReviewToken.and.returnValue(subject.asObservable());
-      createComponent('valid-test-token');
+      await createComponent('valid-test-token');
       fixture.detectChanges();
       // Component is still loading because the observable hasn't emitted
       expect(component.isLoading).toBeTrue();
@@ -147,18 +146,18 @@ describe('ReviewPage', () => {
       expect(loadingEl).toBeTruthy();
     });
 
-    it('should display "Invalid Link" when tokenInvalid is true', () => {
-      createComponent(null);
+    it('should display "Invalid Link" when tokenInvalid is true', async () => {
+      await createComponent(null);
       fixture.detectChanges();
       const heading = fixture.debugElement.query(By.css('h1'));
       expect(heading.nativeElement.textContent).toContain('Invalid Link');
     });
 
-    it('should display "Link Expired" when tokenExpired is true', () => {
+    it('should display "Link Expired" when tokenExpired is true', async () => {
       reviewServiceSpy.validateReviewToken.and.returnValue(
         throwError(() => ({ status: 410 }))
       );
-      createComponent('expired-token');
+      await createComponent('expired-token');
       fixture.detectChanges();
       const heading = fixture.debugElement.query(By.css('h1'));
       expect(heading.nativeElement.textContent).toContain('Link Expired');
@@ -170,8 +169,8 @@ describe('ReviewPage', () => {
   // ═══════════════════════════════════════════════════════════════
 
   describe('Rating Interaction', () => {
-    beforeEach(() => {
-      createComponent('valid-test-token');
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
     });
 
@@ -181,7 +180,7 @@ describe('ReviewPage', () => {
     });
 
     it('should set driverRating when a driver star button is clicked', () => {
-      const driverStarSection = fixture.debugElement.queryAll(By.css('.mb-6'))[0];
+      const driverStarSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
       const starButtons = driverStarSection.queryAll(By.css('button'));
       expect(starButtons.length).toBe(5);
 
@@ -191,8 +190,7 @@ describe('ReviewPage', () => {
     });
 
     it('should set vehicleRating when a vehicle star button is clicked', () => {
-      const vehicleSections = fixture.debugElement.queryAll(By.css('.mb-6'));
-      const vehicleStarSection = vehicleSections[1];
+      const vehicleStarSection = fixture.debugElement.query(By.css('[data-testid="vehicle-stars"]'));
       const starButtons = vehicleStarSection.queryAll(By.css('button'));
       expect(starButtons.length).toBe(5);
 
@@ -211,7 +209,7 @@ describe('ReviewPage', () => {
 
     it('should apply yellow color class to selected driver stars', () => {
       clickDriverStar(3);
-      const driverStarSection = fixture.debugElement.queryAll(By.css('.mb-6'))[0];
+      const driverStarSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
       const stars = driverStarSection.queryAll(By.css('svg'));
 
       // First 3 stars should be yellow, last 2 should be gray
@@ -244,8 +242,8 @@ describe('ReviewPage', () => {
   // ═══════════════════════════════════════════════════════════════
 
   describe('Validation - Submit Disabled', () => {
-    beforeEach(() => {
-      createComponent('valid-test-token');
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
     });
 
@@ -269,21 +267,17 @@ describe('ReviewPage', () => {
     it('should disable submit button when ratings are 0', () => {
       // Ratings default to 0 — no clicks needed
       fixture.detectChanges();
-      const submitBtn = fixture.debugElement.queryAll(By.css('button')).find(
-        btn => btn.nativeElement.textContent.includes('Submit Review')
-      );
+      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
       expect(submitBtn).toBeTruthy();
-      expect(submitBtn!.nativeElement.disabled).toBeTrue();
+      expect(submitBtn.nativeElement.disabled).toBeTrue();
     });
 
     it('should apply disabled styling (bg-gray-700) when canSubmit is false', () => {
       // Ratings default to 0 — no clicks needed
       fixture.detectChanges();
-      const submitBtn = fixture.debugElement.queryAll(By.css('button')).find(
-        btn => btn.nativeElement.textContent.includes('Submit Review')
-      );
-      expect(submitBtn!.nativeElement.classList.contains('bg-gray-700')).toBeTrue();
-      expect(submitBtn!.nativeElement.classList.contains('cursor-not-allowed')).toBeTrue();
+      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      expect(submitBtn.nativeElement.classList.contains('bg-gray-700')).toBeTrue();
+      expect(submitBtn.nativeElement.classList.contains('cursor-not-allowed')).toBeTrue();
     });
 
     it('should show validation message when submit is disabled', () => {
@@ -315,27 +309,23 @@ describe('ReviewPage', () => {
   // ═══════════════════════════════════════════════════════════════
 
   describe('Submission - Happy Path', () => {
-    beforeEach(() => {
-      createComponent('valid-test-token');
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
     });
 
     it('should enable submit button when both ratings are set', () => {
       clickDriverStar(4);
       clickVehicleStar(3);
-      const submitBtn = fixture.debugElement.queryAll(By.css('button')).find(
-        btn => btn.nativeElement.textContent.includes('Submit Review')
-      );
-      expect(submitBtn!.nativeElement.disabled).toBeFalse();
+      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      expect(submitBtn.nativeElement.disabled).toBeFalse();
     });
 
     it('should apply active styling (bg-yellow-500) when canSubmit is true', () => {
       clickDriverStar(4);
       clickVehicleStar(3);
-      const submitBtn = fixture.debugElement.queryAll(By.css('button')).find(
-        btn => btn.nativeElement.textContent.includes('Submit Review')
-      );
-      expect(submitBtn!.nativeElement.classList.contains('bg-yellow-500')).toBeTrue();
+      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      expect(submitBtn.nativeElement.classList.contains('bg-yellow-500')).toBeTrue();
     });
 
     it('should call submitReviewWithToken with correct arguments on submit', () => {
@@ -406,10 +396,8 @@ describe('ReviewPage', () => {
       component.comment = 'Excellent';
       fixture.detectChanges();
 
-      const submitBtn = fixture.debugElement.queryAll(By.css('button')).find(
-        btn => btn.nativeElement.textContent.includes('Submit Review')
-      );
-      submitBtn!.nativeElement.click();
+      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      submitBtn.nativeElement.click();
       fixture.detectChanges();
 
       expect(reviewServiceSpy.submitReviewWithToken).toHaveBeenCalledOnceWith(
@@ -428,8 +416,8 @@ describe('ReviewPage', () => {
   // ═══════════════════════════════════════════════════════════════
 
   describe('Submission - Error Handling', () => {
-    beforeEach(() => {
-      createComponent('valid-test-token');
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
       clickDriverStar(5);
       clickVehicleStar(4);
@@ -497,8 +485,8 @@ describe('ReviewPage', () => {
   // ═══════════════════════════════════════════════════════════════
 
   describe('Comment Textarea', () => {
-    beforeEach(() => {
-      createComponent('valid-test-token');
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
     });
 
@@ -533,8 +521,8 @@ describe('ReviewPage', () => {
   // ═══════════════════════════════════════════════════════════════
 
   describe('Navigation - goHome', () => {
-    beforeEach(() => {
-      createComponent('valid-test-token');
+    beforeEach(async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
     });
 
@@ -586,37 +574,29 @@ describe('ReviewPage', () => {
   // ═══════════════════════════════════════════════════════════════
 
   describe('Full Flow - DOM Interaction', () => {
-    it('should complete a full review flow: rate driver, rate vehicle, type comment, submit', fakeAsync(() => {
-      createComponent('valid-test-token');
+    it('should complete a full review flow: rate driver, rate vehicle, type comment, submit', fakeAsync(async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
 
       // Click 4th driver star
-      const driverSection = fixture.debugElement.queryAll(By.css('.mb-6'))[0];
-      const driverStars = driverSection.queryAll(By.css('button'));
-      driverStars[3].nativeElement.click();
-      fixture.detectChanges();
+      clickDriverStar(4);
       expect(component.driverRating).toBe(4);
 
       // Click 5th vehicle star
-      const vehicleSection = fixture.debugElement.queryAll(By.css('.mb-6'))[1];
-      const vehicleStars = vehicleSection.queryAll(By.css('button'));
-      vehicleStars[4].nativeElement.click();
-      fixture.detectChanges();
+      clickVehicleStar(5);
       expect(component.vehicleRating).toBe(5);
 
       // Type comment
-      const textarea = fixture.debugElement.query(By.css('textarea')).nativeElement;
+      const textarea = fixture.debugElement.query(By.css('[data-testid="comment-input"]')).nativeElement;
       textarea.value = 'Wonderful ride, very smooth!';
       textarea.dispatchEvent(new Event('input'));
       tick();
       fixture.detectChanges();
 
       // Click submit
-      const submitBtn = fixture.debugElement.queryAll(By.css('button')).find(
-        btn => btn.nativeElement.textContent.includes('Submit Review')
-      );
-      expect(submitBtn!.nativeElement.disabled).toBeFalse();
-      submitBtn!.nativeElement.click();
+      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      expect(submitBtn.nativeElement.disabled).toBeFalse();
+      submitBtn.nativeElement.click();
       fixture.detectChanges();
 
       // Verify service called with correct args
@@ -635,8 +615,8 @@ describe('ReviewPage', () => {
       expect(heading.nativeElement.textContent).toContain('Thank You!');
     }));
 
-    it('should show "Rate Your Ride" heading when form is displayed', () => {
-      createComponent('valid-test-token');
+    it('should show "Rate Your Ride" heading when form is displayed', async () => {
+      await createComponent('valid-test-token');
       fixture.detectChanges();
       const heading = fixture.debugElement.query(By.css('h1'));
       expect(heading.nativeElement.textContent).toContain('Rate Your Ride');
