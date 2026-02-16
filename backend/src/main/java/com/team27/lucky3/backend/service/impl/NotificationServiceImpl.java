@@ -484,6 +484,20 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.deleteAllForUser(userId);
     }
 
+    @Override
+    @Transactional
+    public void deleteNotification(Long notificationId, Long userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Notification not found with id: " + notificationId));
+
+        if (!notification.getRecipient().getId().equals(userId)) {
+            throw new IllegalStateException("Cannot delete another user's notification");
+        }
+
+        notificationRepository.delete(notification);
+    }
+
     // ════════════════════════════════════════════════════════════════════
     //  PRIVATE HELPERS
     // ════════════════════════════════════════════════════════════════════

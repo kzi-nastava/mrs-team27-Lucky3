@@ -113,4 +113,18 @@ public class NotificationController {
         int count = notificationService.deleteAllForUser(user.getId());
         return ResponseEntity.ok(Map.of("deletedCount", count));
     }
+
+    /**
+     * Delete a single notification by ID.
+     *
+     * <pre>DELETE /api/notification/42</pre>
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> deleteOne(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        notificationService.deleteNotification(id, user.getId());
+        return ResponseEntity.noContent().build();
+    }
 }

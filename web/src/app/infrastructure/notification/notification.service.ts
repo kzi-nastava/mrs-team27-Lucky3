@@ -197,6 +197,22 @@ export class NotificationService implements OnDestroy {
     });
   }
 
+  /** Remove a single notification locally and delete it from the backend. */
+  deleteNotification(id: string): void {
+    // Optimistic local removal
+    const updated = this.notificationsSubject.value.filter(n => n.id !== id);
+    this.notificationsSubject.next(updated);
+    this.updateUnreadCount(updated);
+
+    // Persist to backend
+    const numericId = this.extractNumericId(id);
+    if (numericId !== null) {
+      this.http.delete(`${this.API_URL}/${numericId}`).subscribe({
+        error: (err) => console.error('Failed to delete notification:', err)
+      });
+    }
+  }
+
   // ------------------------------------------------------------------
   // Sound
   // ------------------------------------------------------------------
@@ -375,7 +391,10 @@ export class NotificationService implements OnDestroy {
         if (role === 'ADMIN') {
           return `/admin/support?chatId=${relatedEntityId}`;
         }
-        return `/support`;
+        if (role === 'DRIVER') {
+          return `/driver/support`;
+        }
+        return `/passenger/support`;
       }
       default:                  return undefined;
     }
