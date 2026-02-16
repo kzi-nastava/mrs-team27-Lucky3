@@ -13,6 +13,7 @@ import com.example.mobile.MainActivity;
 import com.example.mobile.R;
 import com.example.mobile.models.AppNotification;
 import com.example.mobile.models.FcmTokenRequest;
+import com.example.mobile.utils.AppLifecycleTracker;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.NotificationHelper;
 import com.example.mobile.utils.NotificationStore;
@@ -152,12 +153,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             builder.setStyle(new NotificationCompat.BigTextStyle().bigText(body));
         }
 
-        // Display the notification
-        try {
-            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-            notificationManager.notify(notificationIdCounter.incrementAndGet(), builder.build());
-        } catch (SecurityException e) {
-            Log.w(TAG, "POST_NOTIFICATIONS permission not granted — cannot show notification");
+        // Display the system notification only when the app is in the background.
+        // When in the foreground, the in-app notification store + sound is enough.
+        if (!AppLifecycleTracker.isAppInForeground()) {
+            try {
+                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+                notificationManager.notify(notificationIdCounter.incrementAndGet(), builder.build());
+            } catch (SecurityException e) {
+                Log.w(TAG, "POST_NOTIFICATIONS permission not granted — cannot show notification");
+            }
         }
 
         // Feed in-app notification store so bell badge and panel stay in sync
