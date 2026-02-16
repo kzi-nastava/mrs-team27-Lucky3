@@ -1,6 +1,7 @@
 package com.example.mobile.services;
 
 import com.example.mobile.models.EmailRequest;
+import com.example.mobile.models.FcmTokenRequest;
 import com.example.mobile.models.LoginRequest;
 import com.example.mobile.models.PasswordResetRequest;
 import com.example.mobile.models.ProfileUserResponse;
@@ -142,6 +143,23 @@ public interface UserService {
             @Path("id") Long userId,
             @Part("user") RequestBody userData,  // JSON as RequestBody
             @Part MultipartBody.Part profileImage,  // Optional image
+            @Header("Authorization") String token
+    );
+
+    // ========================== FCM Token Endpoints ==========================
+
+    /**
+     * Register or update the user's FCM device token for push notifications.
+     * PUT /api/users/{id}/fcm-token
+     *
+     * @param userId The user ID
+     * @param request Contains the FCM registration token
+     * @param token JWT authorization header
+     */
+    @PUT("api/users/{id}/fcm-token")
+    Call<Void> updateFcmToken(
+            @Path("id") Long userId,
+            @Body FcmTokenRequest request,
             @Header("Authorization") String token
     );
 }

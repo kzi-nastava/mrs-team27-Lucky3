@@ -16,4 +16,12 @@ public interface UserService {
     User updateUser(Long id, UserProfile request, MultipartFile file) throws IOException;
     @Transactional(readOnly = true)
     Image getProfileImage(Long userId);
+
+    /**
+     * Stores or updates the FCM device token for push notifications.
+     *
+     * @param userId   the user to update
+     * @param fcmToken the FCM registration token from the mobile client
+     */
+    void updateFcmToken(Long userId, String fcmToken);
 }
