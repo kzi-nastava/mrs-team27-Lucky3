@@ -93,12 +93,12 @@ export class CreateDriverComponent implements OnInit {
         address: this.driverForm.value.address,
         phone: this.driverForm.value.phone,
         vehicle: {
-        model: this.driverForm.value.vehicle.model,
-        vehicleType: this.driverForm.value.vehicle.vehicleType,
-        licenseNumber: this.driverForm.value.vehicle.licensePlate,
-        passengerSeats: this.driverForm.value.vehicle.numberOfSeats,
-        babyTransport: this.driverForm.value.vehicle.babyTransport,
-        petTransport: this.driverForm.value.vehicle.petTransport
+          model: this.driverForm.value.vehicle.model,
+          vehicleType: this.driverForm.value.vehicle.vehicleType,
+          licenseNumber: this.driverForm.value.vehicle.licensePlate,
+          passengerSeats: this.driverForm.value.vehicle.numberOfSeats,
+          babyTransport: this.driverForm.value.vehicle.babyTransport,
+          petTransport: this.driverForm.value.vehicle.petTransport
         }
     };
 
