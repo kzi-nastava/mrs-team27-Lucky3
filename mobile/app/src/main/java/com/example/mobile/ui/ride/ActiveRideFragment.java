@@ -58,6 +58,7 @@ public class ActiveRideFragment extends Fragment {
     private static final double STOP_COMPLETION_THRESHOLD_METERS = 50.0;
     private static final long LOCATION_POLL_INTERVAL = 10_000; // 10s
     private static final long RIDE_POLL_INTERVAL = 15_000;     // 15s
+    private static final long COST_POLL_INTERVAL = 5_000;      // 5s — matches backend RideCostTrackingService
 
     private SharedPreferencesManager preferencesManager;
     private RideResponse ride;
@@ -113,6 +114,10 @@ public class ActiveRideFragment extends Fragment {
     private LinearLayout actionButtons;
 
     private static final double END_POINT_THRESHOLD_METERS = 100.0;
+
+    // Live cost tracking — computed client-side from ride rate snapshot + distance traveled
+    private volatile double liveCost = 0;
+    private boolean costPollingActive = false;
 
     // Last known vehicle position for stop ride
     private volatile double lastVehicleLatitude = 0;
@@ -313,8 +318,11 @@ public class ActiveRideFragment extends Fragment {
         // Cost
         if (isInProgress) {
             tvCostLabel.setText("Current Cost");
-            double cost = ride.getTotalCost() != null ? ride.getTotalCost() : 0;
+            // Use live cost computed from backend distanceTraveled + rate snapshot
+            double cost = liveCost > 0 ? liveCost : (ride.getTotalCost() != null ? ride.getTotalCost() : 0);
             tvCost.setText(String.format(Locale.US, "RSD %.0f", cost));
+            // Start cost polling if not already running
+            startCostPolling();
         } else {
             tvCostLabel.setText("Est. Cost");
             double cost = ride.getEffectiveCost();
@@ -648,6 +656,64 @@ public class ActiveRideFragment extends Fragment {
         isPollingActive = false;
         pollingHandler.removeCallbacks(locationRunnable);
         pollingHandler.removeCallbacks(rideRunnable);
+        stopCostPolling();
+    }
+
+    // ========== Live Cost Polling ==========
+    // The backend RideCostTrackingService updates totalCost + distanceTraveled in the DB
+    // every 5s but does NOT broadcast via WebSocket. So we must poll the API to get
+    // the latest cost regardless of WebSocket state.
+
+    private final Runnable costRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!costPollingActive || !isAdded()) return;
+            fetchLiveCost();
+            pollingHandler.postDelayed(this, COST_POLL_INTERVAL);
+        }
+    };
+
+    private void startCostPolling() {
+        if (costPollingActive) return;
+        costPollingActive = true;
+        pollingHandler.postDelayed(costRunnable, 0);
+    }
+
+    private void stopCostPolling() {
+        costPollingActive = false;
+        pollingHandler.removeCallbacks(costRunnable);
+    }
+
+    /**
+     * Fetch the latest ride data from the API to get backend-computed totalCost
+     * and distanceTraveled. Computes current cost client-side:
+     * baseFare + distanceTraveled * pricePerKm (matching the web app approach).
+     */
+    private void fetchLiveCost() {
+        if (rideId <= 0 || ride == null || !"IN_PROGRESS".equals(ride.getStatus())) return;
+        String token = "Bearer " + preferencesManager.getToken();
+        ClientUtils.rideService.getRide(rideId, token).enqueue(new Callback<RideResponse>() {
+            @Override
+            public void onResponse(Call<RideResponse> call, Response<RideResponse> response) {
+                if (!isAdded()) return;
+                if (response.isSuccessful() && response.body() != null) {
+                    RideResponse fresh = response.body();
+                    double baseFare = fresh.getRateBaseFare() != null ? fresh.getRateBaseFare() : 120;
+                    double perKm = fresh.getRatePricePerKm() != null ? fresh.getRatePricePerKm() : 120;
+                    double distTraveled = fresh.getDistanceTraveled() != null ? fresh.getDistanceTraveled() : 0;
+                    liveCost = Math.round(baseFare + distTraveled * perKm);
+                    // Update cost display immediately
+                    if (tvCost != null && tvCostLabel != null) {
+                        tvCostLabel.setText("Current Cost");
+                        tvCost.setText(String.format(Locale.US, "RSD %.0f", liveCost));
+                    }
+                }
+            }
+            @Override
+            public void onFailure(Call<RideResponse> call, Throwable t) {
+                Log.w(TAG, "Cost poll failed", t);
+            }
+        });
     }
 
     private final Runnable locationRunnable = new Runnable() {
@@ -1405,9 +1471,7 @@ public class ActiveRideFragment extends Fragment {
     }
 
     private void openStopRideDialog() {
-        // Fetch fresh ride data from the API so we get the latest totalCost
-        // and distanceTraveled (the RideCostTrackingService updates DB every 5s
-        // but does NOT broadcast via WebSocket).
+
         String token = "Bearer " + preferencesManager.getToken();
         ClientUtils.rideService.getRide(rideId, token).enqueue(new Callback<RideResponse>() {
             @Override
@@ -1584,6 +1648,7 @@ public class ActiveRideFragment extends Fragment {
         super.onPause();
         if (mapView != null) mapView.onPause();
         stopPolling();
+        stopCostPolling();
         unsubscribeWebSocket();
     }
 
@@ -1591,6 +1656,7 @@ public class ActiveRideFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         stopPolling();
+        stopCostPolling();
         unsubscribeWebSocket();
         if (mapView != null) mapView.onDetach();
     }
