@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
+import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
@@ -28,7 +29,6 @@ import com.example.mobile.R;
 import com.example.mobile.models.DriverStatsResponse;
 import com.example.mobile.models.LocationDto;
 import com.example.mobile.models.RideResponse;
-import com.example.mobile.models.RoutePointResponse;
 import com.example.mobile.models.VehicleLocationResponse;
 import com.example.mobile.ui.maps.RideMapRenderer;
 import com.example.mobile.utils.ClientUtils;
@@ -36,6 +36,9 @@ import com.example.mobile.utils.SharedPreferencesManager;
 import com.example.mobile.utils.StompClient;
 import com.example.mobile.utils.WebSocketManager;
 
+import org.osmdroid.bonuspack.routing.OSRMRoadManager;
+import org.osmdroid.bonuspack.routing.Road;
+import org.osmdroid.bonuspack.routing.RoadManager;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
@@ -49,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -72,6 +76,11 @@ public class AdminActiveRideDetailFragment extends Fragment {
     private Marker vehicleMarker;
     private Polyline approachRoute;
     private Polyline rideRouteOverlay;
+    private final List<Marker> mapMarkers = new ArrayList<>();
+    private boolean mapCameraInitialized = false;
+    private boolean yellowRouteNeedsRedraw = true;
+    private boolean panicActivated = false;
+    private VehicleLocationResponse lastVehicle;
 
     // WebSocket
     private String vehicleSubId;
@@ -84,6 +93,7 @@ public class AdminActiveRideDetailFragment extends Fragment {
     private static final long VEHICLE_POLL_INTERVAL = 10_000;
     private static final long RIDE_POLL_INTERVAL = 15_000;
     private boolean wsConnected = false;
+    private boolean isPollingActive = false;
 
     // Refresh ride data periodically (in case WS misses updates)
     private Handler refreshHandler;
@@ -145,8 +155,11 @@ public class AdminActiveRideDetailFragment extends Fragment {
                 showLoading(false);
                 if (response.isSuccessful() && response.body() != null) {
                     ride = response.body();
+                    panicActivated = Boolean.TRUE.equals(ride.getPanicPressed());
                     updateUI();
                     connectWebSocket();
+                    startPolling(); // Start polling immediately, WS will take over if connected
+                    pollVehicleLocation(); // Immediate first fetch
                     startPeriodicRefresh();
                 } else {
                     Toast.makeText(getContext(), "Failed to load ride", Toast.LENGTH_SHORT).show();
@@ -478,69 +491,237 @@ public class AdminActiveRideDetailFragment extends Fragment {
     // ===== MAP =====
 
     private void updateMap() {
-        if (mapRenderer == null || ride == null) return;
-
+        if (mapRenderer == null || ride == null || mapView == null) return;
         try {
-            // Draw route
-            List<RoutePointResponse> routePoints = ride.getRoutePoints();
-            if (routePoints != null && !routePoints.isEmpty()) {
-                mapRenderer.showRoute(routePoints);
-            } else {
-                // Fallback: build waypoints
-                LocationDto start = ride.getEffectiveStartLocation();
-                LocationDto end = ride.getEffectiveEndLocation();
-                if (start != null && end != null) {
-                    List<RoutePointResponse> waypoints = new ArrayList<>();
-                    waypoints.add(makeRoutePoint(start, 0));
-                    List<LocationDto> stops = ride.getStops();
-                    if (stops != null) {
-                        for (int i = 0; i < stops.size(); i++) {
-                            waypoints.add(makeRoutePoint(stops.get(i), i + 1));
-                        }
-                    }
-                    waypoints.add(makeRoutePoint(end, waypoints.size()));
-                    mapRenderer.showRoute(waypoints);
-                }
+            LocationDto start = ride.getEffectiveStartLocation();
+            LocationDto end = ride.getEffectiveEndLocation();
+            if (start == null || end == null) return;
+
+            // Update panic state from ride data
+            panicActivated = Boolean.TRUE.equals(ride.getPanicPressed());
+
+            clearRouteOverlays();
+            placeRideMarkers();
+            yellowRouteNeedsRedraw = true;
+
+            // If we have a last known vehicle position, trigger route redraw
+            if (lastVehicle != null) {
+                updateVehicleOnMap(lastVehicle);
+                drawRoutes(lastVehicle);
             }
         } catch (Exception e) {
             Log.e(TAG, "Error updating map", e);
         }
     }
 
-    private void updateVehicleOnMap(double lat, double lng, boolean panic) {
-        if (mapView == null || !isAdded()) return;
-
-        requireActivity().runOnUiThread(() -> {
-            try {
-                GeoPoint pos = new GeoPoint(lat, lng);
-
-                if (vehicleMarker == null) {
-                    vehicleMarker = new Marker(mapView);
-                    vehicleMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
-                    vehicleMarker.setInfoWindow(null);
-                    mapView.getOverlays().add(vehicleMarker);
-                }
-
-                // Use blue dot normally, red if panic
-                int drawableRes = panic ? R.drawable.bg_dot_red : R.drawable.bg_dot_blue;
-                Drawable d = ContextCompat.getDrawable(requireContext(), drawableRes);
-                vehicleMarker.setIcon(d);
-                vehicleMarker.setPosition(pos);
-                vehicleMarker.setTitle("Vehicle");
-
-                mapView.getController().animateTo(pos);
-                mapView.invalidate();
-            } catch (Exception e) {
-                Log.e(TAG, "Error updating vehicle marker", e);
-            }
-        });
+    private void clearRouteOverlays() {
+        if (mapView == null) return;
+        if (approachRoute != null) {
+            mapView.getOverlays().remove(approachRoute);
+            approachRoute = null;
+        }
+        if (rideRouteOverlay != null) {
+            mapView.getOverlays().remove(rideRouteOverlay);
+            rideRouteOverlay = null;
+        }
+        for (Marker m : mapMarkers) {
+            mapView.getOverlays().remove(m);
+        }
+        mapMarkers.clear();
     }
 
-    private RoutePointResponse makeRoutePoint(LocationDto loc, int order) {
-        RoutePointResponse rp = new RoutePointResponse();
-        rp.setLocation(loc);
-        rp.setOrder(order);
-        return rp;
+    /**
+     * Places markers. Rules:
+     * - IN_PROGRESS: hide start dot, hide completed stop dots
+     * - Other: show all dots
+     */
+    private void placeRideMarkers() {
+        if (ride == null || mapView == null) return;
+        boolean isInProgress = "IN_PROGRESS".equals(ride.getStatus());
+        Set<Integer> completed = ride.getCompletedStopIndexes();
+
+        // Pickup — hide for IN_PROGRESS
+        if (!isInProgress && ride.getEffectiveStartLocation() != null) {
+            addMapMarker(new GeoPoint(
+                    ride.getEffectiveStartLocation().getLatitude(),
+                    ride.getEffectiveStartLocation().getLongitude()),
+                    "Pickup", R.drawable.ic_dot_green);
+        }
+
+        // Stops — hide completed
+        if (ride.getStops() != null) {
+            for (int i = 0; i < ride.getStops().size(); i++) {
+                if (completed.contains(i)) continue;
+                LocationDto stop = ride.getStops().get(i);
+                addMapMarker(new GeoPoint(stop.getLatitude(), stop.getLongitude()),
+                        stop.getAddress() != null ? stop.getAddress() : "Stop " + (i + 1),
+                        R.drawable.ic_dot_gray);
+            }
+        }
+
+        // Destination — always show
+        if (ride.getEffectiveEndLocation() != null) {
+            addMapMarker(new GeoPoint(
+                    ride.getEffectiveEndLocation().getLatitude(),
+                    ride.getEffectiveEndLocation().getLongitude()),
+                    "Destination", R.drawable.ic_dot_red);
+        }
+
+        mapView.invalidate();
+    }
+
+    private void addMapMarker(GeoPoint point, String title, int iconRes) {
+        if (mapView == null) return;
+        Marker marker = new Marker(mapView);
+        marker.setPosition(point);
+        marker.setTitle(title);
+        marker.setIcon(requireContext().getDrawable(iconRes));
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
+        mapView.getOverlays().add(marker);
+        mapMarkers.add(marker);
+    }
+
+    private void updateVehicleOnMap(VehicleLocationResponse vehicle) {
+        if (mapView == null) return;
+        GeoPoint vehiclePoint = new GeoPoint(vehicle.getLatitude(), vehicle.getLongitude());
+
+        if (vehicleMarker == null) {
+            vehicleMarker = new Marker(mapView);
+            vehicleMarker.setTitle("Vehicle");
+            vehicleMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
+            vehicleMarker.setIcon(requireContext().getDrawable(
+                    panicActivated ? R.drawable.ic_dot_red : R.drawable.ic_dot_blue));
+            mapView.getOverlays().add(vehicleMarker);
+        } else if (panicActivated) {
+            vehicleMarker.setIcon(requireContext().getDrawable(R.drawable.ic_dot_red));
+        }
+
+        vehicleMarker.setPosition(vehiclePoint);
+
+        // Center map on vehicle the first time
+        if (!mapCameraInitialized) {
+            mapView.getController().setCenter(vehiclePoint);
+            mapView.getController().setZoom(16.0);
+            mapCameraInitialized = true;
+        }
+
+        mapView.invalidate();
+    }
+
+    /**
+     * Blue route updates every poll. Yellow only when yellowRouteNeedsRedraw is set.
+     */
+    private void drawRoutes(VehicleLocationResponse vehicle) {
+        if (ride == null || mapView == null) return;
+
+        GeoPoint vehiclePoint = new GeoPoint(vehicle.getLatitude(), vehicle.getLongitude());
+        boolean isInProgress = "IN_PROGRESS".equals(ride.getStatus());
+        boolean redrawYellow = yellowRouteNeedsRedraw;
+        if (redrawYellow) yellowRouteNeedsRedraw = false;
+
+        // Build full waypoints: pickup → stops → destination
+        List<GeoPoint> allWaypoints = new ArrayList<>();
+        if (ride.getEffectiveStartLocation() != null) {
+            allWaypoints.add(new GeoPoint(
+                    ride.getEffectiveStartLocation().getLatitude(),
+                    ride.getEffectiveStartLocation().getLongitude()));
+        }
+        if (ride.getStops() != null) {
+            for (LocationDto stop : ride.getStops()) {
+                allWaypoints.add(new GeoPoint(stop.getLatitude(), stop.getLongitude()));
+            }
+        }
+        if (ride.getEffectiveEndLocation() != null) {
+            allWaypoints.add(new GeoPoint(
+                    ride.getEffectiveEndLocation().getLatitude(),
+                    ride.getEffectiveEndLocation().getLongitude()));
+        }
+        if (allWaypoints.size() < 2) return;
+
+        ArrayList<GeoPoint> blueWaypoints = new ArrayList<>();
+        ArrayList<GeoPoint> yellowWaypoints = new ArrayList<>();
+
+        if (isInProgress) {
+            Set<Integer> completed = ride.getCompletedStopIndexes();
+            int stopsCount = ride.getStops() != null ? ride.getStops().size() : 0;
+            int nextTargetIdx = allWaypoints.size() - 1;
+            for (int i = 0; i < stopsCount; i++) {
+                if (!completed.contains(i)) {
+                    nextTargetIdx = i + 1;
+                    break;
+                }
+            }
+            blueWaypoints.add(vehiclePoint);
+            blueWaypoints.add(allWaypoints.get(nextTargetIdx));
+            for (int i = nextTargetIdx; i < allWaypoints.size(); i++) {
+                yellowWaypoints.add(allWaypoints.get(i));
+            }
+        } else {
+            blueWaypoints.add(vehiclePoint);
+            blueWaypoints.add(allWaypoints.get(0));
+            yellowWaypoints.addAll(allWaypoints);
+        }
+
+        new Thread(() -> {
+            try {
+                RoadManager roadManager = new OSRMRoadManager(
+                        requireContext().getApplicationContext(), "Lucky3-mobile");
+
+                Polyline blueOverlay = null;
+                if (blueWaypoints.size() >= 2) {
+                    Road blueRoad = roadManager.getRoad(blueWaypoints);
+                    if (blueRoad.mStatus == Road.STATUS_OK) {
+                        blueOverlay = RoadManager.buildRoadOverlay(blueRoad);
+                        blueOverlay.setColor(Color.parseColor(panicActivated ? "#ef4444" : "#3b82f6"));
+                        blueOverlay.setWidth(10f);
+                    }
+                }
+
+                Polyline yellowOverlay = null;
+                if (redrawYellow && yellowWaypoints.size() >= 2) {
+                    Road yellowRoad = roadManager.getRoad(yellowWaypoints);
+                    if (yellowRoad.mStatus == Road.STATUS_OK) {
+                        yellowOverlay = RoadManager.buildRoadOverlay(yellowRoad);
+                        yellowOverlay.setColor(Color.parseColor(panicActivated ? "#ef4444" : "#eab308"));
+                        yellowOverlay.setWidth(12f);
+                        Paint paint = yellowOverlay.getOutlinePaint();
+                        paint.setPathEffect(new DashPathEffect(new float[]{30, 20}, 0));
+                    }
+                }
+
+                final Polyline finalBlue = blueOverlay;
+                final Polyline finalYellow = yellowOverlay;
+
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    if (mapView == null || !isAdded()) return;
+
+                    if (approachRoute != null) {
+                        mapView.getOverlays().remove(approachRoute);
+                    }
+                    if (finalYellow != null) {
+                        if (rideRouteOverlay != null) {
+                            mapView.getOverlays().remove(rideRouteOverlay);
+                        }
+                        rideRouteOverlay = finalYellow;
+                        mapView.getOverlays().add(rideRouteOverlay);
+                    }
+                    if (finalBlue != null) {
+                        approachRoute = finalBlue;
+                        mapView.getOverlays().add(approachRoute);
+                    }
+
+                    // Ensure vehicle marker stays on top of route overlays
+                    if (vehicleMarker != null) {
+                        mapView.getOverlays().remove(vehicleMarker);
+                        mapView.getOverlays().add(vehicleMarker);
+                    }
+
+                    mapView.invalidate();
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to draw routes", e);
+            }
+        }).start();
     }
 
     // ===== WEBSOCKET =====
@@ -554,18 +735,20 @@ public class AdminActiveRideDetailFragment extends Fragment {
                 wsConnected = true;
                 subscribeToVehicles();
                 subscribeToRide();
+                // WS is delivering updates, stop polling
+                stopPolling();
             }
 
             @Override
             public void onDisconnected(String reason) {
                 wsConnected = false;
-                startPollingFallback();
+                startPolling();
             }
 
             @Override
             public void onError(String error) {
                 wsConnected = false;
-                startPollingFallback();
+                startPolling();
             }
         });
     }
@@ -576,12 +759,21 @@ public class AdminActiveRideDetailFragment extends Fragment {
                 "/topic/vehicles",
                 new com.google.gson.reflect.TypeToken<List<VehicleLocationResponse>>() {}.getType(),
                 (StompClient.MessageCallback<List<VehicleLocationResponse>>) vehicles -> {
-                    if (!isAdded() || ride == null || ride.getDriverId() == null) return;
+                    if (!isAdded() || ride == null || mapView == null) return;
+
+                    Long driverId = ride.getDriverId();
+                    if (driverId == null && ride.getDriver() != null) {
+                        driverId = ride.getDriver().getId();
+                    }
+                    if (driverId == null) return;
+
                     for (VehicleLocationResponse v : vehicles) {
-                        if (ride.getDriverId().equals(v.getDriverId())) {
-                            boolean panic = v.isCurrentPanic() ||
+                        if (driverId.equals(v.getDriverId())) {
+                            panicActivated = v.isCurrentPanic() ||
                                     Boolean.TRUE.equals(ride.getPanicPressed());
-                            updateVehicleOnMap(v.getLatitude(), v.getLongitude(), panic);
+                            lastVehicle = v;
+                            updateVehicleOnMap(v);
+                            drawRoutes(v);
                             break;
                         }
                     }
@@ -600,34 +792,47 @@ public class AdminActiveRideDetailFragment extends Fragment {
                 });
     }
 
-    // ===== POLLING FALLBACK =====
+    // ===== POLLING =====
 
-    private void startPollingFallback() {
-        if (wsConnected || !isAdded()) return;
+    private void startPolling() {
+        if (isPollingActive || !isAdded()) return;
+        isPollingActive = true;
 
         pollHandler = new Handler(Looper.getMainLooper());
 
-        // Poll vehicle location
+        // Poll vehicle location every 10s
         vehiclePollRunnable = new Runnable() {
             @Override
             public void run() {
-                if (!isAdded() || wsConnected) return;
-                pollVehicleLocation();
+                if (!isPollingActive || !isAdded()) return;
+                if (!wsConnected) {
+                    pollVehicleLocation();
+                }
                 pollHandler.postDelayed(this, VEHICLE_POLL_INTERVAL);
             }
         };
         pollHandler.postDelayed(vehiclePollRunnable, VEHICLE_POLL_INTERVAL);
 
-        // Poll ride data
+        // Poll ride data every 15s
         ridePollRunnable = new Runnable() {
             @Override
             public void run() {
-                if (!isAdded() || wsConnected) return;
-                refreshRide();
+                if (!isPollingActive || !isAdded()) return;
+                if (!wsConnected) {
+                    refreshRide();
+                }
                 pollHandler.postDelayed(this, RIDE_POLL_INTERVAL);
             }
         };
         pollHandler.postDelayed(ridePollRunnable, RIDE_POLL_INTERVAL);
+    }
+
+    private void stopPolling() {
+        isPollingActive = false;
+        if (pollHandler != null) {
+            if (vehiclePollRunnable != null) pollHandler.removeCallbacks(vehiclePollRunnable);
+            if (ridePollRunnable != null) pollHandler.removeCallbacks(ridePollRunnable);
+        }
     }
 
     private void pollVehicleLocation() {
@@ -635,15 +840,23 @@ public class AdminActiveRideDetailFragment extends Fragment {
             @Override
             public void onResponse(@NonNull Call<List<VehicleLocationResponse>> call,
                                    @NonNull Response<List<VehicleLocationResponse>> response) {
-                if (!isAdded() || ride == null || ride.getDriverId() == null) return;
-                if (response.isSuccessful() && response.body() != null) {
-                    for (VehicleLocationResponse v : response.body()) {
-                        if (ride.getDriverId().equals(v.getDriverId())) {
-                            boolean panic = v.isCurrentPanic() ||
-                                    Boolean.TRUE.equals(ride.getPanicPressed());
-                            updateVehicleOnMap(v.getLatitude(), v.getLongitude(), panic);
-                            break;
-                        }
+                if (!isAdded() || ride == null || mapView == null) return;
+                if (!response.isSuccessful() || response.body() == null) return;
+
+                Long driverId = ride.getDriverId();
+                if (driverId == null && ride.getDriver() != null) {
+                    driverId = ride.getDriver().getId();
+                }
+                if (driverId == null) return;
+
+                for (VehicleLocationResponse v : response.body()) {
+                    if (driverId.equals(v.getDriverId())) {
+                        panicActivated = v.isCurrentPanic() ||
+                                Boolean.TRUE.equals(ride.getPanicPressed());
+                        lastVehicle = v;
+                        updateVehicleOnMap(v);
+                        drawRoutes(v);
+                        break;
                     }
                 }
             }
@@ -764,12 +977,17 @@ public class AdminActiveRideDetailFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (mapView != null) mapView.onResume();
+        // Resume polling if WS isn't connected
+        if (ride != null && !wsConnected) {
+            startPolling();
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
         if (mapView != null) mapView.onPause();
+        stopPolling();
     }
 
     @Override
@@ -780,12 +998,10 @@ public class AdminActiveRideDetailFragment extends Fragment {
         WebSocketManager ws = WebSocketManager.getInstance();
         if (vehicleSubId != null) ws.unsubscribe(vehicleSubId);
         if (rideSubId != null) ws.unsubscribe(rideSubId);
+        wsConnected = false;
 
         // Stop polling
-        if (pollHandler != null) {
-            if (vehiclePollRunnable != null) pollHandler.removeCallbacks(vehiclePollRunnable);
-            if (ridePollRunnable != null) pollHandler.removeCallbacks(ridePollRunnable);
-        }
+        stopPolling();
 
         // Stop periodic refresh
         if (refreshHandler != null && refreshRunnable != null) {
