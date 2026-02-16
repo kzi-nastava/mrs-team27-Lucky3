@@ -20,6 +20,9 @@ public class SidebarComponent {
     @FindBy(id = "sidebar-dashboard")
     private WebElement dashboardLink;
 
+    @FindBy(id = "sidebar-favorite")
+    private WebElement favoritesLink;
+
     public SidebarComponent(WebDriver driver) {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
@@ -29,6 +32,11 @@ public class SidebarComponent {
     public void navigateToRideHistory() {
         wait.until(ExpectedConditions.elementToBeClickable(rideHistoryLink));
         rideHistoryLink.click();
+    }
+
+    public void navigateToFavoriteRides(){
+        wait.until(ExpectedConditions.elementToBeClickable(favoritesLink));
+        favoritesLink.click();
     }
 
     public void navigateToDashboard() {

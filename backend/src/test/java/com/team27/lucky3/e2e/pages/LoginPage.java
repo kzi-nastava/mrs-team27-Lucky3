@@ -1,5 +1,6 @@
 package com.team27.lucky3.e2e.pages;
 
+import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -9,6 +10,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 
+@Slf4j
 public class LoginPage {
 
     private WebDriver driver;
@@ -65,6 +67,9 @@ public class LoginPage {
 
     public void loginAsAdmin() {
         loginAs("admin@example.com", "password");
+    }
+    public void loginAsPassenger(){
+        loginAs("passenger@example.com", "password");
     }
 
     public boolean isErrorDisplayed() {
