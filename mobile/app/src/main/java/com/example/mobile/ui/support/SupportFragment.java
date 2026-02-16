@@ -30,6 +30,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import com.example.mobile.utils.NavbarHelper;
+
 /**
  * Support chat screen for drivers and passengers.
  * Loads (or creates) the user's single support chat and displays messages.
@@ -58,12 +60,7 @@ public class SupportFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_support_chat, container, false);
 
         // Navbar setup
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Support");
-        }
+        NavbarHelper.setup(this, root, "Support");
 
         lvMessages = root.findViewById(R.id.lv_messages);
         etMessage = root.findViewById(R.id.et_message);

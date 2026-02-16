@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.example.mobile.utils.NavbarHelper;
+
 /**
  * Notification center panel — shows all in-app notifications
  * with type-based icons, time-ago stamps, unread indicators,
@@ -59,16 +61,7 @@ public class NotificationPanelFragment extends Fragment {
     }
 
     private void setupNavbar(View root) {
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((com.example.mobile.MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Notifications");
-
-            // Hide the notification bell on this page to avoid recursion
-            View bellBtn = navbar.findViewById(R.id.btn_notifications);
-            if (bellBtn != null) bellBtn.setVisibility(View.GONE);
-        }
+        NavbarHelper.setup(this, root, "Notifications", false);
     }
 
     private void setupActions(View root) {

@@ -41,6 +41,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import com.example.mobile.utils.NavbarHelper;
+
 /**
  * Admin Ride History Fragment.
  * Allows administrators to view ride history for any driver or passenger.
@@ -211,12 +213,7 @@ public class AdminRideHistoryFragment extends Fragment implements SensorEventLis
     }
 
     private void setupNavbar(View root) {
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((com.example.mobile.MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Ride History");
-        }
+        NavbarHelper.setup(this, root, "Ride History");
     }
 
     // ========================== Search Type Toggle ==========================

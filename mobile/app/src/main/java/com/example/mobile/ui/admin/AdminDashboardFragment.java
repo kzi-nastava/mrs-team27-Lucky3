@@ -51,6 +51,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import com.example.mobile.utils.NavbarHelper;
+
 public class AdminDashboardFragment extends Fragment {
 
     private FragmentAdminDashboardBinding binding;
@@ -112,12 +114,7 @@ public class AdminDashboardFragment extends Fragment {
     }
 
     private void setupNavbar() {
-        View navbar = binding.navbar.getRoot();
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((com.example.mobile.MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Admin Dashboard");
-        }
+        NavbarHelper.setup(this, binding.getRoot(), "Admin Dashboard");
     }
 
     private void setupSpinners() {

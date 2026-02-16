@@ -44,6 +44,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import com.example.mobile.utils.NavbarHelper;
+
 /**
  * Passenger Ride History Fragment.
  * Shows ride history with date filtering, status filtering, sorting by any field,
@@ -144,12 +146,7 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
     }
 
     private void setupNavbar(View root) {
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((com.example.mobile.MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Ride History");
-        }
+        NavbarHelper.setup(this, root, "Ride History");
     }
 
     // ==================== STATUS SPINNER ====================

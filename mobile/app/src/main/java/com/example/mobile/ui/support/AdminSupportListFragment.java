@@ -29,6 +29,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import com.example.mobile.utils.NavbarHelper;
+
 /**
  * Admin view: list of all support conversations.
  * Subscribes via WebSocket for real-time chat list updates and new messages.
@@ -55,12 +57,7 @@ public class AdminSupportListFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_admin_support_list, container, false);
 
         // Navbar
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Support");
-        }
+        NavbarHelper.setup(this, root, "Support");
 
         lvChats = root.findViewById(R.id.lv_chats);
         progressBar = root.findViewById(R.id.progress_bar);

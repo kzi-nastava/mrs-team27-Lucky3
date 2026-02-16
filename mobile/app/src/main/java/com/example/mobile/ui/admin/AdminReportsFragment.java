@@ -9,6 +9,8 @@ import android.view.View;
 import android.view.LayoutInflater;
 import android.os.Bundle;
 
+import com.example.mobile.utils.NavbarHelper;
+
 public class AdminReportsFragment extends Fragment {
 
     @Override
@@ -16,13 +18,7 @@ public class AdminReportsFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_admin_reports, container, false);
 
         // Navbar setup
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
-                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
-            });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Reports");
-        }
+        NavbarHelper.setup(this, root, "Reports");
 
         return root;
     }
