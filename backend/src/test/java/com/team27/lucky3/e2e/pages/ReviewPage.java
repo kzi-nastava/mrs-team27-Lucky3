@@ -56,6 +56,10 @@ public class ReviewPage {
     @FindBy(css = "[data-testid='submit-button']")
     private WebElement submitButton;
 
+    // Cancel button (X icon + "Cancel" text) in the review form
+    @FindBy(xpath = "//button[contains(text(), 'Cancel')]")
+    private WebElement cancelButton;
+
     public ReviewPage(WebDriver driver) {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
@@ -109,6 +113,14 @@ public class ReviewPage {
     public void clickSubmit() {
         wait.until(ExpectedConditions.elementToBeClickable(submitButton));
         submitButton.click();
+    }
+
+    /**
+     * Clicks the cancel button to go back without submitting.
+     */
+    public void clickCancel() {
+        wait.until(ExpectedConditions.elementToBeClickable(cancelButton));
+        cancelButton.click();
     }
 
     /**

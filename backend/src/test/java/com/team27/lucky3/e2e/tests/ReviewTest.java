@@ -25,12 +25,14 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * These are E2E tests for the ride review feature.
+ * These are E2E tests for the ride review feature using direct token links.
  * Passengers should be able to rate both the driver and the vehicle after a ride.
  * We're testing both successful submissions and various error cases like expired links or missing ratings.
+ *
+ * These tests use direct URL access with review tokens and don't require any UI navigation or login flow.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@DisplayName("Review Page - Rating & Token Validation")
+@DisplayName("Review via Token Link")
 public class ReviewTest extends BaseTest {
 
     // The JWT secret is pulled from the .env file so we don't have to hardcode it.
