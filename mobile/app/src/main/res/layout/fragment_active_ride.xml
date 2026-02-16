@@ -394,11 +394,11 @@
                 android:id="@+id/btn_finish_ride"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:text="✓ Finish Ride"
+                android:text="Finish Ride"
                 android:textColor="@color/white"
                 android:textStyle="bold"
                 android:textSize="16sp"
-                android:backgroundTint="@color/green_500"
+                android:backgroundTint="#DC2626"
                 app:cornerRadius="12dp"
                 android:layout_marginBottom="4dp"
                 android:visibility="gone" />
