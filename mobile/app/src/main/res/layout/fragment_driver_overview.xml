@@ -438,6 +438,37 @@
                 android:dividerHeight="4dp"
                 android:nestedScrollingEnabled="true" />
 
+            <!-- Show More -->
+            <LinearLayout
+                android:id="@+id/show_more_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginTop="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tv_showing_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Showing 3 of 10"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_show_more"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="Show More"
+                    android:textColor="@color/black"
+                    android:textStyle="bold"
+                    android:textSize="13sp"
+                    android:gravity="center"
+                    android:background="@color/yellow_500" />
+            </LinearLayout>
+
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

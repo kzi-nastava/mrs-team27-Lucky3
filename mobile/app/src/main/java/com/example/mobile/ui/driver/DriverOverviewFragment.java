@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -46,6 +47,10 @@ public class DriverOverviewFragment extends Fragment {
     
     private RideHistoryAdapter adapter;
     private List<RideResponse> rideItems = new ArrayList<>();
+    private List<RideResponse> allFilteredRides = new ArrayList<>();
+    private int visibleCount = 3;
+    private static final int INITIAL_COUNT = 3;
+    private static final int INCREMENT = 5;
     
     // Stats
     private double totalEarnings = 0;
@@ -82,6 +87,10 @@ public class DriverOverviewFragment extends Fragment {
     private Spinner spinnerSort, spinnerStatus;
     private boolean spinnerInitializing = true;
 
+    // Show more UI
+    private LinearLayout showMoreContainer;
+    private TextView tvShowingCount, btnShowMore;
+
     private final SimpleDateFormat displayFormat = new SimpleDateFormat("MMM d, yyyy", Locale.US);
 
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -106,6 +115,7 @@ public class DriverOverviewFragment extends Fragment {
         setupSortSpinner();
         setupStatusSpinner();
         setupSortDirection();
+        setupShowMore(root);
         setupListView();
         
         loadDriverStats();
@@ -169,6 +179,7 @@ public class DriverOverviewFragment extends Fragment {
         btnToDate.setText("");
         btnFromDate.setHint("Start date");
         btnToDate.setHint("End date");
+        visibleCount = INITIAL_COUNT;
         loadRides();
     }
 
@@ -288,6 +299,39 @@ public class DriverOverviewFragment extends Fragment {
         }
     }
 
+    // ---- Show More ----
+
+    private void setupShowMore(View root) {
+        showMoreContainer = root.findViewById(R.id.show_more_container);
+        tvShowingCount = root.findViewById(R.id.tv_showing_count);
+        btnShowMore = root.findViewById(R.id.btn_show_more);
+
+        btnShowMore.setOnClickListener(v -> {
+            visibleCount += INCREMENT;
+            applyVisibleCount();
+        });
+    }
+
+    private void applyVisibleCount() {
+        rideItems.clear();
+        int total = allFilteredRides.size();
+        int show = Math.min(visibleCount, total);
+        for (int i = 0; i < show; i++) {
+            rideItems.add(allFilteredRides.get(i));
+        }
+        adapter.notifyDataSetChanged();
+        ListViewHelper.setListViewHeightBasedOnChildren(binding.rideHistoryList);
+
+        // Update count text and button visibility
+        if (total > INITIAL_COUNT) {
+            showMoreContainer.setVisibility(View.VISIBLE);
+            tvShowingCount.setText(String.format(Locale.US, "Showing %d of %d", show, total));
+            btnShowMore.setVisibility(show < total ? View.VISIBLE : View.GONE);
+        } else {
+            showMoreContainer.setVisibility(View.GONE);
+        }
+    }
+
     // ---- ListView ----
 
     private void setupListView() {
@@ -385,16 +429,16 @@ public class DriverOverviewFragment extends Fragment {
             public void onResponse(Call<PageResponse<RideResponse>> call, Response<PageResponse<RideResponse>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     List<RideResponse> content = response.body().getContent();
-                    rideItems.clear();
+                    allFilteredRides.clear();
                     if (content != null) {
                         for (RideResponse r : content) {
                             if (r.isFinished() || r.isCancelled()) {
-                                rideItems.add(r);
+                                allFilteredRides.add(r);
                             }
                         }
                     }
-                    adapter.notifyDataSetChanged();
-                    ListViewHelper.setListViewHeightBasedOnChildren(binding.rideHistoryList);
+                    visibleCount = INITIAL_COUNT;
+                    applyVisibleCount();
                 } else {
                     Log.e(TAG, "Failed to load rides: HTTP " + response.code());
                     if (getContext() != null) {
