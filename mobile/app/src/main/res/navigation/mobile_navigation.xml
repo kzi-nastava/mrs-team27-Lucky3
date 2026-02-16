@@ -263,6 +263,10 @@
         <action
             android:id="@+id/action_passenger_history_to_passenger_ride_detail"
             app:destination="@id/nav_passenger_ride_detail" />
+
+        <action
+            android:id="@+id/action_passenger_history_to_review"
+            app:destination="@id/nav_review" />
     </fragment>
 
     <fragment

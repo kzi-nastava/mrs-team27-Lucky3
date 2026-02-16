@@ -514,6 +514,7 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
                 holder.tvCost = convertView.findViewById(R.id.tv_cost);
                 holder.tvDriverName = convertView.findViewById(R.id.tv_driver_name);
                 holder.tvDistance = convertView.findViewById(R.id.tv_distance);
+                holder.btnLeaveReview = convertView.findViewById(R.id.btn_leave_review);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
@@ -595,6 +596,9 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
             }
             holder.tvDistance.setText(String.format(Locale.US, "%.1f km • %s", distance, durationStr));
 
+            // Review button: show only for FINISHED rides within 3 days, not yet reviewed by creator
+            setupReviewButton(holder.btnLeaveReview, ride);
+
             return convertView;
         }
 
@@ -613,9 +617,49 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
             }
         }
 
+        private void setupReviewButton(TextView btn, RideResponse ride) {
+            if (!ride.isFinished()) {
+                btn.setVisibility(View.GONE);
+                return;
+            }
+
+            // Check if ride ended within the last 3 days
+            Date endDate = parseDate(ride.getEndTime());
+            if (endDate == null) {
+                btn.setVisibility(View.GONE);
+                return;
+            }
+            long threeDaysMs = 3L * 24 * 60 * 60 * 1000;
+            if (System.currentTimeMillis() - endDate.getTime() > threeDaysMs) {
+                btn.setVisibility(View.GONE);
+                return;
+            }
+
+            // Check if current user (creator) already reviewed
+            Long userId = preferencesManager.getUserId();
+            List<RideResponse.ReviewInfo> reviews = ride.getReviews();
+            if (reviews != null && userId != null) {
+                for (RideResponse.ReviewInfo review : reviews) {
+                    if (userId.equals(review.getPassengerId())) {
+                        btn.setVisibility(View.GONE);
+                        return;
+                    }
+                }
+            }
+
+            btn.setVisibility(View.VISIBLE);
+            btn.setOnClickListener(v -> {
+                Bundle args = new Bundle();
+                args.putLong("rideId", ride.getId());
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.action_passenger_history_to_review, args);
+            });
+        }
+
         class ViewHolder {
             TextView tvStatus, tvDate, tvDeparture, tvDestination;
             TextView tvStartTime, tvEndTime, tvCost, tvDriverName, tvDistance;
+            TextView btnLeaveReview;
         }
     }
 }
