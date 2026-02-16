@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { RideResponse } from '../../../../infrastructure/rest/model/ride-response.model';
 
-export type ActiveRideSortField = 'driver' | 'vehicle' | 'status' | 'passengerCount' | 'rating' | 'timeActive' | 'estimatedTime';
+export type ActiveRideSortField = 'driver' | 'vehicle' | 'status' | 'passengerCount' | 'rating' | 'timeActive';
 
 @Component({
   selector: 'app-active-rides-table',
@@ -15,6 +15,8 @@ export class ActiveRidesTableComponent {
   @Input() rides: RideResponse[] = [];
   @Input() sortField: ActiveRideSortField = 'status';
   @Input() sortDirection: 'asc' | 'desc' = 'desc';
+  @Input() driverRatings: Record<number, number> = {};
+  @Input() driverOnlineHours: Record<number, string> = {};
   
   @Output() sortChange = new EventEmitter<ActiveRideSortField>();
 
@@ -125,15 +127,18 @@ export class ActiveRidesTableComponent {
     return '—';
   }
 
-  // For driver rating - we'd need this from backend
+  // For driver rating - use cached driver stats
   getDriverRating(ride: RideResponse): string {
-    // This would come from driver stats - for now show placeholder
+    if (ride.driver?.id && this.driverRatings[ride.driver.id] > 0) {
+      return this.driverRatings[ride.driver.id].toFixed(1);
+    }
     return '—';
   }
 
-  // For time active - would need from driver stats
   getTimeActive(ride: RideResponse): string {
-    // This would come from driver activity sessions - for now show placeholder
+    if (ride.driver?.id && this.driverOnlineHours[ride.driver.id]) {
+      return this.driverOnlineHours[ride.driver.id];
+    }
     return '—';
   }
 }

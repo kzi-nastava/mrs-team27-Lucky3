@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/gray_900"
+    android:padding="20dp">
+
+    <!-- Header -->
+    <TextView
+        android:id="@+id/dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Edit Standard Pricing"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/dialog_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Update the pricing rates for Standard vehicles"
+        android:textColor="@color/gray_400"
+        android:textSize="13sp"
+        android:layout_marginTop="4dp" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/gray_800"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Base Fare -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Base Fare (RSD)"
+        android:textColor="@color/gray_300"
+        android:textSize="14sp"
+        android:layout_marginBottom="6dp" />
+
+    <EditText
+        android:id="@+id/edit_base_fare"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_edit_text_dark"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:hint="e.g. 120"
+        android:textColorHint="@color/gray_500"
+        android:inputType="numberDecimal"
+        android:padding="14dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Per Kilometer -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Per Kilometer (RSD)"
+        android:textColor="@color/gray_300"
+        android:textSize="14sp"
+        android:layout_marginBottom="6dp" />
+
+    <EditText
+        android:id="@+id/edit_price_per_km"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_edit_text_dark"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:hint="e.g. 120"
+        android:textColorHint="@color/gray_500"
+        android:inputType="numberDecimal"
+        android:padding="14dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Preview Box -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="14dp"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Preview (5 km ride)"
+            android:textColor="@color/gray_500"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/preview_total"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="720 RSD"
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/preview_breakdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="120 base + 120 × 5 km"
+            android:textColor="@color/gray_500"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp" />
+    </LinearLayout>
+
+    <!-- Error message -->
+    <TextView
+        android:id="@+id/dialog_error"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/red_500"
+        android:textSize="13sp"
+        android:visibility="gone"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <!-- Divider above buttons -->
+
+        <android.widget.Button
+            android:id="@+id/btn_cancel"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="Cancel"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textAllCaps="false"
+            android:background="@drawable/bg_card2"
+            android:layout_marginEnd="8dp" />
+
+        <android.widget.Button
+            android:id="@+id/btn_save"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="Save Changes"
+            android:textColor="@color/black"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textAllCaps="false"
+            android:background="@drawable/bg_btn_yellow_rounded"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+</LinearLayout>
