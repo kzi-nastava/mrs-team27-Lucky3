@@ -193,6 +193,18 @@
         </LinearLayout>
     </HorizontalScrollView>
 
+    <!-- Active Rides section title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Active Rides"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp" />
+
     <!-- Search bar -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -295,8 +307,9 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
         android:divider="@android:color/transparent"
-        android:dividerHeight="0dp"
+        android:dividerHeight="12dp"
         android:scrollbars="vertical"
         android:clipToPadding="false"
         android:paddingBottom="8dp" />

@@ -4,9 +4,10 @@
     android:id="@+id/card_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="20dp"
     app:cardCornerRadius="12dp"
     app:cardElevation="2dp"
+    app:strokeColor="@color/gray_700"
+    app:strokeWidth="1dp"
     android:backgroundTint="@color/gray_900">
 
     <LinearLayout
