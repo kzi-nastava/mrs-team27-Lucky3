@@ -84,6 +84,9 @@ public class MainActivity extends AppCompatActivity {
         // Create notification channels for FCM push (safe to call multiple times)
         NotificationHelper.createNotificationChannels(this);
 
+        // Request notification permission on every launch if not granted (Android 13+)
+        requestNotificationPermission();
+
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -101,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
                     R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_ride_history, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support, R.id.nav_admin_panic,
                     R.id.nav_passenger_home, R.id.nav_passenger_history, R.id.nav_passenger_profile, R.id.nav_passenger_support, R.id.nav_passenger_favorites,
                     R.id.nav_driver_dashboard, R.id.nav_driver_overview, R.id.nav_driver_profile, R.id.nav_driver_support,
-                    R.id.nav_active_ride, R.id.nav_notifications)
+                    R.id.nav_active_ride)
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupWithNavController(navigationView, navController);
@@ -254,9 +257,6 @@ public class MainActivity extends AppCompatActivity {
             if ("DRIVER".equals(role) || "PASSENGER".equals(role)) {
                 startActiveRidePolling();
             }
-
-            // Request notification permission for all roles (Android 13+)
-            requestNotificationPermission();
 
             // Start real-time notification manager
             Long userId = sharedPreferencesManager.getUserId();
@@ -511,7 +511,15 @@ public class MainActivity extends AppCompatActivity {
                 case "support":
                     // Navigate to role-specific support
                     if ("ADMIN".equals(currentRole)) {
-                        navController.navigate(R.id.nav_admin_support);
+                        long chatId = intent.getLongExtra("chatId", -1L);
+                        if (chatId > 0) {
+                            // Deep-link directly to the specific chat
+                            Bundle chatArgs = new Bundle();
+                            chatArgs.putLong("chatId", chatId);
+                            navController.navigate(R.id.nav_admin_support_chat, chatArgs);
+                        } else {
+                            navController.navigate(R.id.nav_admin_support);
+                        }
                     } else if ("DRIVER".equals(currentRole)) {
                         navController.navigate(R.id.nav_driver_support);
                     } else {
@@ -529,6 +537,7 @@ public class MainActivity extends AppCompatActivity {
             // Clear the extras to prevent re-navigation on config changes
             intent.removeExtra("navigate_to");
             intent.removeExtra("rideId");
+            intent.removeExtra("chatId");
         } catch (Exception e) {
             Log.e(TAG, "FCM deep-link navigation failed: " + e.getMessage());
         }

@@ -49,6 +49,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import com.example.mobile.utils.NavbarHelper;
+
 /**
  * Driver Dashboard — the default landing page for drivers.
  *
@@ -147,12 +149,7 @@ public class DriverDashboardFragment extends Fragment {
     // ========== Setup ==========
 
     private void setupNavbar(View root) {
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((com.example.mobile.MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Dashboard");
-        }
+        NavbarHelper.setup(this, root, "Dashboard");
     }
 
     private void setupStatusToggle(View root) {

@@ -37,12 +37,20 @@ export class NotificationService implements OnDestroy {
   private userNotifSub: Subscription | null = null;
   private audioContext: AudioContext | null = null;
   private initialized = false;
+  private authSub: Subscription | null = null;
 
   constructor(
     private http: HttpClient,
     private socketService: SocketService,
     private authService: AuthService
-  ) {}
+  ) {
+    // Auto-teardown when user logs out (user$ emits null)
+    this.authSub = this.authService.user$.subscribe((role) => {
+      if (!role && this.initialized) {
+        this.teardown();
+      }
+    });
+  }
 
   // ------------------------------------------------------------------
   // Lifecycle
@@ -182,6 +190,27 @@ export class NotificationService implements OnDestroy {
   clearAll(): void {
     this.notificationsSubject.next([]);
     this.unreadCountSubject.next(0);
+
+    // Delete from backend so they don't reappear on reload
+    this.http.delete(`${this.API_URL}`).subscribe({
+      error: (err) => console.error('Failed to delete all notifications:', err)
+    });
+  }
+
+  /** Remove a single notification locally and delete it from the backend. */
+  deleteNotification(id: string): void {
+    // Optimistic local removal
+    const updated = this.notificationsSubject.value.filter(n => n.id !== id);
+    this.notificationsSubject.next(updated);
+    this.updateUnreadCount(updated);
+
+    // Persist to backend
+    const numericId = this.extractNumericId(id);
+    if (numericId !== null) {
+      this.http.delete(`${this.API_URL}/${numericId}`).subscribe({
+        error: (err) => console.error('Failed to delete notification:', err)
+      });
+    }
   }
 
   // ------------------------------------------------------------------
@@ -362,7 +391,10 @@ export class NotificationService implements OnDestroy {
         if (role === 'ADMIN') {
           return `/admin/support?chatId=${relatedEntityId}`;
         }
-        return `/support`;
+        if (role === 'DRIVER') {
+          return `/driver/support`;
+        }
+        return `/passenger/support`;
       }
       default:                  return undefined;
     }

@@ -22,6 +22,8 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
+import com.example.mobile.utils.NavbarHelper;
+
 public class AdminDriversFragment extends Fragment {
     private FragmentAdminDriversBinding binding;
     private AdminDriversViewModel viewModel;
@@ -32,13 +34,7 @@ public class AdminDriversFragment extends Fragment {
         binding = FragmentAdminDriversBinding.inflate(inflater, container, false);
 
         // Navbar setup
-        View navbar = binding.getRoot().findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
-                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
-            });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Drivers");
-        }
+        NavbarHelper.setup(this, binding.getRoot(), "Drivers");
 
         return binding.getRoot();
     }

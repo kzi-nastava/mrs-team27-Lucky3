@@ -36,6 +36,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import com.example.mobile.utils.NavbarHelper;
+
 public class AdminPricingFragment extends Fragment {
 
     private static final String TAG = "AdminPricingFragment";
@@ -75,13 +77,7 @@ public class AdminPricingFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_admin_pricing, container, false);
 
         // Navbar setup
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
-                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
-            });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Pricing");
-        }
+        NavbarHelper.setup(this, root, "Pricing");
 
         prefsManager = new SharedPreferencesManager(requireContext());
 

@@ -478,6 +478,26 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.countByRecipientIdAndIsReadFalse(userId);
     }
 
+    @Override
+    @Transactional
+    public int deleteAllForUser(Long userId) {
+        return notificationRepository.deleteAllForUser(userId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteNotification(Long notificationId, Long userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Notification not found with id: " + notificationId));
+
+        if (!notification.getRecipient().getId().equals(userId)) {
+            throw new IllegalStateException("Cannot delete another user's notification");
+        }
+
+        notificationRepository.delete(notification);
+    }
+
     // ════════════════════════════════════════════════════════════════════
     //  PRIVATE HELPERS
     // ════════════════════════════════════════════════════════════════════
@@ -554,6 +574,26 @@ public class NotificationServiceImpl implements NotificationService {
             data.put("rideId", String.valueOf(relatedEntityId));
         }
         data.put("userId", String.valueOf(recipient.getId()));
+
+        // Add navigate_to hint for mobile deep-linking
+        switch (type) {
+            case SUPPORT:
+                data.put("navigate_to", "support");
+                break;
+            case PANIC:
+                data.put("navigate_to", "admin_panic");
+                break;
+            case RIDE_STATUS:
+            case RIDE_INVITE:
+            case RIDE_FINISHED:
+            case DRIVER_ASSIGNMENT:
+                if (relatedEntityId != null) {
+                    data.put("navigate_to", "active_ride");
+                }
+                break;
+            default:
+                break;
+        }
 
         try {
             fcmService.sendToDevice(fcmToken, title, text, data);

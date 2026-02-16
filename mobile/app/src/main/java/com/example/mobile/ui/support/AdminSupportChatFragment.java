@@ -12,10 +12,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 
-import com.example.mobile.MainActivity;
 import com.example.mobile.R;
 import com.example.mobile.models.SupportChatResponse;
 import com.example.mobile.models.SupportMessageRequest;
@@ -30,48 +29,56 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import com.example.mobile.utils.NavbarHelper;
-
 /**
- * Support chat screen for drivers and passengers.
- * Loads (or creates) the user's single support chat and displays messages.
- * Subscribes via WebSocket for real-time incoming messages.
+ * Admin view: single chat with a user. Reached from AdminSupportListFragment.
+ * Has a back button to return to the conversation list.
+ * Subscribes via WebSocket for real-time messages.
  */
-public class SupportFragment extends Fragment {
+public class AdminSupportChatFragment extends Fragment {
 
-    private static final String TAG = "SupportFragment";
+    private static final String TAG = "AdminSupportChat";
 
     private ListView lvMessages;
     private EditText etMessage;
     private View btnSend;
+    private View btnBack;
     private ProgressBar progressBar;
-    private TextView tvError;
-    private View emptyState;
+    private TextView tvUserName;
+    private TextView tvUserRole;
 
     private ChatMessageAdapter adapter;
     private SharedPreferencesManager prefs;
 
-    private Long chatId;
+    private long chatId;
     private String wsSubscriptionId;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        View root = inflater.inflate(R.layout.fragment_support_chat, container, false);
-
-        // Navbar setup
-        NavbarHelper.setup(this, root, "Support");
+        View root = inflater.inflate(R.layout.fragment_admin_support_chat, container, false);
 
         lvMessages = root.findViewById(R.id.lv_messages);
         etMessage = root.findViewById(R.id.et_message);
         btnSend = root.findViewById(R.id.btn_send);
+        btnBack = root.findViewById(R.id.btn_back);
         progressBar = root.findViewById(R.id.progress_bar);
-        tvError = root.findViewById(R.id.tv_error);
-        emptyState = root.findViewById(R.id.empty_state);
+        tvUserName = root.findViewById(R.id.tv_chat_user_name);
+        tvUserRole = root.findViewById(R.id.tv_chat_user_role);
 
         prefs = new SharedPreferencesManager(requireContext());
-        adapter = new ChatMessageAdapter(requireContext(), false);
+        adapter = new ChatMessageAdapter(requireContext(), true); // admin mode
         lvMessages.setAdapter(adapter);
+
+        // Parse arguments
+        Bundle args = getArguments();
+        if (args != null) {
+            chatId = args.getLong("chatId", -1);
+            tvUserName.setText(args.getString("userName", "User"));
+            tvUserRole.setText(args.getString("userRole", ""));
+        }
+
+        // Back button
+        btnBack.setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
 
         // Send button
         btnSend.setOnClickListener(v -> sendMessage());
@@ -83,7 +90,8 @@ public class SupportFragment extends Fragment {
             return false;
         });
 
-        loadChat();
+        if (chatId > 0) loadChat();
+
         return root;
     }
 
@@ -93,70 +101,64 @@ public class SupportFragment extends Fragment {
         unsubscribeWebSocket();
     }
 
-    // ====================== REST calls ======================
+    // ====================== REST ======================
 
     private void loadChat() {
-        showLoading();
+        progressBar.setVisibility(View.VISIBLE);
         String token = getAuthToken();
-        if (token == null) {
-            showError("Not logged in");
-            return;
-        }
+        if (token == null) return;
 
-        ClientUtils.supportService.getMyChat(token).enqueue(new Callback<SupportChatResponse>() {
+        ClientUtils.supportService.getChatById(token, chatId).enqueue(new Callback<SupportChatResponse>() {
             @Override
             public void onResponse(@NonNull Call<SupportChatResponse> call,
                                    @NonNull Response<SupportChatResponse> response) {
                 if (!isAdded()) return;
+                progressBar.setVisibility(View.GONE);
                 if (response.isSuccessful() && response.body() != null) {
                     SupportChatResponse chat = response.body();
-                    chatId = chat.getId();
-                    List<SupportMessageResponse> messages = chat.getMessages();
+                    tvUserName.setText(chat.getUserName());
+                    tvUserRole.setText(chat.getUserRole());
 
-                    if (messages != null && !messages.isEmpty()) {
+                    List<SupportMessageResponse> messages = chat.getMessages();
+                    if (messages != null) {
                         adapter.setMessages(messages);
-                        showMessages();
                         scrollToBottom();
-                    } else {
-                        showEmpty();
                     }
+
+                    // Mark as read
+                    markAsRead();
                     subscribeWebSocket();
-                } else {
-                    showError("Failed to load chat (HTTP " + response.code() + ")");
                 }
             }
 
             @Override
             public void onFailure(@NonNull Call<SupportChatResponse> call, @NonNull Throwable t) {
                 if (!isAdded()) return;
-                showError("Connection error: " + t.getMessage());
+                progressBar.setVisibility(View.GONE);
+                Log.e(TAG, "Load chat failed", t);
             }
         });
     }
 
     private void sendMessage() {
         String content = etMessage.getText().toString().trim();
-        if (content.isEmpty()) return;
+        if (content.isEmpty() || chatId <= 0) return;
 
         String token = getAuthToken();
         if (token == null) return;
 
         etMessage.setText("");
 
-        ClientUtils.supportService.sendUserMessage(token, new SupportMessageRequest(content))
+        ClientUtils.supportService.sendAdminMessage(token, chatId, new SupportMessageRequest(content))
                 .enqueue(new Callback<SupportMessageResponse>() {
                     @Override
                     public void onResponse(@NonNull Call<SupportMessageResponse> call,
                                            @NonNull Response<SupportMessageResponse> response) {
                         if (!isAdded()) return;
                         if (response.isSuccessful() && response.body() != null) {
-                            // Message will arrive via WebSocket, but add immediately for responsiveness
                             if (adapter.addMessage(response.body())) {
-                                showMessages();
                                 scrollToBottom();
                             }
-                        } else {
-                            Log.w(TAG, "Send message failed: HTTP " + response.code());
                         }
                     }
 
@@ -167,21 +169,31 @@ public class SupportFragment extends Fragment {
                 });
     }
 
+    private void markAsRead() {
+        String token = getAuthToken();
+        if (token == null) return;
+        ClientUtils.supportService.markChatAsRead(token, chatId).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {}
+            @Override
+            public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {}
+        });
+    }
+
     // ====================== WebSocket ======================
 
     private void subscribeWebSocket() {
-        if (chatId == null) return;
         unsubscribeWebSocket();
-
         String destination = "/topic/support/chat/" + chatId;
         wsSubscriptionId = WebSocketManager.getInstance().subscribe(
                 destination, SupportMessageResponse.class, (SupportMessageResponse msg) -> {
                     if (!isAdded() || msg == null) return;
                     requireActivity().runOnUiThread(() -> {
                         if (adapter.addMessage(msg)) {
-                            showMessages();
                             scrollToBottom();
                         }
+                        // Keep marking as read while admin is viewing
+                        markAsRead();
                     });
                 });
         Log.d(TAG, "Subscribed to " + destination);
@@ -194,36 +206,7 @@ public class SupportFragment extends Fragment {
         }
     }
 
-    // ====================== UI helpers ======================
-
-    private void showLoading() {
-        progressBar.setVisibility(View.VISIBLE);
-        lvMessages.setVisibility(View.GONE);
-        emptyState.setVisibility(View.GONE);
-        tvError.setVisibility(View.GONE);
-    }
-
-    private void showMessages() {
-        progressBar.setVisibility(View.GONE);
-        lvMessages.setVisibility(View.VISIBLE);
-        emptyState.setVisibility(View.GONE);
-        tvError.setVisibility(View.GONE);
-    }
-
-    private void showEmpty() {
-        progressBar.setVisibility(View.GONE);
-        lvMessages.setVisibility(View.GONE);
-        emptyState.setVisibility(View.VISIBLE);
-        tvError.setVisibility(View.GONE);
-    }
-
-    private void showError(String message) {
-        progressBar.setVisibility(View.GONE);
-        lvMessages.setVisibility(View.GONE);
-        emptyState.setVisibility(View.GONE);
-        tvError.setVisibility(View.VISIBLE);
-        tvError.setText(message);
-    }
+    // ====================== Helpers ======================
 
     private void scrollToBottom() {
         lvMessages.post(() -> lvMessages.setSelection(adapter.getCount() - 1));
