@@ -84,6 +84,9 @@ public class MainActivity extends AppCompatActivity {
         // Create notification channels for FCM push (safe to call multiple times)
         NotificationHelper.createNotificationChannels(this);
 
+        // Request notification permission on every launch if not granted (Android 13+)
+        requestNotificationPermission();
+
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -254,9 +257,6 @@ public class MainActivity extends AppCompatActivity {
             if ("DRIVER".equals(role) || "PASSENGER".equals(role)) {
                 startActiveRidePolling();
             }
-
-            // Request notification permission for all roles (Android 13+)
-            requestNotificationPermission();
 
             // Start real-time notification manager
             Long userId = sharedPreferencesManager.getUserId();

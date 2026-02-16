@@ -106,8 +106,8 @@ public class NotificationPanelFragment extends Fragment {
             if (position >= notifications.size()) return;
             AppNotification notif = notifications.get(position);
 
-            // Mark as read on tap
-            NotificationStore.getInstance().markAsRead(notif.getId());
+            // Remove the notification (delete it, not just mark as read)
+            NotificationStore.getInstance().removeNotification(notif.getId());
 
             // Navigate based on type
             navigateToNotification(notif);
