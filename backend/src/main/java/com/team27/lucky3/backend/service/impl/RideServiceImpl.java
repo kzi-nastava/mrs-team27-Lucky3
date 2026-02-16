@@ -1060,9 +1060,9 @@ public class RideServiceImpl implements RideService {
                     }
 
                     emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
-                    log.info("Sent review request email to ride creator: {} for ride: {}", email, ride.getId());
+                    System.out.println("Sent review request email to ride creator: " + email + " for ride: " + ride.getId());
                 } catch (Exception e) {
-                    log.error("Failed to send review request email to {}: {}", email, e.getMessage());
+                    System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
                 }
             }
         }
