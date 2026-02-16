@@ -15,6 +15,7 @@ export class ActiveRidesTableComponent {
   @Input() rides: RideResponse[] = [];
   @Input() sortField: ActiveRideSortField = 'status';
   @Input() sortDirection: 'asc' | 'desc' = 'desc';
+  @Input() driverRatings: Record<number, number> = {};
   
   @Output() sortChange = new EventEmitter<ActiveRideSortField>();
 
@@ -125,9 +126,11 @@ export class ActiveRidesTableComponent {
     return '—';
   }
 
-  // For driver rating - we'd need this from backend
+  // For driver rating - use cached driver stats
   getDriverRating(ride: RideResponse): string {
-    // This would come from driver stats - for now show placeholder
+    if (ride.driver?.id && this.driverRatings[ride.driver.id] > 0) {
+      return this.driverRatings[ride.driver.id].toFixed(1);
+    }
     return '—';
   }
 

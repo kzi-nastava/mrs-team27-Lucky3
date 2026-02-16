@@ -10,6 +10,7 @@ import { RideResponse } from '../../../infrastructure/rest/model/ride-response.m
 import { ActiveRidesTableComponent, ActiveRideSortField } from './active-rides-table/active-rides-table.component';
 import { SocketService } from '../../../infrastructure/rest/socket.service';
 import { PanicResponse } from '../../../infrastructure/rest/panic.service';
+import { DriverService, DriverStatsResponse } from '../../../infrastructure/rest/driver.service';
 
 @Component({
   selector: 'app-admin-dashboard-page',
@@ -33,6 +34,9 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
   rides: RideResponse[] = [];
   isLoading = false;
   errorMessage = '';
+
+  // Driver ratings cache: driverId -> averageRating
+  driverRatings: Record<number, number> = {};
 
   // Filters
   searchQuery = '';
@@ -62,7 +66,8 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
   constructor(
     private rideService: RideService,
     private cdr: ChangeDetectorRef,
-    private socketService: SocketService
+    private socketService: SocketService,
+    private driverService: DriverService
   ) {}
 
   ngOnInit(): void {
@@ -173,6 +178,7 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
         this.totalElements = page.totalElements || 0;
         this.totalPages = page.totalPages || 0;
         this.isLoading = false;
+        this.fetchDriverRatings();
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -197,6 +203,24 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
     
     const backendField = fieldMap[this.sortField] || 'status';
     return `${backendField},${this.sortDirection}`;
+  }
+
+  private fetchDriverRatings(): void {
+    const uniqueDriverIds = new Set<number>();
+    for (const ride of this.rides) {
+      if (ride.driver?.id && !(ride.driver.id in this.driverRatings)) {
+        uniqueDriverIds.add(ride.driver.id);
+      }
+    }
+    for (const driverId of uniqueDriverIds) {
+      this.driverService.getStats(driverId).subscribe({
+        next: (stats) => {
+          this.driverRatings[driverId] = stats.averageRating || 0;
+          this.cdr.detectChanges();
+        },
+        error: () => { /* silently ignore */ }
+      });
+    }
   }
 
   onSearchChange(event: Event): void {
