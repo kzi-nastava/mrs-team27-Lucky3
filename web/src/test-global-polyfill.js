@@ -1,3 +1,10 @@
-// Polyfill for sockjs-client which references Node.js `global` variable.
-// In browsers, `global` does not exist — map it to `window`.
-(window).global = window;
+/**
+ * Testing-only polyfill for SockJS. 
+ * It expects a Node.js-style 'global' object that browser environments 
+ * don't usually provide, so we bridge that gap.
+ */
+(function () {
+  if (typeof globalThis !== 'undefined' && !globalThis.global) {
+    globalThis.global = globalThis;
+  }
+})();

@@ -21,6 +21,10 @@ export type PassengerRideSortField = 'startTime' | 'endTime' | 'distance' | 'dep
       background: transparent;
       border: none;
     }
+    .reviewable-row {
+      box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.5);
+      background-color: rgba(59, 130, 246, 0.05);
+    }
   `]
 })
 export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -409,7 +413,24 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
     return '—';
   }
 
-  // Passenger-specific actions
+  /**
+   * Checks if the passenger is currently allowed to review this ride.
+   * They have a 3-day window from the end of the ride, and they can't 
+   * review it if they already did.
+   */
+  isRideReviewable(ride: RideResponse): boolean {
+    if (!this.passengerId) return false;
+    if (ride.status !== 'FINISHED') return false;
+    if (!ride.endTime) return false;
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    if (Date.now() - new Date(ride.endTime).getTime() > threeDaysMs) return false;
+    return !ride.reviews?.some(rev => rev.passengerId === this.passengerId);
+  }
+
+  /**
+   * Same logic as above, but specifically for the currently selected ride 
+   * in the detail view.
+   */
   canReviewSelectedRide(): boolean {
     if (!this.selectedRide || !this.passengerId) return false;
     if (this.selectedRide.status !== 'FINISHED') return false;
@@ -419,6 +440,10 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
     return !this.selectedRide.reviews?.some(rev => rev.passengerId === this.passengerId);
   }
 
+  /**
+   * Sends the passenger to the review form. We pass the ride ID in the URL 
+   * so the form knows which ride we're talking about.
+   */
   onReviewRide(): void {
     if (this.selectedRide) {
       this.router.navigate(['/review'], { queryParams: { rideId: this.selectedRide.id } });

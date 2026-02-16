@@ -5,120 +5,61 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.Key;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * These are E2E tests for the ride review feature using direct token links.
- * Passengers should be able to rate both the driver and the vehicle after a ride.
- * We're testing both successful submissions and various error cases like expired links or missing ratings.
- *
- * These tests use direct URL access with review tokens and don't require any UI navigation or login flow.
+ * Focuses on the token-based review flow—the kind of links passengers get 
+ * via email or SMS. No login required here, just the right token in the URL.
+ * We're testing successful submissions and edge cases like expired or reused links.
  */
+@Tag("e2e")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Review via Token Link")
 public class ReviewTest extends BaseTest {
 
-    // The JWT secret is pulled from the .env file so we don't have to hardcode it.
+    // Pull the JWT secret from .env so we don't have it floating around in the code.
     private static String JWT_SECRET;
 
-    // These IDs are from the default data seeded by DataInitializer.
-    // Ride 10 is finished and has no reviews yet.
+    // These IDs match the default seed data from DataInitializer.
+    // Ride 10 is our go-to 'fresh' ride for E2E testing.
     private static final long E2E_RIDE_ID = 10L;
     private static final long E2E_DRIVER_ID = 1L;
     private static final long E2E_PASSENGER_ID = 5L;
 
-    // Ride 3 already has a review, so we use it to test duplicate prevention.
+    // Ride 3 already has reviews, perfect for testing duplicate prevention.
     private static final long REVIEWED_RIDE_ID = 3L;
     private static final long REVIEWED_PASSENGER_ID = 3L;
     private static final long REVIEWED_DRIVER_ID = 1L;
 
-    // Ride 5 finished more than 3 days ago, which is the time limit for reviews.
+    // Ride 5 is way too old to be reviewed (3-day limit).
     private static final long EXPIRED_PERIOD_RIDE_ID = 5L;
     private static final long EXPIRED_PERIOD_PASSENGER_ID = 3L;
     private static final long EXPIRED_PERIOD_DRIVER_ID = 2L;
 
     @BeforeAll
     static void setupClass() throws Exception {
-        Map<String, String> env = loadEnvFile();
+        Map<String, String> env = E2ETestUtils.loadEnvFile("JWT_SECRET", "DB_URL", "DB_USERNAME", "DB_PASSWORD");
         JWT_SECRET = env.get("JWT_SECRET");
         if (JWT_SECRET == null || JWT_SECRET.isBlank()) {
-            throw new IllegalStateException("JWT_SECRET is missing from the env!");
+            throw new IllegalStateException("JWT_SECRET is missing! Did you forget to update your .env file?");
         }
-        // We clean up any existing reviews for ride 10 so the test is repeatable.
-        cleanupReviewsForRide(env, E2E_RIDE_ID);
+        // Sweep the DB clean before we start so the tests are repeatable.
+        E2ETestUtils.cleanupReviewsForRide(env, E2E_RIDE_ID);
     }
 
     /**
-     * Reads the .env file to get configuration like the secret and DB credentials.
-     */
-    private static Map<String, String> loadEnvFile() throws IOException {
-        Map<String, String> env = new HashMap<>();
-        Path envFile = Paths.get("").toAbsolutePath().resolve(".env");
-        if (!Files.exists(envFile)) {
-            envFile = Paths.get("").toAbsolutePath().getParent().resolve("backend").resolve(".env");
-        }
-        if (Files.exists(envFile)) {
-            for (String line : Files.readAllLines(envFile)) {
-                String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
-                int eq = trimmed.indexOf('=');
-                if (eq > 0) {
-                    env.put(trimmed.substring(0, eq).trim(), trimmed.substring(eq + 1).trim());
-                }
-            }
-        }
-        // Fall back to system environment variables if the file is missing or values are empty.
-        for (String key : new String[]{"JWT_SECRET", "DB_URL", "DB_USERNAME", "DB_PASSWORD"}) {
-            if (!env.containsKey(key) || env.get(key).isBlank()) {
-                String sysVal = System.getenv(key);
-                if (sysVal != null && !sysVal.isBlank()) {
-                    env.put(key, sysVal);
-                }
-            }
-        }
-        return env;
-    }
-
-    /**
-     * Removes reviews for a specific ride directly from the DB via JDBC.
-     */
-    private static void cleanupReviewsForRide(Map<String, String> env, long rideId) throws Exception {
-        String dbUrl = env.get("DB_URL");
-        String dbUser = env.get("DB_USERNAME");
-        String dbPass = env.get("DB_PASSWORD");
-        if (dbUrl == null || dbUser == null || dbPass == null) {
-            System.err.println("Database info is missing, skipping review cleanup.");
-            return;
-        }
-        try (Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPass);
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM review WHERE ride_id = ?")) {
-            ps.setLong(1, rideId);
-            int deleted = ps.executeUpdate();
-            if (deleted > 0) {
-                System.out.println("Deleted " + deleted + " old reviews for ride " + rideId);
-            }
-        }
-    }
-
-    /**
-     * Generates a signed review token for testing.
+     * Helper to craft a signed JWT review token on the fly. 
+     * Very handy for testing expiration and various ride combinations.
      */
     private String generateReviewToken(long rideId, long passengerId, long driverId, long expiryMs) {
         Key key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8));
@@ -137,24 +78,24 @@ public class ReviewTest extends BaseTest {
                 .compact();
     }
 
-    // A valid token with a 3-day expiry.
+    // Standard valid token with plenty of time left.
     private String generateValidToken() {
         long threeDaysMs = 3L * 24 * 60 * 60 * 1000;
         return generateReviewToken(E2E_RIDE_ID, E2E_PASSENGER_ID, E2E_DRIVER_ID, threeDaysMs);
     }
 
-    // A token that has already expired.
+    // Token that literally just expired.
     private String generateExpiredToken() {
         return generateReviewToken(E2E_RIDE_ID, E2E_PASSENGER_ID, E2E_DRIVER_ID, -1000);
     }
 
-    // A token for a ride that was already reviewed.
+    // Token for a ride that's already been polished off with a review.
     private String generateAlreadyReviewedToken() {
         long threeDaysMs = 3L * 24 * 60 * 60 * 1000;
         return generateReviewToken(REVIEWED_RIDE_ID, REVIEWED_PASSENGER_ID, REVIEWED_DRIVER_ID, threeDaysMs);
     }
 
-    // A token for a ride that ended more than 3 days ago.
+    // Token for a ride that ended more than 3 days ago (business rule violation).
     private String generateExpiredPeriodToken() {
         long threeDaysMs = 3L * 24 * 60 * 60 * 1000;
         return generateReviewToken(EXPIRED_PERIOD_RIDE_ID, EXPIRED_PERIOD_PASSENGER_ID, EXPIRED_PERIOD_DRIVER_ID, threeDaysMs);
@@ -172,22 +113,22 @@ public class ReviewTest extends BaseTest {
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
 
-        // Check if the form shows up as expected.
+        // Check if the form actually loaded for our valid token.
         assertTrue(reviewPage.isReviewFormVisible(),
-                "The review form should be visible since our token is valid.");
+                "The form should be visible since the token is valid.");
 
         assertEquals("Rate Your Ride", reviewPage.getPageHeadingText());
 
-        // Fill out the ratings and a comment.
+        // Fill out the ratings and leave a nice comment.
         reviewPage.setDriverRating(5);
         reviewPage.setVehicleRating(4);
         reviewPage.enterComment("Great service!");
 
         reviewPage.clickSubmit();
 
-        // Make sure the "Thank You!" message pops up.
+        // Verify the success screen appears.
         assertTrue(reviewPage.isSuccessMessageVisible(),
-                "We should see a success message after submitting.");
+                "We should be looking at the 'Thank You' screen now.");
         assertEquals("Thank You!", reviewPage.getSuccessHeadingText());
     }
 
@@ -203,13 +144,13 @@ public class ReviewTest extends BaseTest {
 
         assertTrue(reviewPage.isReviewFormVisible());
 
-        // Set ratings but leave the comment empty.
+        // Stars only, no text.
         reviewPage.setDriverRating(3);
         reviewPage.setVehicleRating(3);
 
-        // It should still let us submit.
+        // This should be allowed.
         assertTrue(reviewPage.isSubmitButtonEnabled(),
-                "Submit should be enabled without a comment since it's optional.");
+                "Submit should be clickable since text comments are totally optional.");
     }
 
     @Test
@@ -224,7 +165,7 @@ public class ReviewTest extends BaseTest {
 
         assertTrue(reviewPage.isReviewFormVisible());
         assertEquals("Rate Your Ride", reviewPage.getPageHeadingText());
-        assertEquals("", reviewPage.getCommentText(), "Textarea should start empty.");
+        assertEquals("", reviewPage.getCommentText(), "Text area should be empty on load.");
     }
 
     // Validation and Error Case Tests
@@ -239,11 +180,11 @@ public class ReviewTest extends BaseTest {
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
 
-        // Submit should be off by default.
+        // No ratings should mean no submission.
         assertFalse(reviewPage.isSubmitButtonEnabled(),
-                "Button should be disabled until ratings are provided.");
+                "Submit should be locked until ratings are provided.");
 
-        // We should also see a warning message.
+        // And we should see a 'please rate' warning.
         assertTrue(reviewPage.isValidationMessageVisible());
         String msg = reviewPage.getValidationMessageText();
         assertTrue(msg.contains("rate both the driver and vehicle"));
@@ -261,7 +202,7 @@ public class ReviewTest extends BaseTest {
 
         reviewPage.setDriverRating(5);
         assertFalse(reviewPage.isSubmitButtonEnabled(),
-                "Still shouldn't be able to submit without a vehicle rating.");
+                "Should still be locked without a vehicle rating.");
     }
 
     @Test
@@ -276,7 +217,7 @@ public class ReviewTest extends BaseTest {
 
         reviewPage.setVehicleRating(3);
         assertFalse(reviewPage.isSubmitButtonEnabled(),
-                "Still shouldn't be able to submit without a driver rating.");
+                "Should still be locked without a driver rating.");
     }
 
     @Test
@@ -296,7 +237,7 @@ public class ReviewTest extends BaseTest {
 
         reviewPage.setVehicleRating(3);
         assertTrue(reviewPage.isSubmitButtonEnabled(),
-                "Now that both ratings are here, it should be clickable.");
+                "Both sets of stars are in, so the button should wake up.");
     }
 
     @Test
@@ -305,7 +246,7 @@ public class ReviewTest extends BaseTest {
     void testNoTokenRedirectsTo404() {
         driver.get(BASE_URL + "/review");
 
-        // The guard should kick in and send us to /404.
+        // The auth guard should catch this and kick us to 404.
         new WebDriverWait(driver, Duration.ofSeconds(10))
                 .until(ExpectedConditions.urlContains("/404"));
 
@@ -330,7 +271,7 @@ public class ReviewTest extends BaseTest {
     @Order(10)
     @DisplayName("Negative: Link Expired shown for malformed token")
     void testMalformedTokenShowsExpiredState() {
-        driver.get(BASE_URL + "/review?token=invalid_token");
+        driver.get(BASE_URL + "/review?token=completely_invalid_garbage");
 
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
@@ -355,7 +296,7 @@ public class ReviewTest extends BaseTest {
         reviewPage.setVehicleRating(4);
         reviewPage.clickSubmit();
 
-        // The backend should tell us we've already done this.
+        // Backend should reject this as a duplicate.
         String errorText = reviewPage.getErrorMessageText();
         assertTrue(errorText.contains("already submitted"));
     }
@@ -370,7 +311,7 @@ public class ReviewTest extends BaseTest {
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
 
-        // If we try to type too much, it should stop at 500 characters.
+        // Blast it with text and ensure it doesn't overflow.
         String longText = "A".repeat(600);
         reviewPage.enterComment(longText);
 
@@ -394,8 +335,15 @@ public class ReviewTest extends BaseTest {
         reviewPage.setVehicleRating(4);
         reviewPage.clickSubmit();
 
-        // We submitted too late, so the page should switch to the expired view.
+        // Even if the token is valid, the business logic should block this.
         assertTrue(reviewPage.isTokenExpiredVisible());
         assertEquals("Link Expired", reviewPage.getPageHeadingText());
+    }
+
+    @AfterAll
+    static void cleanupAfterAll() throws Exception {
+        // Leave the DB clean for the next test run.
+        Map<String, String> env = E2ETestUtils.loadEnvFile("DB_URL", "DB_USERNAME", "DB_PASSWORD");
+        E2ETestUtils.cleanupReviewsForRide(env, E2E_RIDE_ID);
     }
 }
