@@ -194,7 +194,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      * 1. Token refreshes while user is logged in
      * 2. User logs in and token hasn't been synced yet
      */
-    static void syncTokenWithBackend(SharedPreferencesManager prefs, String fcmToken) {
+    public static void syncTokenWithBackend(SharedPreferencesManager prefs, String fcmToken) {
         if (fcmToken == null || fcmToken.isEmpty()) return;
 
         Long userId = prefs.getUserId();
