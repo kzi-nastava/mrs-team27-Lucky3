@@ -1,6 +1,7 @@
 package com.example.mobile.ui.ride;
 
 import android.app.Dialog;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,12 +22,16 @@ import com.example.mobile.utils.SharedPreferencesManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.gson.Gson;
 
+import java.util.ArrayList;
+import java.util.Locale;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
  * Dialog for drivers to stop (end early) a ride at the vehicle's current location.
+ * Shows cost summary, route info, and savings — similar to the web stop-early modal.
  * The backend recalculates cost based on distance traveled so far.
  */
 public class StopRideDialog extends DialogFragment {
@@ -37,6 +42,13 @@ public class StopRideDialog extends DialogFragment {
     private static final String ARG_LATITUDE = "latitude";
     private static final String ARG_LONGITUDE = "longitude";
     private static final String ARG_ADDRESS = "address";
+    private static final String ARG_CURRENT_COST = "current_cost";
+    private static final String ARG_ESTIMATED_COST = "estimated_cost";
+    private static final String ARG_VEHICLE_TYPE = "vehicle_type";
+    private static final String ARG_PICKUP_ADDRESS = "pickup_address";
+    private static final String ARG_DROPOFF_ADDRESS = "dropoff_address";
+    private static final String ARG_DISTANCE_LEFT = "distance_left";
+    private static final String ARG_COMPLETED_STOPS = "completed_stops";
 
     private LinearLayout errorContainer;
     private TextView tvError;
@@ -46,15 +58,26 @@ public class StopRideDialog extends DialogFragment {
     private boolean isStopping = false;
 
     /**
-     * Create a new StopRideDialog with the ride ID and current vehicle coordinates.
+     * Create a new StopRideDialog with ride data for the stop-early summary.
      */
-    public static StopRideDialog newInstance(long rideId, double latitude, double longitude, String address) {
+    public static StopRideDialog newInstance(long rideId, double latitude, double longitude,
+                                             String address, double currentCost, double estimatedCost,
+                                             String vehicleType, String pickupAddress,
+                                             String dropoffAddress, double distanceLeftKm,
+                                             ArrayList<String> completedStops) {
         StopRideDialog dialog = new StopRideDialog();
         Bundle args = new Bundle();
         args.putLong(ARG_RIDE_ID, rideId);
         args.putDouble(ARG_LATITUDE, latitude);
         args.putDouble(ARG_LONGITUDE, longitude);
         args.putString(ARG_ADDRESS, address != null ? address : "");
+        args.putDouble(ARG_CURRENT_COST, currentCost);
+        args.putDouble(ARG_ESTIMATED_COST, estimatedCost);
+        args.putString(ARG_VEHICLE_TYPE, vehicleType != null ? vehicleType : "");
+        args.putString(ARG_PICKUP_ADDRESS, pickupAddress != null ? pickupAddress : "");
+        args.putString(ARG_DROPOFF_ADDRESS, dropoffAddress != null ? dropoffAddress : "");
+        args.putDouble(ARG_DISTANCE_LEFT, distanceLeftKm);
+        args.putStringArrayList(ARG_COMPLETED_STOPS, completedStops);
         dialog.setArguments(args);
         return dialog;
     }
@@ -66,22 +89,104 @@ public class StopRideDialog extends DialogFragment {
         View root = LayoutInflater.from(requireContext())
                 .inflate(R.layout.dialog_stop_ride, null);
 
+        // Bind views
         tvCurrentLocation = root.findViewById(R.id.tv_current_location);
         errorContainer = root.findViewById(R.id.error_container);
         tvError = root.findViewById(R.id.tv_error);
         btnKeep = root.findViewById(R.id.btn_keep_ride);
         btnConfirmStop = root.findViewById(R.id.btn_confirm_stop);
 
-        long rideId = getArguments() != null ? getArguments().getLong(ARG_RIDE_ID, -1) : -1;
-        double latitude = getArguments() != null ? getArguments().getDouble(ARG_LATITUDE, 0) : 0;
-        double longitude = getArguments() != null ? getArguments().getDouble(ARG_LONGITUDE, 0) : 0;
-        String address = getArguments() != null ? getArguments().getString(ARG_ADDRESS, "") : "";
+        TextView tvCurrentCost = root.findViewById(R.id.tv_current_cost);
+        TextView tvEstimatedCost = root.findViewById(R.id.tv_estimated_cost);
+        TextView tvSavings = root.findViewById(R.id.tv_savings);
+        TextView tvRideType = root.findViewById(R.id.tv_ride_type);
+        TextView tvDistanceLeft = root.findViewById(R.id.tv_distance_left);
+        TextView tvPickupAddress = root.findViewById(R.id.tv_pickup_address);
+        TextView tvDropoffAddress = root.findViewById(R.id.tv_dropoff_address);
+        LinearLayout completedStopsContainer = root.findViewById(R.id.completed_stops_container);
 
-        // Display the current location coordinates
+        // Extract arguments
+        Bundle args = getArguments();
+        long rideId = args != null ? args.getLong(ARG_RIDE_ID, -1) : -1;
+        double latitude = args != null ? args.getDouble(ARG_LATITUDE, 0) : 0;
+        double longitude = args != null ? args.getDouble(ARG_LONGITUDE, 0) : 0;
+        String address = args != null ? args.getString(ARG_ADDRESS, "") : "";
+        double currentCost = args != null ? args.getDouble(ARG_CURRENT_COST, 0) : 0;
+        double estimatedCost = args != null ? args.getDouble(ARG_ESTIMATED_COST, 0) : 0;
+        String vehicleType = args != null ? args.getString(ARG_VEHICLE_TYPE, "") : "";
+        String pickupAddr = args != null ? args.getString(ARG_PICKUP_ADDRESS, "") : "";
+        String dropoffAddr = args != null ? args.getString(ARG_DROPOFF_ADDRESS, "") : "";
+        double distanceLeftKm = args != null ? args.getDouble(ARG_DISTANCE_LEFT, -1) : -1;
+        ArrayList<String> completedStops = args != null ? args.getStringArrayList(ARG_COMPLETED_STOPS) : null;
+
+        // Current location
         if (address != null && !address.isEmpty()) {
             tvCurrentLocation.setText(address);
         } else {
-            tvCurrentLocation.setText(String.format("%.5f, %.5f", latitude, longitude));
+            tvCurrentLocation.setText(String.format(Locale.US, "%.5f, %.5f", latitude, longitude));
+        }
+
+        // Cost summary
+        if (currentCost > 0) {
+            tvCurrentCost.setText(String.format(Locale.US, "RSD %.0f", currentCost));
+        }
+        if (estimatedCost > 0) {
+            tvEstimatedCost.setText(String.format(Locale.US, "RSD %.0f", estimatedCost));
+        }
+        double savings = estimatedCost - currentCost;
+        if (estimatedCost > 0 && savings > 0) {
+            tvSavings.setText(String.format(Locale.US, "RSD %.0f", savings));
+        } else {
+            tvSavings.setText("—");
+        }
+
+        // Ride type
+        if (vehicleType != null && !vehicleType.isEmpty()) {
+            tvRideType.setText(vehicleType.toUpperCase(Locale.US));
+        }
+
+        // Distance left
+        if (distanceLeftKm >= 0) {
+            if (distanceLeftKm >= 1.0) {
+                tvDistanceLeft.setText(String.format(Locale.US, "%.1f km", distanceLeftKm));
+            } else {
+                tvDistanceLeft.setText(String.format(Locale.US, "%d m", Math.round(distanceLeftKm * 1000)));
+            }
+        }
+
+        // Route: pickup
+        if (pickupAddr != null && !pickupAddr.isEmpty()) {
+            tvPickupAddress.setText(pickupAddr);
+        }
+
+        // Route: dropoff (strikethrough already set in XML via paintFlags)
+        if (dropoffAddr != null && !dropoffAddr.isEmpty()) {
+            tvDropoffAddress.setText(dropoffAddr);
+        }
+        tvDropoffAddress.setPaintFlags(tvDropoffAddress.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+
+        // Completed stops
+        if (completedStops != null && !completedStops.isEmpty()) {
+            completedStopsContainer.setVisibility(View.VISIBLE);
+            for (String stop : completedStops) {
+                LinearLayout row = new LinearLayout(requireContext());
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setPadding(0, 4, 0, 4);
+
+                TextView checkmark = new TextView(requireContext());
+                checkmark.setText("✓ ");
+                checkmark.setTextColor(requireContext().getResources().getColor(R.color.green_500, null));
+                checkmark.setTextSize(13);
+                row.addView(checkmark);
+
+                TextView stopLabel = new TextView(requireContext());
+                stopLabel.setText(stop);
+                stopLabel.setTextColor(requireContext().getResources().getColor(R.color.white, null));
+                stopLabel.setTextSize(13);
+                row.addView(stopLabel);
+
+                completedStopsContainer.addView(row);
+            }
         }
 
         btnKeep.setOnClickListener(v -> {

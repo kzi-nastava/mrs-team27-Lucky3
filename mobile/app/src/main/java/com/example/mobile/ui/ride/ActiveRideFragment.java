@@ -1405,14 +1405,85 @@ public class ActiveRideFragment extends Fragment {
     }
 
     private void openStopRideDialog() {
+        // Fetch fresh ride data from the API so we get the latest totalCost
+        // and distanceTraveled (the RideCostTrackingService updates DB every 5s
+        // but does NOT broadcast via WebSocket).
+        String token = "Bearer " + preferencesManager.getToken();
+        ClientUtils.rideService.getRide(rideId, token).enqueue(new Callback<RideResponse>() {
+            @Override
+            public void onResponse(Call<RideResponse> call, Response<RideResponse> response) {
+                if (!isAdded()) return;
+                RideResponse freshRide = (response.isSuccessful() && response.body() != null)
+                        ? response.body() : ride;
+                if (freshRide != null) {
+                    ride = freshRide; // also update the cached ride
+                }
+                showStopRideDialogWithData(freshRide != null ? freshRide : ride);
+            }
+
+            @Override
+            public void onFailure(Call<RideResponse> call, Throwable t) {
+                if (!isAdded()) return;
+                Log.w(TAG, "Failed to fetch fresh ride for stop dialog, using cached data", t);
+                showStopRideDialogWithData(ride);
+            }
+        });
+    }
+
+    private void showStopRideDialogWithData(RideResponse rideData) {
         double lat = lastVehicleLatitude;
         double lon = lastVehicleLongitude;
         String address = "";
-        if (lat == 0 && lon == 0 && ride != null && ride.getEndLocation() != null) {
-            lat = ride.getEndLocation().getLatitude();
-            lon = ride.getEndLocation().getLongitude();
-            address = ride.getEndLocation().getAddress();
+        if (lat == 0 && lon == 0 && rideData != null && rideData.getEndLocation() != null) {
+            lat = rideData.getEndLocation().getLatitude();
+            lon = rideData.getEndLocation().getLongitude();
+            address = rideData.getEndLocation().getAddress();
         }
+
+        // Compute current cost from backend-tracked distance (matches web approach:
+        // baseFare + distanceTraveled * pricePerKm). This is always accurate because
+        // we just fetched fresh data from the API.
+        double currentCost = 0;
+        if (rideData != null) {
+            double baseFare = rideData.getRateBaseFare() != null ? rideData.getRateBaseFare() : 120;
+            double perKm = rideData.getRatePricePerKm() != null ? rideData.getRatePricePerKm() : 120;
+            double distTraveled = rideData.getDistanceTraveled() != null ? rideData.getDistanceTraveled() : 0;
+            currentCost = baseFare + distTraveled * perKm;
+            currentCost = Math.round(currentCost);
+        }
+
+        // estimatedCost is the original full-route estimate (never changes)
+        double estimatedCost = (rideData != null && rideData.getEstimatedCost() != null)
+                ? rideData.getEstimatedCost() : 0;
+
+        String vehicleType = (rideData != null) ? rideData.getVehicleType() : "";
+        String pickupAddr = (rideData != null && rideData.getDeparture() != null) ? rideData.getDeparture().getAddress() : "";
+        String dropoffAddr = (rideData != null && rideData.getDestination() != null) ? rideData.getDestination().getAddress() : "";
+
+        double distanceLeftKm = remainingDistanceKm;
+
+        // Build completed stops list
+        ArrayList<String> completedStops = new ArrayList<>();
+        if (rideData != null && rideData.getStops() != null) {
+            Set<Integer> completed = rideData.getCompletedStopIndexes();
+            List<LocationDto> stops = rideData.getStops();
+            for (int i = 0; i < stops.size(); i++) {
+                if (completed.contains(i)) {
+                    String stopAddr = stops.get(i).getAddress();
+                    completedStops.add(stopAddr != null && !stopAddr.isEmpty()
+                            ? stopAddr
+                            : String.format(Locale.US, "Stop %d", i + 1));
+                }
+            }
+        }
+
+        final double fCurrentCost = currentCost;
+        final double fEstimatedCost = estimatedCost;
+        final String fVehicleType = vehicleType;
+        final String fPickupAddr = pickupAddr;
+        final String fDropoffAddr = dropoffAddr;
+        final double fDistanceLeftKm = distanceLeftKm;
+        final ArrayList<String> fCompletedStops = completedStops;
 
         if (address == null || address.isEmpty()) {
             // Reverse geocode on a background thread, then show dialog on UI thread
@@ -1422,13 +1493,19 @@ public class ActiveRideFragment extends Fragment {
                 String resolved = reverseGeocodeLocation(finalLat, finalLon);
                 if (isAdded()) {
                     requireActivity().runOnUiThread(() -> {
-                        StopRideDialog dialog = StopRideDialog.newInstance(rideId, finalLat, finalLon, resolved);
+                        StopRideDialog dialog = StopRideDialog.newInstance(
+                                rideId, finalLat, finalLon, resolved,
+                                fCurrentCost, fEstimatedCost, fVehicleType,
+                                fPickupAddr, fDropoffAddr, fDistanceLeftKm, fCompletedStops);
                         dialog.show(getParentFragmentManager(), "stop_ride");
                     });
                 }
             }).start();
         } else {
-            StopRideDialog dialog = StopRideDialog.newInstance(rideId, lat, lon, address);
+            StopRideDialog dialog = StopRideDialog.newInstance(
+                    rideId, lat, lon, address,
+                    fCurrentCost, fEstimatedCost, fVehicleType,
+                    fPickupAddr, fDropoffAddr, fDistanceLeftKm, fCompletedStops);
             dialog.show(getParentFragmentManager(), "stop_ride");
         }
     }
