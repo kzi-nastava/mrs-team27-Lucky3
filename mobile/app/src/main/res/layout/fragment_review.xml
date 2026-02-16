@@ -7,10 +7,22 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical"
         android:padding="24dp"
-        android:gravity="center_horizontal">
+        android:gravity="center">
+
+        <!-- Cancel / Close button at top-left -->
+        <TextView
+            android:id="@+id/btn_cancel_review"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✕  Cancel"
+            android:textColor="@color/gray_400"
+            android:textSize="14sp"
+            android:padding="8dp"
+            android:layout_gravity="start"
+            android:layout_marginBottom="12dp" />
 
         <!-- ==================== LOADING STATE ==================== -->
         <LinearLayout

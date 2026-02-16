@@ -61,6 +61,7 @@ public class ReviewFragment extends Fragment {
     private TextView tvErrorMessage;
     private TextView btnSubmit;
     private TextView tvValidationHint;
+    private TextView btnCancel;
 
     // State
     private boolean isSubmitting = false;
@@ -106,6 +107,7 @@ public class ReviewFragment extends Fragment {
         tvErrorMessage = view.findViewById(R.id.tv_error_message);
         btnSubmit = view.findViewById(R.id.btn_submit_review);
         tvValidationHint = view.findViewById(R.id.tv_validation_hint);
+        btnCancel = view.findViewById(R.id.btn_cancel_review);
     }
 
     private void setupStars() {
@@ -177,6 +179,9 @@ public class ReviewFragment extends Fragment {
 
     private void setupButtons(View view) {
         btnSubmit.setOnClickListener(v -> submitReview());
+
+        // Cancel button at the top
+        view.findViewById(R.id.btn_cancel_review).setOnClickListener(v -> goBack());
 
         // "Go Home" buttons for error states
         view.findViewById(R.id.btn_expired_go_home).setOnClickListener(v -> goBack());
@@ -336,6 +341,9 @@ public class ReviewFragment extends Fragment {
         successContainer.setVisibility(View.GONE);
         reviewFormContainer.setVisibility(View.GONE);
         visibleContainer.setVisibility(View.VISIBLE);
+
+        // Only show cancel button on the review form
+        btnCancel.setVisibility(visibleContainer == reviewFormContainer ? View.VISIBLE : View.GONE);
     }
 
     private void showError(String message) {
