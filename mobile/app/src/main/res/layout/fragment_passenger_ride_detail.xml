@@ -656,6 +656,20 @@
             android:orientation="vertical"
             android:layout_marginBottom="24dp">
 
+            <!-- Leave a Review Button -->
+            <TextView
+                android:id="@+id/btn_leave_review"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Leave a Review"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:background="@color/yellow_500"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone" />
+
             <!-- Add to Favorites Button -->
             <TextView
                 android:id="@+id/btn_add_to_favorites"

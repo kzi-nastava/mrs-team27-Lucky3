@@ -179,5 +179,19 @@
             android:textColor="@color/gray_400"
             android:visibility="gone" />
 
+        <!-- Row 6: Leave a Review Button -->
+        <TextView
+            android:id="@+id/btn_leave_review"
+            android:layout_width="match_parent"
+            android:layout_height="38dp"
+            android:text="Leave a Review"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:background="@drawable/bg_button_review"
+            android:layout_marginTop="10dp"
+            android:visibility="gone" />
+
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

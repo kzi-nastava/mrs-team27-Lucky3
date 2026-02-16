@@ -591,6 +591,10 @@ public class PassengerRideDetailFragment extends Fragment {
         TextView btnAddToFavorites = root.findViewById(R.id.btn_add_to_favorites);
         TextView btnOrderAgain = root.findViewById(R.id.btn_order_again);
         TextView btnScheduleLater = root.findViewById(R.id.btn_schedule_later);
+        TextView btnLeaveReview = root.findViewById(R.id.btn_leave_review);
+
+        // Show/hide review button based on ride status and existing reviews
+        setupReviewButton(btnLeaveReview);
 
         // Add to Favorites button
         btnAddToFavorites.setOnClickListener(v -> {
@@ -650,6 +654,43 @@ public class PassengerRideDetailFragment extends Fragment {
                         .navigate(R.id.nav_passenger_home, args);
             }
         });
+    }
+
+    private void setupReviewButton(TextView btnLeaveReview) {
+        if (ride == null || !ride.isFinished()) {
+            btnLeaveReview.setVisibility(View.GONE);
+            return;
+        }
+
+        // Check if this passenger has already reviewed this ride
+        Long userId = preferencesManager.getUserId();
+        boolean hasReviewed = false;
+        List<RideResponse.ReviewInfo> reviews = ride.getReviews();
+        if (reviews != null && userId != null) {
+            for (RideResponse.ReviewInfo review : reviews) {
+                if (userId.equals(review.getPassengerId())) {
+                    hasReviewed = true;
+                    break;
+                }
+            }
+        }
+
+        btnLeaveReview.setVisibility(View.VISIBLE);
+        if (hasReviewed) {
+            btnLeaveReview.setEnabled(false);
+            btnLeaveReview.setText("Already Reviewed");
+            btnLeaveReview.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray_400));
+            btnLeaveReview.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.gray_800));
+        } else {
+            btnLeaveReview.setEnabled(true);
+            btnLeaveReview.setText("Leave a Review");
+            btnLeaveReview.setOnClickListener(v -> {
+                Bundle args = new Bundle();
+                args.putLong("rideId", rideId);
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.action_passenger_ride_detail_to_review, args);
+            });
+        }
     }
 
     private void addRideToFavorites() {
