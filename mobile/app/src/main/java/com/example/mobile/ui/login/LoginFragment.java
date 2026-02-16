@@ -144,7 +144,6 @@ public class LoginFragment extends Fragment {
             if (error != null && !error.isEmpty()) {
                 binding.errorContainer.setVisibility(View.VISIBLE);
                 binding.errorText.setText(error);
-                viewModel.clearError();
             } else {
                 binding.errorContainer.setVisibility(View.GONE);
             }
