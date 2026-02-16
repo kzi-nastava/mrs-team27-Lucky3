@@ -88,6 +88,7 @@
       <div class="p-4 border-b border-gray-800 flex flex-col sm:flex-row justify-between items-center bg-gray-800/50 gap-4">
         <div class="flex items-center gap-3">
           <h3 class="text-lg font-semibold text-white">Ride Details</h3>
+
           <span class="text-xs px-2 py-1 rounded border" [ngClass]="getStatusClass(selectedRide.status)">
             {{ formatStatus(selectedRide.status) }}
           </span>
@@ -95,7 +96,8 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             PANIC
           </span>
-          <button (click)="closeDetails()" class="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors" title="Close">
+
+          <button (click)="closeDetails()" class="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors" title="Close" data-testid="ride-details-close-button">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
         </div>

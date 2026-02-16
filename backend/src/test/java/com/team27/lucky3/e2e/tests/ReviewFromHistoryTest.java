@@ -308,10 +308,15 @@ public class ReviewFromHistoryTest extends BaseTest {
 
         // Ride 10 was just reviewed, so it should no longer appear as reviewable.
         int reviewableCount = historyPage.getReviewableRideRows().size();
+        assertEquals(0, reviewableCount,
+                "Ride 10 should no longer be reviewable after review submission.");
+
+        // Also verify the detail panel doesn't show "Leave a Review" for the first finished ride.
         if (historyPage.getRideCount() > 0) {
             historyPage.clickRideRow(0);
             historyPage.waitForDetailPanel();
-            System.out.println("Reviewable rides after submission: " + reviewableCount);
+            assertFalse(historyPage.isLeaveReviewButtonVisible(),
+                    "Leave a Review button should not be visible for reviewed ride.");
         }
     }
 
@@ -354,13 +359,15 @@ public class ReviewFromHistoryTest extends BaseTest {
         // Filter to show cancelled rides — these should never be reviewable.
         historyPage.clickStatusFilter("Cancelled");
 
-        if (historyPage.getRideCount() > 0) {
-            historyPage.clickRideRow(0);
-            historyPage.waitForDetailPanel();
+        int rideCount = historyPage.getRideCount();
+        assertTrue(rideCount > 0,
+                "There should be at least one cancelled ride to test.");
 
-            assertFalse(historyPage.isLeaveReviewButtonVisible(),
-                    "Cancelled rides should not have a 'Leave a Review' button.");
-        }
+        historyPage.clickRideRow(0);
+        historyPage.waitForDetailPanel();
+
+        assertFalse(historyPage.isLeaveReviewButtonVisible(),
+                "Cancelled rides should not have a 'Leave a Review' button.");
     }
 
     @Test

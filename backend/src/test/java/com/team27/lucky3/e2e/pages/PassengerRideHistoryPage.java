@@ -38,12 +38,8 @@ public class PassengerRideHistoryPage {
     @FindBy(xpath = "//button[contains(text(), 'Leave a Review')]")
     private WebElement leaveReviewButton;
 
-    // "Order Again" button (to confirm detail panel is showing)
-    @FindBy(xpath = "//button[contains(text(), 'Order Again')]")
-    private WebElement orderAgainButton;
-
     // Close details button
-    @FindBy(css = ".p-1\\.5.rounded-lg.bg-gray-700")
+    @FindBy(css = "[data-testid='ride-details-close-button']")
     private WebElement closeDetailsButton;
 
     public PassengerRideHistoryPage(WebDriver driver) {
