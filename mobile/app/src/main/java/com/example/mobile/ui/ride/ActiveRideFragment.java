@@ -106,7 +106,11 @@ public class ActiveRideFragment extends Fragment {
     private TextView tvCancelledBy, tvCancellationReason;
     private MaterialButton btnDriverCancel, btnPassengerCancel;
     private MaterialButton btnReportInconsistency, btnPanic, btnStopRide;
+    private MaterialButton btnFinishRide;
+    private TextView tvFinishRideReason;
     private LinearLayout actionButtons;
+
+    private static final double END_POINT_THRESHOLD_METERS = 100.0;
 
     // Last known vehicle position for stop ride
     private volatile double lastVehicleLatitude = 0;
@@ -123,6 +127,7 @@ public class ActiveRideFragment extends Fragment {
         setupCancelDialogListeners();
         setupPanicDialogListener();
         setupStopRideDialogListener();
+        setupFinishRideDialogListener();
 
         if (getArguments() != null) {
             rideId = getArguments().getLong("rideId", -1);
@@ -161,6 +166,8 @@ public class ActiveRideFragment extends Fragment {
         btnReportInconsistency = root.findViewById(R.id.btn_report_inconsistency);
         btnPanic = root.findViewById(R.id.btn_panic);
         btnStopRide = root.findViewById(R.id.btn_stop_ride);
+        btnFinishRide = root.findViewById(R.id.btn_finish_ride);
+        tvFinishRideReason = root.findViewById(R.id.tv_finish_ride_reason);
         actionButtons = root.findViewById(R.id.action_buttons);
 
         // Set PANIC button text with emoji
@@ -584,6 +591,7 @@ public class ActiveRideFragment extends Fragment {
                             drawRoutes(v);
                             if ("DRIVER".equals(preferencesManager.getUserRole())) {
                                 checkStopCompletion(v);
+                                updateFinishRideButton();
                             }
                             break;
                         }
@@ -811,9 +819,10 @@ public class ActiveRideFragment extends Fragment {
                                 lastVehicleLongitude = v.getLongitude();
                                 updateVehicleOnMap(v);
                                 drawRoutes(v);
-                                // Only driver auto-completes stops
+                                // Only driver auto-completes stops and checks finish ride
                                 if ("DRIVER".equals(preferencesManager.getUserRole())) {
                                     checkStopCompletion(v);
+                                    updateFinishRideButton();
                                 }
                                 break;
                             }
@@ -1064,6 +1073,9 @@ public class ActiveRideFragment extends Fragment {
 
         // Rebuild route stops UI so completed dot turns green
         buildRouteStops();
+
+        // Update finish ride button (may become enabled now)
+        updateFinishRideButton();
     }
 
     private static double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
@@ -1194,6 +1206,8 @@ public class ActiveRideFragment extends Fragment {
         btnReportInconsistency.setVisibility(View.GONE);
         btnPanic.setVisibility(View.GONE);
         btnStopRide.setVisibility(View.GONE);
+        btnFinishRide.setVisibility(View.GONE);
+        tvFinishRideReason.setVisibility(View.GONE);
 
         if (ride.isCancelled() || "FINISHED".equals(status)) {
             actionButtons.setVisibility(View.GONE);
@@ -1220,6 +1234,8 @@ public class ActiveRideFragment extends Fragment {
             if ("DRIVER".equals(role) && isCurrentUserDriver()) {
                 btnStopRide.setVisibility(View.VISIBLE);
                 btnStopRide.setOnClickListener(v -> openStopRideDialog());
+                // Finish Ride button (enabled only when all stops completed + near destination)
+                updateFinishRideButton();
             }
 
             // Report Inconsistency for passengers only
@@ -1276,6 +1292,114 @@ public class ActiveRideFragment extends Fragment {
     private void openPassengerCancelDialog() {
         PassengerCancelRideDialog dialog = PassengerCancelRideDialog.newInstance(rideId);
         dialog.show(getParentFragmentManager(), "passenger_cancel");
+    }
+
+    // ========== Finish Ride Logic ==========
+
+    private boolean canEndRide() {
+        if (ride == null || !"IN_PROGRESS".equals(ride.getStatus())) return false;
+
+        // All stops must be completed
+        List<LocationDto> stops = ride.getStops();
+        Set<Integer> completed = ride.getCompletedStopIndexes();
+        int totalStops = stops != null ? stops.size() : 0;
+        if (completed.size() < totalStops) return false;
+
+        // Must be close to end point
+        LocationDto end = ride.getEffectiveEndLocation();
+        if (end == null || (lastVehicleLatitude == 0 && lastVehicleLongitude == 0)) return false;
+
+        double distanceMeters = haversineMeters(lastVehicleLatitude, lastVehicleLongitude,
+                end.getLatitude(), end.getLongitude());
+        return distanceMeters <= END_POINT_THRESHOLD_METERS;
+    }
+
+    private String getEndRideDisabledReason() {
+        if (ride == null || !"IN_PROGRESS".equals(ride.getStatus())) return "";
+
+        List<LocationDto> stops = ride.getStops();
+        Set<Integer> completed = ride.getCompletedStopIndexes();
+        int totalStops = stops != null ? stops.size() : 0;
+        int remaining = totalStops - completed.size();
+
+        if (remaining > 0) {
+            return "Complete " + remaining + " remaining stop" + (remaining > 1 ? "s" : "") + " first";
+        }
+
+        LocationDto end = ride.getEffectiveEndLocation();
+        if (end == null || (lastVehicleLatitude == 0 && lastVehicleLongitude == 0)) {
+            return "Waiting for location...";
+        }
+
+        double distanceMeters = haversineMeters(lastVehicleLatitude, lastVehicleLongitude,
+                end.getLatitude(), end.getLongitude());
+        if (distanceMeters > END_POINT_THRESHOLD_METERS) {
+            String distanceText;
+            if (distanceMeters >= 1000) {
+                distanceText = String.format(Locale.US, "%.1f km", distanceMeters / 1000);
+            } else {
+                distanceText = String.format(Locale.US, "%d m", Math.round(distanceMeters));
+            }
+            return "Drive closer to destination (" + distanceText + " away)";
+        }
+
+        return "";
+    }
+
+    private void updateFinishRideButton() {
+        if (btnFinishRide == null || ride == null) return;
+
+        String role = preferencesManager.getUserRole();
+        if (!"DRIVER".equals(role) || !isCurrentUserDriver() || !"IN_PROGRESS".equals(ride.getStatus())) {
+            btnFinishRide.setVisibility(View.GONE);
+            tvFinishRideReason.setVisibility(View.GONE);
+            return;
+        }
+
+        btnFinishRide.setVisibility(View.VISIBLE);
+
+        if (canEndRide()) {
+            btnFinishRide.setEnabled(true);
+            btnFinishRide.setAlpha(1.0f);
+            tvFinishRideReason.setVisibility(View.GONE);
+            btnFinishRide.setOnClickListener(v -> openFinishRideDialog());
+        } else {
+            btnFinishRide.setEnabled(false);
+            btnFinishRide.setAlpha(0.5f);
+            String reason = getEndRideDisabledReason();
+            if (!reason.isEmpty()) {
+                tvFinishRideReason.setText(reason);
+                tvFinishRideReason.setVisibility(View.VISIBLE);
+            } else {
+                tvFinishRideReason.setVisibility(View.GONE);
+            }
+            btnFinishRide.setOnClickListener(null);
+        }
+    }
+
+    private void openFinishRideDialog() {
+        FinishRideDialog dialog = FinishRideDialog.newInstance(rideId);
+        dialog.show(getParentFragmentManager(), "finish_ride");
+    }
+
+    private void setupFinishRideDialogListener() {
+        getParentFragmentManager().setFragmentResultListener(
+                FinishRideDialog.REQUEST_KEY, this, (requestKey, result) -> {
+                    if (result.getBoolean(FinishRideDialog.KEY_FINISHED, false)) {
+                        onRideFinished();
+                    }
+                });
+    }
+
+    private void onRideFinished() {
+        Toast.makeText(getContext(), "\u2713 Ride finished successfully!", Toast.LENGTH_SHORT).show();
+        try {
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.nav_driver_dashboard);
+        } catch (Exception e) {
+            Log.e(TAG, "Navigation error after finish ride", e);
+            Navigation.findNavController(requireView()).navigateUp();
+        }
     }
 
     private void openStopRideDialog() {

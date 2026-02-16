@@ -1,6 +1,7 @@
 package com.example.mobile.services;
 
 import com.example.mobile.models.CreateRideRequest;
+import com.example.mobile.models.EndRideRequest;
 import com.example.mobile.models.FavoriteRouteRequest;
 import com.example.mobile.models.FavoriteRouteResponse;
 import com.example.mobile.models.InconsistencyRequest;
@@ -106,6 +107,28 @@ public interface RideService {
     Call<RideResponse> panicRide(
         @Path("id") long id,
         @Body RidePanicRequest request,
+        @Header("Authorization") String token
+    );
+
+    /**
+     * End (finish) a ride normally.
+     * PUT /api/rides/{id}/end
+     */
+    @PUT("api/rides/{id}/end")
+    Call<RideResponse> endRide(
+        @Path("id") long id,
+        @Body EndRideRequest request,
+        @Header("Authorization") String token
+    );
+
+    /**
+     * Stop a ride early at the driver's current location.
+     * PUT /api/rides/{id}/stop
+     */
+    @PUT("api/rides/{id}/stop")
+    Call<RideResponse> stopRide(
+        @Path("id") long id,
+        @Body com.example.mobile.models.RideStopRequest request,
         @Header("Authorization") String token
     );
 }
