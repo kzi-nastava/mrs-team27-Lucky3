@@ -37,7 +37,7 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
 
   // Pagination
   currentPage: number = 0;
-  pageSize: number = 10;
+  pageSize: number = 5;
   totalElements: number = 0;
   totalPages: number = 0;
 
@@ -173,13 +173,16 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
 
     this.isLoading = true;
 
-    // Build status filter for backend
-    let statusParam: string | undefined;
+    // Build status filter for backend (like admin page)
+    const historyStatuses = 'FINISHED,CANCELLED,CANCELLED_BY_DRIVER,CANCELLED_BY_PASSENGER';
+    const cancelledStatuses = 'CANCELLED,CANCELLED_BY_DRIVER,CANCELLED_BY_PASSENGER';
+    let statusParam: string;
     if (this.statusFilter === 'FINISHED') {
       statusParam = 'FINISHED';
     } else if (this.statusFilter === 'CANCELLED') {
-      // Backend might need multiple statuses - for now we'll filter on frontend for cancelled
-      statusParam = undefined; // We'll handle this below
+      statusParam = cancelledStatuses;
+    } else {
+      statusParam = historyStatuses;
     }
 
     this.rideService.getRidesHistory({
@@ -193,30 +196,17 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
     }).pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {
-          // Filter to only past rides (FINISHED, CANCELLED variants)
-          const pastStatuses = ['FINISHED', 'CANCELLED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_PASSENGER'];
-          let relevant = (page.content ?? []).filter(r => pastStatuses.includes(r.status as string));
-          
-          // Apply status filter on frontend if needed (for CANCELLED which includes multiple statuses)
-          if (this.statusFilter === 'CANCELLED') {
-            relevant = relevant.filter(r => 
-              r.status === 'CANCELLED' || 
-              r.status === 'CANCELLED_BY_DRIVER' || 
-              r.status === 'CANCELLED_BY_PASSENGER'
-            );
-          } else if (this.statusFilter === 'FINISHED') {
-            relevant = relevant.filter(r => r.status === 'FINISHED');
-          }
-          
+          const rides = page.content ?? [];
+
           // Map and re-sort on frontend to handle null startTime correctly
-          let mappedRides = relevant.map(r => this.mapToRide(r));
+          let mappedRides = rides.map(r => this.mapToRide(r));
           mappedRides = this.sortRidesOnFrontend(mappedRides);
           
           this.sortedRides = mappedRides;
           this.totalElements = page.totalElements ?? 0;
           this.totalPages = page.totalPages ?? 0;
           
-          this.calculateStats(page.content ?? []);
+          this.calculateStats(rides);
           this.isLoading = false;
           this.cdr.detectChanges();
         },
@@ -449,6 +439,28 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
     }
   }
 
+  get visiblePages(): number[] {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(this.totalPages, start + maxVisible);
+    if (end - start < maxVisible) {
+      start = Math.max(0, end - maxVisible);
+    }
+    for (let i = start; i < end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  get startItem(): number {
+    return this.totalElements === 0 ? 0 : this.currentPage * this.pageSize + 1;
+  }
+
+  get endItem(): number {
+    return Math.min((this.currentPage + 1) * this.pageSize, this.totalElements);
+  }
+
   /**
    * Save current filters to localStorage
    */
@@ -482,7 +494,8 @@ export class DriverOverviewPage implements OnInit, OnDestroy {
       this.sortField = filters.sortField ?? 'startTime';
       this.sortDirection = filters.sortDirection ?? 'desc';
       this.currentPage = filters.currentPage ?? 0;
-      this.pageSize = filters.pageSize ?? 10;
+      // Always enforce pageSize = 5, ignore stored value
+      this.pageSize = 5;
     } catch (e) {
       // Invalid stored data, use defaults
       console.warn('Failed to restore filters from localStorage', e);
