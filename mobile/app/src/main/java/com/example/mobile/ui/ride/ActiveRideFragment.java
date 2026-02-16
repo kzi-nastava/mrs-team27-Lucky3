@@ -27,7 +27,10 @@ import com.example.mobile.ui.maps.RideMapRenderer;
 import com.example.mobile.ui.ride.ReportInconsistencyDialog;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
+import com.example.mobile.utils.StompClient;
+import com.example.mobile.utils.WebSocketManager;
 import com.google.android.material.button.MaterialButton;
+import com.google.gson.reflect.TypeToken;
 
 import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
@@ -84,9 +87,14 @@ public class ActiveRideFragment extends Fragment {
     private volatile double routeDistanceKm = -1;
     private volatile double routeTimeMin = -1;
 
-    // Polling
+    // Polling (fallback when WebSocket is unavailable)
     private final Handler pollingHandler = new Handler(Looper.getMainLooper());
     private boolean isPollingActive = false;
+
+    // WebSocket subscriptions
+    private String vehicleSubId;
+    private String rideSubId;
+    private boolean wsConnected = false;
 
     private TextView tvStatusBadge;
     private TextView tvRideType, tvCost, tvCostLabel;
@@ -500,15 +508,125 @@ public class ActiveRideFragment extends Fragment {
             // Flag yellow route for redraw
             yellowRouteNeedsRedraw = true;
 
-            // Start polling for vehicle location + ride status
-            startPolling();
+            // Connect WebSocket and subscribe (falls back to polling)
+            startWebSocketSubscriptions();
         } catch (Exception e) {
             Log.e(TAG, "Error updating map", e);
         }
     }
 
-    // ========== Polling ==========
+    // ========== WebSocket + Polling ==========
 
+    /**
+     * Connect to the WebSocket and subscribe to vehicle location + ride status topics.
+     * Falls back to HTTP polling if WebSocket fails to connect.
+     */
+    private void startWebSocketSubscriptions() {
+        if (ride == null || rideId <= 0) return;
+
+        WebSocketManager ws = WebSocketManager.getInstance();
+        ws.connect(requireContext(), new StompClient.ConnectionCallback() {
+            @Override
+            public void onConnected() {
+                if (!isAdded()) return;
+                wsConnected = true;
+                Log.i(TAG, "WebSocket connected — subscribing to topics");
+                subscribeToVehicleLocation();
+                subscribeToRideUpdates();
+                // Stop polling since WebSocket is active
+                stopPolling();
+                // Do one immediate REST fetch to get the latest state
+                pollVehicleLocation();
+            }
+
+            @Override
+            public void onDisconnected(String reason) {
+                if (!isAdded()) return;
+                wsConnected = false;
+                Log.w(TAG, "WebSocket disconnected, falling back to polling: " + reason);
+                startPolling();
+            }
+
+            @Override
+            public void onError(String error) {
+                if (!isAdded()) return;
+                wsConnected = false;
+                Log.w(TAG, "WebSocket error, falling back to polling: " + error);
+                startPolling();
+            }
+        });
+
+        // Start polling immediately as fallback until WebSocket connects
+        startPolling();
+    }
+
+    private void subscribeToVehicleLocation() {
+        if (vehicleSubId != null) return; // already subscribed
+
+        // Subscribe to all active vehicles broadcast
+        vehicleSubId = WebSocketManager.getInstance().subscribe(
+                "/topic/vehicles",
+                new TypeToken<List<VehicleLocationResponse>>() {}.getType(),
+                (StompClient.MessageCallback<List<VehicleLocationResponse>>) vehicles -> {
+                    if (!isAdded() || ride == null || mapView == null) return;
+
+                    Long driverId = ride.getDriverId();
+                    if (driverId == null && ride.getDriver() != null) {
+                        driverId = ride.getDriver().getId();
+                    }
+                    if (driverId == null) return;
+
+                    for (VehicleLocationResponse v : vehicles) {
+                        if (driverId.equals(v.getDriverId())) {
+                            lastVehicleLatitude = v.getLatitude();
+                            lastVehicleLongitude = v.getLongitude();
+                            updateVehicleOnMap(v);
+                            drawRoutes(v);
+                            if ("DRIVER".equals(preferencesManager.getUserRole())) {
+                                checkStopCompletion(v);
+                            }
+                            break;
+                        }
+                    }
+                });
+    }
+
+    private void subscribeToRideUpdates() {
+        if (rideSubId != null) return; // already subscribed
+
+        rideSubId = WebSocketManager.getInstance().subscribe(
+                "/topic/ride/" + rideId,
+                RideResponse.class,
+                (StompClient.MessageCallback<RideResponse>) updatedRide -> {
+                    if (!isAdded() || updatedRide == null) return;
+
+                    ride = updatedRide;
+                    if (Boolean.TRUE.equals(ride.getPanicPressed()) && !panicActivated) {
+                        panicActivated = true;
+                    }
+                    updateHeader();
+                    updateRoute();
+                    updateActionButtons();
+                    updateCancellationInfo();
+                });
+    }
+
+    private void unsubscribeWebSocket() {
+        WebSocketManager ws = WebSocketManager.getInstance();
+        if (vehicleSubId != null) {
+            ws.unsubscribe(vehicleSubId);
+            vehicleSubId = null;
+        }
+        if (rideSubId != null) {
+            ws.unsubscribe(rideSubId);
+            rideSubId = null;
+        }
+        wsConnected = false;
+    }
+
+    /**
+     * Start HTTP polling as a fallback when WebSocket is unavailable.
+     */
     private void startPolling() {
         if (isPollingActive) return;
         isPollingActive = true;
@@ -526,7 +644,10 @@ public class ActiveRideFragment extends Fragment {
         @Override
         public void run() {
             if (!isPollingActive || !isAdded()) return;
-            pollVehicleLocation();
+            // Skip polling if WebSocket is delivering vehicle updates
+            if (!wsConnected) {
+                pollVehicleLocation();
+            }
             pollingHandler.postDelayed(this, LOCATION_POLL_INTERVAL);
         }
     };
@@ -535,7 +656,10 @@ public class ActiveRideFragment extends Fragment {
         @Override
         public void run() {
             if (!isPollingActive || !isAdded()) return;
-            refreshRide();
+            // Skip polling if WebSocket is delivering ride updates
+            if (!wsConnected) {
+                refreshRide();
+            }
             pollingHandler.postDelayed(this, RIDE_POLL_INTERVAL);
         }
     };
@@ -1209,7 +1333,7 @@ public class ActiveRideFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (mapView != null) mapView.onResume();
-        if (ride != null) startPolling();
+        if (ride != null) startWebSocketSubscriptions();
     }
 
     @Override
@@ -1217,12 +1341,14 @@ public class ActiveRideFragment extends Fragment {
         super.onPause();
         if (mapView != null) mapView.onPause();
         stopPolling();
+        unsubscribeWebSocket();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         stopPolling();
+        unsubscribeWebSocket();
         if (mapView != null) mapView.onDetach();
     }
 }
