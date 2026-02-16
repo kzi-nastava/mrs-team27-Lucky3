@@ -1,6 +1,7 @@
 package com.team27.lucky3.backend.service.impl;
 
 import com.team27.lucky3.backend.dto.response.BlockUserResponse;
+import com.team27.lucky3.backend.dto.response.UserResponse;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.repository.UserRepository;
@@ -8,6 +9,9 @@ import com.team27.lucky3.backend.service.UserBlockingService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserBlockingServiceImpl implements UserBlockingService {
@@ -66,6 +70,36 @@ public class UserBlockingServiceImpl implements UserBlockingService {
                 savedUser.isBlocked(),
                 savedUser.getBlockReason(),
                 "User unblocked successfully"
+        );
+    }
+
+    @Override
+    public List<UserResponse> getBlockedUsers() {
+        List<User> users = userRepository.findByIsBlocked(true);
+        return users.stream()
+                .map(this::mapToUserResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<UserResponse> getUnblockedUsers() {
+        List<User> users = userRepository.findByIsBlocked(false);
+        return users.stream()
+                .map(this::mapToUserResponse)
+                .collect(Collectors.toList());
+    }
+
+    // Helper method to map Entity to DTO
+    private UserResponse mapToUserResponse(User user) {
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getSurname(),
+                user.getEmail(),
+                "/profile-pictures/" + user.getId(), //TODO: STA OVDE IDE KO ZNA
+                user.getRole(),
+                user.getPhoneNumber(),
+                user.getAddress()
         );
     }
 }
