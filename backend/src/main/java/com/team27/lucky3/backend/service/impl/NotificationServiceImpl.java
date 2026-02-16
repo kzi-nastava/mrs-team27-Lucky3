@@ -555,6 +555,26 @@ public class NotificationServiceImpl implements NotificationService {
         }
         data.put("userId", String.valueOf(recipient.getId()));
 
+        // Add navigate_to hint for mobile deep-linking
+        switch (type) {
+            case SUPPORT:
+                data.put("navigate_to", "support");
+                break;
+            case PANIC:
+                data.put("navigate_to", "admin_panic");
+                break;
+            case RIDE_STATUS:
+            case RIDE_INVITE:
+            case RIDE_FINISHED:
+            case DRIVER_ASSIGNMENT:
+                if (relatedEntityId != null) {
+                    data.put("navigate_to", "active_ride");
+                }
+                break;
+            default:
+                break;
+        }
+
         try {
             fcmService.sendToDevice(fcmToken, title, text, data);
         } catch (Exception e) {

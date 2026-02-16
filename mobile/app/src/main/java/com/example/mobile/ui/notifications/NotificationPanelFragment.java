@@ -135,7 +135,8 @@ public class NotificationPanelFragment extends Fragment {
 
                 case SUPPORT_MESSAGE:
                     // Navigate to support chat — use role-specific destination
-                    navigateToSupport();
+                    // Pass chatId for admin direct navigation to the specific chat
+                    navigateToSupport(notif.getChatId());
                     break;
 
                 default:
@@ -147,11 +148,23 @@ public class NotificationPanelFragment extends Fragment {
     }
 
     private void navigateToSupport() {
+        navigateToSupport(null);
+    }
+
+    private void navigateToSupport(Long chatId) {
         try {
             String role = new com.example.mobile.utils.SharedPreferencesManager(
                     requireContext()).getUserRole();
             int destId;
             if ("ADMIN".equals(role)) {
+                if (chatId != null && chatId > 0) {
+                    // Navigate directly to the admin chat with this chatId
+                    Bundle args = new Bundle();
+                    args.putLong("chatId", chatId);
+                    Navigation.findNavController(requireView())
+                            .navigate(R.id.nav_admin_support_chat, args);
+                    return;
+                }
                 destId = R.id.nav_admin_support;
             } else if ("DRIVER".equals(role)) {
                 destId = R.id.nav_driver_support;

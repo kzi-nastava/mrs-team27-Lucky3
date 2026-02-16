@@ -111,6 +111,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 channelId = NotificationHelper.CHANNEL_RIDE_UPDATES;
                 priority = NotificationCompat.PRIORITY_HIGH;
                 break;
+            case "SUPPORT":
+                channelId = NotificationHelper.CHANNEL_GENERAL;
+                priority = NotificationCompat.PRIORITY_HIGH;
+                break;
             default:
                 channelId = NotificationHelper.CHANNEL_GENERAL;
                 priority = NotificationCompat.PRIORITY_DEFAULT;
@@ -168,6 +172,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             case "DRIVER_ASSIGNMENT":
                 notifType = AppNotification.Type.RIDE_STATUS;
                 break;
+            case "SUPPORT":
+                notifType = AppNotification.Type.SUPPORT_MESSAGE;
+                break;
             default:
                 notifType = AppNotification.Type.GENERAL;
                 break;
@@ -175,7 +182,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         AppNotification appNotif = new AppNotification(notifType, title, body);
         if (rideIdStr != null && !rideIdStr.isEmpty()) {
             try {
-                appNotif.setRideId(Long.parseLong(rideIdStr));
+                long parsedId = Long.parseLong(rideIdStr);
+                if ("SUPPORT".equals(type)) {
+                    appNotif.setChatId(parsedId);
+                } else {
+                    appNotif.setRideId(parsedId);
+                }
             } catch (NumberFormatException ignored) {}
         }
         NotificationStore.getInstance().addNotification(appNotif);
@@ -193,6 +205,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      */
     private Intent buildDeepLinkIntent(String type, String rideIdStr) {
         Intent intent = new Intent(this, MainActivity.class);
+
+        if ("SUPPORT".equals(type)) {
+            intent.putExtra("navigate_to", "support");
+            // rideId field is reused as chatId for SUPPORT notifications from backend
+            if (rideIdStr != null && !rideIdStr.isEmpty()) {
+                try {
+                    intent.putExtra("chatId", Long.parseLong(rideIdStr));
+                } catch (NumberFormatException e) {
+                    Log.w(TAG, "Invalid chatId in FCM data: " + rideIdStr);
+                }
+            }
+            return intent;
+        }
 
         if (rideIdStr != null && !rideIdStr.isEmpty()) {
             try {

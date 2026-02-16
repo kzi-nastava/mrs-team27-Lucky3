@@ -143,4 +143,14 @@ public class ClientUtils {
     /**
      * Returns the base Retrofit instance.
      */
-    public static Retrofit
+    public static Retrofit getRetrofit() {
+        return retrofit;
+    }
+
+    /**
+     * Returns the Gson instance.
+     */
+    public static Gson getGson() {
+        return gson;
+    }
+}

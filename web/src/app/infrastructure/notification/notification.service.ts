@@ -37,12 +37,20 @@ export class NotificationService implements OnDestroy {
   private userNotifSub: Subscription | null = null;
   private audioContext: AudioContext | null = null;
   private initialized = false;
+  private authSub: Subscription | null = null;
 
   constructor(
     private http: HttpClient,
     private socketService: SocketService,
     private authService: AuthService
-  ) {}
+  ) {
+    // Auto-teardown when user logs out (user$ emits null)
+    this.authSub = this.authService.user$.subscribe((role) => {
+      if (!role && this.initialized) {
+        this.teardown();
+      }
+    });
+  }
 
   // ------------------------------------------------------------------
   // Lifecycle

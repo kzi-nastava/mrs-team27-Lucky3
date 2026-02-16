@@ -362,7 +362,7 @@ public class AppNotificationManager {
 
         NotificationStore.getInstance().addNotification(notification);
         postSystemNotification(title, body, NotificationHelper.CHANNEL_GENERAL,
-                "support", null);
+                "support", null, msg.getChatId());
     }
 
     private void onAdminChatListUpdate(SupportChatListItemResponse chatItem) {
@@ -386,13 +386,18 @@ public class AppNotificationManager {
 
         NotificationStore.getInstance().addNotification(notification);
         postSystemNotification(title, body, NotificationHelper.CHANNEL_GENERAL,
-                "support", null);
+                "support", null, null);
     }
 
     // ======================== System Notifications ========================
 
     private void postSystemNotification(String title, String body, String channelId,
                                         String navigateTo, Long rideId) {
+        postSystemNotification(title, body, channelId, navigateTo, rideId, null);
+    }
+
+    private void postSystemNotification(String title, String body, String channelId,
+                                        String navigateTo, Long rideId, Long chatId) {
         if (appContext == null) return;
 
         try {
@@ -401,6 +406,9 @@ public class AppNotificationManager {
             intent.putExtra("navigate_to", navigateTo);
             if (rideId != null) {
                 intent.putExtra("rideId", rideId);
+            }
+            if (chatId != null) {
+                intent.putExtra("chatId", chatId);
             }
 
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;

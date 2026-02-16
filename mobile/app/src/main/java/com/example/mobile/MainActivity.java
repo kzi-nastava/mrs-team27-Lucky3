@@ -511,7 +511,15 @@ public class MainActivity extends AppCompatActivity {
                 case "support":
                     // Navigate to role-specific support
                     if ("ADMIN".equals(currentRole)) {
-                        navController.navigate(R.id.nav_admin_support);
+                        long chatId = intent.getLongExtra("chatId", -1L);
+                        if (chatId > 0) {
+                            // Deep-link directly to the specific chat
+                            Bundle chatArgs = new Bundle();
+                            chatArgs.putLong("chatId", chatId);
+                            navController.navigate(R.id.nav_admin_support_chat, chatArgs);
+                        } else {
+                            navController.navigate(R.id.nav_admin_support);
+                        }
                     } else if ("DRIVER".equals(currentRole)) {
                         navController.navigate(R.id.nav_driver_support);
                     } else {
@@ -529,6 +537,7 @@ public class MainActivity extends AppCompatActivity {
             // Clear the extras to prevent re-navigation on config changes
             intent.removeExtra("navigate_to");
             intent.removeExtra("rideId");
+            intent.removeExtra("chatId");
         } catch (Exception e) {
             Log.e(TAG, "FCM deep-link navigation failed: " + e.getMessage());
         }

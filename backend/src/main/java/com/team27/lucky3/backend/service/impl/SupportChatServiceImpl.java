@@ -118,6 +118,8 @@ public class SupportChatServiceImpl implements SupportChatService {
         socketService.broadcastToAdmins(chat.getId(), response);
         // Notify about chat list update
         socketService.broadcastChatListUpdate(mapToListItemResponse(chat));
+        // Notify the user via their personal topic (used by mobile AppNotificationManager)
+        socketService.notifyUser(chat.getUser().getId(), response);
 
         // Send notification to the user about the admin reply
         notificationService.sendSupportReplyToUser(chat.getUser(), chat.getId());
