@@ -80,8 +80,8 @@ public class AdminDashboardFragment extends Fragment {
     private int displayLimit = INITIAL_DISPLAY;
 
     // Spinner labels
-    private static final String[] STATUS_LABELS = {"All", "In Progress", "Pending", "Scheduled"};
-    private static final String[] STATUS_VALUES = {null, "IN_PROGRESS", "PENDING", "SCHEDULED"};
+    private static final String[] STATUS_LABELS = {"All", "In Progress", "Pending", "Accepted", "Scheduled"};
+    private static final String[] STATUS_VALUES = {null, "IN_PROGRESS", "PENDING", "ACCEPTED", "SCHEDULED"};
     private static final String[] VEHICLE_LABELS = {"All Types", "Standard", "Luxury", "Van"};
     private static final String[] VEHICLE_VALUES = {null, "STANDARD", "LUXURY", "VAN"};
     private static final String[] SORT_LABELS = {"Driver Name", "Status"};

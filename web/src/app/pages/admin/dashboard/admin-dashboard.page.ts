@@ -52,7 +52,7 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
 
   // Pagination
   currentPage = 0;
-  pageSize = 10;
+  pageSize = 5;
   totalElements = 0;
   totalPages = 0;
 
@@ -180,6 +180,9 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
         this.rides = page.content || [];
         this.totalElements = page.totalElements || 0;
         this.totalPages = page.totalPages || 0;
+        if (this.sortField === 'status') {
+          this.sortRidesByStatus();
+        }
         this.isLoading = false;
         this.fetchDriverRatings();
         this.cdr.detectChanges();
@@ -272,6 +275,46 @@ export class AdminDashboardPage implements OnInit, OnDestroy {
   goToPage(page: number): void {
     this.currentPage = page;
     this.loadRides();
+  }
+
+  // Computed pagination helpers (same as driver overview)
+  get visiblePages(): number[] {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(this.totalPages, start + maxVisible);
+    if (end - start < maxVisible) {
+      start = Math.max(0, end - maxVisible);
+    }
+    for (let i = start; i < end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  get startItem(): number {
+    return this.totalElements === 0 ? 0 : this.currentPage * this.pageSize + 1;
+  }
+
+  get endItem(): number {
+    return Math.min((this.currentPage + 1) * this.pageSize, this.totalElements);
+  }
+
+  private statusSortOrder(status: string | undefined): number {
+    switch (status) {
+      case 'IN_PROGRESS': return 0;
+      case 'PENDING': return 1;
+      case 'ACCEPTED': return 2;
+      case 'SCHEDULED': return 3;
+      default: return 99;
+    }
+  }
+
+  private sortRidesByStatus(): void {
+    this.rides.sort((a, b) => {
+      const cmp = this.statusSortOrder(a.status) - this.statusSortOrder(b.status);
+      return this.sortDirection === 'asc' ? cmp : -cmp;
+    });
   }
 
   refresh(): void {
