@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -11,187 +10,259 @@
         android:id="@+id/navbar"
         layout="@layout/view_custom_navbar" />
 
-    <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
+    <!-- Stats Cards Row -->
+    <HorizontalScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/black"
-        android:fillViewport="true">
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:padding="16dp">
+            android:orientation="horizontal">
 
-            <!-- Header -->
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/header_card"
-                android:layout_width="match_parent"
+            <!-- Active Rides -->
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:orientation="vertical"
                 android:background="@drawable/bg_card"
-                android:padding="24dp"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                android:padding="12dp"
+                android:layout_marginEnd="8dp"
+                android:minWidth="110dp">
 
                 <TextView
-                    android:id="@+id/welcome_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Welcome back, Admin!"
+                    android:text="Active Rides"
+                    android:textColor="@color/gray_400"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tv_stat_active_rides"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
                     android:textColor="@color/white"
-                    android:textSize="24sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"/>
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+
+            <!-- Avg Rating -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="12dp"
+                android:layout_marginEnd="8dp"
+                android:minWidth="110dp">
 
                 <TextView
-                    android:id="@+id/status_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="System Status: Operational"
-                    android:textColor="@color/green_500"
-                    android:layout_marginTop="4dp"
-                    app:layout_constraintTop_toBottomOf="@id/welcome_text"
-                    app:layout_constraintStart_toStartOf="parent"/>
+                    android:text="Avg Rating"
+                    android:textColor="@color/gray_400"
+                    android:textSize="11sp" />
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                <TextView
+                    android:id="@+id/tv_stat_avg_rating"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="\u2014"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
 
-            <!-- Stats Grid -->
-            <GridLayout
-                android:id="@+id/stats_grid"
-                android:layout_width="match_parent"
+            <!-- Drivers Online -->
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:columnCount="2"
-                android:rowCount="2"
-                android:layout_marginTop="16dp"
-                app:layout_constraintTop_toBottomOf="@id/header_card">
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="12dp"
+                android:layout_marginEnd="8dp"
+                android:minWidth="110dp">
 
-                <!-- Total Users -->
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:layout_marginEnd="8dp"
-                    android:layout_marginBottom="16dp"
-                    android:background="@drawable/bg_card"
-                    android:padding="16dp">
+                    android:text="Drivers Online"
+                    android:textColor="@color/gray_400"
+                    android:textSize="11sp" />
 
-                    <TextView
-                        android:id="@+id/users_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Total Users"
-                        android:textColor="@color/gray_400"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="1,234"
-                        android:textColor="@color/white"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"
-                        app:layout_constraintTop_toBottomOf="@id/users_label"
-                        app:layout_constraintStart_toStartOf="parent"/>
-                </androidx.constraintlayout.widget.ConstraintLayout>
-
-                <!-- Total Drivers -->
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:id="@+id/tv_stat_drivers_online"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginBottom="16dp"
-                    android:background="@drawable/bg_card"
-                    android:padding="16dp">
+                    android:text="0"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/drivers_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Total Drivers"
-                        android:textColor="@color/gray_400"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"/>
+            <!-- Passengers in Rides -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="12dp"
+                android:minWidth="110dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="56"
-                        android:textColor="@color/white"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"
-                        app:layout_constraintTop_toBottomOf="@id/drivers_label"
-                        app:layout_constraintStart_toStartOf="parent"/>
-                </androidx.constraintlayout.widget.ConstraintLayout>
-
-                 <!-- Active Rides -->
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:layout_marginEnd="8dp"
-                    android:background="@drawable/bg_card"
-                    android:padding="16dp">
+                    android:text="Passengers"
+                    android:textColor="@color/gray_400"
+                    android:textSize="11sp" />
 
-                    <TextView
-                        android:id="@+id/rides_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Active Rides"
-                        android:textColor="@color/gray_400"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="12"
-                        android:textColor="@color/white"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"
-                        app:layout_constraintTop_toBottomOf="@id/rides_label"
-                        app:layout_constraintStart_toStartOf="parent"/>
-                </androidx.constraintlayout.widget.ConstraintLayout>
-
-                <!-- Revenue -->
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:id="@+id/tv_stat_passengers"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_card"
-                    android:padding="16dp">
+                    android:text="0"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/revenue_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Revenue"
-                        android:textColor="@color/gray_400"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"/>
+        </LinearLayout>
+    </HorizontalScrollView>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="4.5k RSD"
-                        android:textColor="@color/white"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"
-                        app:layout_constraintTop_toBottomOf="@id/revenue_label"
-                        app:layout_constraintStart_toStartOf="parent"/>
-                </androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- Search bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="6dp"
+        android:gravity="center_vertical">
 
-            </GridLayout>
+        <EditText
+            android:id="@+id/et_search"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:hint="Search by driver name..."
+            android:textSize="13sp"
+            android:textColor="@color/white"
+            android:textColorHint="@color/gray_400"
+            android:background="@drawable/bg_card"
+            android:paddingHorizontal="12dp"
+            android:singleLine="true"
+            android:imeOptions="actionSearch"
+            android:inputType="text" />
+    </LinearLayout>
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </ScrollView>
+    <!-- Filter row: Status + Vehicle Type -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="4dp"
+        android:gravity="center_vertical">
+
+        <Spinner
+            android:id="@+id/spinner_status"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_card"
+            android:popupBackground="@color/gray_800"
+            android:spinnerMode="dropdown" />
+
+        <Spinner
+            android:id="@+id/spinner_vehicle_type"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_card"
+            android:popupBackground="@color/gray_800"
+            android:spinnerMode="dropdown" />
+    </LinearLayout>
+
+    <!-- Sort row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="8dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sort:"
+            android:textColor="@color/gray_400"
+            android:textSize="12sp"
+            android:layout_marginEnd="6dp" />
+
+        <Spinner
+            android:id="@+id/spinner_sort"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_card"
+            android:popupBackground="@color/gray_800"
+            android:spinnerMode="dropdown" />
+
+        <TextView
+            android:id="@+id/btn_sort_direction"
+            android:layout_width="wrap_content"
+            android:layout_height="34dp"
+            android:gravity="center"
+            android:text="\u2193"
+            android:textSize="18sp"
+            android:textColor="@color/white"
+            android:background="@drawable/bg_card"
+            android:paddingHorizontal="14dp"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
+
+    <!-- Rides list -->
+    <ListView
+        android:id="@+id/lv_active_rides"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingHorizontal="12dp"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="0dp"
+        android:scrollbars="vertical"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
+
+    <!-- Empty state -->
+    <TextView
+        android:id="@+id/tv_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="No active rides found"
+        android:textColor="@color/gray_400"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- Loading indicator -->
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
 </LinearLayout>

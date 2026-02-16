@@ -149,7 +149,11 @@
         android:id="@+id/nav_admin_dashboard"
         android:name="com.example.mobile.ui.admin.AdminDashboardFragment"
         android:label="Admin Dashboard"
-        tools:layout="@layout/fragment_admin_dashboard" />
+        tools:layout="@layout/fragment_admin_dashboard">
+        <action
+            android:id="@+id/action_admin_dashboard_to_admin_ride_detail"
+            app:destination="@id/nav_admin_ride_detail" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_admin_ride_history"
