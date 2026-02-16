@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/gray_900">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Finish Ride"
+        android:textColor="@color/green_500"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Please confirm the following before finishing the ride:"
+        android:textColor="@color/gray_400"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
+
+    <CheckBox
+        android:id="@+id/cb_passengers_exited"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Passengers have exited the vehicle"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:paddingVertical="8dp" />
+
+    <CheckBox
+        android:id="@+id/cb_payment_confirmed"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Payment has been confirmed"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:paddingVertical="8dp"
+        android:layout_marginBottom="16dp" />
+
+    <LinearLayout
+        android:id="@+id/error_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_error_box"
+        android:padding="12dp"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tv_error"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/red_500"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="Cancel"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:backgroundTint="@color/gray_700" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_confirm_finish"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="Finish Ride"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:backgroundTint="@color/green_500" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -389,6 +389,31 @@
                 android:layout_marginBottom="8dp"
                 android:visibility="gone" />
 
+            <!-- Finish Ride Button (IN_PROGRESS, driver only, enabled when conditions met) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_finish_ride"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Finish Ride"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:backgroundTint="#DC2626"
+                app:cornerRadius="12dp"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone" />
+
+            <!-- Disabled reason text for Finish Ride -->
+            <TextView
+                android:id="@+id/tv_finish_ride_reason"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/gray_400"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:paddingBottom="8dp"
+                android:visibility="gone" />
+
             <!-- PANIC Button (IN_PROGRESS, both roles) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_panic"
