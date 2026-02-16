@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:strokeColor="@color/gray_700"
+    app:strokeWidth="1dp"
+    android:backgroundTint="@color/gray_900">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Row 1: Status badge + Ride ID -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="10dp">
+
+            <TextView
+                android:id="@+id/tv_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="IN PROGRESS"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#4CAF50"
+                android:background="@drawable/bg_status_badge"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tv_ride_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="#123"
+                android:textSize="11sp"
+                android:textColor="@color/gray_400" />
+        </LinearLayout>
+
+        <!-- Row 2: Driver info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <ImageView
+                android:id="@+id/iv_driver_avatar"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_person"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_status_badge"
+                android:clipToOutline="true" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_driver_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="John Doe"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white" />
+
+                <TextView
+                    android:id="@+id/tv_driver_email"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="john@example.com"
+                    android:textSize="11sp"
+                    android:textColor="@color/gray_400"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Row 3: Vehicle info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp"
+            android:background="@color/gray_800"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="6dp">
+
+            <TextView
+                android:id="@+id/tv_vehicle_type_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🚗"
+                android:textSize="14sp"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/tv_vehicle_info"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Toyota Camry • NS-123-AB"
+                android:textSize="12sp"
+                android:textColor="@color/gray_300"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/tv_vehicle_type"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="STANDARD"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="@color/blue_500" />
+        </LinearLayout>
+
+        <!-- Row 4: Route info (departure → destination) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:layout_marginEnd="10dp"
+                android:layout_marginTop="2dp">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_dot_green" />
+
+                <View
+                    android:layout_width="2dp"
+                    android:layout_height="18dp"
+                    android:background="@color/gray_600" />
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_dot_red" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_departure"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Departure"
+                    android:textSize="13sp"
+                    android:textColor="@color/white"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/tv_destination"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Destination"
+                    android:textSize="13sp"
+                    android:textColor="@color/white"
+                    android:layout_marginTop="12dp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Row 5: Passengers + Est. Time Left + Cost -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
+
+            <TextView
+                android:id="@+id/tv_passengers"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="👥 2 passengers"
+                android:textSize="12sp"
+                android:textColor="@color/gray_300" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tv_est_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⏱ ~12 min"
+                android:textSize="12sp"
+                android:textColor="@color/yellow_400"
+                android:layout_marginEnd="12dp" />
+
+            <TextView
+                android:id="@+id/tv_cost"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="450.00 RSD"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/white" />
+        </LinearLayout>
+
+        <!-- Row 6: Distance + Duration info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="4dp">
+
+            <TextView
+                android:id="@+id/tv_distance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📍 5.2 km"
+                android:textSize="11sp"
+                android:textColor="@color/gray_400" />
+
+            <TextView
+                android:id="@+id/tv_scheduled_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="11sp"
+                android:textColor="@color/gray_400"
+                android:layout_marginStart="16dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Row 7 (bottom, small): Rating + Time active -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp"
+            android:paddingTop="6dp">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/gray_800"
+                android:layout_marginBottom="6dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tv_rating"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⭐ —"
+                android:textSize="10sp"
+                android:textColor="@color/gray_500" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tv_time_active"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Active: —"
+                android:textSize="10sp"
+                android:textColor="@color/gray_500" />
+        </LinearLayout>
+
+        <!-- Panic indicator overlay -->
+        <TextView
+            android:id="@+id/tv_panic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⚠ PANIC PRESSED"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="@color/red_500"
+            android:gravity="center"
+            android:layout_marginTop="6dp"
+            android:background="@color/red_500_10"
+            android:paddingVertical="4dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
