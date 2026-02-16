@@ -393,83 +393,14 @@
                 </HorizontalScrollView>
             </LinearLayout>
 
-            <!-- Table Scroll Container -->
-            <HorizontalScrollView
+            <!-- Ride History List -->
+            <ListView
+                android:id="@+id/ride_history_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:minWidth="800dp">
-
-                    <!-- Table Header -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingVertical="8dp"
-                        android:paddingHorizontal="8dp">
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1.2"
-                            android:text="Start Time"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1.2"
-                            android:text="End Time"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="2.5"
-                            android:text="Route"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="0.8"
-                            android:text="Passengers"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Distance"
-                            android:textColor="@color/gray_400"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:gravity="end"/>
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/gray_800"
-                        android:layout_marginBottom="8dp"/>
-
-                    <!-- Ride History List -->
-                    <ListView
-                        android:id="@+id/ride_history_list"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:divider="@null"
-                        android:dividerHeight="0dp"/>
-                </LinearLayout>
-            </HorizontalScrollView>
+                android:divider="@null"
+                android:dividerHeight="4dp"
+                android:nestedScrollingEnabled="true" />
 
         </LinearLayout>
     </ScrollView>

@@ -5,13 +5,12 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-
-import android.widget.ListView;
 
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentDriverOverviewBinding;
@@ -42,7 +41,7 @@ public class DriverOverviewFragment extends Fragment {
     private SharedPreferencesManager preferencesManager;
     
     private RideHistoryAdapter adapter;
-    private List<RideHistoryAdapter.RideHistoryItem> rideItems = new ArrayList<>();
+    private List<RideResponse> rideItems = new ArrayList<>();
     
     // Stats
     private double totalEarnings = 0;
@@ -336,56 +335,12 @@ public class DriverOverviewFragment extends Fragment {
                                     ("cancelled".equals(statusFilter) && r.isCancelled());
             
             if (matchesFilter) {
-                rideItems.add(mapToHistoryItem(r));
+                rideItems.add(r);
             }
         }
         
         adapter.notifyDataSetChanged();
         ListViewHelper.setListViewHeightBasedOnChildren(binding.rideHistoryList);
-    }
-    
-    private RideHistoryAdapter.RideHistoryItem mapToHistoryItem(RideResponse ride) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
-        SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.US);
-        
-        Date startDate = parseDate(ride.getStartTime());
-        Date endDate = parseDate(ride.getEndTime());
-        
-        String startDateStr = startDate != null ? dateFormat.format(startDate) : "-";
-        String startTimeStr = startDate != null ? timeFormat.format(startDate) : "-";
-        String endDateStr = endDate != null ? dateFormat.format(endDate) : "-";
-        String endTimeStr = endDate != null ? timeFormat.format(endDate) : "-";
-        
-        String pickupAddr = "—";
-        if (ride.getEffectiveStartLocation() != null && ride.getEffectiveStartLocation().getAddress() != null) {
-            pickupAddr = truncate(ride.getEffectiveStartLocation().getAddress(), 30);
-        }
-        
-        String destAddr = "—";
-        if (ride.getEffectiveEndLocation() != null && ride.getEffectiveEndLocation().getAddress() != null) {
-            destAddr = truncate(ride.getEffectiveEndLocation().getAddress(), 30);
-        }
-        
-        int passengerCount = ride.getPassengers() != null ? ride.getPassengers().size() : 1;
-        
-        double distance = ride.getEffectiveDistance();
-        String distanceStr = String.format(Locale.US, "%.1f km", distance);
-        
-        String durationStr = "—";
-        if (startDate != null && endDate != null) {
-            long durationMinutes = (endDate.getTime() - startDate.getTime()) / 60000;
-            durationStr = durationMinutes + " min";
-        } else if (ride.getEstimatedTimeInMinutes() != null) {
-            durationStr = ride.getEstimatedTimeInMinutes() + " min";
-        }
-        
-        double price = ride.getEffectiveCost();
-        
-        return new RideHistoryAdapter.RideHistoryItem(
-            ride.getId() != null ? ride.getId() : 0,
-            startDateStr, startTimeStr, endDateStr, endTimeStr,
-            pickupAddr, destAddr, passengerCount, distanceStr, durationStr, price
-        );
     }
     
     private String getFromDateForFilter() {
@@ -444,11 +399,6 @@ public class DriverOverviewFragment extends Fragment {
                 return null;
             }
         }
-    }
-    
-    private String truncate(String s, int maxLen) {
-        if (s == null) return "";
-        return s.length() > maxLen ? s.substring(0, maxLen) + "..." : s;
     }
     
     private void updateStatsUI() {
