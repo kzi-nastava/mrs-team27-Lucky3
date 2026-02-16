@@ -259,9 +259,32 @@
 
     <fragment
         android:id="@+id/nav_admin_support"
-        android:name="com.example.mobile.ui.support.SupportFragment"
+        android:name="com.example.mobile.ui.support.AdminSupportListFragment"
         android:label="Support"
-        tools:layout="@layout/fragment_support" />
+        tools:layout="@layout/fragment_admin_support_list">
+        <action
+            android:id="@+id/action_admin_support_list_to_chat"
+            app:destination="@id/nav_admin_support_chat" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_admin_support_chat"
+        android:name="com.example.mobile.ui.support.AdminSupportChatFragment"
+        android:label="Support Chat"
+        tools:layout="@layout/fragment_admin_support_chat">
+        <argument
+            android:name="chatId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+        <argument
+            android:name="userName"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="userRole"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_admin_panic"
@@ -310,7 +333,7 @@
         android:id="@+id/nav_passenger_support"
         android:name="com.example.mobile.ui.support.SupportFragment"
         android:label="Support"
-        tools:layout="@layout/fragment_support" />
+        tools:layout="@layout/fragment_support_chat" />
 
     <fragment
         android:id="@+id/nav_passenger_favorites"
@@ -322,7 +345,7 @@
         android:id="@+id/nav_driver_support"
         android:name="com.example.mobile.ui.support.SupportFragment"
         android:label="Support"
-        tools:layout="@layout/fragment_support" />
+        tools:layout="@layout/fragment_support_chat" />
 
     <fragment
         android:id="@+id/nav_review"

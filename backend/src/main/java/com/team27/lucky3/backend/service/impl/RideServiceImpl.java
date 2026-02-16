@@ -317,6 +317,7 @@ public class RideServiceImpl implements RideService {
         // Set passenger info
         ride.setPassengers(Set.of(passenger));
         ride.setInvitedEmails(request.getPassengerEmails());
+        ride.setCreatedBy(passenger);
 
         // Initialize payment flags
         ride.setPaid(false);
@@ -349,14 +350,13 @@ public class RideServiceImpl implements RideService {
 
         // ── Notification integration ──
         if (savedRide.getDriver() != null && savedRide.getStatus() != RideStatus.REJECTED) {
-            notificationService.sendDriverAssignmentNotification(savedRide);
-            
+            // Push notification to ALL registered parties (creator + driver + registered invited)
+            notificationService.sendRideCreatedNotification(savedRide);
+
             // Notify linked passengers (from invitedEmails) - sends email with tracking token to all,
             // and push notification only to registered users. Exclude the ride creator.
             notificationService.notifyLinkedPassengersRideCreated(savedRide, passenger.getEmail());
         }
-
-        // Do NOT notify the creator about their own ride creation - they already know about it
 
         return mapToResponse(savedRide);
     }
@@ -1047,71 +1047,32 @@ public class RideServiceImpl implements RideService {
 
         Long driverId = ride.getDriver().getId();
 
-        // Collect registered passenger emails so we don't send duplicates to invitedEmails
-        Set<String> sentEmails = new java.util.HashSet<>();
+        // Only send review token email to the ride creator
+        User creator = ride.getCreatedBy();
+        if (creator == null && ride.getPassengers() != null && !ride.getPassengers().isEmpty()) {
+            // Fallback for rides created before createdBy field was added
+            creator = ride.getPassengers().iterator().next();
+        }
 
-        // 1. Send to registered passengers
-        if (ride.getPassengers() != null) {
-            for (User passenger : ride.getPassengers()) {
-                String email = passenger.getEmail();
-
-                // Skip test emails ending with @example.com
-                if (email == null || email.toLowerCase().endsWith("@example.com")) {
-                    continue;
-                }
-
+        if (creator != null) {
+            String email = creator.getEmail();
+            if (email != null && !email.toLowerCase().endsWith("@example.com")) {
                 try {
                     String reviewToken = reviewTokenUtils.generateReviewToken(
                         ride.getId(),
-                        passenger.getId(),
+                        creator.getId(),
                         driverId
                     );
 
-                    String passengerName = passenger.getName();
+                    String passengerName = creator.getName();
                     if (passengerName == null || passengerName.trim().isEmpty()) {
                         passengerName = "Valued Customer";
                     }
 
                     emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
-                    sentEmails.add(email.toLowerCase());
-
-                    System.out.println("Sent review request email to passenger: " + email + " for ride: " + ride.getId());
+                    System.out.println("Sent review request email to ride creator: " + email + " for ride: " + ride.getId());
                 } catch (Exception e) {
                     System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
-                }
-            }
-        }
-
-        // 2. Send to linked (potentially non-registered) passengers
-        if (ride.getInvitedEmails() != null) {
-            for (String email : ride.getInvitedEmails()) {
-                if (email == null || email.toLowerCase().endsWith("@example.com")) {
-                    continue;
-                }
-
-                // Skip if already sent via registered passengers
-                if (sentEmails.contains(email.toLowerCase())) {
-                    continue;
-                }
-
-                try {
-                    // Generate email-based token for linked passenger
-                    String reviewToken = reviewTokenUtils.generateReviewTokenForEmail(
-                        ride.getId(),
-                        email,
-                        driverId
-                    );
-
-                    // Try to get name if user is registered
-                    String passengerName = userRepository.findByEmail(email)
-                        .map(User::getName)
-                        .orElse("Valued Customer");
-
-                    emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
-
-                    System.out.println("Sent review request email to linked passenger: " + email + " for ride: " + ride.getId());
-                } catch (Exception e) {
-                    System.err.println("Failed to send review request email to linked passenger " + email + ": " + e.getMessage());
                 }
             }
         }

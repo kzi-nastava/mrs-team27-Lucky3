@@ -21,6 +21,8 @@ import com.example.mobile.utils.SharedPreferencesManager;
 import com.example.mobile.viewmodels.DriverProfileViewModel;
 import com.example.mobile.viewmodels.UserProfileViewModel;
 
+import com.example.mobile.utils.NavbarHelper;
+
 public class DriverProfileFragment extends Fragment {
 
     private FragmentDriverProfileBinding binding;
@@ -32,13 +34,7 @@ public class DriverProfileFragment extends Fragment {
         binding = FragmentDriverProfileBinding.inflate(inflater, container, false);
 
         // Navbar setup
-        View navbar = binding.getRoot().findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
-                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
-            });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Profile");
-        }
+        NavbarHelper.setup(this, binding.getRoot(), "Profile");
 
         return binding.getRoot();
     }

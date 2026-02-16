@@ -44,6 +44,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import com.example.mobile.utils.NavbarHelper;
+
 /**
  * Admin page for viewing and receiving PANIC alerts in real-time.
  * Polls the backend every 10 seconds for new panic alerts,
@@ -107,12 +109,7 @@ public class AdminPanicFragment extends Fragment {
     }
 
     private void setupNavbar(View root) {
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((com.example.mobile.MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Panic Alerts");
-        }
+        NavbarHelper.setup(this, root, "Panic Alerts");
     }
 
     private void setupRefreshButton(View root) {

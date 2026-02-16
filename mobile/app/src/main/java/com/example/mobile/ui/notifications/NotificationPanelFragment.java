@@ -16,11 +16,19 @@ import androidx.navigation.Navigation;
 
 import com.example.mobile.R;
 import com.example.mobile.models.AppNotification;
+import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.NotificationStore;
+import com.example.mobile.utils.SharedPreferencesManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import com.example.mobile.utils.NavbarHelper;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Notification center panel — shows all in-app notifications
@@ -59,24 +67,35 @@ public class NotificationPanelFragment extends Fragment {
     }
 
     private void setupNavbar(View root) {
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((com.example.mobile.MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Notifications");
-
-            // Hide the notification bell on this page to avoid recursion
-            View bellBtn = navbar.findViewById(R.id.btn_notifications);
-            if (bellBtn != null) bellBtn.setVisibility(View.GONE);
-        }
+        NavbarHelper.setup(this, root, "Notifications", false, true);
     }
 
     private void setupActions(View root) {
         root.findViewById(R.id.btn_mark_all_read).setOnClickListener(v ->
                 NotificationStore.getInstance().markAllAsRead());
 
-        root.findViewById(R.id.btn_clear_all).setOnClickListener(v ->
-                NotificationStore.getInstance().clearAll());
+        root.findViewById(R.id.btn_clear_all).setOnClickListener(v -> {
+            // Clear locally
+            NotificationStore.getInstance().clearAll();
+
+            // Delete from backend so they don't reappear
+            String token = new SharedPreferencesManager(requireContext()).getToken();
+            if (token != null) {
+                ClientUtils.notificationService.deleteAll("Bearer " + token)
+                        .enqueue(new Callback<Map<String, Integer>>() {
+                            @Override
+                            public void onResponse(Call<Map<String, Integer>> call,
+                                                   Response<Map<String, Integer>> response) {
+                                // Deleted on backend — nothing else to do
+                            }
+
+                            @Override
+                            public void onFailure(Call<Map<String, Integer>> call, Throwable t) {
+                                // Best-effort: local clear already happened
+                            }
+                        });
+            }
+        });
     }
 
     private void setupListView() {
@@ -87,8 +106,8 @@ public class NotificationPanelFragment extends Fragment {
             if (position >= notifications.size()) return;
             AppNotification notif = notifications.get(position);
 
-            // Mark as read on tap
-            NotificationStore.getInstance().markAsRead(notif.getId());
+            // Remove the notification (delete it, not just mark as read)
+            NotificationStore.getInstance().removeNotification(notif.getId());
 
             // Navigate based on type
             navigateToNotification(notif);
@@ -117,14 +136,35 @@ public class NotificationPanelFragment extends Fragment {
 
     private void navigateToNotification(AppNotification notif) {
         try {
+            String role = new com.example.mobile.utils.SharedPreferencesManager(
+                    requireContext()).getUserRole();
+
             switch (notif.getType()) {
                 case RIDE_STATUS:
                 case RIDE_INVITE:
+                case RIDE_CREATED:
+                case DRIVER_ASSIGNED:
                     if (notif.getRideId() != null) {
                         Bundle args = new Bundle();
                         args.putLong("rideId", notif.getRideId());
                         Navigation.findNavController(requireView())
                                 .navigate(R.id.nav_active_ride, args);
+                    }
+                    break;
+
+                case RIDE_FINISHED:
+                case RIDE_CANCELLED:
+                    if (notif.getRideId() != null) {
+                        Bundle histArgs = new Bundle();
+                        histArgs.putLong("rideId", notif.getRideId());
+                        // Navigate to role-specific ride detail
+                        if ("DRIVER".equals(role)) {
+                            Navigation.findNavController(requireView())
+                                    .navigate(R.id.nav_ride_details, histArgs);
+                        } else {
+                            Navigation.findNavController(requireView())
+                                    .navigate(R.id.nav_passenger_ride_detail, histArgs);
+                        }
                     }
                     break;
 
@@ -135,7 +175,8 @@ public class NotificationPanelFragment extends Fragment {
 
                 case SUPPORT_MESSAGE:
                     // Navigate to support chat — use role-specific destination
-                    navigateToSupport();
+                    // Pass chatId for admin direct navigation to the specific chat
+                    navigateToSupport(notif.getChatId());
                     break;
 
                 default:
@@ -147,11 +188,23 @@ public class NotificationPanelFragment extends Fragment {
     }
 
     private void navigateToSupport() {
+        navigateToSupport(null);
+    }
+
+    private void navigateToSupport(Long chatId) {
         try {
             String role = new com.example.mobile.utils.SharedPreferencesManager(
                     requireContext()).getUserRole();
             int destId;
             if ("ADMIN".equals(role)) {
+                if (chatId != null && chatId > 0) {
+                    // Navigate directly to the admin chat with this chatId
+                    Bundle args = new Bundle();
+                    args.putLong("chatId", chatId);
+                    Navigation.findNavController(requireView())
+                            .navigate(R.id.nav_admin_support_chat, args);
+                    return;
+                }
                 destId = R.id.nav_admin_support;
             } else if ("DRIVER".equals(role)) {
                 destId = R.id.nav_driver_support;

@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import com.example.mobile.utils.NavbarHelper;
+
 public class PassengerFavoritesFragment extends Fragment {
 
     private static final String TAG = "PassengerFavorites";
@@ -68,12 +70,7 @@ public class PassengerFavoritesFragment extends Fragment {
     }
 
     private void setupNavbar(View root) {
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v ->
-                    ((com.example.mobile.MainActivity) requireActivity()).openDrawer());
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Favorites");
-        }
+        NavbarHelper.setup(this, root, "Favorites");
     }
 
     private void setupListView() {

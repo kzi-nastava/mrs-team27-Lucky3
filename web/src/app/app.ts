@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
 })
 export class App implements OnInit {
   protected readonly title = signal('Web');
-  isSidebarOpen = true;
+  isSidebarOpen = false;
   showLayout = true;
 
   constructor(private router: Router) {}

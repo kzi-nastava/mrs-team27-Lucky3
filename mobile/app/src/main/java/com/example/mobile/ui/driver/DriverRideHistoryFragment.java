@@ -35,6 +35,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import com.example.mobile.utils.NavbarHelper;
+
 public class DriverRideHistoryFragment extends Fragment {
 
     private static final String TAG = "DriverRideHistory";
@@ -70,13 +72,7 @@ public class DriverRideHistoryFragment extends Fragment {
         preferencesManager = new SharedPreferencesManager(requireContext());
 
         // Navbar setup
-        View navbar = root.findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
-                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
-            });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Ride History");
-        }
+        NavbarHelper.setup(this, root, "Ride History");
 
         setupTimeFilterButtons();
         setupListView();

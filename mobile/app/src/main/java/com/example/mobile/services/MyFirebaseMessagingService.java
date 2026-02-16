@@ -13,6 +13,7 @@ import com.example.mobile.MainActivity;
 import com.example.mobile.R;
 import com.example.mobile.models.AppNotification;
 import com.example.mobile.models.FcmTokenRequest;
+import com.example.mobile.utils.AppLifecycleTracker;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.NotificationHelper;
 import com.example.mobile.utils.NotificationStore;
@@ -111,6 +112,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 channelId = NotificationHelper.CHANNEL_RIDE_UPDATES;
                 priority = NotificationCompat.PRIORITY_HIGH;
                 break;
+            case "SUPPORT":
+                channelId = NotificationHelper.CHANNEL_GENERAL;
+                priority = NotificationCompat.PRIORITY_HIGH;
+                break;
             default:
                 channelId = NotificationHelper.CHANNEL_GENERAL;
                 priority = NotificationCompat.PRIORITY_DEFAULT;
@@ -148,12 +153,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             builder.setStyle(new NotificationCompat.BigTextStyle().bigText(body));
         }
 
-        // Display the notification
-        try {
-            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-            notificationManager.notify(notificationIdCounter.incrementAndGet(), builder.build());
-        } catch (SecurityException e) {
-            Log.w(TAG, "POST_NOTIFICATIONS permission not granted — cannot show notification");
+        // Display the system notification only when the app is in the background.
+        // When in the foreground, the in-app notification store + sound is enough.
+        if (!AppLifecycleTracker.isAppInForeground()) {
+            try {
+                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+                notificationManager.notify(notificationIdCounter.incrementAndGet(), builder.build());
+            } catch (SecurityException e) {
+                Log.w(TAG, "POST_NOTIFICATIONS permission not granted — cannot show notification");
+            }
         }
 
         // Feed in-app notification store so bell badge and panel stay in sync
@@ -162,11 +170,24 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             case "PANIC":
                 notifType = AppNotification.Type.PANIC_ALERT;
                 break;
+            case "RIDE_FINISHED":
+                notifType = AppNotification.Type.RIDE_FINISHED;
+                break;
+            case "RIDE_CANCELLED":
+                notifType = AppNotification.Type.RIDE_CANCELLED;
+                break;
+            case "RIDE_CREATED":
+                notifType = AppNotification.Type.RIDE_CREATED;
+                break;
+            case "DRIVER_ASSIGNMENT":
+                notifType = AppNotification.Type.DRIVER_ASSIGNED;
+                break;
             case "RIDE_STATUS":
             case "RIDE_INVITE":
-            case "RIDE_FINISHED":
-            case "DRIVER_ASSIGNMENT":
                 notifType = AppNotification.Type.RIDE_STATUS;
+                break;
+            case "SUPPORT":
+                notifType = AppNotification.Type.SUPPORT_MESSAGE;
                 break;
             default:
                 notifType = AppNotification.Type.GENERAL;
@@ -175,7 +196,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         AppNotification appNotif = new AppNotification(notifType, title, body);
         if (rideIdStr != null && !rideIdStr.isEmpty()) {
             try {
-                appNotif.setRideId(Long.parseLong(rideIdStr));
+                long parsedId = Long.parseLong(rideIdStr);
+                if ("SUPPORT".equals(type)) {
+                    appNotif.setChatId(parsedId);
+                } else {
+                    appNotif.setRideId(parsedId);
+                }
             } catch (NumberFormatException ignored) {}
         }
         NotificationStore.getInstance().addNotification(appNotif);
@@ -194,18 +220,39 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private Intent buildDeepLinkIntent(String type, String rideIdStr) {
         Intent intent = new Intent(this, MainActivity.class);
 
-        if (rideIdStr != null && !rideIdStr.isEmpty()) {
-            try {
-                long rideId = Long.parseLong(rideIdStr);
-                intent.putExtra("navigate_to", "active_ride");
-                intent.putExtra("rideId", rideId);
-            } catch (NumberFormatException e) {
-                Log.w(TAG, "Invalid rideId in FCM data: " + rideIdStr);
+        if ("SUPPORT".equals(type)) {
+            intent.putExtra("navigate_to", "support");
+            // rideId field is reused as chatId for SUPPORT notifications from backend
+            if (rideIdStr != null && !rideIdStr.isEmpty()) {
+                try {
+                    intent.putExtra("chatId", Long.parseLong(rideIdStr));
+                } catch (NumberFormatException e) {
+                    Log.w(TAG, "Invalid chatId in FCM data: " + rideIdStr);
+                }
             }
+            return intent;
         }
 
         if ("PANIC".equals(type)) {
             intent.putExtra("navigate_to", "admin_panic");
+            return intent;
+        }
+
+        // Ride-related deep-links
+        if (rideIdStr != null && !rideIdStr.isEmpty()) {
+            try {
+                long rideId = Long.parseLong(rideIdStr);
+                intent.putExtra("rideId", rideId);
+
+                // Finished/cancelled rides → ride history detail, others → active ride
+                if ("RIDE_FINISHED".equals(type) || "RIDE_CANCELLED".equals(type)) {
+                    intent.putExtra("navigate_to", "ride_history");
+                } else {
+                    intent.putExtra("navigate_to", "active_ride");
+                }
+            } catch (NumberFormatException e) {
+                Log.w(TAG, "Invalid rideId in FCM data: " + rideIdStr);
+            }
         }
 
         return intent;

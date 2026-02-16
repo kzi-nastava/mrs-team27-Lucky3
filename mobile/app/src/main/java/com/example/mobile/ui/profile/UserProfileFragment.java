@@ -21,6 +21,8 @@ import com.example.mobile.models.User;
 import com.example.mobile.utils.SharedPreferencesManager;
 import com.example.mobile.viewmodels.UserProfileViewModel;
 
+import com.example.mobile.utils.NavbarHelper;
+
 public class UserProfileFragment extends Fragment {
 
     private FragmentUserProfileBinding binding;
@@ -31,13 +33,7 @@ public class UserProfileFragment extends Fragment {
         binding = FragmentUserProfileBinding.inflate(inflater, container, false);
 
         // set up navbar
-        View navbar = binding.getRoot().findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
-                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
-            });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Profile");
-        }
+        NavbarHelper.setup(this, binding.getRoot(), "Profile");
 
         return binding.getRoot();
     }

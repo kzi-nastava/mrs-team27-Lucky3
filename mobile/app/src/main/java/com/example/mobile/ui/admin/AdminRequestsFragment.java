@@ -16,6 +16,8 @@ import com.example.mobile.databinding.FragmentAdminRequestsBinding;
 import com.example.mobile.utils.ListViewHelper;
 import com.example.mobile.viewmodels.AdminRequestsViewModel;
 
+import com.example.mobile.utils.NavbarHelper;
+
 public class AdminRequestsFragment extends Fragment {
 
     private FragmentAdminRequestsBinding binding;
@@ -28,13 +30,7 @@ public class AdminRequestsFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         binding = FragmentAdminRequestsBinding.inflate(inflater, container, false);
         // Navbar setup
-        View navbar = binding.getRoot().findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
-                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
-            });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Requests");
-        }
+        NavbarHelper.setup(this, binding.getRoot(), "Requests");
         return binding.getRoot();
     }
 

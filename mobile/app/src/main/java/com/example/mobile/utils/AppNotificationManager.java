@@ -4,6 +4,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.os.Build;
 import android.util.Log;
 
@@ -306,13 +308,32 @@ public class AppNotificationManager {
                 break;
         }
 
-        AppNotification notification = new AppNotification(
-                AppNotification.Type.RIDE_STATUS, title, body);
+        AppNotification.Type notifType;
+        String navigateTo;
+
+        switch (status) {
+            case "FINISHED":
+                notifType = AppNotification.Type.RIDE_FINISHED;
+                navigateTo = "ride_history";
+                break;
+            case "CANCELLED":
+            case "CANCELLED_BY_DRIVER":
+            case "CANCELLED_BY_PASSENGER":
+                notifType = AppNotification.Type.RIDE_CANCELLED;
+                navigateTo = "ride_history";
+                break;
+            default:
+                notifType = AppNotification.Type.RIDE_STATUS;
+                navigateTo = "active_ride";
+                break;
+        }
+
+        AppNotification notification = new AppNotification(notifType, title, body);
         notification.setRideId(ride.getId());
 
         NotificationStore.getInstance().addNotification(notification);
         postSystemNotification(title, body, NotificationHelper.CHANNEL_RIDE_UPDATES,
-                "active_ride", ride.getId());
+                navigateTo, ride.getId());
     }
 
     private void onPanicAlert(PanicResponse panic) {
@@ -362,7 +383,7 @@ public class AppNotificationManager {
 
         NotificationStore.getInstance().addNotification(notification);
         postSystemNotification(title, body, NotificationHelper.CHANNEL_GENERAL,
-                "support", null);
+                "support", null, msg.getChatId());
     }
 
     private void onAdminChatListUpdate(SupportChatListItemResponse chatItem) {
@@ -386,14 +407,26 @@ public class AppNotificationManager {
 
         NotificationStore.getInstance().addNotification(notification);
         postSystemNotification(title, body, NotificationHelper.CHANNEL_GENERAL,
-                "support", null);
+                "support", null, null);
     }
 
     // ======================== System Notifications ========================
 
     private void postSystemNotification(String title, String body, String channelId,
                                         String navigateTo, Long rideId) {
+        postSystemNotification(title, body, channelId, navigateTo, rideId, null);
+    }
+
+    private void postSystemNotification(String title, String body, String channelId,
+                                        String navigateTo, Long rideId, Long chatId) {
         if (appContext == null) return;
+
+        // When the app is in the foreground, play an in-app sound instead
+        // of posting an Android system notification.
+        if (AppLifecycleTracker.isAppInForeground()) {
+            playInAppSound(channelId);
+            return;
+        }
 
         try {
             Intent intent = new Intent(appContext, MainActivity.class);
@@ -401,6 +434,9 @@ public class AppNotificationManager {
             intent.putExtra("navigate_to", navigateTo);
             if (rideId != null) {
                 intent.putExtra("rideId", rideId);
+            }
+            if (chatId != null) {
+                intent.putExtra("chatId", chatId);
             }
 
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -439,5 +475,42 @@ public class AppNotificationManager {
         } catch (Exception e) {
             Log.e(TAG, "Failed to post system notification", e);
         }
+    }
+
+    // ======================== In-App Sound ========================
+
+    /**
+     * Plays a short in-app notification sound on a background thread.
+     * Uses {@link ToneGenerator} so no audio file is needed.
+     * <p>
+     * Panic alerts get an urgent three-beep pattern; everything else
+     * gets a single short "ding".
+     */
+    private void playInAppSound(String channelId) {
+        new Thread(() -> {
+            try {
+                int stream = NotificationHelper.CHANNEL_PANIC_ALERTS.equals(channelId)
+                        ? AudioManager.STREAM_ALARM
+                        : AudioManager.STREAM_NOTIFICATION;
+                ToneGenerator toneGen = new ToneGenerator(stream, 80);
+
+                if (NotificationHelper.CHANNEL_PANIC_ALERTS.equals(channelId)) {
+                    // Urgent triple-beep for panic
+                    toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
+                    Thread.sleep(250);
+                    toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
+                    Thread.sleep(250);
+                    toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
+                    Thread.sleep(200);
+                } else {
+                    // Single short tone for normal notifications
+                    toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 200);
+                    Thread.sleep(250);
+                }
+                toneGen.release();
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to play in-app notification sound", e);
+            }
+        }).start();
     }
 }
