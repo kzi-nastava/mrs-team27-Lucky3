@@ -87,4 +87,8 @@ export class DriverService {
   getStats(driverId: number): Observable<DriverStatsResponse> {
     return this.http.get<DriverStatsResponse>(`${this.apiUrl}/${driverId}/stats`);
   }
+
+  createDriver(formData: FormData): Observable<any> {
+    return this.http.post(this.apiUrl, formData);
+  }
 }
