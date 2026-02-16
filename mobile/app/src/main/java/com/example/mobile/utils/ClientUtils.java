@@ -8,6 +8,7 @@ import com.example.mobile.services.RideService;
 import com.example.mobile.services.UserService;
 import com.example.mobile.services.VehicleService;
 import com.example.mobile.services.AdminService;
+import com.example.mobile.services.SupportService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
@@ -135,16 +136,11 @@ public class ClientUtils {
     public static final AdminService adminService = retrofit.create(AdminService.class);
 
     /**
-     * Returns the base Retrofit instance.
+     * SupportService instance (support chat endpoints).
      */
-    public static Retrofit getRetrofit() {
-        return retrofit;
-    }
+    public static final SupportService supportService = retrofit.create(SupportService.class);
 
     /**
-     * Returns the Gson instance.
+     * Returns the base Retrofit instance.
      */
-    public static Gson getGson() {
-        return gson;
-    }
-}
+    public static Retrofit
