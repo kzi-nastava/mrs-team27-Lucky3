@@ -2,8 +2,6 @@ package com.example.mobile;
 
 import android.content.Intent;
 import android.graphics.Color;
-import android.media.AudioManager;
-import android.media.ToneGenerator;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -18,8 +16,6 @@ import com.google.android.material.navigation.NavigationView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -30,17 +26,17 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobile.databinding.ActivityMainBinding;
 import com.example.mobile.models.PageResponse;
-import com.example.mobile.models.PanicResponse;
 import com.example.mobile.models.RideResponse;
+import com.example.mobile.utils.AppNotificationManager;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.NotificationHelper;
+import com.example.mobile.utils.NotificationStore;
 import com.example.mobile.utils.SharedPreferencesManager;
 
-import org.osmdroid.config.Configuration;
+import android.view.View;
+import android.widget.TextView;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import org.osmdroid.config.Configuration;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -50,9 +46,6 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     private static final long ACTIVE_RIDE_POLL_INTERVAL = 15_000; // 15 seconds
-    private static final long PANIC_POLL_INTERVAL = 10_000; // 10 seconds
-    private static final String PANIC_CHANNEL_ID = "panic_alerts";
-    private static final int PANIC_NOTIFICATION_BASE_ID = 9000;
 
     private AppBarConfiguration mAppBarConfiguration;
     private SharedPreferencesManager sharedPreferencesManager;
@@ -63,11 +56,8 @@ public class MainActivity extends AppCompatActivity {
     private Long currentActiveRideId = null;
     private String currentRole = null;
 
-    // Admin panic polling (global — works on any screen)
-    private Handler panicPollHandler;
-    private Runnable panicPollRunnable;
-    private final Set<Long> knownPanicIds = new HashSet<>();
-    private boolean panicFirstLoad = true;
+    // Notification badge in navbar
+    private TextView tvNotificationBadge;
 
     // Notification permission launcher (Android 13+)
     private final ActivityResultLauncher<String> notificationPermissionLauncher =
@@ -97,6 +87,9 @@ public class MainActivity extends AppCompatActivity {
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Wire notification bell and badge
+        setupNotificationBell();
+
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_main);
         assert navHostFragment != null;
         NavController navController = navHostFragment.getNavController();
@@ -108,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
                     R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_ride_history, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support, R.id.nav_admin_panic,
                     R.id.nav_passenger_home, R.id.nav_passenger_history, R.id.nav_passenger_profile, R.id.nav_passenger_support, R.id.nav_passenger_favorites,
                     R.id.nav_driver_dashboard, R.id.nav_driver_overview, R.id.nav_driver_profile, R.id.nav_driver_support,
-                    R.id.nav_active_ride)
+                    R.id.nav_active_ride, R.id.nav_notifications)
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupWithNavController(navigationView, navController);
@@ -226,11 +219,10 @@ public class MainActivity extends AppCompatActivity {
                 // Handle logout
                 if (itemId == R.id.nav_logout) {
                     stopActiveRidePolling();
-                    stopPanicPolling();
+                    AppNotificationManager.getInstance().stop();
+                    NotificationStore.getInstance().clearAll();
                     currentActiveRideId = null;
                     currentRole = null;
-                    panicFirstLoad = true;
-                    knownPanicIds.clear();
                     sharedPreferencesManager.logout();
                     NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
                     navController.navigate(R.id.nav_guest_home);
@@ -263,13 +255,43 @@ public class MainActivity extends AppCompatActivity {
                 startActiveRidePolling();
             }
 
-            // Start panic polling for admins (global — works on any screen)
-            if ("ADMIN".equals(role)) {
-                createPanicNotificationChannel();
-                requestNotificationPermission();
-                startPanicPolling();
+            // Request notification permission for all roles (Android 13+)
+            requestNotificationPermission();
+
+            // Start real-time notification manager
+            Long userId = sharedPreferencesManager.getUserId();
+            if (userId != null && userId > 0) {
+                AppNotificationManager.getInstance().start(this, role, userId);
             }
         }
+    }
+
+    // ======================== Notification Bell & Badge ========================
+
+    private void setupNotificationBell() {
+        // Find badge view
+        tvNotificationBadge = findViewById(R.id.tv_notification_badge);
+
+        // Wire bell click to open notification panel
+        View btnNotifications = findViewById(R.id.btn_notifications);
+        if (btnNotifications != null) {
+            btnNotifications.setOnClickListener(v -> {
+                NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+                navController.navigate(R.id.nav_notifications);
+            });
+        }
+
+        // Observe unread count and update badge dynamically
+        NotificationStore.getInstance().getUnreadCount().observe(this, count -> {
+            if (tvNotificationBadge != null) {
+                if (count != null && count > 0) {
+                    tvNotificationBadge.setText(count > 99 ? "99+" : String.valueOf(count));
+                    tvNotificationBadge.setVisibility(View.VISIBLE);
+                } else {
+                    tvNotificationBadge.setVisibility(View.GONE);
+                }
+            }
+        });
     }
 
     // ======================== Active Ride Polling ========================
@@ -339,6 +361,8 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 currentActiveRideId = ride.getId();
                                 styleActiveRideMenuItem(true);
+                                // Bridge to WebSocket for real-time ride status updates
+                                AppNotificationManager.getInstance().subscribeToRideUpdates(ride.getId());
                             });
                         } else {
                             onNotFound.run();
@@ -405,26 +429,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ======================== Admin Panic Polling ========================
-
-    private void createPanicNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            android.app.NotificationChannel channel = new android.app.NotificationChannel(
-                    PANIC_CHANNEL_ID,
-                    "Panic Alerts",
-                    android.app.NotificationManager.IMPORTANCE_HIGH);
-            channel.setDescription("Emergency panic alert notifications from rides");
-            channel.enableVibration(true);
-            channel.setVibrationPattern(new long[]{0, 500, 200, 500, 200, 500});
-            channel.enableLights(true);
-            channel.setLightColor(Color.RED);
-
-            android.app.NotificationManager manager = getSystemService(android.app.NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
-        }
-    }
+    // ======================== Notification Permission ========================
 
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= 33) {
@@ -433,117 +438,6 @@ public class MainActivity extends AppCompatActivity {
                 notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
             }
         }
-    }
-
-    private void startPanicPolling() {
-        stopPanicPolling();
-        panicPollHandler = new Handler(Looper.getMainLooper());
-        panicPollRunnable = new Runnable() {
-            @Override
-            public void run() {
-                pollForPanicAlerts();
-                if (panicPollHandler != null) {
-                    panicPollHandler.postDelayed(this, PANIC_POLL_INTERVAL);
-                }
-            }
-        };
-        // Initial poll immediately
-        panicPollHandler.post(panicPollRunnable);
-    }
-
-    private void stopPanicPolling() {
-        if (panicPollHandler != null && panicPollRunnable != null) {
-            panicPollHandler.removeCallbacks(panicPollRunnable);
-        }
-        panicPollHandler = null;
-        panicPollRunnable = null;
-    }
-
-    private void pollForPanicAlerts() {
-        String token = sharedPreferencesManager.getToken();
-        if (token == null) return;
-        String bearerToken = "Bearer " + token;
-
-        ClientUtils.panicService.getPanics(0, 20, bearerToken)
-                .enqueue(new Callback<PageResponse<PanicResponse>>() {
-                    @Override
-                    public void onResponse(Call<PageResponse<PanicResponse>> call,
-                                           Response<PageResponse<PanicResponse>> response) {
-                        if (response.isSuccessful() && response.body() != null
-                                && response.body().getContent() != null) {
-                            List<PanicResponse> panics = response.body().getContent();
-                            for (PanicResponse panic : panics) {
-                                if (panic.getId() != null && !knownPanicIds.contains(panic.getId())) {
-                                    knownPanicIds.add(panic.getId());
-                                    if (!panicFirstLoad) {
-                                        // New panic alert — notify!
-                                        sendGlobalPanicNotification(panic);
-                                        playPanicAlertSound();
-                                    }
-                                }
-                            }
-                            panicFirstLoad = false;
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<PageResponse<PanicResponse>> call, Throwable t) {
-                        Log.e(TAG, "Failed to poll panic alerts", t);
-                    }
-                });
-    }
-
-    private void sendGlobalPanicNotification(PanicResponse alert) {
-        try {
-            String userName = alert.getUser() != null ? alert.getUser().getFullName() : "Unknown";
-            Long rideId = alert.getRide() != null ? alert.getRide().getId() : null;
-            String title = "\uD83D\uDEA8 PANIC ALERT";
-            String body = userName + " triggered panic on ride #" +
-                    (rideId != null ? rideId : "?");
-            if (alert.getReason() != null && !alert.getReason().trim().isEmpty()) {
-                body += "\nReason: " + alert.getReason();
-            }
-
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, PANIC_CHANNEL_ID)
-                    .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                    .setContentTitle(title)
-                    .setContentText(body)
-                    .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .setCategory(NotificationCompat.CATEGORY_ALARM)
-                    .setAutoCancel(true)
-                    .setVibrate(new long[]{0, 500, 200, 500, 200, 500})
-                    .setLights(Color.RED, 1000, 300);
-
-            int notificationId = PANIC_NOTIFICATION_BASE_ID +
-                    (alert.getId() != null ? alert.getId().intValue() : 0);
-
-            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-            try {
-                notificationManager.notify(notificationId, builder.build());
-            } catch (SecurityException e) {
-                Log.w(TAG, "Notification permission not granted", e);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to send global panic notification", e);
-        }
-    }
-
-    private void playPanicAlertSound() {
-        new Thread(() -> {
-            try {
-                ToneGenerator toneGen = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
-                toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
-                Thread.sleep(250);
-                toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
-                Thread.sleep(250);
-                toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
-                Thread.sleep(200);
-                toneGen.release();
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to play panic alert sound", e);
-            }
-        }).start();
     }
 
     private void stylePanicMenuItem() {
@@ -573,7 +467,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         stopActiveRidePolling();
-        stopPanicPolling();
+        AppNotificationManager.getInstance().stop();
     }
 
     // ======================== FCM Deep-Link Handling ========================
@@ -613,6 +507,19 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case "admin_panic":
                     navController.navigate(R.id.nav_admin_panic);
+                    break;
+                case "support":
+                    // Navigate to role-specific support
+                    if ("ADMIN".equals(currentRole)) {
+                        navController.navigate(R.id.nav_admin_support);
+                    } else if ("DRIVER".equals(currentRole)) {
+                        navController.navigate(R.id.nav_driver_support);
+                    } else {
+                        navController.navigate(R.id.nav_passenger_support);
+                    }
+                    break;
+                case "notifications":
+                    navController.navigate(R.id.nav_notifications);
                     break;
                 default:
                     Log.d(TAG, "Unknown deep-link target: " + navigateTo);

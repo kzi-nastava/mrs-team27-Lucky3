@@ -11,9 +11,11 @@ import androidx.core.app.NotificationManagerCompat;
 
 import com.example.mobile.MainActivity;
 import com.example.mobile.R;
+import com.example.mobile.models.AppNotification;
 import com.example.mobile.models.FcmTokenRequest;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.NotificationHelper;
+import com.example.mobile.utils.NotificationStore;
 import com.example.mobile.utils.SharedPreferencesManager;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -153,6 +155,30 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         } catch (SecurityException e) {
             Log.w(TAG, "POST_NOTIFICATIONS permission not granted — cannot show notification");
         }
+
+        // Feed in-app notification store so bell badge and panel stay in sync
+        AppNotification.Type notifType;
+        switch (type) {
+            case "PANIC":
+                notifType = AppNotification.Type.PANIC_ALERT;
+                break;
+            case "RIDE_STATUS":
+            case "RIDE_INVITE":
+            case "RIDE_FINISHED":
+            case "DRIVER_ASSIGNMENT":
+                notifType = AppNotification.Type.RIDE_STATUS;
+                break;
+            default:
+                notifType = AppNotification.Type.GENERAL;
+                break;
+        }
+        AppNotification appNotif = new AppNotification(notifType, title, body);
+        if (rideIdStr != null && !rideIdStr.isEmpty()) {
+            try {
+                appNotif.setRideId(Long.parseLong(rideIdStr));
+            } catch (NumberFormatException ignored) {}
+        }
+        NotificationStore.getInstance().addNotification(appNotif);
     }
 
     // ════════════════════════════════════════════════════════════════════
