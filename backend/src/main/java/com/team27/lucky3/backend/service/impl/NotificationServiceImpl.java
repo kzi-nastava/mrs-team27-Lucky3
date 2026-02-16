@@ -12,6 +12,7 @@ import com.team27.lucky3.backend.repository.NotificationRepository;
 import com.team27.lucky3.backend.repository.RideTrackingTokenRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
 import com.team27.lucky3.backend.service.EmailService;
+import com.team27.lucky3.backend.service.FcmService;
 import com.team27.lucky3.backend.service.NotificationService;
 import com.team27.lucky3.backend.util.RideTrackingTokenUtils;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +60,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final RideTrackingTokenRepository rideTrackingTokenRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final EmailService emailService;
+    private final FcmService fcmService;
     private final RideTrackingTokenUtils rideTrackingTokenUtils;
 
     @Value("${frontend.url}")
@@ -104,7 +106,10 @@ public class NotificationServiceImpl implements NotificationService {
         // 2. Push via WebSocket → /user/{id}/queue/notifications
         pushWebSocket(recipient.getId(), dto);
 
-        // 3. Conditional email (async)
+        // 3. Push via FCM (async, non-blocking)
+        pushFcm(recipient, text, type, relatedEntityId);
+
+        // 4. Conditional email (async)
         if (type == NotificationType.RIDE_INVITE || type == NotificationType.RIDE_FINISHED) {
             sendEmailAsync(recipient.getEmail(), type, text, relatedEntityId);
         }
@@ -203,7 +208,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         String text = buildRideSummaryText(ride);
 
-        // Notify all passengers (push + email)
+        // Notify all passengers (push + FCM + email)
         Set<User> passengers = ride.getPassengers();
         if (passengers != null) {
             for (User passenger : passengers) {
@@ -211,6 +216,9 @@ public class NotificationServiceImpl implements NotificationService {
                         NotificationType.RIDE_FINISHED, ride.getId(), PRIORITY_NORMAL);
                 NotificationResponse dto = mapToResponse(entity);
                 pushWebSocket(passenger.getId(), dto);
+
+                // Send FCM push notification (async, non-blocking)
+                pushFcm(passenger, text, NotificationType.RIDE_FINISHED, ride.getId());
 
                 // Send ride-summary email (async, skip dummy emails)
                 sendRideSummaryEmail(passenger, ride);
@@ -496,6 +504,62 @@ public class NotificationServiceImpl implements NotificationService {
         } catch (Exception e) {
             // WebSocket failure must never break the persist-first contract
             log.warn("Failed to push WS notification to {}: {}", dest, e.getMessage());
+        }
+    }
+
+    /**
+     * Sends an FCM push notification to the user's registered device.
+     * Executes asynchronously and never throws — a failed FCM push must not
+     * break the persist-first notification contract.
+     */
+    private void pushFcm(User recipient, String text,
+                         NotificationType type, Long relatedEntityId) {
+        if (!fcmService.isAvailable()) return;
+
+        String fcmToken = recipient.getFcmToken();
+        if (fcmToken == null || fcmToken.isBlank()) {
+            log.debug("No FCM token for user {} — skipping push", recipient.getId());
+            return;
+        }
+
+        // Build a descriptive title based on notification type
+        String title;
+        switch (type) {
+            case RIDE_STATUS:
+                title = "Ride Update";
+                break;
+            case RIDE_INVITE:
+                title = "Ride Invitation";
+                break;
+            case PANIC:
+                title = "⚠ PANIC Alert";
+                break;
+            case DRIVER_ASSIGNMENT:
+                title = "Driver Assigned";
+                break;
+            case RIDE_FINISHED:
+                title = "Ride Completed";
+                break;
+            case SUPPORT:
+                title = "Support Message";
+                break;
+            default:
+                title = "Lucky3 Notification";
+        }
+
+        // Extra data for deep-linking on the client
+        java.util.Map<String, String> data = new java.util.HashMap<>();
+        data.put("type", type.name());
+        if (relatedEntityId != null) {
+            data.put("rideId", String.valueOf(relatedEntityId));
+        }
+        data.put("userId", String.valueOf(recipient.getId()));
+
+        try {
+            fcmService.sendToDevice(fcmToken, title, text, data);
+        } catch (Exception e) {
+            // FCM failure must never break the persist-first contract
+            log.warn("Failed to push FCM notification to user {}: {}", recipient.getId(), e.getMessage());
         }
     }
 
