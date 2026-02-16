@@ -190,6 +190,11 @@ export class NotificationService implements OnDestroy {
   clearAll(): void {
     this.notificationsSubject.next([]);
     this.unreadCountSubject.next(0);
+
+    // Delete from backend so they don't reappear on reload
+    this.http.delete(`${this.API_URL}`).subscribe({
+      error: (err) => console.error('Failed to delete all notifications:', err)
+    });
   }
 
   // ------------------------------------------------------------------

@@ -117,4 +117,7 @@ public interface NotificationService {
 
     /** Unread count for badge display. */
     long getUnreadCount(Long userId);
+
+    /** Delete all notifications for a user. Returns count deleted. */
+    int deleteAllForUser(Long userId);
 }

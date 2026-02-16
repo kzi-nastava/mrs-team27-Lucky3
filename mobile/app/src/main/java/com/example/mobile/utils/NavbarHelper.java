@@ -1,6 +1,7 @@
 package com.example.mobile.utils;
 
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
@@ -39,7 +40,7 @@ public final class NavbarHelper {
      * @param title    Optional toolbar title; if null, the title is left unchanged
      */
     public static void setup(Fragment fragment, View root, String title) {
-        setup(fragment, root, title, true);
+        setup(fragment, root, title, true, false);
     }
 
     /**
@@ -51,14 +52,34 @@ public final class NavbarHelper {
      * @param showBell  Whether to show the notification bell (false hides it)
      */
     public static void setup(Fragment fragment, View root, String title, boolean showBell) {
+        setup(fragment, root, title, showBell, false);
+    }
+
+    /**
+     * Full overload for navbar setup.
+     *
+     * @param fragment       The host fragment
+     * @param root           The inflated root view
+     * @param title          Optional toolbar title; if null, the title is left unchanged
+     * @param showBell       Whether to show the notification bell (false hides it)
+     * @param showBackButton If true, replaces the hamburger with a back arrow that pops the back stack
+     */
+    public static void setup(Fragment fragment, View root, String title,
+                             boolean showBell, boolean showBackButton) {
         View navbar = root.findViewById(R.id.navbar);
         if (navbar == null) return;
 
-        // Menu button → open drawer
-        View btnMenu = navbar.findViewById(R.id.btn_menu);
+        // Menu / back button
+        ImageView btnMenu = navbar.findViewById(R.id.btn_menu);
         if (btnMenu != null) {
-            btnMenu.setOnClickListener(v ->
-                    ((MainActivity) fragment.requireActivity()).openDrawer());
+            if (showBackButton) {
+                btnMenu.setImageResource(R.drawable.ic_arrow_back);
+                btnMenu.setOnClickListener(v ->
+                        Navigation.findNavController(v).popBackStack());
+            } else {
+                btnMenu.setOnClickListener(v ->
+                        ((MainActivity) fragment.requireActivity()).openDrawer());
+            }
         }
 
         // Title

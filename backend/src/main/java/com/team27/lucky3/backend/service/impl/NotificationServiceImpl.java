@@ -478,6 +478,12 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.countByRecipientIdAndIsReadFalse(userId);
     }
 
+    @Override
+    @Transactional
+    public int deleteAllForUser(Long userId) {
+        return notificationRepository.deleteAllForUser(userId);
+    }
+
     // ════════════════════════════════════════════════════════════════════
     //  PRIVATE HELPERS
     // ════════════════════════════════════════════════════════════════════

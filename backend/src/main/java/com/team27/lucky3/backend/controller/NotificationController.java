@@ -99,4 +99,18 @@ public class NotificationController {
         int count = notificationService.markAllAsRead(user.getId());
         return ResponseEntity.ok(Map.of("markedCount", count));
     }
+
+    /**
+     * Delete <b>all</b> notifications for the current user (clear history).
+     *
+     * <pre>DELETE /api/notification</pre>
+     * Response: {@code { "deletedCount": 8 }}
+     */
+    @DeleteMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Integer>> deleteAll(
+            @AuthenticationPrincipal User user) {
+        int count = notificationService.deleteAllForUser(user.getId());
+        return ResponseEntity.ok(Map.of("deletedCount", count));
+    }
 }

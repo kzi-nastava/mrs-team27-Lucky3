@@ -16,13 +16,19 @@ import androidx.navigation.Navigation;
 
 import com.example.mobile.R;
 import com.example.mobile.models.AppNotification;
+import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.NotificationStore;
+import com.example.mobile.utils.SharedPreferencesManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.example.mobile.utils.NavbarHelper;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Notification center panel — shows all in-app notifications
@@ -61,15 +67,35 @@ public class NotificationPanelFragment extends Fragment {
     }
 
     private void setupNavbar(View root) {
-        NavbarHelper.setup(this, root, "Notifications", false);
+        NavbarHelper.setup(this, root, "Notifications", false, true);
     }
 
     private void setupActions(View root) {
         root.findViewById(R.id.btn_mark_all_read).setOnClickListener(v ->
                 NotificationStore.getInstance().markAllAsRead());
 
-        root.findViewById(R.id.btn_clear_all).setOnClickListener(v ->
-                NotificationStore.getInstance().clearAll());
+        root.findViewById(R.id.btn_clear_all).setOnClickListener(v -> {
+            // Clear locally
+            NotificationStore.getInstance().clearAll();
+
+            // Delete from backend so they don't reappear
+            String token = new SharedPreferencesManager(requireContext()).getToken();
+            if (token != null) {
+                ClientUtils.notificationService.deleteAll("Bearer " + token)
+                        .enqueue(new Callback<Map<String, Integer>>() {
+                            @Override
+                            public void onResponse(Call<Map<String, Integer>> call,
+                                                   Response<Map<String, Integer>> response) {
+                                // Deleted on backend — nothing else to do
+                            }
+
+                            @Override
+                            public void onFailure(Call<Map<String, Integer>> call, Throwable t) {
+                                // Best-effort: local clear already happened
+                            }
+                        });
+            }
+        });
     }
 
     private void setupListView() {
