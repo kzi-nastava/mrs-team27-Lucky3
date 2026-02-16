@@ -97,8 +97,12 @@ public class ActiveRideFragment extends Fragment {
     private LinearLayout passengersList;
     private TextView tvCancelledBy, tvCancellationReason;
     private MaterialButton btnDriverCancel, btnPassengerCancel;
-    private MaterialButton btnReportInconsistency, btnPanic;
+    private MaterialButton btnReportInconsistency, btnPanic, btnStopRide;
     private LinearLayout actionButtons;
+
+    // Last known vehicle position for stop ride
+    private volatile double lastVehicleLatitude = 0;
+    private volatile double lastVehicleLongitude = 0;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -110,6 +114,7 @@ public class ActiveRideFragment extends Fragment {
         setupBackButton(root);
         setupCancelDialogListeners();
         setupPanicDialogListener();
+        setupStopRideDialogListener();
 
         if (getArguments() != null) {
             rideId = getArguments().getLong("rideId", -1);
@@ -147,6 +152,7 @@ public class ActiveRideFragment extends Fragment {
         btnPassengerCancel = root.findViewById(R.id.btn_passenger_cancel);
         btnReportInconsistency = root.findViewById(R.id.btn_report_inconsistency);
         btnPanic = root.findViewById(R.id.btn_panic);
+        btnStopRide = root.findViewById(R.id.btn_stop_ride);
         actionButtons = root.findViewById(R.id.action_buttons);
 
         // Set PANIC button text with emoji
@@ -677,6 +683,8 @@ public class ActiveRideFragment extends Fragment {
 
                         for (VehicleLocationResponse v : response.body()) {
                             if (driverId.equals(v.getDriverId())) {
+                                lastVehicleLatitude = v.getLatitude();
+                                lastVehicleLongitude = v.getLongitude();
                                 updateVehicleOnMap(v);
                                 drawRoutes(v);
                                 // Only driver auto-completes stops
@@ -1061,6 +1069,7 @@ public class ActiveRideFragment extends Fragment {
         btnPassengerCancel.setVisibility(View.GONE);
         btnReportInconsistency.setVisibility(View.GONE);
         btnPanic.setVisibility(View.GONE);
+        btnStopRide.setVisibility(View.GONE);
 
         if (ride.isCancelled() || "FINISHED".equals(status)) {
             actionButtons.setVisibility(View.GONE);
@@ -1081,6 +1090,12 @@ public class ActiveRideFragment extends Fragment {
             } else {
                 btnPanic.setVisibility(View.VISIBLE);
                 btnPanic.setOnClickListener(v -> openPanicDialog());
+            }
+
+            // Stop Ride for driver only (end ride early at current location)
+            if ("DRIVER".equals(role) && isCurrentUserDriver()) {
+                btnStopRide.setVisibility(View.VISIBLE);
+                btnStopRide.setOnClickListener(v -> openStopRideDialog());
             }
 
             // Report Inconsistency for passengers only
@@ -1137,6 +1152,39 @@ public class ActiveRideFragment extends Fragment {
     private void openPassengerCancelDialog() {
         PassengerCancelRideDialog dialog = PassengerCancelRideDialog.newInstance(rideId);
         dialog.show(getParentFragmentManager(), "passenger_cancel");
+    }
+
+    private void openStopRideDialog() {
+        double lat = lastVehicleLatitude;
+        double lon = lastVehicleLongitude;
+        String address = "";
+        if (lat == 0 && lon == 0 && ride != null && ride.getEndLocation() != null) {
+            lat = ride.getEndLocation().getLatitude();
+            lon = ride.getEndLocation().getLongitude();
+            address = ride.getEndLocation().getAddress();
+        }
+        StopRideDialog dialog = StopRideDialog.newInstance(rideId, lat, lon, address);
+        dialog.show(getParentFragmentManager(), "stop_ride");
+    }
+
+    private void setupStopRideDialogListener() {
+        getParentFragmentManager().setFragmentResultListener(
+                StopRideDialog.REQUEST_KEY, this, (requestKey, result) -> {
+                    if (result.getBoolean(StopRideDialog.KEY_STOPPED, false)) {
+                        onRideStopped();
+                    }
+                });
+    }
+
+    private void onRideStopped() {
+        Toast.makeText(getContext(), "Ride stopped — fare recalculated", Toast.LENGTH_SHORT).show();
+        try {
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.nav_driver_dashboard);
+        } catch (Exception e) {
+            Log.e(TAG, "Navigation error after stop ride", e);
+            Navigation.findNavController(requireView()).navigateUp();
+        }
     }
 
     private void onRideCancelled() {
