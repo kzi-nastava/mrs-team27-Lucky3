@@ -43,9 +43,10 @@ public class ReportController {
     public ResponseEntity<ReportResponse> getGlobalReport(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            @RequestParam @NotNull String type) {
+            @RequestParam @NotNull String type,
+            @RequestParam @NotNull Long userId) {
 
-        ReportResponse response = reportService.generateGlobalReport(from, to, type);
+        ReportResponse response = reportService.generateGlobalReport(from, to, type, userId);
         return ResponseEntity.ok(response);
     }
 }

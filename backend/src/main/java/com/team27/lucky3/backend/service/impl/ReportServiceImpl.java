@@ -4,6 +4,7 @@ import com.team27.lucky3.backend.dto.response.DailyReport;
 import com.team27.lucky3.backend.dto.response.ReportResponse;
 import com.team27.lucky3.backend.entity.Ride;
 import com.team27.lucky3.backend.entity.User;
+import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.repository.RideRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
@@ -40,37 +41,38 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type) {
+    public ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type, Long userId) {
         if ("DRIVER".equalsIgnoreCase(type)) {
             return generateAllDriversReport(from, to);
         } else if ("PASSENGER".equalsIgnoreCase(type)) {
             return generateAllPassengersReport(from, to);
         }
-        throw new IllegalArgumentException("Invalid report type. Use DRIVER or PASSENGER");
+        else{
+            return generateReportForUser(userId, from, to, type);
+        }
     }
 
     private ReportResponse generateDriverReport(Long driverId, LocalDateTime from, LocalDateTime to) {
         // Get all completed rides for this driver in date range
         List<Ride> rides = rideRepository.findByDriverIdAndStartTimeBetweenAndStatus(
-                driverId, from, to, "COMPLETED");
+                driverId, from, to, RideStatus.FINISHED);
 
         return buildReportResponse(rides, from, to, true);
     }
 
     private ReportResponse generatePassengerReport(Long passengerId, LocalDateTime from, LocalDateTime to) {
         // Get all rides where user was a passenger
-        List<Ride> rides = rideRepository.findRidesForPassenger(passengerId, from, to, "COMPLETED");
-
+        List<Ride> rides = rideRepository.findRidesForPassenger(passengerId, from, to, RideStatus.FINISHED.name());
         return buildReportResponse(rides, from, to, false);
     }
 
     private ReportResponse generateAllDriversReport(LocalDateTime from, LocalDateTime to) {
-        List<Ride> rides = rideRepository.findByStartTimeBetweenAndStatus(from, to, "COMPLETED");
+        List<Ride> rides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.FINISHED);
         return buildReportResponse(rides, from, to, true);
     }
 
     private ReportResponse generateAllPassengersReport(LocalDateTime from, LocalDateTime to) {
-        List<Ride> rides = rideRepository.findByStartTimeBetweenAndStatus(from, to, "COMPLETED");
+        List<Ride> rides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.FINISHED);
         return buildReportResponse(rides, from, to, false);
     }
 
@@ -99,17 +101,7 @@ public class ReportServiceImpl implements ReportService {
                     .mapToDouble(r -> r.getTotalCost() != null ? r.getTotalCost() : 0.0)
                     .sum();
 
-            // For passengers, money is spent (could be negative or just track as positive spent)
-            if (!isDriver) {
-                money = money; // Keep positive but represents spending
-            }
-
-            DailyReport dailyReport = DailyReport.builder()
-                    .date(currentDate.toString())
-                    .rideCount(rideCount)
-                    .kilometers(kilometers)
-                    .money(money)
-                    .build();
+            DailyReport dailyReport = new DailyReport(currentDate.toString(), rideCount, kilometers, money);
 
             dailyData.add(dailyReport);
 
@@ -123,15 +115,8 @@ public class ReportServiceImpl implements ReportService {
         // Calculate averages
         long dayCount = java.time.temporal.ChronoUnit.DAYS.between(from.toLocalDate(), to.toLocalDate()) + 1;
 
-        return ReportResponse.builder()
-                .dailyData(dailyData)
-                .cumulativeRides(totalRides)
-                .cumulativeKilometers(totalKilometers)
-                .cumulativeMoney(totalMoney)
-                .averageRides(totalRides / dayCount)
-                .averageKilometers(totalKilometers / dayCount)
-                .averageMoney(totalMoney / dayCount)
-                .build();
+        return new ReportResponse(dailyData, totalRides, totalKilometers, totalMoney, totalRides / dayCount,
+                totalKilometers / dayCount, totalMoney / dayCount);
     }
 }
 

@@ -5,5 +5,5 @@ import java.time.LocalDateTime;
 
 public interface ReportService {
     ReportResponse generateReportForUser(Long userId, LocalDateTime from, LocalDateTime to, String type);
-    ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type);
+    ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type, Long userId);
 }
