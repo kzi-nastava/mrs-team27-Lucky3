@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ReviewService, ReviewTokenData, ReviewRequest } from '../../infrastructure/rest/review.service';
@@ -14,7 +14,9 @@ import { AuthService } from '../../infrastructure/auth/auth.service';
 })
 export class ReviewPage implements OnInit {
   token: string | null = null;
+  rideId: number | null = null;
   tokenData: ReviewTokenData | null = null;
+  isAuthenticatedMode = false;
   
   // Form data
   driverRating = 0;
@@ -38,12 +40,23 @@ export class ReviewPage implements OnInit {
     private router: Router,
     private reviewService: ReviewService,
     private cdr: ChangeDetectorRef,
-    private authService: AuthService
+    private authService: AuthService,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
     this.token = this.route.snapshot.queryParamMap.get('token');
+    const rideIdParam = this.route.snapshot.queryParamMap.get('rideId');
     
+    // Authenticated mode: logged-in passenger with rideId
+    if (rideIdParam && this.authService.isLoggedIn()) {
+      this.rideId = Number(rideIdParam);
+      this.isAuthenticatedMode = true;
+      this.isLoading = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
     if (!this.token) {
       this.tokenInvalid = true;
       this.isLoading = false;
@@ -88,36 +101,60 @@ export class ReviewPage implements OnInit {
   }
 
   submitReview(): void {
-    if (!this.canSubmit || !this.token) return;
+    if (!this.canSubmit) return;
 
     this.isSubmitting = true;
     this.error = null;
 
-    const request: ReviewRequest = {
-      token: this.token,
-      driverRating: this.driverRating,
-      vehicleRating: this.vehicleRating,
-      comment: this.comment.trim() || undefined
-    };
-
-    this.reviewService.submitReviewWithToken(request).subscribe({
-      next: () => {
-        this.isSubmitting = false;
-        this.success = true;
-        this.cdr.detectChanges();
-      },
-      error: (err: any) => {
-        this.isSubmitting = false;
-        if (err.status === 410) {
-          this.tokenExpired = true;
-        } else if (err.status === 409) {
-          this.error = 'You have already submitted a review for this ride.';
-        } else {
-          this.error = err.error?.message || 'Failed to submit review. Please try again.';
+    if (this.isAuthenticatedMode && this.rideId) {
+      const request: ReviewRequest = {
+        rideId: this.rideId,
+        driverRating: this.driverRating,
+        vehicleRating: this.vehicleRating,
+        comment: this.comment.trim() || undefined
+      };
+      this.reviewService.submitReview(request).subscribe({
+        next: () => {
+          this.isSubmitting = false;
+          this.success = true;
+          this.cdr.detectChanges();
+        },
+        error: (err: any) => {
+          this.isSubmitting = false;
+          if (err.status === 409) {
+            this.error = 'You have already submitted a review for this ride.';
+          } else {
+            this.error = err.error?.message || 'Failed to submit review. Please try again.';
+          }
+          this.cdr.detectChanges();
         }
-        this.cdr.detectChanges();
-      }
-    });
+      });
+    } else if (this.token) {
+      const request: ReviewRequest = {
+        token: this.token,
+        driverRating: this.driverRating,
+        vehicleRating: this.vehicleRating,
+        comment: this.comment.trim() || undefined
+      };
+      this.reviewService.submitReviewWithToken(request).subscribe({
+        next: () => {
+          this.isSubmitting = false;
+          this.success = true;
+          this.cdr.detectChanges();
+        },
+        error: (err: any) => {
+          this.isSubmitting = false;
+          if (err.status === 410) {
+            this.tokenExpired = true;
+          } else if (err.status === 409) {
+            this.error = 'You have already submitted a review for this ride.';
+          } else {
+            this.error = err.error?.message || 'Failed to submit review. Please try again.';
+          }
+          this.cdr.detectChanges();
+        }
+      });
+    }
   }
 
   goHome(): void {
@@ -133,5 +170,9 @@ export class ReviewPage implements OnInit {
     } else {
       this.router.navigate(['/']);
     }
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 }

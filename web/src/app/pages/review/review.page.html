@@ -54,8 +54,13 @@
   </div>
 
   <!-- Review Form -->
-  <div *ngIf="!isLoading && !tokenExpired && !tokenInvalid && !success && tokenData" class="max-w-md w-full" data-testid="review-form">
-    <div class="bg-[#1C1C1E] rounded-2xl p-8">
+  <div *ngIf="!isLoading && !tokenExpired && !tokenInvalid && !success && (tokenData || isAuthenticatedMode)" class="max-w-md w-full" data-testid="review-form">
+    <div class="bg-[#1C1C1E] rounded-2xl p-8 relative">
+      <!-- Cancel Button -->
+      <button (click)="goBack()" class="absolute top-4 left-4 text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        Cancel
+      </button>
       <!-- Header -->
       <div class="text-center mb-8">
         <div class="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">

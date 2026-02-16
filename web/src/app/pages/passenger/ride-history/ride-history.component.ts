@@ -454,5 +454,20 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     });
   }
+
+  canReviewSelectedRide(): boolean {
+    if (!this.selectedRide || !this.selectedRideDetails) return false;
+    if (this.selectedRideDetails.status !== 'FINISHED') return false;
+    if (!this.selectedRideDetails.endTime) return false;
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    if (Date.now() - new Date(this.selectedRideDetails.endTime).getTime() > threeDaysMs) return false;
+    return !this.selectedRideDetails.reviews?.some(rev => rev.passengerId === this.passengerId);
+  }
+
+  onReviewRide(): void {
+    if (this.selectedRide) {
+      this.router.navigate(['/review'], { queryParams: { rideId: this.selectedRide.id } });
+    }
+  }
   
 }
