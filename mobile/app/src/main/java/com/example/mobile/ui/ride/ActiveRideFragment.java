@@ -27,7 +27,10 @@ import com.example.mobile.ui.maps.RideMapRenderer;
 import com.example.mobile.ui.ride.ReportInconsistencyDialog;
 import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
+import com.example.mobile.utils.StompClient;
+import com.example.mobile.utils.WebSocketManager;
 import com.google.android.material.button.MaterialButton;
+import com.google.gson.reflect.TypeToken;
 
 import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
@@ -84,9 +87,14 @@ public class ActiveRideFragment extends Fragment {
     private volatile double routeDistanceKm = -1;
     private volatile double routeTimeMin = -1;
 
-    // Polling
+    // Polling (fallback when WebSocket is unavailable)
     private final Handler pollingHandler = new Handler(Looper.getMainLooper());
     private boolean isPollingActive = false;
+
+    // WebSocket subscriptions
+    private String vehicleSubId;
+    private String rideSubId;
+    private boolean wsConnected = false;
 
     private TextView tvStatusBadge;
     private TextView tvRideType, tvCost, tvCostLabel;
@@ -97,8 +105,16 @@ public class ActiveRideFragment extends Fragment {
     private LinearLayout passengersList;
     private TextView tvCancelledBy, tvCancellationReason;
     private MaterialButton btnDriverCancel, btnPassengerCancel;
-    private MaterialButton btnReportInconsistency, btnPanic;
+    private MaterialButton btnReportInconsistency, btnPanic, btnStopRide;
+    private MaterialButton btnFinishRide;
+    private TextView tvFinishRideReason;
     private LinearLayout actionButtons;
+
+    private static final double END_POINT_THRESHOLD_METERS = 100.0;
+
+    // Last known vehicle position for stop ride
+    private volatile double lastVehicleLatitude = 0;
+    private volatile double lastVehicleLongitude = 0;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -110,6 +126,8 @@ public class ActiveRideFragment extends Fragment {
         setupBackButton(root);
         setupCancelDialogListeners();
         setupPanicDialogListener();
+        setupStopRideDialogListener();
+        setupFinishRideDialogListener();
 
         if (getArguments() != null) {
             rideId = getArguments().getLong("rideId", -1);
@@ -147,6 +165,9 @@ public class ActiveRideFragment extends Fragment {
         btnPassengerCancel = root.findViewById(R.id.btn_passenger_cancel);
         btnReportInconsistency = root.findViewById(R.id.btn_report_inconsistency);
         btnPanic = root.findViewById(R.id.btn_panic);
+        btnStopRide = root.findViewById(R.id.btn_stop_ride);
+        btnFinishRide = root.findViewById(R.id.btn_finish_ride);
+        tvFinishRideReason = root.findViewById(R.id.tv_finish_ride_reason);
         actionButtons = root.findViewById(R.id.action_buttons);
 
         // Set PANIC button text with emoji
@@ -494,15 +515,126 @@ public class ActiveRideFragment extends Fragment {
             // Flag yellow route for redraw
             yellowRouteNeedsRedraw = true;
 
-            // Start polling for vehicle location + ride status
-            startPolling();
+            // Connect WebSocket and subscribe (falls back to polling)
+            startWebSocketSubscriptions();
         } catch (Exception e) {
             Log.e(TAG, "Error updating map", e);
         }
     }
 
-    // ========== Polling ==========
+    // ========== WebSocket + Polling ==========
 
+    /**
+     * Connect to the WebSocket and subscribe to vehicle location + ride status topics.
+     * Falls back to HTTP polling if WebSocket fails to connect.
+     */
+    private void startWebSocketSubscriptions() {
+        if (ride == null || rideId <= 0) return;
+
+        WebSocketManager ws = WebSocketManager.getInstance();
+        ws.connect(requireContext(), new StompClient.ConnectionCallback() {
+            @Override
+            public void onConnected() {
+                if (!isAdded()) return;
+                wsConnected = true;
+                Log.i(TAG, "WebSocket connected — subscribing to topics");
+                subscribeToVehicleLocation();
+                subscribeToRideUpdates();
+                // Stop polling since WebSocket is active
+                stopPolling();
+                // Do one immediate REST fetch to get the latest state
+                pollVehicleLocation();
+            }
+
+            @Override
+            public void onDisconnected(String reason) {
+                if (!isAdded()) return;
+                wsConnected = false;
+                Log.w(TAG, "WebSocket disconnected, falling back to polling: " + reason);
+                startPolling();
+            }
+
+            @Override
+            public void onError(String error) {
+                if (!isAdded()) return;
+                wsConnected = false;
+                Log.w(TAG, "WebSocket error, falling back to polling: " + error);
+                startPolling();
+            }
+        });
+
+        // Start polling immediately as fallback until WebSocket connects
+        startPolling();
+    }
+
+    private void subscribeToVehicleLocation() {
+        if (vehicleSubId != null) return; // already subscribed
+
+        // Subscribe to all active vehicles broadcast
+        vehicleSubId = WebSocketManager.getInstance().subscribe(
+                "/topic/vehicles",
+                new TypeToken<List<VehicleLocationResponse>>() {}.getType(),
+                (StompClient.MessageCallback<List<VehicleLocationResponse>>) vehicles -> {
+                    if (!isAdded() || ride == null || mapView == null) return;
+
+                    Long driverId = ride.getDriverId();
+                    if (driverId == null && ride.getDriver() != null) {
+                        driverId = ride.getDriver().getId();
+                    }
+                    if (driverId == null) return;
+
+                    for (VehicleLocationResponse v : vehicles) {
+                        if (driverId.equals(v.getDriverId())) {
+                            lastVehicleLatitude = v.getLatitude();
+                            lastVehicleLongitude = v.getLongitude();
+                            updateVehicleOnMap(v);
+                            drawRoutes(v);
+                            if ("DRIVER".equals(preferencesManager.getUserRole())) {
+                                checkStopCompletion(v);
+                                updateFinishRideButton();
+                            }
+                            break;
+                        }
+                    }
+                });
+    }
+
+    private void subscribeToRideUpdates() {
+        if (rideSubId != null) return; // already subscribed
+
+        rideSubId = WebSocketManager.getInstance().subscribe(
+                "/topic/ride/" + rideId,
+                RideResponse.class,
+                (StompClient.MessageCallback<RideResponse>) updatedRide -> {
+                    if (!isAdded() || updatedRide == null) return;
+
+                    ride = updatedRide;
+                    if (Boolean.TRUE.equals(ride.getPanicPressed()) && !panicActivated) {
+                        panicActivated = true;
+                    }
+                    updateHeader();
+                    updateRoute();
+                    updateActionButtons();
+                    updateCancellationInfo();
+                });
+    }
+
+    private void unsubscribeWebSocket() {
+        WebSocketManager ws = WebSocketManager.getInstance();
+        if (vehicleSubId != null) {
+            ws.unsubscribe(vehicleSubId);
+            vehicleSubId = null;
+        }
+        if (rideSubId != null) {
+            ws.unsubscribe(rideSubId);
+            rideSubId = null;
+        }
+        wsConnected = false;
+    }
+
+    /**
+     * Start HTTP polling as a fallback when WebSocket is unavailable.
+     */
     private void startPolling() {
         if (isPollingActive) return;
         isPollingActive = true;
@@ -520,7 +652,10 @@ public class ActiveRideFragment extends Fragment {
         @Override
         public void run() {
             if (!isPollingActive || !isAdded()) return;
-            pollVehicleLocation();
+            // Skip polling if WebSocket is delivering vehicle updates
+            if (!wsConnected) {
+                pollVehicleLocation();
+            }
             pollingHandler.postDelayed(this, LOCATION_POLL_INTERVAL);
         }
     };
@@ -529,7 +664,10 @@ public class ActiveRideFragment extends Fragment {
         @Override
         public void run() {
             if (!isPollingActive || !isAdded()) return;
-            refreshRide();
+            // Skip polling if WebSocket is delivering ride updates
+            if (!wsConnected) {
+                refreshRide();
+            }
             pollingHandler.postDelayed(this, RIDE_POLL_INTERVAL);
         }
     };
@@ -677,11 +815,14 @@ public class ActiveRideFragment extends Fragment {
 
                         for (VehicleLocationResponse v : response.body()) {
                             if (driverId.equals(v.getDriverId())) {
+                                lastVehicleLatitude = v.getLatitude();
+                                lastVehicleLongitude = v.getLongitude();
                                 updateVehicleOnMap(v);
                                 drawRoutes(v);
-                                // Only driver auto-completes stops
+                                // Only driver auto-completes stops and checks finish ride
                                 if ("DRIVER".equals(preferencesManager.getUserRole())) {
                                     checkStopCompletion(v);
+                                    updateFinishRideButton();
                                 }
                                 break;
                             }
@@ -932,6 +1073,9 @@ public class ActiveRideFragment extends Fragment {
 
         // Rebuild route stops UI so completed dot turns green
         buildRouteStops();
+
+        // Update finish ride button (may become enabled now)
+        updateFinishRideButton();
     }
 
     private static double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
@@ -1061,6 +1205,9 @@ public class ActiveRideFragment extends Fragment {
         btnPassengerCancel.setVisibility(View.GONE);
         btnReportInconsistency.setVisibility(View.GONE);
         btnPanic.setVisibility(View.GONE);
+        btnStopRide.setVisibility(View.GONE);
+        btnFinishRide.setVisibility(View.GONE);
+        tvFinishRideReason.setVisibility(View.GONE);
 
         if (ride.isCancelled() || "FINISHED".equals(status)) {
             actionButtons.setVisibility(View.GONE);
@@ -1081,6 +1228,14 @@ public class ActiveRideFragment extends Fragment {
             } else {
                 btnPanic.setVisibility(View.VISIBLE);
                 btnPanic.setOnClickListener(v -> openPanicDialog());
+            }
+
+            // Stop Ride for driver only (end ride early at current location)
+            if ("DRIVER".equals(role) && isCurrentUserDriver()) {
+                btnStopRide.setVisibility(View.VISIBLE);
+                btnStopRide.setOnClickListener(v -> openStopRideDialog());
+                // Finish Ride button (enabled only when all stops completed + near destination)
+                updateFinishRideButton();
             }
 
             // Report Inconsistency for passengers only
@@ -1139,6 +1294,147 @@ public class ActiveRideFragment extends Fragment {
         dialog.show(getParentFragmentManager(), "passenger_cancel");
     }
 
+    // ========== Finish Ride Logic ==========
+
+    private boolean canEndRide() {
+        if (ride == null || !"IN_PROGRESS".equals(ride.getStatus())) return false;
+
+        // All stops must be completed
+        List<LocationDto> stops = ride.getStops();
+        Set<Integer> completed = ride.getCompletedStopIndexes();
+        int totalStops = stops != null ? stops.size() : 0;
+        if (completed.size() < totalStops) return false;
+
+        // Must be close to end point
+        LocationDto end = ride.getEffectiveEndLocation();
+        if (end == null || (lastVehicleLatitude == 0 && lastVehicleLongitude == 0)) return false;
+
+        double distanceMeters = haversineMeters(lastVehicleLatitude, lastVehicleLongitude,
+                end.getLatitude(), end.getLongitude());
+        return distanceMeters <= END_POINT_THRESHOLD_METERS;
+    }
+
+    private String getEndRideDisabledReason() {
+        if (ride == null || !"IN_PROGRESS".equals(ride.getStatus())) return "";
+
+        List<LocationDto> stops = ride.getStops();
+        Set<Integer> completed = ride.getCompletedStopIndexes();
+        int totalStops = stops != null ? stops.size() : 0;
+        int remaining = totalStops - completed.size();
+
+        if (remaining > 0) {
+            return "Complete " + remaining + " remaining stop" + (remaining > 1 ? "s" : "") + " first";
+        }
+
+        LocationDto end = ride.getEffectiveEndLocation();
+        if (end == null || (lastVehicleLatitude == 0 && lastVehicleLongitude == 0)) {
+            return "Waiting for location...";
+        }
+
+        double distanceMeters = haversineMeters(lastVehicleLatitude, lastVehicleLongitude,
+                end.getLatitude(), end.getLongitude());
+        if (distanceMeters > END_POINT_THRESHOLD_METERS) {
+            String distanceText;
+            if (distanceMeters >= 1000) {
+                distanceText = String.format(Locale.US, "%.1f km", distanceMeters / 1000);
+            } else {
+                distanceText = String.format(Locale.US, "%d m", Math.round(distanceMeters));
+            }
+            return "Drive closer to destination (" + distanceText + " away)";
+        }
+
+        return "";
+    }
+
+    private void updateFinishRideButton() {
+        if (btnFinishRide == null || ride == null) return;
+
+        String role = preferencesManager.getUserRole();
+        if (!"DRIVER".equals(role) || !isCurrentUserDriver() || !"IN_PROGRESS".equals(ride.getStatus())) {
+            btnFinishRide.setVisibility(View.GONE);
+            tvFinishRideReason.setVisibility(View.GONE);
+            return;
+        }
+
+        btnFinishRide.setVisibility(View.VISIBLE);
+
+        if (canEndRide()) {
+            btnFinishRide.setEnabled(true);
+            btnFinishRide.setAlpha(1.0f);
+            tvFinishRideReason.setVisibility(View.GONE);
+            btnFinishRide.setOnClickListener(v -> openFinishRideDialog());
+        } else {
+            btnFinishRide.setEnabled(false);
+            btnFinishRide.setAlpha(0.5f);
+            String reason = getEndRideDisabledReason();
+            if (!reason.isEmpty()) {
+                tvFinishRideReason.setText(reason);
+                tvFinishRideReason.setVisibility(View.VISIBLE);
+            } else {
+                tvFinishRideReason.setVisibility(View.GONE);
+            }
+            btnFinishRide.setOnClickListener(null);
+        }
+    }
+
+    private void openFinishRideDialog() {
+        FinishRideDialog dialog = FinishRideDialog.newInstance(rideId);
+        dialog.show(getParentFragmentManager(), "finish_ride");
+    }
+
+    private void setupFinishRideDialogListener() {
+        getParentFragmentManager().setFragmentResultListener(
+                FinishRideDialog.REQUEST_KEY, this, (requestKey, result) -> {
+                    if (result.getBoolean(FinishRideDialog.KEY_FINISHED, false)) {
+                        onRideFinished();
+                    }
+                });
+    }
+
+    private void onRideFinished() {
+        Toast.makeText(getContext(), "\u2713 Ride finished successfully!", Toast.LENGTH_SHORT).show();
+        try {
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.nav_driver_dashboard);
+        } catch (Exception e) {
+            Log.e(TAG, "Navigation error after finish ride", e);
+            Navigation.findNavController(requireView()).navigateUp();
+        }
+    }
+
+    private void openStopRideDialog() {
+        double lat = lastVehicleLatitude;
+        double lon = lastVehicleLongitude;
+        String address = "";
+        if (lat == 0 && lon == 0 && ride != null && ride.getEndLocation() != null) {
+            lat = ride.getEndLocation().getLatitude();
+            lon = ride.getEndLocation().getLongitude();
+            address = ride.getEndLocation().getAddress();
+        }
+        StopRideDialog dialog = StopRideDialog.newInstance(rideId, lat, lon, address);
+        dialog.show(getParentFragmentManager(), "stop_ride");
+    }
+
+    private void setupStopRideDialogListener() {
+        getParentFragmentManager().setFragmentResultListener(
+                StopRideDialog.REQUEST_KEY, this, (requestKey, result) -> {
+                    if (result.getBoolean(StopRideDialog.KEY_STOPPED, false)) {
+                        onRideStopped();
+                    }
+                });
+    }
+
+    private void onRideStopped() {
+        Toast.makeText(getContext(), "Ride stopped — fare recalculated", Toast.LENGTH_SHORT).show();
+        try {
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.nav_driver_dashboard);
+        } catch (Exception e) {
+            Log.e(TAG, "Navigation error after stop ride", e);
+            Navigation.findNavController(requireView()).navigateUp();
+        }
+    }
+
     private void onRideCancelled() {
         Toast.makeText(getContext(), "Ride cancelled successfully", Toast.LENGTH_SHORT).show();
 
@@ -1161,7 +1457,7 @@ public class ActiveRideFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (mapView != null) mapView.onResume();
-        if (ride != null) startPolling();
+        if (ride != null) startWebSocketSubscriptions();
     }
 
     @Override
@@ -1169,12 +1465,14 @@ public class ActiveRideFragment extends Fragment {
         super.onPause();
         if (mapView != null) mapView.onPause();
         stopPolling();
+        unsubscribeWebSocket();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         stopPolling();
+        unsubscribeWebSocket();
         if (mapView != null) mapView.onDetach();
     }
 }

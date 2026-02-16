@@ -22,6 +22,8 @@ public class SharedPreferencesManager {
     private static final String KEY_USER_PROFILE_IMAGE = "user_profile_image";
     private static final String KEY_DRIVER_STATUS = "driver_status";
     private static final String KEY_IS_LOGGED_IN = "is_logged_in";
+    private static final String KEY_FCM_TOKEN = "fcm_token";
+    private static final String KEY_FCM_TOKEN_SYNCED = "fcm_token_synced";
 
     private final SharedPreferences sharedPreferences;
 
@@ -166,6 +168,44 @@ public class SharedPreferencesManager {
      */
     public boolean getDriverStatus() {
         return sharedPreferences.getBoolean(KEY_DRIVER_STATUS, false);
+    }
+
+    // ========================== FCM Token Methods ==========================
+
+    /**
+     * Saves the FCM device token for push notifications.
+     * @param token The FCM registration token
+     */
+    public void saveFcmToken(String token) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(KEY_FCM_TOKEN, token);
+        editor.apply();
+    }
+
+    /**
+     * Gets the stored FCM device token.
+     * @return The FCM token or null if not stored
+     */
+    public String getFcmToken() {
+        return sharedPreferences.getString(KEY_FCM_TOKEN, null);
+    }
+
+    /**
+     * Marks the FCM token as synced with the backend.
+     * @param synced true if the token has been successfully sent to the backend
+     */
+    public void setFcmTokenSynced(boolean synced) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(KEY_FCM_TOKEN_SYNCED, synced);
+        editor.apply();
+    }
+
+    /**
+     * Checks if the current FCM token has been synced with the backend.
+     * @return true if the token was successfully registered with the server
+     */
+    public boolean isFcmTokenSynced() {
+        return sharedPreferences.getBoolean(KEY_FCM_TOKEN_SYNCED, false);
     }
 
     // ========================== Session Methods ==========================
