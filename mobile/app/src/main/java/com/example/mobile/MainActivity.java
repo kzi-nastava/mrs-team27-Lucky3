@@ -113,11 +113,21 @@ public class MainActivity extends AppCompatActivity {
                     .build();
             NavigationUI.setupWithNavController(navigationView, navController);
             
-            // Restore session
-            checkSession(navController);
+            // Only navigate on fresh start — NOT on configuration changes (e.g. orientation)
+            if (savedInstanceState == null) {
+                // Restore session
+                checkSession(navController);
 
-            // Handle FCM deep-link if app was launched from a notification
-            handleFcmDeepLink(getIntent());
+                // Handle FCM deep-link if app was launched from a notification
+                handleFcmDeepLink(getIntent());
+            } else {
+                // On config change, just restore the role-based drawer menu without navigating
+                String role = sharedPreferencesManager.getUserRole();
+                if (role != null) {
+                    currentRole = role;
+                    setupNavigationForRole(role);
+                }
+            }
         }
     }
 
