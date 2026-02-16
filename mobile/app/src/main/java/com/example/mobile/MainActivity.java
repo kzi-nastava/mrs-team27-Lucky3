@@ -1,5 +1,6 @@
 package com.example.mobile;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
@@ -32,6 +33,7 @@ import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.PanicResponse;
 import com.example.mobile.models.RideResponse;
 import com.example.mobile.utils.ClientUtils;
+import com.example.mobile.utils.NotificationHelper;
 import com.example.mobile.utils.SharedPreferencesManager;
 
 import org.osmdroid.config.Configuration;
@@ -89,6 +91,9 @@ public class MainActivity extends AppCompatActivity {
                 PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
         Configuration.getInstance().setUserAgentValue(getPackageName());
 
+        // Create notification channels for FCM push (safe to call multiple times)
+        NotificationHelper.createNotificationChannels(this);
+
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -110,6 +115,9 @@ public class MainActivity extends AppCompatActivity {
             
             // Restore session
             checkSession(navController);
+
+            // Handle FCM deep-link if app was launched from a notification
+            handleFcmDeepLink(getIntent());
         }
     }
 
@@ -556,5 +564,52 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         stopActiveRidePolling();
         stopPanicPolling();
+    }
+
+    // ======================== FCM Deep-Link Handling ========================
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleFcmDeepLink(intent);
+    }
+
+    /**
+     * Handles deep-link navigation from FCM notification taps.
+     * Checks the intent for {@code navigate_to} extra and navigates accordingly.
+     */
+    private void handleFcmDeepLink(Intent intent) {
+        if (intent == null || intent.getExtras() == null) return;
+
+        String navigateTo = intent.getStringExtra("navigate_to");
+        if (navigateTo == null) return;
+
+        try {
+            NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+
+            switch (navigateTo) {
+                case "active_ride":
+                    long rideId = intent.getLongExtra("rideId", -1L);
+                    if (rideId > 0) {
+                        Bundle args = new Bundle();
+                        args.putLong("rideId", rideId);
+                        navController.navigate(R.id.nav_active_ride, args);
+                    }
+                    break;
+                case "admin_panic":
+                    navController.navigate(R.id.nav_admin_panic);
+                    break;
+                default:
+                    Log.d(TAG, "Unknown deep-link target: " + navigateTo);
+                    break;
+            }
+
+            // Clear the extras to prevent re-navigation on config changes
+            intent.removeExtra("navigate_to");
+            intent.removeExtra("rideId");
+        } catch (Exception e) {
+            Log.e(TAG, "FCM deep-link navigation failed: " + e.getMessage());
+        }
     }
 }
