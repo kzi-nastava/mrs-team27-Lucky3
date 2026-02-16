@@ -208,7 +208,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         String text = buildRideSummaryText(ride);
 
-        // Notify all passengers (push + email)
+        // Notify all passengers (push + FCM + email)
         Set<User> passengers = ride.getPassengers();
         if (passengers != null) {
             for (User passenger : passengers) {
@@ -216,6 +216,9 @@ public class NotificationServiceImpl implements NotificationService {
                         NotificationType.RIDE_FINISHED, ride.getId(), PRIORITY_NORMAL);
                 NotificationResponse dto = mapToResponse(entity);
                 pushWebSocket(passenger.getId(), dto);
+
+                // Send FCM push notification (async, non-blocking)
+                pushFcm(passenger, text, NotificationType.RIDE_FINISHED, ride.getId());
 
                 // Send ride-summary email (async, skip dummy emails)
                 sendRideSummaryEmail(passenger, ride);
