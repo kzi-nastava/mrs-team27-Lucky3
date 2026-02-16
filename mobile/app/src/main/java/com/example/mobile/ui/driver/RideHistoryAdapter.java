@@ -66,6 +66,7 @@ public class RideHistoryAdapter extends BaseAdapter {
             holder.tvDriverName = convertView.findViewById(R.id.tv_driver_name);
             holder.tvDistance = convertView.findViewById(R.id.tv_distance);
             holder.btnLeaveReview = convertView.findViewById(R.id.btn_leave_review);
+            holder.panicOverlay = convertView.findViewById(R.id.panic_overlay);
             convertView.setTag(holder);
         } else {
             holder = (ViewHolder) convertView.getTag();
@@ -141,6 +142,10 @@ public class RideHistoryAdapter extends BaseAdapter {
         // No review button for driver
         holder.btnLeaveReview.setVisibility(View.GONE);
 
+        // Panic overlay
+        boolean hasPanic = Boolean.TRUE.equals(ride.getPanicPressed());
+        holder.panicOverlay.setVisibility(hasPanic ? View.VISIBLE : View.GONE);
+
         // Click handler
         convertView.setOnClickListener(v -> {
             Bundle args = new Bundle();
@@ -170,6 +175,7 @@ public class RideHistoryAdapter extends BaseAdapter {
         TextView tvStatus, tvDate, tvDeparture, tvDestination;
         TextView tvStartTime, tvEndTime, tvCost, tvDriverName, tvDistance;
         TextView btnLeaveReview;
+        View panicOverlay;
     }
 }
 

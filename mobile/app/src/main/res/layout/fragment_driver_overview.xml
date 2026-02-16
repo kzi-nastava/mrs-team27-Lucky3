@@ -294,103 +294,139 @@
             </GridLayout>
 
             <!-- Ride History Header -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ride History"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Date Range -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginTop="24dp"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="From:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_from_date"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:hint="Start date"
+                    android:textColorHint="@color/gray_400"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card"
+                    android:layout_marginEnd="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="To:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_to_date"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:hint="End date"
+                    android:textColorHint="@color/gray_400"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card" />
+
+                <ImageView
+                    android:id="@+id/btn_clear_dates"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    app:tint="@color/gray_400"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_marginStart="8dp"
+                    android:padding="4dp" />
+            </LinearLayout>
+
+            <!-- Sort Controls -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sort by:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="8dp" />
+
+                <Spinner
+                    android:id="@+id/spinner_sort"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card"
+                    android:popupBackground="@color/gray_800"
+                    android:paddingHorizontal="8dp" />
+
+                <TextView
+                    android:id="@+id/btn_sort_direction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="↓ DESC"
+                    android:textColor="@color/yellow_500"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card"
+                    android:paddingHorizontal="12dp"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
+
+            <!-- Status Filter -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:layout_marginBottom="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ride History"
-                    android:textColor="@color/white"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:layout_marginEnd="16dp"/>
+                    android:text="Status:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="8dp" />
 
-                <HorizontalScrollView
+                <Spinner
+                    android:id="@+id/spinner_status"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="36dp"
                     android:layout_weight="1"
-                    android:scrollbars="none">
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <!-- Date Filter -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/bg_filter_container"
-                            android:paddingHorizontal="12dp"
-                            android:paddingVertical="6dp"
-                            android:layout_marginEnd="8dp"
-                            android:gravity="center_vertical">
-                            <ImageView
-                                android:layout_width="16dp"
-                                android:layout_height="16dp"
-                                android:src="@android:drawable/ic_menu_my_calendar"
-                                app:tint="@color/gray_400"
-                                android:layout_marginEnd="8dp"
-                                android:contentDescription="Calendar"/>
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="mm/dd/yyyy"
-                                android:textColor="@color/gray_400"
-                                android:textSize="12sp"/>
-                        </LinearLayout>
-
-                        <!-- Status Filters -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/bg_filter_container"
-                            android:padding="4dp"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:id="@+id/status_all"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="All"
-                                android:textColor="@color/black"
-                                android:background="@drawable/bg_filter_selected"
-                                android:paddingHorizontal="12dp"
-                                android:paddingVertical="6dp"
-                                android:textSize="12sp"
-                                android:textStyle="bold"/>
-
-                            <TextView
-                                android:id="@+id/status_completed"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Finished"
-                                android:textColor="@color/gray_400"
-                                android:paddingHorizontal="12dp"
-                                android:paddingVertical="6dp"
-                                android:textSize="12sp"
-                                android:textStyle="bold"/>
-
-                            <TextView
-                                android:id="@+id/status_cancelled"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Cancelled"
-                                android:textColor="@color/gray_400"
-                                android:paddingHorizontal="12dp"
-                                android:paddingVertical="6dp"
-                                android:textSize="12sp"
-                                android:textStyle="bold"/>
-                        </LinearLayout>
-                    </LinearLayout>
-                </HorizontalScrollView>
+                    android:background="@drawable/bg_card"
+                    android:popupBackground="@color/gray_800"
+                    android:paddingHorizontal="8dp" />
             </LinearLayout>
 
             <!-- Ride History List -->
