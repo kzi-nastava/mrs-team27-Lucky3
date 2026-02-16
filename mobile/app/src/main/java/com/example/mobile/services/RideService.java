@@ -1,5 +1,6 @@
 package com.example.mobile.services;
 
+import com.example.mobile.models.AdminStatsResponse;
 import com.example.mobile.models.CreateRideRequest;
 import com.example.mobile.models.EndRideRequest;
 import com.example.mobile.models.FavoriteRouteRequest;
@@ -179,6 +180,30 @@ public interface RideService {
     Call<Void> removeFavouriteRoute(
         @Path("passengerId") Long passengerId,
         @Path("favouriteRouteId") Long favouriteRouteId,
+        @Header("Authorization") String token
+    );
+
+    /**
+     * Admin: Get all active rides (PENDING, ACCEPTED, SCHEDULED, IN_PROGRESS)
+     * GET /api/rides/active/all
+     */
+    @GET("api/rides/active/all")
+    Call<PageResponse<RideResponse>> getAllActiveRides(
+        @Query("page") Integer page,
+        @Query("size") Integer size,
+        @Query("sort") String sort,
+        @Query("search") String search,
+        @Query("status") String status,
+        @Query("vehicleType") String vehicleType,
+        @Header("Authorization") String token
+    );
+
+    /**
+     * Admin: Get dashboard statistics
+     * GET /api/admin/stats
+     */
+    @GET("api/admin/stats")
+    Call<AdminStatsResponse> getAdminStats(
         @Header("Authorization") String token
     );
 }

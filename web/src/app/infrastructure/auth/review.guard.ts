@@ -6,10 +6,20 @@ export const reviewGuard: CanActivateFn = (route, state): boolean | UrlTree => {
   const authService = inject(AuthService);
   const router = inject(Router);
   
-  // Check if token is present in query params first
+  // Check if token or rideId is present in query params
   const token = route.queryParamMap.get('token');
+  const rideId = route.queryParamMap.get('rideId');
+
+  // For authenticated mode (rideId), user must be logged in as a passenger
+  if (rideId) {
+    if (authService.isLoggedIn() && authService.getRole() === 'PASSENGER') {
+      return true;
+    }
+    return router.createUrlTree(['/404']);
+  }
+
   if (!token) {
-    // No token - redirect to 404
+    // No token and no rideId - redirect to 404
     return router.createUrlTree(['/404']);
   }
 

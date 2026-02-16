@@ -15,6 +15,7 @@ export class RidesTableComponent {
   @Input() rides: Ride[] = [];
   @Input() sortField: RideSortField = 'startTime';
   @Input() sortDirection: 'asc' | 'desc' = 'desc';
+  @Input() reviewableRideIds: Set<string> = new Set();
   
   @Output() sortChange = new EventEmitter<RideSortField>();
   @Output() viewDetails = new EventEmitter<string>();
@@ -73,5 +74,9 @@ export class RidesTableComponent {
   
   isSelected(ride: Ride): boolean {
     return this.selectedRide?.id === ride.id;
+  }
+
+  isReviewable(ride: Ride): boolean {
+    return this.reviewableRideIds.has(ride.id);
   }
 }

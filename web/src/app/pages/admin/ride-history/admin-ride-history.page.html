@@ -416,7 +416,7 @@
               (click)="onRideSelected(ride)"
               class="border-b border-gray-800 hover:bg-gray-800/50 cursor-pointer transition-colors relative"
               [ngClass]="{
-                'outline outline-2 outline-red-500 z-10': ride.panicPressed,
+                'bg-red-500/[0.15]': ride.panicPressed,
                 'bg-gray-800/30': selectedRide?.id === ride.id
               }"
             >

@@ -58,4 +58,12 @@ export class ReviewService {
     const headers = new HttpHeaders().set('skip', 'true');
     return this.http.post<ReviewResponse>(`${this.apiUrl}/with-token`, request, { headers });
   }
+
+  /**
+   * Submit a review as an authenticated passenger.
+   * Requires JWT auth (interceptor adds it automatically).
+   */
+  submitReview(request: ReviewRequest): Observable<ReviewResponse> {
+    return this.http.post<ReviewResponse>(this.apiUrl, request);
+  }
 }

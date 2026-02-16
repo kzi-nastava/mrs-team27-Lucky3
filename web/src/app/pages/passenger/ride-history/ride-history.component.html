@@ -90,6 +90,7 @@
           </button>
         </div>
         <div class="flex flex-wrap gap-2">
+          <button *ngIf="canReviewSelectedRide()" (click)="onReviewRide()" class="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-400 transition-colors">Leave a Review</button>
           <button (click)="orderAgain()" class="px-3 py-1.5 bg-yellow-500 text-black rounded-lg text-sm font-medium hover:bg-yellow-400 transition-colors">Order Again</button>
           <button (click)="scheduleLater()" class="px-3 py-1.5 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">Schedule Later</button>
           <button (click)="addToFavorites(selectedRide)" class="px-3 py-1.5 border border-yellow-500 text-yellow-500 rounded-lg text-sm font-medium hover:bg-yellow-500/10 transition-colors flex items-center gap-1">
@@ -244,6 +245,7 @@
         [rides]="sortedRides"
         [sortField]="sortField"
         [sortDirection]="sortDirection"
+        [reviewableRideIds]="reviewableRideIds"
         (sortChange)="handleSort($event)"
         (rideSelected)="onRideSelected($event)"
       ></app-rides-table>

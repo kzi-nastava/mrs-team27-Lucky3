@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -134,23 +135,31 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_cancel_panic"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
+            android:minHeight="48dp"
             android:text="Cancel"
             android:textColor="@color/white"
+            android:textSize="14sp"
             android:textStyle="bold"
-            android:backgroundTint="@color/gray_700" />
+            app:backgroundTint="@color/gray_700"
+            app:cornerRadius="8dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_confirm_panic"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="🚨 SEND PANIC"
+            android:minHeight="48dp"
+            android:text="SEND PANIC"
             android:textColor="@color/white"
+            android:textSize="13sp"
             android:textStyle="bold"
-            android:backgroundTint="#DC2626" />
+            app:backgroundTint="#DC2626"
+            app:cornerRadius="8dp"
+            app:iconPadding="4dp"
+            app:iconSize="18dp" />
     </LinearLayout>
 
 </LinearLayout>

@@ -296,6 +296,17 @@
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
+            <!-- Shake hint -->
+            <TextView
+                android:id="@+id/tv_shake_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📱 Shake device to toggle sort direction"
+                android:textColor="@color/gray_400"
+                android:textSize="11sp"
+                android:gravity="center"
+                android:layout_marginBottom="12dp" />
+
             <!-- Loading Indicator -->
             <ProgressBar
                 android:id="@+id/progress_bar"

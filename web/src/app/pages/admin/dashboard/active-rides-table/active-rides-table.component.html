@@ -49,11 +49,7 @@
           </th>
           <!-- Estimated Time -->
           <th class="p-4 font-semibold text-gray-300">
-            <button (click)="handleSort('estimatedTime')" class="flex items-center gap-2 hover:text-white transition-colors">
-              Est. Time Left
-              <span *ngIf="sortField !== 'estimatedTime'" class="opacity-30">▼</span>
-              <span *ngIf="sortField === 'estimatedTime'" class="text-yellow-500">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
-            </button>
+            Est. Time Left
           </th>
         </tr>
       </thead>

@@ -1,17 +1,21 @@
 package com.example.mobile.ui.driver;
 
+import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-
-import android.widget.ListView;
 
 import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentDriverOverviewBinding;
@@ -42,7 +46,11 @@ public class DriverOverviewFragment extends Fragment {
     private SharedPreferencesManager preferencesManager;
     
     private RideHistoryAdapter adapter;
-    private List<RideHistoryAdapter.RideHistoryItem> rideItems = new ArrayList<>();
+    private List<RideResponse> rideItems = new ArrayList<>();
+    private List<RideResponse> allFilteredRides = new ArrayList<>();
+    private int visibleCount = 3;
+    private static final int INITIAL_COUNT = 3;
+    private static final int INCREMENT = 5;
     
     // Stats
     private double totalEarnings = 0;
@@ -51,13 +59,39 @@ public class DriverOverviewFragment extends Fragment {
     private int ratingCount = 0;
     private double totalDistance = 0;
     
-    // All rides for the current time period (used for stats calculation)
+    // All rides for the current stats time period
     private List<RideResponse> allRidesInPeriod = new ArrayList<>();
     
-    // Time filter: today, week, month, all
+    // Time filter for stats: today, week, month, all
     private String timeFilter = "week";
-    // Status filter: all, completed, cancelled
-    private String statusFilter = "all";
+
+    // Ride history filters
+    private String fromDate = null;
+    private String toDate = null;
+    private String sortField = "startTime";
+    private boolean sortAsc = false;
+    private String statusFilter = null; // null = all
+
+    // Sort/Status options
+    private static final String[] STATUS_OPTIONS = {"All", "Finished", "Cancelled"};
+    private static final String[] STATUS_VALUES = {null, "FINISHED", "CANCELLED,CANCELLED_BY_DRIVER,CANCELLED_BY_PASSENGER"};
+    private static final String[] SORT_OPTIONS = {
+            "Start Time", "End Time", "Total Cost", "Distance"
+    };
+    private static final String[] SORT_FIELDS = {
+            "startTime", "endTime", "totalCost", "distanceKm"
+    };
+
+    // UI elements for ride history filters
+    private TextView btnFromDate, btnToDate, btnSortDirection;
+    private Spinner spinnerSort, spinnerStatus;
+    private boolean spinnerInitializing = true;
+
+    // Show more UI
+    private LinearLayout showMoreContainer;
+    private TextView tvShowingCount, btnShowMore;
+
+    private final SimpleDateFormat displayFormat = new SimpleDateFormat("MMM d, yyyy", Locale.US);
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -75,71 +109,140 @@ public class DriverOverviewFragment extends Fragment {
             ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Overview");
         }
 
+        initRideHistoryFilterViews(root);
         setupTimeFilterButtons();
-        setupStatusFilterButtons();
+        setupDatePickers();
+        setupSortSpinner();
+        setupStatusSpinner();
+        setupSortDirection();
+        setupShowMore(root);
         setupListView();
         
         loadDriverStats();
+        loadStatsRides();
         loadRides();
 
         return root;
     }
-    
-    private void setupStatusFilterButtons() {
-        View root = binding.getRoot();
 
-        TextView statusAll = root.findViewById(R.id.status_all);
-        TextView statusCompleted = root.findViewById(R.id.status_completed);
-        TextView statusCancelled = root.findViewById(R.id.status_cancelled);
+    private void initRideHistoryFilterViews(View root) {
+        btnFromDate = root.findViewById(R.id.btn_from_date);
+        btnToDate = root.findViewById(R.id.btn_to_date);
+        btnSortDirection = root.findViewById(R.id.btn_sort_direction);
+        spinnerSort = root.findViewById(R.id.spinner_sort);
+        spinnerStatus = root.findViewById(R.id.spinner_status);
 
-        View.OnClickListener listener = v -> {
-            String filter = "";
-            if (v.getId() == R.id.status_all) filter = "all";
-            else if (v.getId() == R.id.status_completed) filter = "completed";
-            else if (v.getId() == R.id.status_cancelled) filter = "cancelled";
-
-            if (!filter.isEmpty()) {
-                setStatusFilter(filter);
-            }
-        };
-
-        if (statusAll != null) statusAll.setOnClickListener(listener);
-        if (statusCompleted != null) statusCompleted.setOnClickListener(listener);
-        if (statusCancelled != null) statusCancelled.setOnClickListener(listener);
-
-        updateStatusFilterStyles();
+        root.findViewById(R.id.btn_clear_dates).setOnClickListener(v -> clearDates());
     }
 
-    private void setStatusFilter(String filter) {
-        this.statusFilter = filter;
-        updateStatusFilterStyles();
-        // Only re-filter the list, don't reload from API (stats stay the same)
-        applyStatusFilterToList();
+    // ---- Date Pickers ----
+
+    private void setupDatePickers() {
+        btnFromDate.setOnClickListener(v -> showDatePicker(true));
+        btnToDate.setOnClickListener(v -> showDatePicker(false));
     }
 
-    private void updateStatusFilterStyles() {
-        View root = binding.getRoot();
-        if (root == null) return;
+    private void showDatePicker(boolean isFrom) {
+        Calendar cal = Calendar.getInstance();
+        DatePickerDialog dialog = new DatePickerDialog(
+                requireContext(),
+                R.style.DatePickerTheme,
+                (view, year, month, dayOfMonth) -> {
+                    Calendar selected = Calendar.getInstance();
+                    selected.set(year, month, dayOfMonth);
+                    if (isFrom) {
+                        selected.set(Calendar.HOUR_OF_DAY, 0);
+                        selected.set(Calendar.MINUTE, 0);
+                        selected.set(Calendar.SECOND, 0);
+                        fromDate = formatDateForApi(selected.getTime(), false);
+                        btnFromDate.setText(displayFormat.format(selected.getTime()));
+                    } else {
+                        selected.set(Calendar.HOUR_OF_DAY, 23);
+                        selected.set(Calendar.MINUTE, 59);
+                        selected.set(Calendar.SECOND, 59);
+                        toDate = formatDateForApi(selected.getTime(), true);
+                        btnToDate.setText(displayFormat.format(selected.getTime()));
+                    }
+                    loadRides();
+                },
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH),
+                cal.get(Calendar.DAY_OF_MONTH)
+        );
+        dialog.show();
+    }
 
-        TextView statusAll = root.findViewById(R.id.status_all);
-        TextView statusCompleted = root.findViewById(R.id.status_completed);
-        TextView statusCancelled = root.findViewById(R.id.status_cancelled);
+    private void clearDates() {
+        fromDate = null;
+        toDate = null;
+        btnFromDate.setText("");
+        btnToDate.setText("");
+        btnFromDate.setHint("Start date");
+        btnToDate.setHint("End date");
+        visibleCount = INITIAL_COUNT;
+        loadRides();
+    }
 
-        TextView[] filters = {statusAll, statusCompleted, statusCancelled};
-        String[] filterNames = {"all", "completed", "cancelled"};
+    // ---- Sort Spinner ----
 
-        for (int i = 0; i < filters.length; i++) {
-            if (filters[i] != null) {
-                if (filterNames[i].equals(statusFilter)) {
-                    filters[i].setBackgroundResource(R.drawable.bg_filter_selected);
-                    filters[i].setTextColor(getResources().getColor(R.color.black, null));
-                } else {
-                    filters[i].setBackgroundColor(getResources().getColor(android.R.color.transparent, null));
-                    filters[i].setTextColor(getResources().getColor(R.color.gray_400, null));
+    private void setupSortSpinner() {
+        ArrayAdapter<String> sortAdapter = new ArrayAdapter<>(requireContext(),
+                R.layout.spinner_item_dark, SORT_OPTIONS);
+        sortAdapter.setDropDownViewResource(R.layout.spinner_dropdown_dark);
+        spinnerSort.setAdapter(sortAdapter);
+        spinnerSort.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                sortField = SORT_FIELDS[position];
+                if (!spinnerInitializing) {
+                    loadRides();
                 }
             }
-        }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
     }
+
+    // ---- Sort Direction ----
+
+    private void setupSortDirection() {
+        updateSortDirectionUI();
+        btnSortDirection.setOnClickListener(v -> {
+            sortAsc = !sortAsc;
+            updateSortDirectionUI();
+            loadRides();
+        });
+    }
+
+    private void updateSortDirectionUI() {
+        btnSortDirection.setText(sortAsc ? "↑ ASC" : "↓ DESC");
+    }
+
+    // ---- Status Spinner ----
+
+    private void setupStatusSpinner() {
+        ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(requireContext(),
+                R.layout.spinner_item_dark, STATUS_OPTIONS);
+        statusAdapter.setDropDownViewResource(R.layout.spinner_dropdown_dark);
+        spinnerStatus.setAdapter(statusAdapter);
+        spinnerStatus.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                statusFilter = STATUS_VALUES[position];
+                if (!spinnerInitializing) {
+                    loadRides();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+        // Done initializing spinners — next selections will trigger reload
+        spinnerInitializing = false;
+    }
+
+    // ---- Time Filter Buttons (for stats) ----
 
     private void setupTimeFilterButtons() {
         View root = binding.getRoot();
@@ -163,19 +266,13 @@ public class DriverOverviewFragment extends Fragment {
         if (filterMonth != null) filterMonth.setOnClickListener(filterClickListener);
         if (filterAll != null) filterAll.setOnClickListener(filterClickListener);
         
-        // Set initial selection
         updateFilterButtonStyles();
     }
     
     private void setTimeFilter(String filter) {
         this.timeFilter = filter;
-        rideItems.clear();
-        if (adapter != null) {
-            adapter.notifyDataSetChanged();
-            ListViewHelper.setListViewHeightBasedOnChildren(binding.rideHistoryList);
-        }
         updateFilterButtonStyles();
-        loadRides();
+        loadStatsRides();
     }
     
     private void updateFilterButtonStyles() {
@@ -202,12 +299,49 @@ public class DriverOverviewFragment extends Fragment {
         }
     }
 
+    // ---- Show More ----
+
+    private void setupShowMore(View root) {
+        showMoreContainer = root.findViewById(R.id.show_more_container);
+        tvShowingCount = root.findViewById(R.id.tv_showing_count);
+        btnShowMore = root.findViewById(R.id.btn_show_more);
+
+        btnShowMore.setOnClickListener(v -> {
+            visibleCount += INCREMENT;
+            applyVisibleCount();
+        });
+    }
+
+    private void applyVisibleCount() {
+        rideItems.clear();
+        int total = allFilteredRides.size();
+        int show = Math.min(visibleCount, total);
+        for (int i = 0; i < show; i++) {
+            rideItems.add(allFilteredRides.get(i));
+        }
+        adapter.notifyDataSetChanged();
+        ListViewHelper.setListViewHeightBasedOnChildren(binding.rideHistoryList);
+
+        // Update count text and button visibility
+        if (total > INITIAL_COUNT) {
+            showMoreContainer.setVisibility(View.VISIBLE);
+            tvShowingCount.setText(String.format(Locale.US, "Showing %d of %d", show, total));
+            btnShowMore.setVisibility(show < total ? View.VISIBLE : View.GONE);
+        } else {
+            showMoreContainer.setVisibility(View.GONE);
+        }
+    }
+
+    // ---- ListView ----
+
     private void setupListView() {
         ListView listView = binding.rideHistoryList;
         adapter = new RideHistoryAdapter(requireContext(), rideItems);
         listView.setAdapter(adapter);
     }
     
+    // ---- Data Loading ----
+
     private void loadDriverStats() {
         Long userId = preferencesManager.getUserId();
         if (userId == null || userId <= 0) {
@@ -215,7 +349,6 @@ public class DriverOverviewFragment extends Fragment {
             return;
         }
         
-        Log.d(TAG, "Loading driver stats for driver " + userId);
         String token = "Bearer " + preferencesManager.getToken();
         ClientUtils.driverService.getStats(userId, token).enqueue(new Callback<DriverStatsResponse>() {
             @Override
@@ -224,10 +357,7 @@ public class DriverOverviewFragment extends Fragment {
                     DriverStatsResponse stats = response.body();
                     avgRating = stats.getAverageRating();
                     ratingCount = stats.getTotalRatings();
-                    Log.d(TAG, "Driver stats loaded: rating=" + avgRating + " count=" + ratingCount);
                     updateStatsUI();
-                } else {
-                    Log.e(TAG, "Failed to load driver stats: HTTP " + response.code());
                 }
             }
             
@@ -238,63 +368,79 @@ public class DriverOverviewFragment extends Fragment {
         });
     }
 
-    private void loadRides() {
+    /**
+     * Load rides for the stats time period (today/week/month/all).
+     * Used only for calculating earnings, distance, ride count stats.
+     */
+    private void loadStatsRides() {
         Long userId = preferencesManager.getUserId();
-        if (userId == null || userId <= 0) {
-            Log.e(TAG, "User ID is invalid (" + userId + "), cannot load rides");
-            return;
-        }
-        
-        // Calculate date range based on time filter
-        String fromDate = getFromDateForFilter();
-        String toDate = formatDateForApi(new Date(), true);
-        
-        Log.d(TAG, "Loading rides for driver " + userId + " fromDate=" + fromDate + " toDate=" + toDate);
-        
+        if (userId == null || userId <= 0) return;
+
+        String statsFromDate = getFromDateForTimeFilter();
+        String statsToDate = formatDateForApi(new Date(), true);
         String token = "Bearer " + preferencesManager.getToken();
+
         ClientUtils.rideService.getRidesHistory(
-            userId,    // driverId
-            null,      // passengerId
-            null,      // status - get all, filter on frontend
-            fromDate,
-            toDate,
-            0,         // page
-            100,       // size - larger to capture full history
-            "startTime,desc",
-            token
+            userId, null, "FINISHED,CANCELLED,CANCELLED_BY_DRIVER,CANCELLED_BY_PASSENGER",
+            statsFromDate, statsToDate, 0, 200, "startTime,desc", token
         ).enqueue(new Callback<PageResponse<RideResponse>>() {
             @Override
             public void onResponse(Call<PageResponse<RideResponse>> call, Response<PageResponse<RideResponse>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    PageResponse<RideResponse> page = response.body();
-                    List<RideResponse> content = page.getContent();
-                    
-                    Log.d(TAG, "Loaded " + (content != null ? content.size() : 0) + " rides");
-                    
+                    List<RideResponse> content = response.body().getContent();
                     if (content != null) {
-                        // Filter to only past rides (FINISHED or CANCELLED)
                         allRidesInPeriod = content.stream()
                             .filter(r -> r.isFinished() || r.isCancelled())
                             .collect(Collectors.toList());
-                        
-                        Log.d(TAG, "Filtered to " + allRidesInPeriod.size() + " past rides");
-                        
-                        // Calculate stats from all FINISHED rides in the period
                         calculateStats();
-                        
-                        // Apply status filter for the list display
-                        applyStatusFilterToList();
                     }
-                } else {
-                    String errorBody = "";
-                    try {
-                        if (response.errorBody() != null) {
-                            errorBody = response.errorBody().string();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<PageResponse<RideResponse>> call, Throwable t) {
+                Log.e(TAG, "Failed to load stats rides", t);
+            }
+        });
+    }
+
+    /**
+     * Load rides for the history list using ride history filters
+     * (date range, sort, status).
+     */
+    private void loadRides() {
+        Long userId = preferencesManager.getUserId();
+        if (userId == null || userId <= 0) return;
+
+        // Build status param
+        String historyStatuses = "FINISHED,CANCELLED,CANCELLED_BY_DRIVER,CANCELLED_BY_PASSENGER";
+        String statusParam = statusFilter != null ? statusFilter : historyStatuses;
+
+        // Build sort param
+        String sortParam = sortField + "," + (sortAsc ? "asc" : "desc");
+
+        String token = "Bearer " + preferencesManager.getToken();
+        ClientUtils.rideService.getRidesHistory(
+            userId, null, statusParam,
+            fromDate, toDate,
+            0, 200, sortParam, token
+        ).enqueue(new Callback<PageResponse<RideResponse>>() {
+            @Override
+            public void onResponse(Call<PageResponse<RideResponse>> call, Response<PageResponse<RideResponse>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<RideResponse> content = response.body().getContent();
+                    allFilteredRides.clear();
+                    if (content != null) {
+                        for (RideResponse r : content) {
+                            if (r.isFinished() || r.isCancelled()) {
+                                allFilteredRides.add(r);
+                            }
                         }
-                    } catch (Exception e) {
-                        errorBody = "Could not read error body";
                     }
-                    Log.e(TAG, "Failed to load rides: HTTP " + response.code() + " - " + errorBody);
+                    visibleCount = INITIAL_COUNT;
+                    applyVisibleCount();
+                } else {
+                    Log.e(TAG, "Failed to load rides: HTTP " + response.code());
                     if (getContext() != null) {
                         Toast.makeText(getContext(), "Failed to load rides: " + response.code(), Toast.LENGTH_SHORT).show();
                     }
@@ -311,6 +457,8 @@ public class DriverOverviewFragment extends Fragment {
         });
     }
     
+    // ---- Stats ----
+
     private void calculateStats() {
         totalEarnings = 0;
         finishedRides = 0;
@@ -327,68 +475,9 @@ public class DriverOverviewFragment extends Fragment {
         updateStatsUI();
     }
     
-    private void applyStatusFilterToList() {
-        rideItems.clear();
-        
-        for (RideResponse r : allRidesInPeriod) {
-            boolean matchesFilter = "all".equals(statusFilter) ||
-                                    ("completed".equals(statusFilter) && r.isFinished()) ||
-                                    ("cancelled".equals(statusFilter) && r.isCancelled());
-            
-            if (matchesFilter) {
-                rideItems.add(mapToHistoryItem(r));
-            }
-        }
-        
-        adapter.notifyDataSetChanged();
-        ListViewHelper.setListViewHeightBasedOnChildren(binding.rideHistoryList);
-    }
-    
-    private RideHistoryAdapter.RideHistoryItem mapToHistoryItem(RideResponse ride) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
-        SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.US);
-        
-        Date startDate = parseDate(ride.getStartTime());
-        Date endDate = parseDate(ride.getEndTime());
-        
-        String startDateStr = startDate != null ? dateFormat.format(startDate) : "-";
-        String startTimeStr = startDate != null ? timeFormat.format(startDate) : "-";
-        String endDateStr = endDate != null ? dateFormat.format(endDate) : "-";
-        String endTimeStr = endDate != null ? timeFormat.format(endDate) : "-";
-        
-        String pickupAddr = "—";
-        if (ride.getEffectiveStartLocation() != null && ride.getEffectiveStartLocation().getAddress() != null) {
-            pickupAddr = truncate(ride.getEffectiveStartLocation().getAddress(), 30);
-        }
-        
-        String destAddr = "—";
-        if (ride.getEffectiveEndLocation() != null && ride.getEffectiveEndLocation().getAddress() != null) {
-            destAddr = truncate(ride.getEffectiveEndLocation().getAddress(), 30);
-        }
-        
-        int passengerCount = ride.getPassengers() != null ? ride.getPassengers().size() : 1;
-        
-        double distance = ride.getEffectiveDistance();
-        String distanceStr = String.format(Locale.US, "%.1f km", distance);
-        
-        String durationStr = "—";
-        if (startDate != null && endDate != null) {
-            long durationMinutes = (endDate.getTime() - startDate.getTime()) / 60000;
-            durationStr = durationMinutes + " min";
-        } else if (ride.getEstimatedTimeInMinutes() != null) {
-            durationStr = ride.getEstimatedTimeInMinutes() + " min";
-        }
-        
-        double price = ride.getEffectiveCost();
-        
-        return new RideHistoryAdapter.RideHistoryItem(
-            ride.getId() != null ? ride.getId() : 0,
-            startDateStr, startTimeStr, endDateStr, endTimeStr,
-            pickupAddr, destAddr, passengerCount, distanceStr, durationStr, price
-        );
-    }
-    
-    private String getFromDateForFilter() {
+    // ---- Helpers ----
+
+    private String getFromDateForTimeFilter() {
         Calendar cal = Calendar.getInstance();
         switch (timeFilter) {
             case "today":
@@ -412,7 +501,7 @@ public class DriverOverviewFragment extends Fragment {
                 cal.set(Calendar.MILLISECOND, 0);
                 break;
             default:
-                return null; // All time - no from date
+                return null;
         }
         return formatDateForApi(cal.getTime(), false);
     }
@@ -431,69 +520,42 @@ public class DriverOverviewFragment extends Fragment {
         return sdf.format(cal.getTime());
     }
     
-    private Date parseDate(String dateStr) {
-        if (dateStr == null || dateStr.isEmpty()) return null;
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
-            return sdf.parse(dateStr);
-        } catch (Exception e) {
-            try {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US);
-                return sdf.parse(dateStr);
-            } catch (Exception e2) {
-                return null;
-            }
-        }
-    }
-    
-    private String truncate(String s, int maxLen) {
-        if (s == null) return "";
-        return s.length() > maxLen ? s.substring(0, maxLen) + "..." : s;
-    }
-    
     private void updateStatsUI() {
         if (binding == null) return;
         
         View root = binding.getRoot();
         
-        // Update Total Earnings
         TextView earningsView = root.findViewById(R.id.total_earnings);
         if (earningsView != null) {
             earningsView.setText(String.format(Locale.US, "%.2f RSD", totalEarnings));
         }
         
-        // Update Total Rides
         TextView ridesView = root.findViewById(R.id.total_rides);
         if (ridesView != null) {
             ridesView.setText(String.valueOf(finishedRides));
         }
         
-        // Update Average per ride
         TextView avgPerRideView = root.findViewById(R.id.avg_per_ride);
         if (avgPerRideView != null) {
             double avg = finishedRides > 0 ? totalEarnings / finishedRides : 0;
             avgPerRideView.setText(String.format(Locale.US, "Avg %.2f RSD/ride", avg));
         }
         
-        // Update Average Rating
         TextView ratingView = root.findViewById(R.id.avg_rating);
         if (ratingView != null) {
             ratingView.setText(String.format(Locale.US, "%.2f", avgRating));
         }
         
-        // Update rating count
         TextView ratingCountView = root.findViewById(R.id.rating_count);
         if (ratingCountView != null) {
             ratingCountView.setText(ratingCount + " ratings");
         }
         
-        // Update Total Distance
         TextView distanceView = root.findViewById(R.id.total_distance);
         if (distanceView != null) {
             distanceView.setText(String.format(Locale.US, "%.1f km", totalDistance));
         }
         
-        // Update Average Distance per ride
         TextView avgDistanceView = root.findViewById(R.id.avg_distance);
         if (avgDistanceView != null) {
             double avgDist = finishedRides > 0 ? totalDistance / finishedRides : 0;
