@@ -58,7 +58,7 @@
           (click)="onViewDetails(ride.id)"
           (click)="selectRide(ride)"
           class="border-b border-gray-800 hover:bg-gray-800/50 cursor-pointer transition-colors relative"
-          [ngClass]="{'outline outline-2 outline-red-500 z-10': ride.hasPanic}"
+          [ngClass]="{'outline outline-2 outline-red-500 z-10': ride.hasPanic, 'outline outline-1 outline-blue-500 z-[5]': !ride.hasPanic && isReviewable(ride)}"
         >
           <!-- Start Time -->
           <td class="p-4">

@@ -28,6 +28,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
   sortedRides: Ride[] = [];
   selectedRide: Ride | null = null;
   selectedRideDetails: RideResponse | null = null;
+  reviewableRideIds: Set<string> = new Set();
   private backendRides: Ride[] = [];
   private fullRideResponses: RideResponse[] = [];
   
@@ -125,6 +126,7 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
           
           // Since we are filtering on backend, we just map what we got
           this.sortedRides = this.fullRideResponses.map(r => this.mapToRide(r));
+          this.computeReviewableRides();
           this.cdr.detectChanges();
 
           // Auto-select ride from query param (e.g. notification deep link)
@@ -467,6 +469,19 @@ export class RideHistoryComponent implements OnInit, OnDestroy, AfterViewInit {
   onReviewRide(): void {
     if (this.selectedRide) {
       this.router.navigate(['/review'], { queryParams: { rideId: this.selectedRide.id } });
+    }
+  }
+
+  private computeReviewableRides(): void {
+    this.reviewableRideIds = new Set();
+    const now = Date.now();
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    for (const r of this.fullRideResponses) {
+      if (r.status !== 'FINISHED') continue;
+      if (!r.endTime) continue;
+      if (now - new Date(r.endTime).getTime() > threeDaysMs) continue;
+      if (r.reviews?.some(rev => rev.passengerId === this.passengerId)) continue;
+      this.reviewableRideIds.add(String(r.id));
     }
   }
   
