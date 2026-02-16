@@ -18,6 +18,7 @@ import com.team27.lucky3.backend.service.RideService;
 import com.team27.lucky3.backend.util.ReviewTokenUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Join;
+import org.springframework.web.server.ResponseStatusException;
 
 import static com.team27.lucky3.backend.entity.enums.VehicleType.VAN;
 
@@ -255,6 +257,13 @@ public class RideServiceImpl implements RideService {
             throw new IllegalStateException("User must be logged in to create a ride");
         }
 
+        if (passenger.isBlocked()) {
+            String reason = passenger.getBlockReason();
+            String msg = "BLOCKED: " + (reason != null ? reason : "Account suspended");
+            // This will return a 403 Forbidden with the reason message
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, msg);
+        }
+
         if(request.getRequirements() == null) {
             throw new IllegalArgumentException("Ride requirements must be provided");
         }
@@ -367,6 +376,7 @@ public class RideServiceImpl implements RideService {
         boolean isPet = request.getRequirements().isPetTransport();
 
         List<Vehicle> compatibleVehicles = activeVehicles.stream()
+                .filter(v -> v.getDriver() != null && !v.getDriver().isBlocked())           //check if driver is blocked
                 .filter(v -> requestedType == null || v.getVehicleType() == requestedType)
                 .filter(v -> !isBaby || v.isBabyTransport())
                 .filter(v -> !isPet || v.isPetTransport())
