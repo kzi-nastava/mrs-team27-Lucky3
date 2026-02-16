@@ -45,6 +45,9 @@ public class User implements UserDetails {
     private UserRole role;
 
     private boolean isBlocked; // Admin blocked user
+    @Column(name = "block_reason", length = 500)
+    private String blockReason;
+
     private boolean isEnabled; // Email activated (Spec 2.2.2)
 
     // 2.2.1 Driver Availability
