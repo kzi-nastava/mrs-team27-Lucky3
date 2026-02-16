@@ -40,10 +40,10 @@ public class AdminRideHistoryViewModel extends AndroidViewModel {
             "All", "FINISHED", "CANCELLED", "CANCELLED_BY_DRIVER", "CANCELLED_BY_PASSENGER"
     };
     public static final String[] SORT_OPTIONS = {
-            "Start Time", "End Time", "Total Cost", "Status", "Distance"
+            "Start Time", "End Time", "Total Cost", "Status", "Distance", "Panic"
     };
     public static final String[] SORT_FIELDS = {
-            "startTime", "endTime", "totalCost", "status", "distanceKm"
+            "startTime", "endTime", "totalCost", "status", "distanceKm", "panicPressed"
     };
 
     private final SharedPreferencesManager preferencesManager;

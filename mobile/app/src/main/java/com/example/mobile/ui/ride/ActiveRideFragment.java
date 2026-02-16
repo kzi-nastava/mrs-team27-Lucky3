@@ -3,6 +3,8 @@ package com.example.mobile.ui.ride;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.location.Address;
+import android.location.Geocoder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -1411,8 +1413,48 @@ public class ActiveRideFragment extends Fragment {
             lon = ride.getEndLocation().getLongitude();
             address = ride.getEndLocation().getAddress();
         }
-        StopRideDialog dialog = StopRideDialog.newInstance(rideId, lat, lon, address);
-        dialog.show(getParentFragmentManager(), "stop_ride");
+
+        if (address == null || address.isEmpty()) {
+            // Reverse geocode on a background thread, then show dialog on UI thread
+            final double finalLat = lat;
+            final double finalLon = lon;
+            new Thread(() -> {
+                String resolved = reverseGeocodeLocation(finalLat, finalLon);
+                if (isAdded()) {
+                    requireActivity().runOnUiThread(() -> {
+                        StopRideDialog dialog = StopRideDialog.newInstance(rideId, finalLat, finalLon, resolved);
+                        dialog.show(getParentFragmentManager(), "stop_ride");
+                    });
+                }
+            }).start();
+        } else {
+            StopRideDialog dialog = StopRideDialog.newInstance(rideId, lat, lon, address);
+            dialog.show(getParentFragmentManager(), "stop_ride");
+        }
+    }
+
+    /**
+     * Reverse-geocode latitude/longitude into a human-readable address string.
+     * Falls back to formatted coordinates if geocoding fails.
+     */
+    private String reverseGeocodeLocation(double lat, double lon) {
+        try {
+            Geocoder geocoder = new Geocoder(requireContext(), Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                Address addr = addresses.get(0);
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i <= addr.getMaxAddressLineIndex(); i++) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(addr.getAddressLine(i));
+                }
+                String result = sb.toString();
+                if (!result.isEmpty()) return result;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Reverse geocoding failed", e);
+        }
+        return String.format(Locale.US, "%.5f, %.5f", lat, lon);
     }
 
     private void setupStopRideDialogListener() {
