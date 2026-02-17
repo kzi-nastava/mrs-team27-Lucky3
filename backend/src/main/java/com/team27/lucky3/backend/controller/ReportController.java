@@ -35,8 +35,8 @@ public class ReportController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{userId}")
-    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/user/{email}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReportResponse> getReportForUser(
             @PathVariable String email,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,

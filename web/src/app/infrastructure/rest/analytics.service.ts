@@ -62,20 +62,20 @@ export class AnalyticsService {
    * Fetches analytics report for a specific user by email
    */
   getReportForUserByEmail(
-    email: string,
-    from: Date | string,
-    to: Date | string
-  ): Observable<ReportResponse> {
-    const fromDate = from instanceof Date ? from.toISOString() : from;
-    const toDate = to instanceof Date ? to.toISOString() : to;
+  email: string,
+  from: Date | string,
+  to: Date | string
+): Observable<ReportResponse> {
+  const fromDate = from instanceof Date ? from.toISOString() : from;
+  const toDate = to instanceof Date ? to.toISOString() : to;
 
-    const params = new HttpParams()
-      .set('email', email)
-      .set('from', fromDate)
-      .set('to', toDate);
-    
-    return this.http.get<ReportResponse>(`${this.API_URL}/user`, { params });
-  }
+  const params = new HttpParams()
+    .set('from', fromDate)
+    .set('to', toDate);
+  
+  // Email is now part of the URL path, not a query parameter
+  return this.http.get<ReportResponse>(`${this.API_URL}/user/${encodeURIComponent(email)}`, { params });
+}
 
   /**
    * Alternative method with individual date components for easier use

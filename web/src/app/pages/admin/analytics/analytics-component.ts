@@ -38,7 +38,6 @@ export class AdminAnalyticsComponent {
   
   isLoading: boolean = false;
   errorMessage: string = '';
-  successMessage: string = '';
 
   // Daily data for bar charts
   dailyData: DailyReport[] = [];
@@ -84,9 +83,7 @@ export class AdminAnalyticsComponent {
 
   onReportTypeChange(): void {
     // Clear error messages when report type changes
-    this.errorMessage = '';
-    this.successMessage = '';
-    
+    this.errorMessage = '';    
     // Clear user email if switching away from specific user
     if (this.reportType !== 'specific') {
       this.userEmail = '';
@@ -96,7 +93,6 @@ export class AdminAnalyticsComponent {
   applyDateRange(): void {
     // Reset messages
     this.errorMessage = '';
-    this.successMessage = '';
 
     // Validate date inputs
     if (!this.startDate || !this.endDate) {
@@ -153,7 +149,6 @@ export class AdminAnalyticsComponent {
         next: (response: ReportResponse) => {
           this.reportData = response;
           this.updateUIWithReportData(response);
-          this.successMessage = `Report generated successfully for ${this.userEmail}`;
           this.isLoading = false;
           this.cdr.detectChanges();
           console.log('Analytics data loaded:', response);
@@ -183,7 +178,6 @@ export class AdminAnalyticsComponent {
           this.reportData = response;
           this.updateUIWithReportData(response);
           const userTypeLabel = this.reportType === 'PASSENGER' ? 'Passengers' : 'Drivers';
-          this.successMessage = `Global report generated successfully for all ${userTypeLabel}`;
           this.isLoading = false;
           this.cdr.detectChanges();
           console.log('Analytics data loaded:', response);

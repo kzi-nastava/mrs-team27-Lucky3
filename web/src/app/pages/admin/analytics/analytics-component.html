@@ -6,48 +6,112 @@
     <h1 class="text-4xl font-bold mb-8 flex flex-col items-center">Analytics</h1>
     
    <!-- Date Range Selector and Apply Button -->
-  <div class="flex flex-col items-center mb-8">
-    <!-- Explanatory Text -->
-    <div class="text-center mb-4">
-      <p class="text-gray-300 text-base mb-1">Select a date range to view analytics</p>
-      <p class="text-gray-500 text-sm">Choose the start and end dates for your ride statistics report</p>
-    </div>
-    
-    <!-- Date Inputs and Button -->
-    <div class="flex flex-wrap items-end gap-3 justify-center">
-      <div class="min-w-[180px] max-w-[220px]">
-        <label class="block text-xs font-medium text-gray-400 mb-1.5">Start Date</label>
-        <input 
-          type="date" 
-          [(ngModel)]="startDate"
-          class="w-full px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-white"
-        />
+<div class="flex flex-col items-center mb-8">
+  <!-- Explanatory Text -->
+  <div class="text-center mb-6">
+    <p class="text-gray-300 text-base mb-1">Admin Analytics Dashboard</p>
+    <p class="text-gray-500 text-sm">Generate reports for specific users or global statistics</p>
+  </div>
+  
+  <!-- Report Type Selection -->
+  <div class="mb-6 w-full max-w-3xl">
+    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+      <label class="block text-sm font-medium text-gray-300 mb-3">Report Type</label>
+      <div class="flex flex-wrap gap-4">
+        <label class="flex items-center cursor-pointer">
+          <input 
+            type="radio" 
+            name="reportType" 
+            value="specific"
+            [(ngModel)]="reportType"
+            (change)="onReportTypeChange()"
+            class="w-4 h-4 text-yellow-500 bg-gray-800 border-gray-700 focus:ring-yellow-500"
+          />
+          <span class="ml-2 text-gray-300">Specific User</span>
+        </label>
+        
+        <label class="flex items-center cursor-pointer">
+          <input 
+            type="radio" 
+            name="reportType" 
+            value="PASSENGER"
+            [(ngModel)]="reportType"
+            (change)="onReportTypeChange()"
+            class="w-4 h-4 text-yellow-500 bg-gray-800 border-gray-700 focus:ring-yellow-500"
+          />
+          <span class="ml-2 text-gray-300">All Passengers</span>
+        </label>
+        
+        <label class="flex items-center cursor-pointer">
+          <input 
+            type="radio" 
+            name="reportType" 
+            value="DRIVER"
+            [(ngModel)]="reportType"
+            (change)="onReportTypeChange()"
+            class="w-4 h-4 text-yellow-500 bg-gray-800 border-gray-700 focus:ring-yellow-500"
+          />
+          <span class="ml-2 text-gray-300">All Drivers</span>
+        </label>
       </div>
-      
-      <div class="min-w-[180px] max-w-[220px]">
-        <label class="block text-xs font-medium text-gray-400 mb-1.5">End Date</label>
-        <input 
-          type="date" 
-          [(ngModel)]="endDate"
-          class="w-full px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-white"
-        />
-      </div>
-      
-      <button 
-        (click)="applyDateRange()"
-        [disabled]="isLoading"
-        class="px-6 py-1.5 text-sm bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <span *ngIf="!isLoading">Apply</span>
-        <span *ngIf="isLoading">Loading...</span>
-      </button>
     </div>
   </div>
-
-    <!-- Error Message -->
-    <div *ngIf="errorMessage" class="mb-6 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-500 text-sm">
-      {{ errorMessage }}
+  
+  <!-- User Email Input (shown only for specific user) -->
+  <div *ngIf="reportType === 'specific'" class="mb-6 w-full max-w-3xl">
+    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+      <label class="block text-sm font-medium text-gray-300 mb-3">User Email</label>
+      <input 
+        type="email" 
+        [(ngModel)]="userEmail"
+        placeholder="Enter user email address"
+        class="w-full px-4 py-2 text-sm bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-white placeholder-gray-500"
+      />
+      <p class="text-xs text-gray-500 mt-2">Enter the email of the user you want to generate a report for</p>
     </div>
+  </div>
+  
+  <!-- Date Inputs and Button -->
+  <div class="flex flex-wrap items-end gap-3 justify-center">
+    <div class="min-w-[180px] max-w-[220px]">
+      <label class="block text-xs font-medium text-gray-400 mb-1.5">Start Date</label>
+      <input 
+        type="date" 
+        [(ngModel)]="startDate"
+        class="w-full px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-white"
+      />
+    </div>
+    
+    <div class="min-w-[180px] max-w-[220px]">
+      <label class="block text-xs font-medium text-gray-400 mb-1.5">End Date</label>
+      <input 
+        type="date" 
+        [(ngModel)]="endDate"
+        class="w-full px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-white"
+      />
+    </div>
+    
+    <button 
+      (click)="applyDateRange()"
+      [disabled]="isLoading"
+      class="px-6 py-1.5 text-sm bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <span *ngIf="!isLoading">Generate Report</span>
+      <span *ngIf="isLoading">Loading...</span>
+    </button>
+  </div>
+</div>
+
+<!-- Error Message -->
+<div *ngIf="errorMessage" class="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg text-red-500 max-w-3xl mx-auto">
+  <div class="flex items-center gap-2">
+    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+    </svg>
+    <span>{{ errorMessage }}</span>
+  </div>
+</div>
+
 
     <!-- Empty State: Show when no data is loaded -->
     <div *ngIf="!reportData && !isLoading" class="flex flex-col items-center justify-center py-5">
