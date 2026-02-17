@@ -26,5 +26,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Count online drivers (active = true)
     @Query("SELECT COUNT(u) FROM User u WHERE u.role = 'DRIVER' AND u.isActive = true")
     Integer countOnlineDrivers();
+
+    List<User> findByIsBlocked(boolean isBlocked);
 }
 
