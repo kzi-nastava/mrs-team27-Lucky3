@@ -23,8 +23,7 @@ export class AnalyticsService {
   getReportForUser(
     userId: number,
     from: Date | string,
-    to: Date | string,
-    type: string
+    to: Date | string
   ): Observable<ReportResponse> {
     if (userId == -1 || userId == null) {
       userId = Number(this.authService.getUserId());
@@ -35,8 +34,7 @@ export class AnalyticsService {
 
     const params = new HttpParams()
       .set('from', fromDate)
-      .set('to', toDate)
-      .set('type', type);
+      .set('to', toDate);
 
     return this.http.get<ReportResponse>(`${this.API_URL}/${userId}`, { params });
   }
@@ -47,9 +45,8 @@ export class AnalyticsService {
   getReportForUserByDateRange(
     userId: number,
     fromDate: Date,
-    toDate: Date,
-    reportType: 'daily' | 'weekly' | 'monthly'
+    toDate: Date
   ): Observable<ReportResponse> {
-    return this.getReportForUser(userId, fromDate, toDate, reportType);
+    return this.getReportForUser(userId, fromDate, toDate);
   }
 }

@@ -96,7 +96,7 @@ export class AnalyticsComponent {
 
     console.log('Fetching analytics from', fromDateTime, 'to', toDateTime);
 
-    this.analyticsService.getReportForUser(-1, fromDateTime, toDateTime, "daily")
+    this.analyticsService.getReportForUser(-1, fromDateTime, toDateTime)
       .subscribe({
         next: (response: ReportResponse) => {
           this.reportData = response;

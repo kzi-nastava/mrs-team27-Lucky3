@@ -28,8 +28,8 @@ public class ReportServiceImpl implements ReportService {
     private final UserRepository userRepository;
 
     @Override
-    public ReportResponse generateReportForUser(Long userId, LocalDateTime from, LocalDateTime to, String type) {
-        if(from == null || to == null || type == null){
+    public ReportResponse generateReportForUser(Long userId, LocalDateTime from, LocalDateTime to) {
+        if(from == null || to == null){
             throw new IllegalArgumentException("From, To and Type parameters are required");
         }
         if(from.isAfter(to)){
@@ -47,7 +47,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type, Long userId) {
+    public ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type) {
         if(from == null || to == null || type == null){
             throw new IllegalArgumentException("From, To and Type parameters are required");
         }
@@ -58,9 +58,8 @@ public class ReportServiceImpl implements ReportService {
             return generateAllDriversReport(from, to);
         } else if ("PASSENGER".equalsIgnoreCase(type)) {
             return generateAllPassengersReport(from, to);
-        }
-        else{
-            return generateReportForUser(userId, from, to, type);
+        } else {
+            throw new IllegalArgumentException("Invalid type parameter. Must be 'DRIVER' or 'PASSENGER'");
         }
     }
 

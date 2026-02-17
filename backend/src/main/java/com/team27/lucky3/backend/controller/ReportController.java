@@ -30,10 +30,9 @@ public class ReportController {
     public ResponseEntity<ReportResponse> getReportForUser(
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            @RequestParam @NotNull String type) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
 
-        ReportResponse response = reportService.generateReportForUser(userId, from, to, type);
+        ReportResponse response = reportService.generateReportForUser(userId, from, to);
         return ResponseEntity.ok(response);
     }
 
@@ -43,10 +42,9 @@ public class ReportController {
     public ResponseEntity<ReportResponse> getGlobalReport(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            @RequestParam @NotNull String type,
-            @RequestParam @NotNull Long userId) {
+            @RequestParam @NotNull String type) {
 
-        ReportResponse response = reportService.generateGlobalReport(from, to, type, userId);
+        ReportResponse response = reportService.generateGlobalReport(from, to, type);
         return ResponseEntity.ok(response);
     }
 }

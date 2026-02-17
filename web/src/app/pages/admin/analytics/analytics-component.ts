@@ -12,7 +12,7 @@ import { AnalyticsService } from '../../../infrastructure/rest/analytics.service
   imports: [CommonModule, BaseChartDirective, FormsModule],
   templateUrl: './analytics-component.html',
 })
-export class DriverAnalyticsComponent {
+export class AdminAnalyticsComponent {
   reportData: ReportResponse | null = null;
   
   startDate: string = '';
