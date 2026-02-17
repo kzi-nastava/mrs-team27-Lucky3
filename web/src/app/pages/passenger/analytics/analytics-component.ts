@@ -1,9 +1,9 @@
-import { Component, ChangeDetectorRef  } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartData, ChartOptions } from 'chart.js';
-import { ReportResponse } from '../../../infrastructure/rest/model/report-response.model';
+import { ReportResponse, DailyReport } from '../../../infrastructure/rest/model/report-response.model';
 import { AnalyticsService } from '../../../infrastructure/rest/analytics.service';
 
 @Component({
@@ -34,6 +34,9 @@ export class AnalyticsComponent {
   
   isLoading: boolean = false;
   errorMessage: string = '';
+
+  // Daily data for bar charts
+  dailyData: DailyReport[] = [];
 
   rideStatusChartType = 'doughnut' as const;
 
@@ -75,13 +78,11 @@ export class AnalyticsComponent {
   ) {}
 
   applyDateRange(): void {
-    // Validate date inputs
     if (!this.startDate || !this.endDate) {
       this.errorMessage = 'Please select both start and end dates';
       return;
     }
 
-    // Validate date range
     if (new Date(this.startDate) > new Date(this.endDate)) {
       this.errorMessage = 'Start date must be before end date';
       return;
@@ -90,13 +91,12 @@ export class AnalyticsComponent {
     this.errorMessage = '';
     this.isLoading = true;
 
-    // Convert date strings to ISO DateTime format
     const fromDateTime = new Date(this.startDate + 'T00:00:00').toISOString();
     const toDateTime = new Date(this.endDate + 'T23:59:59').toISOString();
 
     console.log('Fetching analytics from', fromDateTime, 'to', toDateTime);
 
-    this.analyticsService.getReportForUser(-1, fromDateTime, toDateTime, "")
+    this.analyticsService.getReportForUser(-1, fromDateTime, toDateTime, "daily")
       .subscribe({
         next: (response: ReportResponse) => {
           this.reportData = response;
@@ -109,39 +109,72 @@ export class AnalyticsComponent {
           console.error('Error fetching analytics:', error);
           this.errorMessage = 'Failed to load analytics data. Please try again.';
           this.isLoading = false;
+          this.cdr.detectChanges();
         }
       });
   }
 
   private updateUIWithReportData(data: ReportResponse): void {
-  // Update cumulative statistics
-  this.totalMoneySpent = data.cumulativeMoney || 0;
-  this.totalKm = data.cumulativeKilometers || 0;
-  this.totalRides = data.cumulativeRides || 0;
+    // Update cumulative statistics
+    this.totalMoneySpent = data.cumulativeMoney || 0;
+    this.totalKm = data.cumulativeKilometers || 0;
+    this.totalRides = data.cumulativeRides || 0;
 
-  // Update average statistics
-  this.averageMoney = data.averageMoney || 0;
-  this.averageKm = data.averageKilometers || 0;
-  this.averageRides = data.averageRides || 0;
+    // Update average statistics
+    this.averageMoney = data.averageMoney || 0;
+    this.averageKm = data.averageKilometers || 0;
+    this.averageRides = data.averageRides || 0;
 
-  // Update ride statistics
-  this.rideStats = {
-    finished: data.finishedRides || 0,
-    cancelled: data.cancelledRides || 0,
-    rejected: data.rejectedRides || 0,
-    inProgress: data.inProgressRides || 0,
-  };
+    // Update ride statistics
+    this.rideStats = {
+      finished: data.finishedRides || 0,
+      cancelled: data.cancelledRides || 0,
+      rejected: data.rejectedRides || 0,
+      inProgress: data.inProgressRides || 0,
+    };
 
-  // Update chart data
-  this.rideStatusChartData.datasets[0].data = [
-    this.rideStats.finished,
-    this.rideStats.cancelled,
-    this.rideStats.rejected,
-    this.rideStats.inProgress,
-  ];
+    // Update daily data for charts
+    this.dailyData = data.dailyData || [];
 
-    // Force chart update
+    // Update chart data
+    this.rideStatusChartData.datasets[0].data = [
+      this.rideStats.finished,
+      this.rideStats.cancelled,
+      this.rideStats.rejected,
+      this.rideStats.inProgress,
+    ];
+
     this.rideStatusChartData = { ...this.rideStatusChartData };
+    this.cdr.detectChanges();
+  }
+
+  // Calculate bar height percentage based on max value
+  calculateBarHeight(value: number, dataArray: number[]): string {
+    if (!dataArray || dataArray.length === 0) return '0%';
+    const maxValue = Math.max(...dataArray);
+    if (maxValue === 0) return '0%';
+    return `${(value / maxValue) * 100}%`;
+  }
+
+  // Get ride counts from daily data
+  getRideCounts(): number[] {
+    return this.dailyData.map(day => day.rideCount || 0);
+  }
+
+  // Get money values from daily data
+  getMoneyValues(): number[] {
+    return this.dailyData.map(day => day.money || 0);
+  }
+
+  // Get kilometers from daily data
+  getKilometers(): number[] {
+    return this.dailyData.map(day => day.kilometers || 0);
+  }
+
+  // Format date for display (e.g., "Feb 15")
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
   setRideStats(stats: typeof this.rideStats): void {
@@ -152,5 +185,6 @@ export class AnalyticsComponent {
       stats.rejected,
       stats.inProgress,
     ];
+    this.cdr.detectChanges();
   }
 }

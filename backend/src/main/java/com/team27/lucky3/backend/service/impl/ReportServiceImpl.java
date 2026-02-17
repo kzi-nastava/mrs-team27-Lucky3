@@ -125,7 +125,7 @@ public class ReportServiceImpl implements ReportService {
         }
 
         // Calculate averages
-        long dayCount = java.time.temporal.ChronoUnit.DAYS.between(from.toLocalDate(), to.toLocalDate()) + 1;
+        long dayCount = java.time.temporal.ChronoUnit.DAYS.between(from.toLocalDate(), to.toLocalDate());
 
         int pendingRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.PENDING).size();
         int activeRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.ACTIVE).size();
