@@ -44,6 +44,7 @@ import { AdminRideHistoryPage } from './pages/admin/ride-history/admin-ride-hist
 import { rideTrackingGuard } from './infrastructure/auth/ride-tracking.guard';
 import { RideTrackingPage } from './shared/active-ride/ride-tracking.page';
 import { AnalyticsComponent } from './pages/passenger/analytics/analytics-component';
+import { DriverAnalyticsComponent } from './pages/driver/analytics/analytics-component';
 
 export const routes: Routes = [
   // --- GUEST-ONLY ROUTES (redirect to dashboard if logged in) ---
@@ -252,6 +253,12 @@ export const routes: Routes = [
     canActivate: [rideAccessGuard]
   },
   {
+    path: 'driver/analytics',
+    component: DriverAnalyticsComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['DRIVER'] }
+  },
+  {
     path: 'driver/overview',
     component: DriverOverviewPage,
     canActivate: [authGuard, roleGuard],
@@ -271,12 +278,6 @@ export const routes: Routes = [
   {
     path: 'driver/support',
     component: SupportPage,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['DRIVER'] }
-  },
-  {
-    path: 'passenger/analytics',
-    component: AnalyticsComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['DRIVER'] }
   },
