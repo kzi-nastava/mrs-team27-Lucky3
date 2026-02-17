@@ -7,8 +7,8 @@ import com.team27.lucky3.backend.dto.response.UserResponse;
 import java.util.List;
 
 public interface UserBlockingService{
-    void blockUser(Long userId, String reason);
-    BlockUserResponse unblockUser(Long userId);
+    void blockUser(String email, String reason);
+    BlockUserResponse unblockUser(String email);
     List<UserProfile> getBlockedUsers();
     List<UserProfile> getUnblockedUsers();
 }

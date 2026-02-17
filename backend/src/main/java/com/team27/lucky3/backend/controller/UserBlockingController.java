@@ -29,15 +29,15 @@ public class UserBlockingController {
     @PostMapping("/block")
     public ResponseEntity<Void> blockUser(@Valid @RequestBody BlockUserRequest request) {
         userBlockingService.blockUser(
-                request.getUserId(),
+                request.getEmail(),
                 request.getReason()
         );
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @PostMapping("/unblock/{userId}")
-    public ResponseEntity<BlockUserResponse> unblockUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(userBlockingService.unblockUser(userId));
+    @PostMapping("/unblock/{email}")
+    public ResponseEntity<BlockUserResponse> unblockUser(@PathVariable String email) {
+        return ResponseEntity.ok(userBlockingService.unblockUser(email));
     }
 
     @GetMapping("/blocked")

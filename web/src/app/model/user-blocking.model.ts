@@ -1,6 +1,6 @@
 
 export interface BlockUserRequest {
-  userId: number;
+  email: string;
   reason: string;
 }
 

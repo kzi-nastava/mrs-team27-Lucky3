@@ -26,9 +26,9 @@ public class UserBlockingServiceImpl implements UserBlockingService {
 
     @Override
     @Transactional // Ensures data consistency
-    public void blockUser(Long userId, String reason) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+    public void blockUser(String email, String reason) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
 
         // Optional: Prevent double blocking
         if (user.isBlocked()) {
@@ -49,9 +49,9 @@ public class UserBlockingServiceImpl implements UserBlockingService {
 
     @Override
     @Transactional
-    public BlockUserResponse unblockUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+    public BlockUserResponse unblockUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
 
         // Optional: Check if actually blocked
         if (!user.isBlocked()) {

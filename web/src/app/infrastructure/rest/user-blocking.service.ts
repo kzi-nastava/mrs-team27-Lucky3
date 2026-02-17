@@ -5,7 +5,7 @@ import { BlockUserRequest, BlockUserResponse } from '../../model/user-blocking.m
 import { UserProfile } from "../../infrastructure/rest/user.service";
 
 @Injectable({ providedIn: 'root' })
-export class UserBlockingApiService {
+export class UserBlockingService {
   private readonly baseUrl = '/api/admin/users';
 
   constructor(private http: HttpClient) {}
@@ -14,8 +14,8 @@ export class UserBlockingApiService {
     return this.http.post<void>(`${this.baseUrl}/block`, req);
   }
 
-  unblockUser(userId: number): Observable<BlockUserResponse> {
-    return this.http.post<BlockUserResponse>(`${this.baseUrl}/unblock/${userId}`, {});
+  unblockUser(email: string): Observable<BlockUserResponse> {
+    return this.http.post<BlockUserResponse>(`${this.baseUrl}/unblock/${email}`, {});
   }
 
   getBlockedUsers(): Observable<UserProfile[]> {
