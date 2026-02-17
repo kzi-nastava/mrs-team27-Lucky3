@@ -115,8 +115,18 @@ public class ReportServiceImpl implements ReportService {
         // Calculate averages
         long dayCount = java.time.temporal.ChronoUnit.DAYS.between(from.toLocalDate(), to.toLocalDate()) + 1;
 
+        int pendingRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.PENDING).size();
+        int activeRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.ACTIVE).size();
+        int inProgressRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.IN_PROGRESS).size();
+        int finishedRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.FINISHED).size();
+        int rejectedRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.REJECTED).size();
+        int panicRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.PANIC).size();
+        int cancelledRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.CANCELLED).size() +
+                rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.CANCELLED_BY_DRIVER).size() +
+                rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.CANCELLED_BY_PASSENGER).size();
+
         return new ReportResponse(dailyData, totalRides, totalKilometers, totalMoney, totalRides / dayCount,
-                totalKilometers / dayCount, totalMoney / dayCount);
+                totalKilometers / dayCount, totalMoney / dayCount, pendingRides, activeRides, inProgressRides, finishedRides, rejectedRides, panicRides, cancelledRides);
     }
 }
 

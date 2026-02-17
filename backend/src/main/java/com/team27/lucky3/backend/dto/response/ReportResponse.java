@@ -20,4 +20,12 @@ public class ReportResponse {
     private Double averageRides;
     private Double averageKilometers;
     private Double averageMoney;
+
+    private int pendingRides;
+    private int activeRides;
+    private int inProgressRides;
+    private int finishedRides;
+    private int rejectedRides;
+    private int panicRides;
+    private int cancelledRides;
 }
