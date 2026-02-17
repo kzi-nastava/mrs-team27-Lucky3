@@ -63,6 +63,26 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+
+    @Override
+    public ReportResponse generateReportForUser(String email, LocalDateTime from, LocalDateTime to) {
+        if(from == null || to == null){
+            throw new IllegalArgumentException("From, To and Type parameters are required");
+        }
+        if(from.isAfter(to)){
+            throw new IllegalArgumentException("From date cannot be after To date");
+        }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check user role and generate appropriate report
+        if (user.getRole() == UserRole.DRIVER) {
+            return generateDriverReport(user.getId(), from, to);
+        } else {
+            return generatePassengerReport(user.getId(), from, to);
+        }
+    }
+
     private ReportResponse generateDriverReport(Long driverId, LocalDateTime from, LocalDateTime to) {
         // Get all completed rides for this driver in date range
         List<Ride> rides = rideRepository.findByDriverIdAndStartTimeBetweenAndStatus(

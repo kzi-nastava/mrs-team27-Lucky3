@@ -24,7 +24,6 @@ public class ReportController {
     private final ReportService reportService;
 
     // 2.10 Generate reports (Admin, Driver, User)
-    // Types: "RIDES", "KILOMETERS", "MONEY"
     @GetMapping("/{userId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ReportResponse> getReportForUser(
@@ -33,6 +32,17 @@ public class ReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
 
         ReportResponse response = reportService.generateReportForUser(userId, from, to);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{userId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ReportResponse> getReportForUser(
+            @PathVariable String email,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+
+        ReportResponse response = reportService.generateReportForUser(email, from, to);
         return ResponseEntity.ok(response);
     }
 

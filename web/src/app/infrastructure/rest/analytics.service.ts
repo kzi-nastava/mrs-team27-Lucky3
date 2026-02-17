@@ -17,7 +17,6 @@ export class AnalyticsService {
    * @param userId - The user ID
    * @param from - Start date in ISO 8601 format (e.g., '2026-02-01T00:00:00')
    * @param to - End date in ISO 8601 format (e.g., '2026-02-17T23:59:59')
-   * @param type - Report type (e.g., 'daily', 'weekly', 'monthly')
    * @returns Observable of ReportResponse
    */
   getReportForUser(
@@ -39,6 +38,45 @@ export class AnalyticsService {
     return this.http.get<ReportResponse>(`${this.API_URL}/${userId}`, { params });
   }
 
+  getReportForUserType(
+    from: Date | string,
+    to: Date | string,
+    type: string 
+  ): Observable<ReportResponse> {
+    if (type != "PASSENGER" && type != "DRIVER") {
+      throw new Error("Invalid user type. Must be 'PASSENGER' or 'DRIVER'.");
+    }
+    // Convert dates to ISO string format if Date objects are passed
+    const fromDate = from instanceof Date ? from.toISOString() : from;
+    const toDate = to instanceof Date ? to.toISOString() : to;
+
+    const params = new HttpParams()
+      .set('from', fromDate)
+      .set('to', toDate)
+      .set('type', type);
+
+    return this.http.get<ReportResponse>(`${this.API_URL}/admin`, { params });
+  }
+
+  /**
+   * Fetches analytics report for a specific user by email
+   */
+  getReportForUserByEmail(
+    email: string,
+    from: Date | string,
+    to: Date | string
+  ): Observable<ReportResponse> {
+    const fromDate = from instanceof Date ? from.toISOString() : from;
+    const toDate = to instanceof Date ? to.toISOString() : to;
+
+    const params = new HttpParams()
+      .set('email', email)
+      .set('from', fromDate)
+      .set('to', toDate);
+    
+    return this.http.get<ReportResponse>(`${this.API_URL}/user`, { params });
+  }
+
   /**
    * Alternative method with individual date components for easier use
    */
@@ -49,4 +87,6 @@ export class AnalyticsService {
   ): Observable<ReportResponse> {
     return this.getReportForUser(userId, fromDate, toDate);
   }
+
+
 }

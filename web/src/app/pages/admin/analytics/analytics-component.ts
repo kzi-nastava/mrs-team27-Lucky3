@@ -15,6 +15,10 @@ import { AnalyticsService } from '../../../infrastructure/rest/analytics.service
 export class AdminAnalyticsComponent {
   reportData: ReportResponse | null = null;
   
+  // Report type selection
+  reportType: 'specific' | 'PASSENGER' | 'DRIVER' = 'specific';
+  userEmail: string = '';
+  
   startDate: string = '';
   endDate: string = '';
   
@@ -34,6 +38,7 @@ export class AdminAnalyticsComponent {
   
   isLoading: boolean = false;
   errorMessage: string = '';
+  successMessage: string = '';
 
   // Daily data for bar charts
   dailyData: DailyReport[] = [];
@@ -77,41 +82,124 @@ export class AdminAnalyticsComponent {
     private cdr: ChangeDetectorRef
   ) {}
 
+  onReportTypeChange(): void {
+    // Clear error messages when report type changes
+    this.errorMessage = '';
+    this.successMessage = '';
+    
+    // Clear user email if switching away from specific user
+    if (this.reportType !== 'specific') {
+      this.userEmail = '';
+    }
+  }
+
   applyDateRange(): void {
+    // Reset messages
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    // Validate date inputs
     if (!this.startDate || !this.endDate) {
       this.errorMessage = 'Please select both start and end dates';
+      this.cdr.detectChanges();
       return;
     }
 
+    // Validate date range
     if (new Date(this.startDate) > new Date(this.endDate)) {
       this.errorMessage = 'Start date must be before end date';
+      this.cdr.detectChanges();
       return;
     }
 
-    this.errorMessage = '';
+    // Validate user email for specific user reports
+    if (this.reportType === 'specific' && !this.userEmail.trim()) {
+      this.errorMessage = 'Please enter a user email address';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    // Validate email format
+    if (this.reportType === 'specific' && !this.isValidEmail(this.userEmail)) {
+      this.errorMessage = 'Please enter a valid email address';
+      this.cdr.detectChanges();
+      return;
+    }
+
     this.isLoading = true;
+    this.cdr.detectChanges();
 
     const fromDateTime = new Date(this.startDate + 'T00:00:00').toISOString();
     const toDateTime = new Date(this.endDate + 'T23:59:59').toISOString();
 
-    console.log('Fetching analytics from', fromDateTime, 'to', toDateTime);
+    console.log('Fetching analytics:', {
+      reportType: this.reportType,
+      userEmail: this.userEmail,
+      from: fromDateTime,
+      to: toDateTime
+    });
 
-    this.analyticsService.getReportForUser(-1, fromDateTime, toDateTime)
+    // Call appropriate service method based on report type
+    if (this.reportType === 'specific') {
+      this.fetchSpecificUserReport(fromDateTime, toDateTime);
+    } else {
+      this.fetchGlobalReport(fromDateTime, toDateTime);
+    }
+  }
+
+  private fetchSpecificUserReport(fromDateTime: string, toDateTime: string): void {
+    this.analyticsService.getReportForUserByEmail(this.userEmail, fromDateTime, toDateTime)
       .subscribe({
         next: (response: ReportResponse) => {
           this.reportData = response;
           this.updateUIWithReportData(response);
+          this.successMessage = `Report generated successfully for ${this.userEmail}`;
           this.isLoading = false;
           this.cdr.detectChanges();
           console.log('Analytics data loaded:', response);
         },
         error: (error) => {
           console.error('Error fetching analytics:', error);
-          this.errorMessage = 'Failed to load analytics data. Please try again.';
+          
+          // Handle specific error cases
+          if (error.status === 404) {
+            this.errorMessage = `User with email "${this.userEmail}" not found`;
+          } else if (error.status === 400) {
+            this.errorMessage = 'Invalid request. Please check your input';
+          } else {
+            this.errorMessage = 'Failed to load analytics data. Please try again.';
+          }
+          
           this.isLoading = false;
           this.cdr.detectChanges();
         }
       });
+  }
+
+  private fetchGlobalReport(fromDateTime: string, toDateTime: string): void {
+    this.analyticsService.getReportForUserType(fromDateTime, toDateTime, this.reportType)
+      .subscribe({
+        next: (response: ReportResponse) => {
+          this.reportData = response;
+          this.updateUIWithReportData(response);
+          const userTypeLabel = this.reportType === 'PASSENGER' ? 'Passengers' : 'Drivers';
+          this.successMessage = `Global report generated successfully for all ${userTypeLabel}`;
+          this.isLoading = false;
+          this.cdr.detectChanges();
+          console.log('Analytics data loaded:', response);
+        },
+        error: (error) => {
+          console.error('Error fetching analytics:', error);
+          this.errorMessage = 'Failed to load global analytics data. Please try again.';
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   }
 
   private updateUIWithReportData(data: ReportResponse): void {
