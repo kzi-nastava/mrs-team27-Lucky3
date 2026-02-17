@@ -27,152 +27,278 @@
       
       <button 
         (click)="applyDateRange()"
-        class="px-8 py-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-lg transition-colors duration-200"
+        [disabled]="isLoading"
+        class="px-8 py-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Apply
+        <span *ngIf="!isLoading">Apply</span>
+        <span *ngIf="isLoading">Loading...</span>
       </button>
     </div>
-    
-    <!-- Stats Cards and Pie Chart -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      
-      <!-- Total Money Spent Card -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm font-medium mb-2">Total Money Spent</p>
-            <p class="text-3xl font-bold text-yellow-500">
-              ${{ totalMoneySpent.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
-            </p>
-          </div>
-          <div class="bg-yellow-500/10 p-3 rounded-lg">
-            <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Total KM Card -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm font-medium mb-2">Total Kilometers</p>
-            <p class="text-3xl font-bold text-yellow-500">
-              {{ totalKm.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}) }} km
-            </p>
-          </div>
-          <div class="bg-yellow-500/10 p-3 rounded-lg">
-            <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Pie Chart Card -->
-     <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h3 class="text-lg font-semibold mb-4">Ride Status</h3>
 
-        <div class="h-56">
-            <canvas
-            baseChart [type]="rideStatusChartType" [data]="rideStatusChartData"
-            [options]="rideStatusChartOptions">
-            </canvas>
-        </div>
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg text-red-500">
+      {{ errorMessage }}
+    </div>
 
-        <!-- Optional: numbers under chart -->
-        <div class="mt-4 grid grid-cols-2 gap-2 text-sm text-gray-300">
-            <div class="flex justify-between"><span>Finished</span><span class="font-semibold text-white">{{ rideStats.finished }}</span></div>
-            <div class="flex justify-between"><span>Cancelled</span><span class="font-semibold text-white">{{ rideStats.cancelled }}</span></div>
-            <div class="flex justify-between"><span>Rejected</span><span class="font-semibold text-white">{{ rideStats.rejected }}</span></div>
-            <div class="flex justify-between"><span>In progress</span><span class="font-semibold text-white">{{ rideStats.inProgress }}</span></div>
-        </div>
-      </div>
-        
-        <!-- Legend -->
-    <div class="space-y-2 text-sm">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span class="text-gray-300">Finished</span>
-            </div>
-            <span class="font-semibold">{{ rideStats.finished }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span class="text-gray-300">Cancelled</span>
-            </div>
-            <span class="font-semibold">{{ rideStats.cancelled }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
-              <span class="text-gray-300">Rejected</span>
-            </div>
-            <span class="font-semibold">{{ rideStats.rejected }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span class="text-gray-300">In Progress</span>
-            </div>
-            <span class="font-semibold">{{ rideStats.inProgress }}</span>
-          </div>
-         </div>
+    <!-- Empty State: Show when no data is loaded -->
+    <div *ngIf="!reportData && !isLoading" class="flex flex-col items-center justify-center py-20">
+      <div class="bg-gray-800 rounded-lg p-12 border border-gray-700 max-w-2xl text-center">
+        <svg class="w-24 h-24 text-gray-600 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        <h2 class="text-2xl font-bold text-gray-200 mb-3">No Analytics Data</h2>
+        <p class="text-gray-400 text-lg mb-2">Select a date range to view your ride analytics and statistics.</p>
+        <p class="text-gray-500 text-sm">Choose a start and end date, then click "Apply" to load your data.</p>
       </div>
     </div>
-    
-    <!-- Three Horizontal Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Chart 1: Rides Per Day -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h3 class="text-lg font-semibold mb-4">Rides Per Day</h3>
-        <div class="h-64 flex items-end justify-between gap-2">
-          <!-- Placeholder bars - Replace with actual chart library -->
-          <div class="flex-1 bg-yellow-500 rounded-t" style="height: 70%"></div>
-          <div class="flex-1 bg-yellow-500 rounded-t" style="height: 85%"></div>
-          <div class="flex-1 bg-yellow-500 rounded-t" style="height: 60%"></div>
-          <div class="flex-1 bg-yellow-500 rounded-t" style="height: 90%"></div>
-          <div class="flex-1 bg-yellow-500 rounded-t" style="height: 75%"></div>
-          <div class="flex-1 bg-yellow-500 rounded-t" style="height: 65%"></div>
-          <div class="flex-1 bg-yellow-500 rounded-t" style="height: 80%"></div>
-        </div>
-        <p class="text-center text-gray-400 text-sm mt-4">Last 7 Days</p>
-      </div>
-      
-      <!-- Chart 2: Revenue Per Day -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h3 class="text-lg font-semibold mb-4">Revenue Per Day</h3>
-        <div class="h-64 flex items-end justify-between gap-2">
-          <!-- Placeholder bars -->
-          <div class="flex-1 bg-green-500 rounded-t" style="height: 65%"></div>
-          <div class="flex-1 bg-green-500 rounded-t" style="height: 78%"></div>
-          <div class="flex-1 bg-green-500 rounded-t" style="height: 55%"></div>
-          <div class="flex-1 bg-green-500 rounded-t" style="height: 88%"></div>
-          <div class="flex-1 bg-green-500 rounded-t" style="height: 72%"></div>
-          <div class="flex-1 bg-green-500 rounded-t" style="height: 68%"></div>
-          <div class="flex-1 bg-green-500 rounded-t" style="height: 82%"></div>
-        </div>
-        <p class="text-center text-gray-400 text-sm mt-4">Last 7 Days</p>
-      </div>
-      
-      <!-- Chart 3: KM Per Day -->
-      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h3 class="text-lg font-semibold mb-4">Kilometers Per Day</h3>
-        <div class="h-64 flex items-end justify-between gap-2">
-          <!-- Placeholder bars -->
-          <div class="flex-1 bg-blue-500 rounded-t" style="height: 72%"></div>
-          <div class="flex-1 bg-blue-500 rounded-t" style="height: 80%"></div>
-          <div class="flex-1 bg-blue-500 rounded-t" style="height: 58%"></div>
-          <div class="flex-1 bg-blue-500 rounded-t" style="height: 92%"></div>
-          <div class="flex-1 bg-blue-500 rounded-t" style="height: 70%"></div>
-          <div class="flex-1 bg-blue-500 rounded-t" style="height: 63%"></div>
-          <div class="flex-1 bg-blue-500 rounded-t" style="height: 85%"></div>
-        </div>
-        <p class="text-center text-gray-400 text-sm mt-4">Last 7 Days</p>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20">
+      <div class="bg-gray-800 rounded-lg p-12 border border-gray-700 text-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-yellow-500 mx-auto mb-6"></div>
+        <p class="text-xl text-gray-300">Loading analytics data...</p>
       </div>
     </div>
+
+    <!-- Statistics Content: Show only when data is loaded -->
+    <div *ngIf="reportData && !isLoading">
+      
+      <!-- Ride Status Section -->
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Ride Status Distribution</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Pie Chart Card -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-4">Ride Status</h3>
+            
+            <div class="h-64">
+              <canvas
+                baseChart 
+                [type]="rideStatusChartType" 
+                [data]="rideStatusChartData"
+                [options]="rideStatusChartOptions">
+              </canvas>
+            </div>
+          </div>
+
+          <!-- Status Numbers Grid -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-4">Status Breakdown</h3>
+            
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                  <span class="text-gray-200">Finished</span>
+                </div>
+                <span class="text-2xl font-bold text-green-500">{{ rideStats.finished }}</span>
+              </div>
+              
+              <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-4 h-4 bg-red-500 rounded-full"></div>
+                  <span class="text-gray-200">Cancelled</span>
+                </div>
+                <span class="text-2xl font-bold text-red-500">{{ rideStats.cancelled }}</span>
+              </div>
+              
+              <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-4 h-4 bg-orange-500 rounded-full"></div>
+                  <span class="text-gray-200">Rejected</span>
+                </div>
+                <span class="text-2xl font-bold text-orange-500">{{ rideStats.rejected }}</span>
+              </div>
+              
+              <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-4 h-4 bg-yellow-500 rounded-full"></div>
+                  <span class="text-gray-200">In Progress</span>
+                </div>
+                <span class="text-2xl font-bold text-yellow-500">{{ rideStats.inProgress }}</span>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <!-- Cumulative Statistics Section -->
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Cumulative Statistics</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Total Money Spent Card -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Total Money</p>
+                <p class="text-3xl font-bold text-yellow-500">
+                  ${{ totalMoneySpent.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
+                </p>
+              </div>
+              <div class="bg-yellow-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Total KM Card -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Total Kilometers</p>
+                <p class="text-3xl font-bold text-yellow-500">
+                  {{ totalKm.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}) }} km
+                </p>
+              </div>
+              <div class="bg-yellow-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Rides Card -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Total Rides</p>
+                <p class="text-3xl font-bold text-yellow-500">
+                  {{ totalRides.toLocaleString('en-US') }}
+                </p>
+              </div>
+              <div class="bg-yellow-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+
+      <!-- Average Statistics Section -->
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Average Statistics (Per Day)</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Average Money Card -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Average Money</p>
+                <p class="text-3xl font-bold text-blue-500">
+                  ${{ averageMoney.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
+                </p>
+              </div>
+              <div class="bg-blue-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Average KM Card -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Average Kilometers</p>
+                <p class="text-3xl font-bold text-blue-500">
+                  {{ averageKm.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}) }} km
+                </p>
+              </div>
+              <div class="bg-blue-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Average Rides Card -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Average Rides</p>
+                <p class="text-3xl font-bold text-blue-500">
+                  {{ averageRides.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}) }}
+                </p>
+              </div>
+              <div class="bg-blue-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <!-- Three Horizontal Charts -->
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Daily Trends</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Chart 1: Rides Per Day -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-4">Rides Per Day</h3>
+            <div class="h-64 flex items-end justify-between gap-2">
+              <!-- Placeholder bars - Replace with actual chart library -->
+              <div class="flex-1 bg-yellow-500 rounded-t" style="height: 70%"></div>
+              <div class="flex-1 bg-yellow-500 rounded-t" style="height: 85%"></div>
+              <div class="flex-1 bg-yellow-500 rounded-t" style="height: 60%"></div>
+              <div class="flex-1 bg-yellow-500 rounded-t" style="height: 90%"></div>
+              <div class="flex-1 bg-yellow-500 rounded-t" style="height: 75%"></div>
+              <div class="flex-1 bg-yellow-500 rounded-t" style="height: 65%"></div>
+              <div class="flex-1 bg-yellow-500 rounded-t" style="height: 80%"></div>
+            </div>
+            <p class="text-center text-gray-400 text-sm mt-4">Last 7 Days</p>
+          </div>
+          
+          <!-- Chart 2: Revenue Per Day -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-4">Revenue Per Day</h3>
+            <div class="h-64 flex items-end justify-between gap-2">
+              <!-- Placeholder bars -->
+              <div class="flex-1 bg-green-500 rounded-t" style="height: 65%"></div>
+              <div class="flex-1 bg-green-500 rounded-t" style="height: 78%"></div>
+              <div class="flex-1 bg-green-500 rounded-t" style="height: 55%"></div>
+              <div class="flex-1 bg-green-500 rounded-t" style="height: 88%"></div>
+              <div class="flex-1 bg-green-500 rounded-t" style="height: 72%"></div>
+              <div class="flex-1 bg-green-500 rounded-t" style="height: 68%"></div>
+              <div class="flex-1 bg-green-500 rounded-t" style="height: 82%"></div>
+            </div>
+            <p class="text-center text-gray-400 text-sm mt-4">Last 7 Days</p>
+          </div>
+          
+          <!-- Chart 3: KM Per Day -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-4">Kilometers Per Day</h3>
+            <div class="h-64 flex items-end justify-between gap-2">
+              <!-- Placeholder bars -->
+              <div class="flex-1 bg-blue-500 rounded-t" style="height: 72%"></div>
+              <div class="flex-1 bg-blue-500 rounded-t" style="height: 80%"></div>
+              <div class="flex-1 bg-blue-500 rounded-t" style="height: 58%"></div>
+              <div class="flex-1 bg-blue-500 rounded-t" style="height: 92%"></div>
+              <div class="flex-1 bg-blue-500 rounded-t" style="height: 70%"></div>
+              <div class="flex-1 bg-blue-500 rounded-t" style="height: 63%"></div>
+              <div class="flex-1 bg-blue-500 rounded-t" style="height: 85%"></div>
+            </div>
+            <p class="text-center text-gray-400 text-sm mt-4">Last 7 Days</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- End of Statistics Content -->
+
+  </div>
 </div>

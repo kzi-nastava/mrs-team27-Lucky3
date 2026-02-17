@@ -29,6 +29,12 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public ReportResponse generateReportForUser(Long userId, LocalDateTime from, LocalDateTime to, String type) {
+        if(from == null || to == null || type == null){
+            throw new IllegalArgumentException("From, To and Type parameters are required");
+        }
+        if(from.isAfter(to)){
+            throw new IllegalArgumentException("From date cannot be after To date");
+        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -42,6 +48,12 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type, Long userId) {
+        if(from == null || to == null || type == null){
+            throw new IllegalArgumentException("From, To and Type parameters are required");
+        }
+        if(from.isAfter(to)){
+            throw new IllegalArgumentException("From date cannot be after To date");
+        }
         if ("DRIVER".equalsIgnoreCase(type)) {
             return generateAllDriversReport(from, to);
         } else if ("PASSENGER".equalsIgnoreCase(type)) {
