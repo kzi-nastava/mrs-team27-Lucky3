@@ -2,6 +2,7 @@ package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.request.BlockUserRequest;
 import com.team27.lucky3.backend.dto.response.BlockUserResponse;
+import com.team27.lucky3.backend.dto.response.UserProfile;
 import com.team27.lucky3.backend.dto.response.UserResponse;
 import com.team27.lucky3.backend.service.UserBlockingService;
 import jakarta.validation.Valid;
@@ -40,12 +41,12 @@ public class UserBlockingController {
     }
 
     @GetMapping("/blocked")
-    public ResponseEntity<List<UserResponse>> getBlockedUsers() {
+    public ResponseEntity<List<UserProfile>> getBlockedUsers() {
         return ResponseEntity.ok(userBlockingService.getBlockedUsers());
     }
 
     @GetMapping("/unblocked")
-    public ResponseEntity<List<UserResponse>> getUnblockedUsers() {
+    public ResponseEntity<List<UserProfile>> getUnblockedUsers() {
         return ResponseEntity.ok(userBlockingService.getUnblockedUsers());
     }
 }

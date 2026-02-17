@@ -1,6 +1,7 @@
 package com.team27.lucky3.backend.service.impl;
 
 import com.team27.lucky3.backend.dto.response.BlockUserResponse;
+import com.team27.lucky3.backend.dto.response.UserProfile;
 import com.team27.lucky3.backend.dto.response.UserResponse;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.UserRole;
@@ -74,33 +75,24 @@ public class UserBlockingServiceImpl implements UserBlockingService {
     }
 
     @Override
-    public List<UserResponse> getBlockedUsers() {
+    public List<UserProfile> getBlockedUsers() {
         List<User> users = userRepository.findByIsBlocked(true);
         return users.stream()
-                .map(this::mapToUserResponse)
+                .map(this::mapToUserProfile)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<UserResponse> getUnblockedUsers() {
+    public List<UserProfile> getUnblockedUsers() {
         List<User> users = userRepository.findByIsBlocked(false);
         return users.stream()
-                .map(this::mapToUserResponse)
+                .map(this::mapToUserProfile)
                 .collect(Collectors.toList());
     }
 
     // Helper method to map Entity to DTO
-    private UserResponse mapToUserResponse(User user) {
-        return new UserResponse(
-                user.getId(),
-                user.getName(),
-                user.getSurname(),
-                user.getEmail(),
-                "/profile-pictures/" + user.getId(), //TODO: STA OVDE IDE KO ZNA
-                user.getRole(),
-                user.getPhoneNumber(),
-                user.getAddress()
-        );
+    private UserProfile mapToUserProfile(User user) {
+        return new UserProfile(user.getName(), user.getSurname(), user.getEmail(), user.getPhoneNumber(), user.getAddress(), "nista");
     }
 }
 
