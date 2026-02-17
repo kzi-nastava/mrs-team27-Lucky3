@@ -235,4 +235,65 @@ class RideRepositoryEndRideTest {
         boolean exists = rideRepository.existsByDriverIdAndStatusIn(99999L, List.of(RideStatus.ACTIVE));
         assertFalse(exists);
     }
+
+    @Test
+    @DisplayName("sumTotalEarningsByDriverId - returns 0 for non-existent driver")
+    void sumTotalEarnings_nonExistentDriver_returnsZero() {
+        Double sum = rideRepository.sumTotalEarningsByDriverId(99999L);
+        assertEquals(0.0, sum);
+    }
+
+    @Test
+    @DisplayName("findFinishedRidesByDriverSince - excludes ride with endTime exactly at threshold")
+    void findFinishedRides_endTimeAtThreshold_excluded() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime threshold = now.minusHours(3);
+
+        // endTime exactly at threshold — "endTime >= since" should include it
+        Ride r = createRide(driver, RideStatus.FINISHED, now.minusHours(4), threshold);
+
+        List<Ride> result = rideRepository.findFinishedRidesByDriverSince(driver.getId(), threshold);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    @DisplayName("findByDriverIdAndStatusInOrderByStartTimeAsc - works with single status filter")
+    void findNextRides_singleStatusFilter() {
+        LocalDateTime now = LocalDateTime.now();
+        createRide(driver, RideStatus.SCHEDULED, now.plusHours(1), null);
+        createRide(driver, RideStatus.PENDING, now.plusHours(2), null);
+
+        List<Ride> result = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
+                driver.getId(), List.of(RideStatus.SCHEDULED));
+
+        assertEquals(1, result.size());
+        assertEquals(RideStatus.SCHEDULED, result.get(0).getStatus());
+    }
+
+    @Test
+    @DisplayName("existsByDriverIdAndStatusIn - with multiple statuses returns true when any match")
+    void existsByDriverIdAndStatusIn_multipleStatuses_returnsTrue() {
+        createRide(driver, RideStatus.SCHEDULED, LocalDateTime.now().plusHours(1), null);
+
+        boolean exists = rideRepository.existsByDriverIdAndStatusIn(
+                driver.getId(), List.of(RideStatus.ACTIVE, RideStatus.SCHEDULED, RideStatus.IN_PROGRESS));
+        assertTrue(exists);
+    }
+
+    @Test
+    @DisplayName("countCompletedRidesByDriverId - does not count rides of other drivers")
+    void countCompletedRides_driverIsolation() {
+        User driver2 = new User();
+        driver2.setName("Driver2");
+        driver2.setEmail("driver2@example.com");
+        driver2.setRole(UserRole.DRIVER);
+        driver2 = userRepository.save(driver2);
+
+        createRide(driver2, RideStatus.FINISHED, LocalDateTime.now().minusHours(2), LocalDateTime.now().minusHours(1));
+        createRide(driver, RideStatus.FINISHED, LocalDateTime.now().minusHours(3), LocalDateTime.now().minusHours(2));
+
+        Integer count = rideRepository.countCompletedRidesByDriverId(driver.getId());
+        assertEquals(1, count);
+    }
 }

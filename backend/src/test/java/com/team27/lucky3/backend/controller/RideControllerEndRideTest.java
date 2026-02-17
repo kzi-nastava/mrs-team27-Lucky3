@@ -11,6 +11,7 @@ import com.team27.lucky3.backend.util.TokenUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -21,6 +22,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -351,5 +353,111 @@ class RideControllerEndRideTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(999999));
+    }
+
+    @Test
+    @WithMockUser(roles = "DRIVER")
+    @DisplayName("GET /api/rides/{id}/end - 405 method not allowed")
+    void endRide_getMethod_notAllowed() throws Exception {
+        mockMvc.perform(get("/api/rides/1/end")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    @WithMockUser(roles = "DRIVER")
+    @DisplayName("PUT /api/rides/{id}/end - 400 for non-numeric ID")
+    void endRide_nonNumericId_badRequest() throws Exception {
+        mockMvc.perform(put("/api/rides/abc/end")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(roles = "DRIVER")
+    @DisplayName("PUT /api/rides/{id}/end - 400 when both fields null")
+    void endRide_bothFieldsNull_badRequest() throws Exception {
+        EndRideRequest nullRequest = new EndRideRequest();
+        nullRequest.setPaid(null);
+        nullRequest.setPassengersExited(null);
+
+        mockMvc.perform(put("/api/rides/1/end")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(nullRequest)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(roles = "DRIVER")
+    @DisplayName("PUT /api/rides/{id}/end - 400 for missing request body")
+    void endRide_missingBody_badRequest() throws Exception {
+        mockMvc.perform(put("/api/rides/1/end")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(roles = "DRIVER")
+    @DisplayName("PUT /api/rides/{id}/end - 400 error response has correct JSON structure")
+    void endRide_badRequest_errorStructure() throws Exception {
+        mockMvc.perform(put("/api/rides/1/end")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    @WithMockUser(roles = "DRIVER")
+    @DisplayName("PUT /api/rides/{id}/end - response content type is JSON")
+    void endRide_responseContentType_isJson() throws Exception {
+        RideResponse response = new RideResponse();
+        response.setId(1L);
+        when(rideService.endRide(eq(1L), any(EndRideRequest.class))).thenReturn(response);
+
+        mockMvc.perform(put("/api/rides/1/end")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    @WithMockUser(roles = "DRIVER")
+    @DisplayName("PUT /api/rides/{id}/end - service receives correct request values")
+    void endRide_serviceReceivesCorrectValues() throws Exception {
+        RideResponse response = new RideResponse();
+        response.setId(1L);
+        when(rideService.endRide(eq(1L), any(EndRideRequest.class))).thenReturn(response);
+
+        EndRideRequest request = new EndRideRequest();
+        request.setPaid(false);
+        request.setPassengersExited(true);
+
+        mockMvc.perform(put("/api/rides/1/end")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<EndRideRequest> captor = ArgumentCaptor.forClass(EndRideRequest.class);
+        verify(rideService).endRide(eq(1L), captor.capture());
+        assertFalse(captor.getValue().getPaid());
+        assertTrue(captor.getValue().getPassengersExited());
     }
 }

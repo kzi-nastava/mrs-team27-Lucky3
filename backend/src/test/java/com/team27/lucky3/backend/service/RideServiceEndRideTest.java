@@ -229,35 +229,24 @@ class RideServiceEndRideTest {
     }
 
     @Test
-    @DisplayName("endRide - sends review request emails to non-test passengers")
+    @DisplayName("endRide - sends review request email to ride creator")
     void endRide_sendsReviewEmails_toRealPassengers() {
         passengerUser.setEmail("real@gmail.com");
         passengerUser.setName("Real Passenger");
-        
-        User otherPassenger = new User();
-        otherPassenger.setId(3L);
-        otherPassenger.setEmail("another@yahoo.com");
-        otherPassenger.setName("Another");
-        
-        inProgressRide.setPassengers(new HashSet<>(Arrays.asList(passengerUser, otherPassenger)));
-        inProgressRide.setInvitedEmails(List.of("invited@outlook.com", "real@gmail.com")); // duplicate
+
+        // Set createdBy so the implementation sends to the creator
+        inProgressRide.setCreatedBy(passengerUser);
+        inProgressRide.setPassengers(Set.of(passengerUser));
 
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
         when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
         when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
-        when(reviewTokenUtils.generateReviewToken(anyLong(), anyLong(), anyLong())).thenReturn("token1", "token2");
-        when(reviewTokenUtils.generateReviewTokenForEmail(anyLong(), anyString(), anyLong())).thenReturn("token3");
-        when(userRepository.findByEmail("invited@outlook.com")).thenReturn(Optional.empty());
+        when(reviewTokenUtils.generateReviewToken(anyLong(), anyLong(), anyLong())).thenReturn("token1");
 
         rideService.endRide(1L, validEndRequest);
 
-        // Verify emailService.sendReviewRequestEmail called for real passengers and non-duplicate invited email
-        verify(emailService).sendReviewRequestEmail(eq("real@gmail.com"), eq("Real Passenger"), anyString());
-        verify(emailService).sendReviewRequestEmail(eq("another@yahoo.com"), eq("Another"), anyString());
-        verify(emailService).sendReviewRequestEmail(eq("invited@outlook.com"), eq("Valued Customer"), anyString());
-        
-        // Should NOT send to @example.com or duplicates
-        verify(emailService, times(3)).sendReviewRequestEmail(anyString(), anyString(), anyString());
+        // Only the ride creator receives the review request email
+        verify(emailService, times(1)).sendReviewRequestEmail(eq("real@gmail.com"), eq("Real Passenger"), eq("token1"));
     }
 
     @Test
@@ -443,5 +432,214 @@ class RideServiceEndRideTest {
         assertEquals(1, response.getPassengers().size());
         assertTrue(response.getPaid());
         assertTrue(response.getPassengersExited());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  sendReviewRequestEmails edge cases
+    // ═══════════════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("endRide - falls back to first passenger when createdBy is null")
+    void endRide_fallbackToFirstPassenger_whenCreatedByNull() {
+        passengerUser.setEmail("fallback@gmail.com");
+        passengerUser.setName("Fallback Passenger");
+        inProgressRide.setCreatedBy(null);
+        inProgressRide.setPassengers(Set.of(passengerUser));
+
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+        when(reviewTokenUtils.generateReviewToken(anyLong(), anyLong(), anyLong())).thenReturn("token-fb");
+
+        rideService.endRide(1L, validEndRequest);
+
+        verify(emailService, times(1)).sendReviewRequestEmail(
+                eq("fallback@gmail.com"), eq("Fallback Passenger"), eq("token-fb"));
+    }
+
+    @Test
+    @DisplayName("endRide - uses 'Valued Customer' when creator name is null")
+    void endRide_valuedCustomer_whenCreatorNameNull() {
+        passengerUser.setEmail("noname@gmail.com");
+        passengerUser.setName(null);
+        inProgressRide.setCreatedBy(passengerUser);
+
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+        when(reviewTokenUtils.generateReviewToken(anyLong(), anyLong(), anyLong())).thenReturn("token-vc");
+
+        rideService.endRide(1L, validEndRequest);
+
+        verify(emailService).sendReviewRequestEmail(
+                eq("noname@gmail.com"), eq("Valued Customer"), eq("token-vc"));
+    }
+
+    @Test
+    @DisplayName("endRide - uses 'Valued Customer' when creator name is blank")
+    void endRide_valuedCustomer_whenCreatorNameBlank() {
+        passengerUser.setEmail("blank@gmail.com");
+        passengerUser.setName("   ");
+        inProgressRide.setCreatedBy(passengerUser);
+
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+        when(reviewTokenUtils.generateReviewToken(anyLong(), anyLong(), anyLong())).thenReturn("token-bl");
+
+        rideService.endRide(1L, validEndRequest);
+
+        verify(emailService).sendReviewRequestEmail(
+                eq("blank@gmail.com"), eq("Valued Customer"), eq("token-bl"));
+    }
+
+    @Test
+    @DisplayName("endRide - skips review email when creator email is null")
+    void endRide_skipsReviewEmail_whenCreatorEmailNull() {
+        passengerUser.setEmail(null);
+        inProgressRide.setCreatedBy(passengerUser);
+
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+
+        rideService.endRide(1L, validEndRequest);
+
+        verify(emailService, never()).sendReviewRequestEmail(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("endRide - handles emailService exception gracefully")
+    void endRide_emailServiceException_handledGracefully() {
+        passengerUser.setEmail("fail@gmail.com");
+        passengerUser.setName("Fail User");
+        inProgressRide.setCreatedBy(passengerUser);
+
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+        when(reviewTokenUtils.generateReviewToken(anyLong(), anyLong(), anyLong())).thenReturn("token-fail");
+        doThrow(new RuntimeException("SMTP error")).when(emailService)
+                .sendReviewRequestEmail(anyString(), anyString(), anyString());
+
+        assertDoesNotThrow(() -> rideService.endRide(1L, validEndRequest));
+        assertEquals(RideStatus.FINISHED, inProgressRide.getStatus());
+    }
+
+    @Test
+    @DisplayName("endRide - skips review emails when ride has no passengers and no createdBy")
+    void endRide_skipsReviewEmails_noPassengersNoCreatedBy() {
+        inProgressRide.setCreatedBy(null);
+        inProgressRide.setPassengers(Collections.emptySet());
+
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+
+        rideService.endRide(1L, validEndRequest);
+
+        verify(emailService, never()).sendReviewRequestEmail(anyString(), anyString(), anyString());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  checkAndHandleInactiveRequest edge cases
+    // ═══════════════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("endRide - does not trigger deactivation when inactiveRequested is false")
+    void endRide_noDeactivation_whenInactiveNotRequested() {
+        driverUser.setInactiveRequested(false);
+        driverUser.setActive(true);
+
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+        when(rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(eq(driverUser.getId()), anyList()))
+                .thenReturn(Collections.emptyList());
+
+        rideService.endRide(1L, validEndRequest);
+
+        assertTrue(driverUser.isActive());
+        verify(userRepository, never()).save(any(User.class));
+        verify(rideRepository, never()).existsByDriverIdAndStatusIn(anyLong(), anyList());
+    }
+
+    @Test
+    @DisplayName("endRide - deactivates driver even when no activity session exists")
+    void endRide_deactivatesDriver_noActivitySession() {
+        driverUser.setInactiveRequested(true);
+        driverUser.setActive(true);
+
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+        when(rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(eq(driverUser.getId()), anyList()))
+                .thenReturn(Collections.emptyList());
+        when(rideRepository.existsByDriverIdAndStatusIn(eq(driverUser.getId()), anyList()))
+                .thenReturn(false);
+        when(activitySessionRepository.findByDriverIdAndEndTimeIsNull(driverUser.getId()))
+                .thenReturn(Optional.empty());
+
+        rideService.endRide(1L, validEndRequest);
+
+        assertFalse(driverUser.isActive());
+        assertFalse(driverUser.isInactiveRequested());
+        verify(userRepository).save(driverUser);
+        verify(activitySessionRepository, never()).save(any(DriverActivitySession.class));
+    }
+
+    @Test
+    @DisplayName("endRide - keeps driver active when has active rides (IN_PROGRESS)")
+    void endRide_keepsDriverActive_ifActiveRidesExist() {
+        driverUser.setInactiveRequested(true);
+        driverUser.setActive(true);
+
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+        // First call (for active rides check) returns true
+        when(rideRepository.existsByDriverIdAndStatusIn(eq(driverUser.getId()), anyList()))
+                .thenReturn(true);
+
+        rideService.endRide(1L, validEndRequest);
+
+        assertTrue(driverUser.isActive());
+        assertTrue(driverUser.isInactiveRequested());
+        verify(userRepository, never()).save(driverUser);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  WebSocket broadcast verification
+    // ═══════════════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("endRide - broadcasts ride update via WebSocket")
+    void endRide_broadcastsRideUpdate() {
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.of(vehicle));
+        when(rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(eq(driverUser.getId()), anyList()))
+                .thenReturn(Collections.emptyList());
+
+        RideResponse response = rideService.endRide(1L, validEndRequest);
+
+        verify(rideSocketService).broadcastRideUpdate(eq(1L), argThat(r ->
+                r.getStatus() == RideStatus.FINISHED && r.getId().equals(1L)));
+    }
+
+    @Test
+    @DisplayName("endRide - notifications sent even when vehicle not found")
+    void endRide_notificationsSent_evenWhenNoVehicle() {
+        when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
+        when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vehicleRepository.findByDriverId(driverUser.getId())).thenReturn(Optional.empty());
+        when(rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(eq(driverUser.getId()), anyList()))
+                .thenReturn(Collections.emptyList());
+
+        rideService.endRide(1L, validEndRequest);
+
+        verify(notificationService).sendRideFinishedNotification(any());
+        verify(notificationService).notifyLinkedPassengersRideCompleted(any());
+        verify(rideSocketService).broadcastRideUpdate(eq(1L), any());
     }
 }
