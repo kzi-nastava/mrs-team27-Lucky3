@@ -53,6 +53,7 @@ export class Sidebar implements OnInit, OnDestroy {
     { icon: 'history', label: 'Ride History', route: '/passenger/ride-history', active: false },
     { icon: 'profile', label: 'Profile', route: '/passenger/profile', active: false },
     { icon: 'support', label: 'Support', route: '/passenger/support', active: false },
+    { icon: 'reports', label: 'Analytics', route: '/passenger/analytics', active: false },
     { icon: 'favorite', label: 'Favorites', route: '/passenger/favorites', active: false},
     { icon: 'logout', label: 'Logout', route: '/login', variant: 'danger' }
   ];
@@ -61,7 +62,7 @@ export class Sidebar implements OnInit, OnDestroy {
     { icon: 'dashboard', label: 'Dashboard', route: '/admin/dashboard', active: false },
     { icon: 'history', label: 'Ride History', route: '/admin/ride-history', active: false },
     { icon: 'requests', label: 'Requests', route: '/admin/requests', active: false },
-    { icon: 'reports', label: 'Reports', route: '/admin/reports', active: false },
+    { icon: 'reports', label: 'Analytics', route: '/admin/analytics', active: false },
     { icon: 'drivers', label: 'Drivers', route: '/admin/drivers', active: false },
     { icon: 'pricing', label: 'Pricing', route: '/admin/pricing', active: false },
     { icon: 'panic', label: 'Panic Alerts', route: '/admin/panic', active: false, variant: 'danger' },
