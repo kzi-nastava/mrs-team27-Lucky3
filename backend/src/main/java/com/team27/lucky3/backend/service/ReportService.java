@@ -4,6 +4,7 @@ import com.team27.lucky3.backend.dto.response.ReportResponse;
 import java.time.LocalDateTime;
 
 public interface ReportService {
-    ReportResponse generateReportForUser(Long userId, LocalDateTime from, LocalDateTime to, String type);
-    ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type, Long userId);
+    ReportResponse generateReportForUser(String email, LocalDateTime from, LocalDateTime to);
+    ReportResponse generateReportForUser(Long userId, LocalDateTime from, LocalDateTime to);
+    ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type);
 }

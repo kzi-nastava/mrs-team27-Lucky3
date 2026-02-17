@@ -1,0 +1,349 @@
+<!-- analytics.component.html -->
+<div class="min-h-screen bg-black text-white p-6">
+  <div class="max-w-7xl mx-auto">
+    
+    <!-- Heading -->
+    <h1 class="text-4xl font-bold mb-8 flex flex-col items-center">Analytics</h1>
+    
+   <!-- Date Range Selector and Apply Button -->
+<div class="flex flex-col items-center mb-8">
+  <!-- Explanatory Text -->
+  <div class="text-center mb-4">
+    <p class="text-gray-300 text-base mb-1">Select a date range to view analytics</p>
+    <p class="text-gray-500 text-sm">Choose the start and end dates for your ride statistics report</p>
+  </div>
+  
+  <!-- Date Inputs and Button -->
+  <div class="flex flex-wrap items-end gap-3 justify-center">
+    <div class="min-w-[180px] max-w-[220px]">
+      <label class="block text-xs font-medium text-gray-400 mb-1.5">Start Date</label>
+      <input 
+        type="date" 
+        [(ngModel)]="startDate"
+        class="w-full px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-white"
+      />
+    </div>
+    
+    <div class="min-w-[180px] max-w-[220px]">
+      <label class="block text-xs font-medium text-gray-400 mb-1.5">End Date</label>
+      <input 
+        type="date" 
+        [(ngModel)]="endDate"
+        class="w-full px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-white"
+      />
+    </div>
+    
+    <button 
+      (click)="applyDateRange()"
+      [disabled]="isLoading"
+      class="px-6 py-1.5 text-sm bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <span *ngIf="!isLoading">Apply</span>
+      <span *ngIf="isLoading">Loading...</span>
+    </button>
+  </div>
+</div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="mb-6 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-500 text-sm">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Empty State: Show when no data is loaded -->
+    <div *ngIf="!reportData && !isLoading" class="flex flex-col items-center justify-center py-5">
+      <div class="bg-gray-900 rounded-lg p-12 border border-gray-800 max-w-2xl text-center">
+        <svg class="w-24 h-24 text-gray-700 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        <h2 class="text-2xl font-bold text-gray-300 mb-3">No Analytics Data</h2>
+        <p class="text-gray-400 text-lg mb-2">Select a date range to view your ride analytics and statistics.</p>
+        <p class="text-gray-600 text-sm">Choose a start and end date, then click "Apply" to load your data.</p>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20">
+      <div class="bg-gray-900 rounded-lg p-12 border border-gray-800 text-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-yellow-500 mx-auto mb-6"></div>
+        <p class="text-xl text-gray-300">Loading analytics data...</p>
+      </div>
+    </div>
+
+    <!-- Statistics Content: Show only when data is loaded -->
+    <div *ngIf="reportData && !isLoading">
+      
+      <!-- Ride Status Section -->
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Ride Status Distribution</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Pie Chart Card -->
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+            <h3 class="text-lg font-semibold mb-4">Ride Status</h3>
+            
+            <div class="h-64">
+              <canvas
+                baseChart 
+                [type]="rideStatusChartType" 
+                [data]="rideStatusChartData"
+                [options]="rideStatusChartOptions">
+              </canvas>
+            </div>
+          </div>
+
+          <!-- Status Numbers Grid -->
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+            <h3 class="text-lg font-semibold mb-4">Status Breakdown</h3>
+            
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 bg-gray-800/70 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                  <span class="text-gray-200">Finished</span>
+                </div>
+                <span class="text-2xl font-bold text-green-500">{{ rideStats.finished }}</span>
+              </div>
+              
+              <div class="flex items-center justify-between p-4 bg-gray-800/70 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-4 h-4 bg-red-500 rounded-full"></div>
+                  <span class="text-gray-200">Cancelled</span>
+                </div>
+                <span class="text-2xl font-bold text-red-500">{{ rideStats.cancelled }}</span>
+              </div>
+              
+              <div class="flex items-center justify-between p-4 bg-gray-800/70 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-4 h-4 bg-orange-500 rounded-full"></div>
+                  <span class="text-gray-200">Rejected</span>
+                </div>
+                <span class="text-2xl font-bold text-orange-500">{{ rideStats.rejected }}</span>
+              </div>
+              
+              <div class="flex items-center justify-between p-4 bg-gray-800/70 rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-4 h-4 bg-yellow-500 rounded-full"></div>
+                  <span class="text-gray-200">In Progress</span>
+                </div>
+                <span class="text-2xl font-bold text-yellow-500">{{ rideStats.inProgress }}</span>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <!-- Cumulative Statistics Section -->
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Cumulative Statistics</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Total Money Spent Card -->
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Total Money</p>
+                <p class="text-3xl font-bold text-yellow-500">
+                  ${{ totalMoneySpent.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
+                </p>
+              </div>
+              <div class="bg-yellow-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Total KM Card -->
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Total Kilometers</p>
+                <p class="text-3xl font-bold text-yellow-500">
+                  {{ totalKm.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}) }} km
+                </p>
+              </div>
+              <div class="bg-yellow-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Rides Card -->
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Total Rides</p>
+                <p class="text-3xl font-bold text-yellow-500">
+                  {{ totalRides.toLocaleString('en-US') }}
+                </p>
+              </div>
+              <div class="bg-yellow-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+
+      <!-- Average Statistics Section -->
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Average Statistics (Per Day)</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Average Money Card -->
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Average Money</p>
+                <p class="text-3xl font-bold text-blue-500">
+                  ${{ averageMoney.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
+                </p>
+              </div>
+              <div class="bg-blue-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Average KM Card -->
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Average Kilometers</p>
+                <p class="text-3xl font-bold text-blue-500">
+                  {{ averageKm.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}) }} km
+                </p>
+              </div>
+              <div class="bg-blue-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Average Rides Card -->
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm font-medium mb-2">Average Rides</p>
+                <p class="text-3xl font-bold text-blue-500">
+                  {{ averageRides.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}) }}
+                </p>
+              </div>
+              <div class="bg-blue-500/10 p-3 rounded-lg">
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <!-- Three Horizontal Charts -->
+<div class="mb-6">
+  <h2 class="text-2xl font-semibold mb-4">Daily Trends</h2>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Chart 1: Rides Per Day -->
+    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+      <h3 class="text-lg font-semibold mb-4">Rides Per Day</h3>
+      <div class="h-64 flex items-end justify-between gap-2">
+        <ng-container *ngIf="dailyData.length > 0; else noRidesData">
+          <div 
+            *ngFor="let day of dailyData" 
+            class="flex-1 bg-yellow-500 rounded-t relative group"
+            [style.height]="calculateBarHeight(day.rideCount, getRideCounts())"
+          >
+            <!-- Tooltip on hover -->
+            <div class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              {{ day.rideCount }} rides<br>{{ formatDate(day.date) }}
+            </div>
+          </div>
+        </ng-container>
+        <ng-template #noRidesData>
+          <div class="flex-1 flex items-center justify-center text-gray-600 text-sm">
+            No data
+          </div>
+        </ng-template>
+      </div>
+      <div class="flex justify-between mt-4 text-xs text-gray-400">
+        <span *ngIf="dailyData.length > 0">{{ formatDate(dailyData[0].date) }}</span>
+        <span *ngIf="dailyData.length > 0">{{ formatDate(dailyData[dailyData.length - 1].date) }}</span>
+      </div>
+    </div>
+    
+    <!-- Chart 2: Revenue Per Day -->
+    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+      <h3 class="text-lg font-semibold mb-4">Revenue Per Day</h3>
+      <div class="h-64 flex items-end justify-between gap-2">
+        <ng-container *ngIf="dailyData.length > 0; else noMoneyData">
+          <div 
+            *ngFor="let day of dailyData" 
+            class="flex-1 bg-green-500 rounded-t relative group"
+            [style.height]="calculateBarHeight(day.money, getMoneyValues())"
+          >
+            <!-- Tooltip on hover -->
+            <div class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              ${{ day.money.toFixed(2) }}<br>{{ formatDate(day.date) }}
+            </div>
+          </div>
+        </ng-container>
+        <ng-template #noMoneyData>
+          <div class="flex-1 flex items-center justify-center text-gray-600 text-sm">
+            No data
+          </div>
+        </ng-template>
+      </div>
+      <div class="flex justify-between mt-4 text-xs text-gray-400">
+        <span *ngIf="dailyData.length > 0">{{ formatDate(dailyData[0].date) }}</span>
+        <span *ngIf="dailyData.length > 0">{{ formatDate(dailyData[dailyData.length - 1].date) }}</span>
+      </div>
+    </div>
+    
+    <!-- Chart 3: KM Per Day -->
+    <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+      <h3 class="text-lg font-semibold mb-4">Kilometers Per Day</h3>
+      <div class="h-64 flex items-end justify-between gap-2">
+        <ng-container *ngIf="dailyData.length > 0; else noKmData">
+          <div 
+            *ngFor="let day of dailyData" 
+            class="flex-1 bg-blue-500 rounded-t relative group"
+            [style.height]="calculateBarHeight(day.kilometers, getKilometers())"
+          >
+            <!-- Tooltip on hover -->
+            <div class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              {{ day.kilometers.toFixed(1) }} km<br>{{ formatDate(day.date) }}
+            </div>
+          </div>
+        </ng-container>
+        <ng-template #noKmData>
+          <div class="flex-1 flex items-center justify-center text-gray-600 text-sm">
+            No data
+          </div>
+        </ng-template>
+      </div>
+      <div class="flex justify-between mt-4 text-xs text-gray-400">
+        <span *ngIf="dailyData.length > 0">{{ formatDate(dailyData[0].date) }}</span>
+        <span *ngIf="dailyData.length > 0">{{ formatDate(dailyData[dailyData.length - 1].date) }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+    </div>
+    <!-- End of Statistics Content -->
+
+  </div>
+</div>

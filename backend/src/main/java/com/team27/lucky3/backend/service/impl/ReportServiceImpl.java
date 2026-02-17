@@ -28,7 +28,13 @@ public class ReportServiceImpl implements ReportService {
     private final UserRepository userRepository;
 
     @Override
-    public ReportResponse generateReportForUser(Long userId, LocalDateTime from, LocalDateTime to, String type) {
+    public ReportResponse generateReportForUser(Long userId, LocalDateTime from, LocalDateTime to) {
+        if(from == null || to == null){
+            throw new IllegalArgumentException("From, To and Type parameters are required");
+        }
+        if(from.isAfter(to)){
+            throw new IllegalArgumentException("From date cannot be after To date");
+        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -41,14 +47,39 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type, Long userId) {
+    public ReportResponse generateGlobalReport(LocalDateTime from, LocalDateTime to, String type) {
+        if(from == null || to == null || type == null){
+            throw new IllegalArgumentException("From, To and Type parameters are required");
+        }
+        if(from.isAfter(to)){
+            throw new IllegalArgumentException("From date cannot be after To date");
+        }
         if ("DRIVER".equalsIgnoreCase(type)) {
             return generateAllDriversReport(from, to);
         } else if ("PASSENGER".equalsIgnoreCase(type)) {
             return generateAllPassengersReport(from, to);
+        } else {
+            throw new IllegalArgumentException("Invalid type parameter. Must be 'DRIVER' or 'PASSENGER'");
         }
-        else{
-            return generateReportForUser(userId, from, to, type);
+    }
+
+
+    @Override
+    public ReportResponse generateReportForUser(String email, LocalDateTime from, LocalDateTime to) {
+        if(from == null || to == null){
+            throw new IllegalArgumentException("From, To and Type parameters are required");
+        }
+        if(from.isAfter(to)){
+            throw new IllegalArgumentException("From date cannot be after To date");
+        }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check user role and generate appropriate report
+        if (user.getRole() == UserRole.DRIVER) {
+            return generateDriverReport(user.getId(), from, to);
+        } else {
+            return generatePassengerReport(user.getId(), from, to);
         }
     }
 
@@ -113,10 +144,20 @@ public class ReportServiceImpl implements ReportService {
         }
 
         // Calculate averages
-        long dayCount = java.time.temporal.ChronoUnit.DAYS.between(from.toLocalDate(), to.toLocalDate()) + 1;
+        long dayCount = java.time.temporal.ChronoUnit.DAYS.between(from.toLocalDate(), to.toLocalDate());
+
+        int pendingRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.PENDING).size();
+        int activeRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.ACTIVE).size();
+        int inProgressRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.IN_PROGRESS).size();
+        int finishedRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.FINISHED).size();
+        int rejectedRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.REJECTED).size();
+        int panicRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.PANIC).size();
+        int cancelledRides = rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.CANCELLED).size() +
+                rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.CANCELLED_BY_DRIVER).size() +
+                rideRepository.findByStartTimeBetweenAndStatus(from, to, RideStatus.CANCELLED_BY_PASSENGER).size();
 
         return new ReportResponse(dailyData, totalRides, totalKilometers, totalMoney, totalRides / dayCount,
-                totalKilometers / dayCount, totalMoney / dayCount);
+                totalKilometers / dayCount, totalMoney / dayCount, pendingRides, activeRides, inProgressRides, finishedRides, rejectedRides, panicRides, cancelledRides);
     }
 }
 
