@@ -76,23 +76,23 @@ public class UserBlockingServiceImpl implements UserBlockingService {
 
     @Override
     public List<UserProfile> getBlockedUsers() {
-        List<User> users = userRepository.findByIsBlocked(true);
-        return users.stream()
+        return userRepository.findByIsBlocked(true).stream()
+                .filter(user -> user.getRole() != UserRole.ADMIN)
                 .map(this::mapToUserProfile)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<UserProfile> getUnblockedUsers() {
-        List<User> users = userRepository.findByIsBlocked(false);
-        return users.stream()
+        return userRepository.findByIsBlocked(false).stream()
+                .filter(user -> user.getRole() != UserRole.ADMIN)
                 .map(this::mapToUserProfile)
                 .collect(Collectors.toList());
     }
 
     // Helper method to map Entity to DTO
     private UserProfile mapToUserProfile(User user) {
-        return new UserProfile(user.getName(), user.getSurname(), user.getEmail(), user.getPhoneNumber(), user.getAddress(), "nista");
+        return new UserProfile(user.getName(), user.getSurname(), user.getEmail(), user.getPhoneNumber(), user.getAddress(), "/api/users/" + user.getId() + "/profile-image");
     }
 }
 
