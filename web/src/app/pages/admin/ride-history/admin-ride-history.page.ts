@@ -172,7 +172,11 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
           }
           this.cdr.detectChanges();
         },
-        error: (err) => console.error('Failed to load history', err)
+        error: (err) => {
+          console.error('Failed to load history', err);
+          this.loadId++;
+          this.cdr.detectChanges();
+        }
       });
   }
 

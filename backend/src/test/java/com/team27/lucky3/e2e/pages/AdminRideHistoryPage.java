@@ -643,16 +643,26 @@ public class AdminRideHistoryPage {
     // ----- Dynamic Count Helpers -----
 
     public int getTotalRidesFromBadge() {
-        // Try the "all rides" badge first (shown when no search is active)
-        String text = getAllRidesCountText();
-        if (text.isEmpty()) {
-            // Try the search-specific badge
-            text = getSearchRidesCountText();
-        }
-        if (!text.isEmpty()) {
-            String digits = text.replaceAll("[^0-9]", "");
-            if (!digits.isEmpty()) return Integer.parseInt(digits);
-        }
+        // Check both badges immediately without waiting — data is already loaded
+        // by the time this method is called (after waitForDataRefresh or waitForTableToLoad).
+        // "all-rides-count" is shown when no search is active (*ngIf="!searchId && rides.length > 0")
+        // "rides-count" is shown when searching by driver/passenger ID (*ngIf="selectedUserName")
+        try {
+            if (allRidesCount.isDisplayed()) {
+                String text = allRidesCount.getText().trim();
+                String digits = text.replaceAll("[^0-9]", "");
+                if (!digits.isEmpty()) return Integer.parseInt(digits);
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            if (ridesCount.isDisplayed()) {
+                String text = ridesCount.getText().trim();
+                String digits = text.replaceAll("[^0-9]", "");
+                if (!digits.isEmpty()) return Integer.parseInt(digits);
+            }
+        } catch (Exception ignored) {}
+
         return getRideCount();
     }
 

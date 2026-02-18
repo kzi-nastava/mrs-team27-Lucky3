@@ -49,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   Ride 14: FINISHED              - 14 days ago - $420   - Driver 2 - Passenger 4
  *   Ride 15: CANCELLED             - 20 days ago - $720   - Driver 1 - Passenger 3
  */
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Admin Ride History - Filtering, Sorting & Pagination")
 public class AdminRideHistoryFilterSortTest extends BaseTest {
@@ -71,21 +72,57 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
     private SidebarComponent sidebar;
     private AdminRideHistoryPage historyPage;
 
-    @BeforeEach
-    public void setUpPages() {
+    /**
+     * Create browser and login once for all tests in this class.
+     */
+    @BeforeAll
+    public void initBrowser() {
+        super.setUp();
         loginPage = new LoginPage(driver);
         sidebar = new SidebarComponent(driver);
         historyPage = new AdminRideHistoryPage(driver);
-
         loginPage.loginAsAdmin();
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        wait.until(ExpectedConditions.urlContains("/admin"));
-        sidebar.navigateToRideHistory();
-        wait.until(ExpectedConditions.urlContains("/admin/ride-history"));
+        new WebDriverWait(driver, Duration.ofSeconds(10))
+                .until(ExpectedConditions.urlContains("/admin"));
+    }
+
+    /**
+     * Override parent @BeforeEach — browser is created once in @BeforeAll.
+     */
+    @Override
+    public void setUp() {
+        // No-op: browser is reused across all tests
+    }
+
+    /**
+     * Before each test, navigate directly to the ride history page
+     * (auth token persists in localStorage) and wait for the table.
+     */
+    @BeforeEach
+    public void setUpPages() {
+        driver.get("http://localhost:4200/admin/ride-history");
         historyPage.waitForTableToLoad();
 
         totalHistoryRides = historyPage.getTotalRidesFromBadge();
         totalPages = (int) Math.ceil((double) totalHistoryRides / UI_PAGE_SIZE);
+    }
+
+    /**
+     * Override parent @AfterEach — don't quit browser after each test.
+     */
+    @Override
+    public void tearDown() {
+        // No-op: browser is reused across all tests
+    }
+
+    /**
+     * Quit browser once after all tests.
+     */
+    @AfterAll
+    public void closeBrowser() {
+        if (driver != null) {
+            driver.quit();
+        }
     }
 
     // =====================================================================
@@ -2273,5 +2310,9 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
 
         assertTrue(driver.getCurrentUrl().contains("/login"),
                 "Should be redirected to login page when not authenticated");
+
+        // Re-login so that any tests added after this one still work
+        loginPage.loginAsAdmin();
+        wait.until(ExpectedConditions.urlContains("/admin"));
     }
 }
