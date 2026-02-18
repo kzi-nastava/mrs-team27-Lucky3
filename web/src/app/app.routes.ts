@@ -46,6 +46,7 @@ import { RideTrackingPage } from './shared/active-ride/ride-tracking.page';
 import { AnalyticsComponent } from './pages/passenger/analytics/analytics-component';
 import { DriverAnalyticsComponent } from './pages/driver/analytics/analytics-component';
 import { AdminAnalyticsComponent } from './pages/admin/analytics/analytics-component';
+import { AdminUserBlockingComponent } from './pages/admin/user-blocking/admin-user-blocking.component';
 
 export const routes: Routes = [
   // --- GUEST-ONLY ROUTES (redirect to dashboard if logged in) ---
@@ -177,6 +178,12 @@ export const routes: Routes = [
   {
     path: 'admin/profile',
     component: AdminProfile,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
+  {
+    path: 'admin/blocking-users',
+    component: AdminUserBlockingComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN'] }
   },

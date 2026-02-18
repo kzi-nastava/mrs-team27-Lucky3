@@ -7,19 +7,19 @@ import jakarta.validation.constraints.Size;
 // Request DTO for blocking a user
 public class BlockUserRequest {
     @NotNull(message = "User ID is required")
-    private Long userId;
+    private String email;
 
     @NotBlank(message = "Block reason is required")
     @Size(max = 500, message = "Block reason cannot exceed 500 characters")
     private String reason;
 
     // Getters and setters
-    public Long getUserId() {
-        return userId;
+    public String getEmail() {
+        return email;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getReason() {

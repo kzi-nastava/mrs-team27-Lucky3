@@ -1,6 +1,7 @@
 package com.team27.lucky3.backend.service.impl;
 
 import com.team27.lucky3.backend.dto.response.BlockUserResponse;
+import com.team27.lucky3.backend.dto.response.UserProfile;
 import com.team27.lucky3.backend.dto.response.UserResponse;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.UserRole;
@@ -25,9 +26,9 @@ public class UserBlockingServiceImpl implements UserBlockingService {
 
     @Override
     @Transactional // Ensures data consistency
-    public void blockUser(Long userId, String reason) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+    public void blockUser(String email, String reason) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
 
         // Optional: Prevent double blocking
         if (user.isBlocked()) {
@@ -48,9 +49,9 @@ public class UserBlockingServiceImpl implements UserBlockingService {
 
     @Override
     @Transactional
-    public BlockUserResponse unblockUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+    public BlockUserResponse unblockUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
 
         // Optional: Check if actually blocked
         if (!user.isBlocked()) {
@@ -74,33 +75,36 @@ public class UserBlockingServiceImpl implements UserBlockingService {
     }
 
     @Override
-    public List<UserResponse> getBlockedUsers() {
-        List<User> users = userRepository.findByIsBlocked(true);
-        return users.stream()
-                .map(this::mapToUserResponse)
+    public List<UserProfile> getBlockedUsers() {
+        return userRepository.findByIsBlocked(true).stream()
+                .filter(user -> user.getRole() != UserRole.ADMIN)
+                .map(this::mapToUserProfile)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<UserResponse> getUnblockedUsers() {
-        List<User> users = userRepository.findByIsBlocked(false);
-        return users.stream()
-                .map(this::mapToUserResponse)
+    public List<UserProfile> getUnblockedUsers() {
+        return userRepository.findByIsBlocked(false).stream()
+                .filter(user -> user.getRole() != UserRole.ADMIN)
+                .map(this::mapToUserProfile)
                 .collect(Collectors.toList());
     }
 
     // Helper method to map Entity to DTO
-    private UserResponse mapToUserResponse(User user) {
-        return new UserResponse(
-                user.getId(),
-                user.getName(),
-                user.getSurname(),
-                user.getEmail(),
-                "/profile-pictures/" + user.getId(), //TODO: STA OVDE IDE KO ZNA
-                user.getRole(),
-                user.getPhoneNumber(),
-                user.getAddress()
-        );
+    private UserProfile mapToUserProfile(User user) {
+        return new UserProfile(user.getName(), user.getSurname(), user.getEmail(), user.getPhoneNumber(), user.getAddress(), "/api/users/" + user.getId() + "/profile-image");
+    }
+
+    @Override
+    public String isBlocked(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + id));
+        if(user.isBlocked()){
+            return user.getBlockReason();
+        }
+        else{
+            return null;
+        }
     }
 }
 
