@@ -38,9 +38,7 @@ public class ReviewFromHistoryTest extends BaseTest {
         E2ETestUtils.cleanupReviewsForRide(env, E2E_RIDE_ID);
     }
 
-    /**
-     * Helper to get the passenger logged in and landed on the history page.
-     */
+    // Helper to get the passenger logged in and landed on the history page.
     private PassengerRideHistoryPage loginAndGoToRideHistory() {
         LoginPage loginPage = new LoginPage(driver);
         loginPage.loginAs(PASSENGER3_EMAIL, PASSENGER3_PASSWORD);
@@ -110,8 +108,8 @@ public class ReviewFromHistoryTest extends BaseTest {
 
     @Test
     @Order(4)
-    @DisplayName("Happy Path: Review form is shown in authenticated mode and accepts ratings")
-    void testReviewFormVisibleInAuthenticatedMode() {
+    @DisplayName("Happy Path: Review form heading and subtitle are visible after navigating from history")
+    void testReviewFormVisibleFromHistory() {
         PassengerRideHistoryPage historyPage = loginAndGoToRideHistory();
 
         historyPage.clickFirstReviewableRide();
@@ -123,14 +121,17 @@ public class ReviewFromHistoryTest extends BaseTest {
         reviewPage.waitForPageToLoad();
 
         assertTrue(reviewPage.isReviewFormVisible(),
-                "The form should be visible for an authenticated passenger.");
-        assertEquals("Rate Your Ride", reviewPage.getPageHeadingText());
+                "The review form should be visible on the page.");
+        assertEquals("Rate Your Ride", reviewPage.getPageHeadingText(),
+                "The page heading should read 'Rate Your Ride'.");
+        assertEquals("How was your experience?", reviewPage.getPageSubtitleText(),
+                "The user should see the subtitle asking about their experience.");
     }
 
     @Test
     @Order(5)
-    @DisplayName("Happy Path: Submit button disabled until both ratings are set (authenticated mode)")
-    void testSubmitDisabledWithoutRatingsAuthenticated() {
+    @DisplayName("Happy Path: Submit button disabled until both ratings are set")
+    void testSubmitDisabledWithoutRatings() {
         PassengerRideHistoryPage historyPage = loginAndGoToRideHistory();
 
         historyPage.clickFirstReviewableRide();
@@ -141,19 +142,27 @@ public class ReviewFromHistoryTest extends BaseTest {
         ReviewPage reviewPage = new ReviewPage(driver);
         reviewPage.waitForPageToLoad();
 
-        // Button should be off initially.
+        // Button should be off initially, and stars should prompt the user to click.
         assertFalse(reviewPage.isSubmitButtonEnabled(),
                 "Submit shouldn't be allowed without any ratings.");
+        assertEquals("Click to rate", reviewPage.getDriverRatingFeedbackText(),
+                "The driver stars should show 'Click to rate' before any selection.");
+        assertEquals("Click to rate", reviewPage.getVehicleRatingFeedbackText(),
+                "The vehicle stars should show 'Click to rate' before any selection.");
 
         // Just one rating isn't enough.
         reviewPage.setDriverRating(4);
         assertFalse(reviewPage.isSubmitButtonEnabled(),
                 "We still need the vehicle rating before we can submit.");
+        assertEquals("4 of 5 stars", reviewPage.getDriverRatingFeedbackText(),
+                "After clicking 4 stars, the user should see '4 of 5 stars' under the driver rating.");
 
         // Both ratings set: green light.
         reviewPage.setVehicleRating(3);
         assertTrue(reviewPage.isSubmitButtonEnabled(),
                 "Submit should be ready now that both ratings are in.");
+        assertEquals("3 of 5 stars", reviewPage.getVehicleRatingFeedbackText(),
+                "After clicking 3 stars, the user should see '3 of 5 stars' under the vehicle rating.");
     }
 
     @Test
@@ -181,6 +190,12 @@ public class ReviewFromHistoryTest extends BaseTest {
 
         assertTrue(driver.getCurrentUrl().contains("/passenger/ride-history"),
                 "Cancel should take us back to the history list.");
+
+        // The ride history table should be visible again.
+        PassengerRideHistoryPage backOnHistory = new PassengerRideHistoryPage(driver);
+        backOnHistory.waitForTableToLoad();
+        assertTrue(backOnHistory.getRideCount() > 0,
+                "The ride history table should be visible with rides after cancelling.");
     }
 
     @Test
@@ -235,7 +250,10 @@ public class ReviewFromHistoryTest extends BaseTest {
         // Wait for the success state.
         assertTrue(reviewPage.isSuccessMessageVisible(),
                 "We should see the 'Thank You' screen after submission.");
-        assertEquals("Thank You!", reviewPage.getSuccessHeadingText());
+        assertEquals("Thank You!", reviewPage.getSuccessHeadingText(),
+                "The success heading should read 'Thank You!'.");
+        assertTrue(reviewPage.getSuccessDescriptionText().contains("submitted successfully"),
+                "The user should see a confirmation that the review was submitted successfully.");
     }
 
     @Test
@@ -313,8 +331,8 @@ public class ReviewFromHistoryTest extends BaseTest {
 
     @Test
     @Order(12)
-    @DisplayName("Happy Path: Comment textarea maxlength enforced in authenticated mode")
-    void testCommentMaxLengthAuthenticated() {
+    @DisplayName("Happy Path: Comment textarea truncates text at 500 characters")
+    void testCommentMaxLength() {
         LoginPage loginPage = new LoginPage(driver);
         loginPage.loginAs(PASSENGER3_EMAIL, PASSENGER3_PASSWORD);
 
@@ -334,12 +352,16 @@ public class ReviewFromHistoryTest extends BaseTest {
         String actualText = reviewPage.getCommentText();
         assertTrue(actualText.length() <= 500,
                 "Text should be truncated by the HTML maxlength attribute.");
+
+        // The user should see the character counter showing the limit was reached.
+        assertEquals("500/500", reviewPage.getCharacterCounterText(),
+                "The visible character counter should show '500/500' when the limit is reached.");
     }
 
     @Test
     @Order(13)
-    @DisplayName("Happy Path: Validation message shown when ratings are missing")
-    void testValidationMessageInAuthenticatedMode() {
+    @DisplayName("Happy Path: Validation message tells user to rate both driver and vehicle")
+    void testValidationMessageShownWhenRatingsMissing() {
         LoginPage loginPage = new LoginPage(driver);
         loginPage.loginAs(PASSENGER3_EMAIL, PASSENGER3_PASSWORD);
 
@@ -352,10 +374,11 @@ public class ReviewFromHistoryTest extends BaseTest {
         reviewPage.waitForPageToLoad();
 
         // Should see the 'please rate' warning immediately.
-        assertTrue(reviewPage.isValidationMessageVisible());
+        assertTrue(reviewPage.isValidationMessageVisible(),
+                "A validation hint should be visible before any ratings are set.");
         String msg = reviewPage.getValidationMessageText();
-        assertTrue(msg.contains("rate both the driver and vehicle"),
-                "The warning message should clearly state why they can't submit yet.");
+        assertEquals("Please rate both the driver and vehicle to submit", msg,
+                "The validation message should tell the user exactly what's needed.");
     }
 
     @AfterAll

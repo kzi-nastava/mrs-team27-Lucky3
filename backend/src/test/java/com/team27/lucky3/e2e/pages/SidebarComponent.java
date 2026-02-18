@@ -9,12 +9,17 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 
+/**
+ * Page object for the sidebar navigation component.
+ * The sidebar starts collapsed; use {@link #openSidebar()} to expand it
+ * before interacting with the links.
+ */
 public class SidebarComponent {
 
     private WebDriver driver;
     private WebDriverWait wait;
 
-    @FindBy(id = "sidebar-toggle")
+    @FindBy(css = "[data-testid='sidebar-toggle']")
     private WebElement sidebarToggleButton;
 
     @FindBy(id = "sidebar-history")
@@ -25,6 +30,15 @@ public class SidebarComponent {
 
     @FindBy(id = "sidebar-favorite")
     private WebElement favoritesLink;
+
+    @FindBy(id = "sidebar-home")
+    private WebElement homeLink;
+
+    @FindBy(id = "sidebar-profile")
+    private WebElement profileLink;
+
+    @FindBy(id = "sidebar-support")
+    private WebElement supportLink;
 
     public SidebarComponent(WebDriver driver) {
         this.driver = driver;
@@ -38,18 +52,39 @@ public class SidebarComponent {
     }
 
     public void navigateToRideHistory() {
+        openSidebar();
         wait.until(ExpectedConditions.elementToBeClickable(rideHistoryLink));
         rideHistoryLink.click();
     }
 
-    public void navigateToFavoriteRides(){
+    public void navigateToFavoriteRides() {
+        openSidebar();
         wait.until(ExpectedConditions.elementToBeClickable(favoritesLink));
         favoritesLink.click();
     }
 
     public void navigateToDashboard() {
+        openSidebar();
         wait.until(ExpectedConditions.elementToBeClickable(dashboardLink));
         dashboardLink.click();
+    }
+
+    public void navigateToHome() {
+        openSidebar();
+        wait.until(ExpectedConditions.elementToBeClickable(homeLink));
+        homeLink.click();
+    }
+
+    public void navigateToProfile() {
+        openSidebar();
+        wait.until(ExpectedConditions.elementToBeClickable(profileLink));
+        profileLink.click();
+    }
+
+    public void navigateToSupport() {
+        openSidebar();
+        wait.until(ExpectedConditions.elementToBeClickable(supportLink));
+        supportLink.click();
     }
 
     public boolean isRideHistoryLinkVisible() {

@@ -8,6 +8,33 @@ import { Location } from '@angular/common';
 import { By } from '@angular/platform-browser';
 import { of, throwError, Subject } from 'rxjs';
 
+// ── CSS selectors for querying DOM elements ──────────────────────
+const SEL = {
+  DRIVER_STARS: '[data-testid="driver-stars"]',
+  VEHICLE_STARS: '[data-testid="vehicle-stars"]',
+  SUBMIT_BTN: '[data-testid="submit-button"]',
+  COMMENT_INPUT: '[data-testid="comment-input"]',
+  REVIEW_FORM: '[data-testid="review-form"]',
+  DRIVER_RATING_SECTION: '[data-testid="driver-rating-section"]',
+  VEHICLE_RATING_SECTION: '[data-testid="vehicle-rating-section"]',
+  VALIDATION_MSG: '[data-testid="validation-message"]',
+  ERROR_MSG: '[data-testid="error-message"]',
+  LOADING_SPINNER: '.animate-spin',
+  SUBMIT_SPINNER: '[data-testid="submit-button"] .animate-spin',
+  ERROR_TEXT: '.text-red-400',
+  RATING_FEEDBACK: '.text-yellow-500.text-xs',
+  CLICK_TO_RATE: '.text-gray-500.text-xs.text-center',
+} as const;
+
+// ── CSS classes for classList assertions ──────────────────────────
+const CSS = {
+  STAR_ACTIVE: 'text-yellow-500',
+  STAR_INACTIVE: 'text-gray-600',
+  BTN_DISABLED_BG: 'bg-gray-700',
+  BTN_DISABLED_CURSOR: 'cursor-not-allowed',
+  BTN_ACTIVE_BG: 'bg-yellow-500',
+} as const;
+
 describe('ReviewPage', () => {
   let component: ReviewPage;
   let fixture: ComponentFixture<ReviewPage>;
@@ -71,7 +98,7 @@ describe('ReviewPage', () => {
 
   /** Hits the Nth driver star in the DOM (1-based) */
   function clickDriverStar(n: number): void {
-    const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+    const driverSection = fixture.debugElement.query(By.css(SEL.DRIVER_STARS));
     const starButtons = driverSection.queryAll(By.css('button'));
     starButtons[n - 1].nativeElement.click();
     fixture.detectChanges();
@@ -79,7 +106,7 @@ describe('ReviewPage', () => {
 
   /** Hits the Nth vehicle star in the DOM (1-based) */
   function clickVehicleStar(n: number): void {
-    const vehicleSection = fixture.debugElement.query(By.css('[data-testid="vehicle-stars"]'));
+    const vehicleSection = fixture.debugElement.query(By.css(SEL.VEHICLE_STARS));
     const starButtons = vehicleSection.queryAll(By.css('button'));
     starButtons[n - 1].nativeElement.click();
     fixture.detectChanges();
@@ -157,7 +184,7 @@ describe('ReviewPage', () => {
       fixture.detectChanges();
       // Component is still loading because the observable hasn't emitted
       expect(component.isLoading).toBeTrue();
-      const loadingEl = fixture.debugElement.query(By.css('.animate-spin'));
+      const loadingEl = fixture.debugElement.query(By.css(SEL.LOADING_SPINNER));
       expect(loadingEl).toBeTruthy();
     });
 
@@ -195,7 +222,7 @@ describe('ReviewPage', () => {
     });
 
     it('should set driverRating when a driver star button is clicked', () => {
-      const driverStarSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const driverStarSection = fixture.debugElement.query(By.css(SEL.DRIVER_STARS));
       const starButtons = driverStarSection.queryAll(By.css('button'));
       expect(starButtons.length).toBe(5);
 
@@ -205,7 +232,7 @@ describe('ReviewPage', () => {
     });
 
     it('should set vehicleRating when a vehicle star button is clicked', () => {
-      const vehicleStarSection = fixture.debugElement.query(By.css('[data-testid="vehicle-stars"]'));
+      const vehicleStarSection = fixture.debugElement.query(By.css(SEL.VEHICLE_STARS));
       const starButtons = vehicleStarSection.queryAll(By.css('button'));
       expect(starButtons.length).toBe(5);
 
@@ -224,27 +251,27 @@ describe('ReviewPage', () => {
 
     it('should apply yellow color class to selected driver stars', () => {
       clickDriverStar(3);
-      const driverStarSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const driverStarSection = fixture.debugElement.query(By.css(SEL.DRIVER_STARS));
       const stars = driverStarSection.queryAll(By.css('svg'));
 
       // First 3 stars should be yellow, last 2 should be gray
-      expect(stars[0].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[1].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[2].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[3].nativeElement.classList.contains('text-gray-600')).toBeTrue();
-      expect(stars[4].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+      expect(stars[0].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[1].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[2].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[3].nativeElement.classList.contains(CSS.STAR_INACTIVE)).toBeTrue();
+      expect(stars[4].nativeElement.classList.contains(CSS.STAR_INACTIVE)).toBeTrue();
     });
 
     it('should display "X of 5 stars" text after rating', () => {
       clickDriverStar(4);
-      const ratingText = fixture.debugElement.queryAll(By.css('.text-yellow-500.text-xs'));
+      const ratingText = fixture.debugElement.queryAll(By.css(SEL.RATING_FEEDBACK));
       expect(ratingText.length).toBeGreaterThan(0);
       expect(ratingText[0].nativeElement.textContent).toContain('4 of 5 stars');
     });
 
     it('should display "Click to rate" when rating is 0', () => {
       fixture.detectChanges();
-      const clickToRate = fixture.debugElement.queryAll(By.css('.text-gray-500.text-xs.text-center'));
+      const clickToRate = fixture.debugElement.queryAll(By.css(SEL.CLICK_TO_RATE));
       const clickToRateTexts = clickToRate.filter(
         el => el.nativeElement.textContent.includes('Click to rate')
       );
@@ -282,7 +309,7 @@ describe('ReviewPage', () => {
     it('should disable submit button when ratings are 0', () => {
       // Ratings default to 0 — no clicks needed
       fixture.detectChanges();
-      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      const submitBtn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
       expect(submitBtn).toBeTruthy();
       expect(submitBtn.nativeElement.disabled).toBeTrue();
     });
@@ -290,9 +317,9 @@ describe('ReviewPage', () => {
     it('should apply disabled styling (bg-gray-700) when canSubmit is false', () => {
       // Ratings default to 0 — no clicks needed
       fixture.detectChanges();
-      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
-      expect(submitBtn.nativeElement.classList.contains('bg-gray-700')).toBeTrue();
-      expect(submitBtn.nativeElement.classList.contains('cursor-not-allowed')).toBeTrue();
+      const submitBtn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
+      expect(submitBtn.nativeElement.classList.contains(CSS.BTN_DISABLED_BG)).toBeTrue();
+      expect(submitBtn.nativeElement.classList.contains(CSS.BTN_DISABLED_CURSOR)).toBeTrue();
     });
 
     it('should show validation message when submit is disabled', () => {
@@ -332,15 +359,15 @@ describe('ReviewPage', () => {
     it('should enable submit button when both ratings are set', () => {
       clickDriverStar(4);
       clickVehicleStar(3);
-      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      const submitBtn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
       expect(submitBtn.nativeElement.disabled).toBeFalse();
     });
 
     it('should apply active styling (bg-yellow-500) when canSubmit is true', () => {
       clickDriverStar(4);
       clickVehicleStar(3);
-      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
-      expect(submitBtn.nativeElement.classList.contains('bg-yellow-500')).toBeTrue();
+      const submitBtn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
+      expect(submitBtn.nativeElement.classList.contains(CSS.BTN_ACTIVE_BG)).toBeTrue();
     });
 
     it('should call submitReviewWithToken with correct arguments on submit', () => {
@@ -411,7 +438,7 @@ describe('ReviewPage', () => {
       component.comment = 'Excellent';
       fixture.detectChanges();
 
-      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      const submitBtn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
       submitBtn.nativeElement.click();
       fixture.detectChanges();
 
@@ -479,7 +506,7 @@ describe('ReviewPage', () => {
       );
       component.submitReview();
       fixture.detectChanges();
-      const errorEl = fixture.debugElement.query(By.css('.text-red-400'));
+      const errorEl = fixture.debugElement.query(By.css(SEL.ERROR_TEXT));
       expect(errorEl).toBeTruthy();
       expect(errorEl.nativeElement.textContent).toContain('already submitted');
     });
@@ -602,14 +629,14 @@ describe('ReviewPage', () => {
       expect(component.vehicleRating).toBe(5);
 
       // Type comment
-      const textarea = fixture.debugElement.query(By.css('[data-testid="comment-input"]')).nativeElement;
+      const textarea = fixture.debugElement.query(By.css(SEL.COMMENT_INPUT)).nativeElement;
       textarea.value = 'Wonderful ride, very smooth!';
       textarea.dispatchEvent(new Event('input'));
       tick();
       fixture.detectChanges();
 
       // Click submit
-      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      const submitBtn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
       expect(submitBtn.nativeElement.disabled).toBeFalse();
       submitBtn.nativeElement.click();
       fixture.detectChanges();
@@ -660,7 +687,7 @@ describe('ReviewPage', () => {
     });
 
     it('should display the review form in authenticated mode', () => {
-      const form = fixture.debugElement.query(By.css('[data-testid="review-form"]'));
+      const form = fixture.debugElement.query(By.css(SEL.REVIEW_FORM));
       expect(form).toBeTruthy();
     });
 
@@ -758,13 +785,13 @@ describe('ReviewPage', () => {
       clickDriverStar(3);
       clickVehicleStar(5);
 
-      const textarea = fixture.debugElement.query(By.css('[data-testid="comment-input"]')).nativeElement;
+      const textarea = fixture.debugElement.query(By.css(SEL.COMMENT_INPUT)).nativeElement;
       textarea.value = 'Smooth ride!';
       textarea.dispatchEvent(new Event('input'));
       tick();
       fixture.detectChanges();
 
-      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      const submitBtn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
       submitBtn.nativeElement.click();
       fixture.detectChanges();
 
@@ -793,22 +820,22 @@ describe('ReviewPage', () => {
     });
 
     it('should highlight driver stars up to the hovered star', () => {
-      const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const driverSection = fixture.debugElement.query(By.css(SEL.DRIVER_STARS));
       const starButtons = driverSection.queryAll(By.css('button'));
 
       starButtons[2].nativeElement.dispatchEvent(new Event('mouseenter'));
       fixture.detectChanges();
 
       const stars = driverSection.queryAll(By.css('svg'));
-      expect(stars[0].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[1].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[2].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[3].nativeElement.classList.contains('text-gray-600')).toBeTrue();
-      expect(stars[4].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+      expect(stars[0].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[1].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[2].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[3].nativeElement.classList.contains(CSS.STAR_INACTIVE)).toBeTrue();
+      expect(stars[4].nativeElement.classList.contains(CSS.STAR_INACTIVE)).toBeTrue();
     });
 
     it('should remove driver hover highlight on mouseleave', () => {
-      const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const driverSection = fixture.debugElement.query(By.css(SEL.DRIVER_STARS));
       const starButtons = driverSection.queryAll(By.css('button'));
 
       starButtons[2].nativeElement.dispatchEvent(new Event('mouseenter'));
@@ -818,12 +845,12 @@ describe('ReviewPage', () => {
 
       // No rating set, all should be gray
       const stars = driverSection.queryAll(By.css('svg'));
-      expect(stars[0].nativeElement.classList.contains('text-gray-600')).toBeTrue();
-      expect(stars[2].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+      expect(stars[0].nativeElement.classList.contains(CSS.STAR_INACTIVE)).toBeTrue();
+      expect(stars[2].nativeElement.classList.contains(CSS.STAR_INACTIVE)).toBeTrue();
     });
 
     it('should highlight all 5 vehicle stars when hovering the last one', () => {
-      const vehicleSection = fixture.debugElement.query(By.css('[data-testid="vehicle-stars"]'));
+      const vehicleSection = fixture.debugElement.query(By.css(SEL.VEHICLE_STARS));
       const starButtons = vehicleSection.queryAll(By.css('button'));
 
       starButtons[4].nativeElement.dispatchEvent(new Event('mouseenter'));
@@ -831,14 +858,14 @@ describe('ReviewPage', () => {
 
       const stars = vehicleSection.queryAll(By.css('svg'));
       for (let i = 0; i < 5; i++) {
-        expect(stars[i].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
+        expect(stars[i].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
       }
     });
 
     it('should override existing rating with hover highlight', () => {
       // Set rating to 2, then hover over star 4
       clickDriverStar(2);
-      const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const driverSection = fixture.debugElement.query(By.css(SEL.DRIVER_STARS));
       const starButtons = driverSection.queryAll(By.css('button'));
 
       starButtons[3].nativeElement.dispatchEvent(new Event('mouseenter'));
@@ -846,14 +873,14 @@ describe('ReviewPage', () => {
 
       const stars = driverSection.queryAll(By.css('svg'));
       // Hover (4) overrides rating (2), so first 4 stars should be yellow
-      expect(stars[0].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[3].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[4].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+      expect(stars[0].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[3].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[4].nativeElement.classList.contains(CSS.STAR_INACTIVE)).toBeTrue();
     });
 
     it('should revert to rating highlight after mouseleave', () => {
       clickDriverStar(2);
-      const driverSection = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const driverSection = fixture.debugElement.query(By.css(SEL.DRIVER_STARS));
       const starButtons = driverSection.queryAll(By.css('button'));
 
       starButtons[3].nativeElement.dispatchEvent(new Event('mouseenter'));
@@ -863,9 +890,9 @@ describe('ReviewPage', () => {
 
       // Should revert to rating of 2
       const stars = driverSection.queryAll(By.css('svg'));
-      expect(stars[0].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[1].nativeElement.classList.contains('text-yellow-500')).toBeTrue();
-      expect(stars[2].nativeElement.classList.contains('text-gray-600')).toBeTrue();
+      expect(stars[0].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[1].nativeElement.classList.contains(CSS.STAR_ACTIVE)).toBeTrue();
+      expect(stars[2].nativeElement.classList.contains(CSS.STAR_INACTIVE)).toBeTrue();
     });
   });
 
@@ -914,7 +941,7 @@ describe('ReviewPage', () => {
       component.submitReview();
       fixture.detectChanges();
 
-      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      const submitBtn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
       expect(submitBtn.nativeElement.textContent).toContain('Submitting...');
       expect(component.isSubmitting).toBeTrue();
     });
@@ -929,7 +956,7 @@ describe('ReviewPage', () => {
       component.submitReview();
       fixture.detectChanges();
 
-      const submitBtn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      const submitBtn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
       expect(submitBtn.nativeElement.disabled).toBeTrue();
     });
 
@@ -943,7 +970,7 @@ describe('ReviewPage', () => {
       component.submitReview();
       fixture.detectChanges();
 
-      const spinner = fixture.debugElement.query(By.css('[data-testid="submit-button"] .animate-spin'));
+      const spinner = fixture.debugElement.query(By.css(SEL.SUBMIT_SPINNER));
       expect(spinner).toBeTruthy();
     });
 
@@ -957,7 +984,7 @@ describe('ReviewPage', () => {
       component.submitReview();
       fixture.detectChanges();
 
-      const validationMsg = fixture.debugElement.query(By.css('[data-testid="validation-message"]'));
+      const validationMsg = fixture.debugElement.query(By.css(SEL.VALIDATION_MSG));
       expect(validationMsg).toBeNull();
     });
   });
@@ -973,45 +1000,45 @@ describe('ReviewPage', () => {
     });
 
     it('should render the review-form container', () => {
-      expect(fixture.debugElement.query(By.css('[data-testid="review-form"]'))).toBeTruthy();
+      expect(fixture.debugElement.query(By.css(SEL.REVIEW_FORM))).toBeTruthy();
     });
 
     it('should render driver-rating-section with label "Rate the Driver"', () => {
-      const section = fixture.debugElement.query(By.css('[data-testid="driver-rating-section"]'));
+      const section = fixture.debugElement.query(By.css(SEL.DRIVER_RATING_SECTION));
       expect(section).toBeTruthy();
       expect(section.nativeElement.textContent).toContain('Rate the Driver');
     });
 
     it('should render vehicle-rating-section with label "Rate the Vehicle"', () => {
-      const section = fixture.debugElement.query(By.css('[data-testid="vehicle-rating-section"]'));
+      const section = fixture.debugElement.query(By.css(SEL.VEHICLE_RATING_SECTION));
       expect(section).toBeTruthy();
       expect(section.nativeElement.textContent).toContain('Rate the Vehicle');
     });
 
     it('should render exactly 5 driver star buttons', () => {
-      const stars = fixture.debugElement.query(By.css('[data-testid="driver-stars"]'));
+      const stars = fixture.debugElement.query(By.css(SEL.DRIVER_STARS));
       expect(stars.queryAll(By.css('button')).length).toBe(5);
     });
 
     it('should render exactly 5 vehicle star buttons', () => {
-      const stars = fixture.debugElement.query(By.css('[data-testid="vehicle-stars"]'));
+      const stars = fixture.debugElement.query(By.css(SEL.VEHICLE_STARS));
       expect(stars.queryAll(By.css('button')).length).toBe(5);
     });
 
     it('should render comment textarea with placeholder "Share your experience..."', () => {
-      const textarea = fixture.debugElement.query(By.css('[data-testid="comment-input"]'));
+      const textarea = fixture.debugElement.query(By.css(SEL.COMMENT_INPUT));
       expect(textarea).toBeTruthy();
       expect(textarea.nativeElement.getAttribute('placeholder')).toBe('Share your experience...');
     });
 
     it('should render submit button with text "Submit Review"', () => {
-      const btn = fixture.debugElement.query(By.css('[data-testid="submit-button"]'));
+      const btn = fixture.debugElement.query(By.css(SEL.SUBMIT_BTN));
       expect(btn).toBeTruthy();
       expect(btn.nativeElement.textContent).toContain('Submit Review');
     });
 
     it('should show validation message when form is incomplete', () => {
-      const msg = fixture.debugElement.query(By.css('[data-testid="validation-message"]'));
+      const msg = fixture.debugElement.query(By.css(SEL.VALIDATION_MSG));
       expect(msg).toBeTruthy();
       expect(msg.nativeElement.textContent).toContain('Please rate both the driver and vehicle');
     });
@@ -1019,20 +1046,20 @@ describe('ReviewPage', () => {
     it('should hide validation message once both ratings are set', () => {
       clickDriverStar(3);
       clickVehicleStar(2);
-      const msg = fixture.debugElement.query(By.css('[data-testid="validation-message"]'));
+      const msg = fixture.debugElement.query(By.css(SEL.VALIDATION_MSG));
       expect(msg).toBeNull();
     });
 
     it('should show error message container when error is set', () => {
       component.error = 'Something went wrong';
       fixture.detectChanges();
-      const errorEl = fixture.debugElement.query(By.css('[data-testid="error-message"]'));
+      const errorEl = fixture.debugElement.query(By.css(SEL.ERROR_MSG));
       expect(errorEl).toBeTruthy();
       expect(errorEl.nativeElement.textContent).toContain('Something went wrong');
     });
 
     it('should not show error message container when no error', () => {
-      const errorEl = fixture.debugElement.query(By.css('[data-testid="error-message"]'));
+      const errorEl = fixture.debugElement.query(By.css(SEL.ERROR_MSG));
       expect(errorEl).toBeNull();
     });
   });

@@ -264,7 +264,7 @@ public class ReviewTest extends BaseTest {
         reviewPage.waitForPageToLoad();
 
         assertTrue(reviewPage.isTokenExpiredVisible());
-        assertEquals("Link Expired", reviewPage.getPageHeadingText());
+        assertEquals("Link Expired", reviewPage.getTokenExpiredHeadingText());
     }
 
     @Test
@@ -277,7 +277,7 @@ public class ReviewTest extends BaseTest {
         reviewPage.waitForPageToLoad();
 
         assertTrue(reviewPage.isTokenExpiredVisible());
-        assertEquals("Link Expired", reviewPage.getPageHeadingText());
+        assertEquals("Link Expired", reviewPage.getTokenExpiredHeadingText());
     }
 
     @Test
@@ -337,7 +337,7 @@ public class ReviewTest extends BaseTest {
 
         // Even if the token is valid, the business logic should block this.
         assertTrue(reviewPage.isTokenExpiredVisible());
-        assertEquals("Link Expired", reviewPage.getPageHeadingText());
+        assertEquals("Link Expired", reviewPage.getTokenExpiredHeadingText());
     }
 
     @AfterAll
