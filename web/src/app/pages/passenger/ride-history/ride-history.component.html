@@ -85,10 +85,10 @@
     </div>
 
     <!-- The expanded detail view for a specific ride. Shows the map and extra info. -->
-    <div *ngIf="selectedRide" class="mb-6 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+    <div *ngIf="selectedRide" class="mb-6 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-lg" data-testid="ride-detail-panel">
       <div class="p-4 border-b border-gray-800 flex flex-col sm:flex-row justify-between items-center bg-gray-800/50 gap-4">
         <div class="flex items-center gap-3">
-          <h3 class="text-lg font-semibold text-white">Ride Details</h3>
+          <h3 class="text-lg font-semibold text-white" data-testid="ride-detail-heading">Ride Details</h3>
 
           <span class="text-xs px-2 py-1 rounded border" [ngClass]="getStatusClass(selectedRide.status)">
             {{ formatStatus(selectedRide.status) }}
@@ -103,7 +103,7 @@
           </button>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button *ngIf="canReviewSelectedRide()" (click)="onReviewRide()" class="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-400 transition-colors">Leave a Review</button>
+          <button *ngIf="canReviewSelectedRide()" (click)="onReviewRide()" data-testid="leave-review-button" class="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-400 transition-colors">Leave a Review</button>
           <button (click)="orderAgain()" class="px-3 py-1.5 bg-yellow-500 text-black rounded-lg text-sm font-medium hover:bg-yellow-400 transition-colors">Order Again</button>
           <button (click)="scheduleLater()" class="px-3 py-1.5 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">Schedule Later</button>
           <button (click)="addToFavorites()" class="px-3 py-1.5 border border-yellow-500 text-yellow-500 rounded-lg text-sm font-medium hover:bg-yellow-500/10 transition-colors flex items-center gap-1">
@@ -321,7 +321,7 @@
           </thead>
           <tbody>
             <tr *ngIf="rides.length === 0">
-              <td colspan="7" class="p-8 text-center text-gray-500">
+              <td colspan="7" class="p-8 text-center text-gray-500" data-testid="no-rides-message">
                 No rides found
               </td>
             </tr>
