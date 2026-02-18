@@ -36,6 +36,9 @@ import com.example.mobile.utils.SharedPreferencesManager;
 
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.gson.Gson;
 
 import org.osmdroid.config.Configuration;
 
@@ -245,15 +248,8 @@ public class MainActivity extends AppCompatActivity {
 
                 // Handle logout
                 if (itemId == R.id.nav_logout) {
-                    stopActiveRidePolling();
-                    AppNotificationManager.getInstance().stop();
-                    NotificationStore.getInstance().clearAll();
-                    currentActiveRideId = null;
-                    currentRole = null;
-                    sharedPreferencesManager.logout();
-                    NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-                    navController.navigate(R.id.nav_guest_home);
                     closeDrawer();
+                    performLogout();
                     return true;
                 }
 
@@ -451,6 +447,99 @@ public class MainActivity extends AppCompatActivity {
         if (drawer != null) {
             drawer.open();
         }
+    }
+
+    // ======================== Logout ========================
+
+    /**
+     * Performs logout with backend call.
+     * For drivers: calls backend first — if 409 (active ride), shows error dialog.
+     * For others: calls backend then clears local state.
+     */
+    private void performLogout() {
+        String token = sharedPreferencesManager.getToken();
+        String role = sharedPreferencesManager.getUserRole();
+
+        if (token == null || token.isEmpty()) {
+            doLocalLogout();
+            return;
+        }
+
+        String authHeader = "Bearer " + token;
+
+        ClientUtils.userService.logout(authHeader).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
+                if (response.isSuccessful()) {
+                    doLocalLogout();
+                } else if (response.code() == 409) {
+                    // Driver has active ride or scheduled rides — cannot log out
+                    String errorMsg = parseLogoutError(response);
+                    showCannotLogoutDialog(errorMsg);
+                } else {
+                    // Other error — still log out locally
+                    doLocalLogout();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
+                Log.e(TAG, "Logout API call failed", t);
+                // Network error — still log out locally
+                doLocalLogout();
+            }
+        });
+    }
+
+    /**
+     * Clears local session state and navigates to guest home.
+     */
+    private void doLocalLogout() {
+        stopActiveRidePolling();
+        AppNotificationManager.getInstance().stop();
+        NotificationStore.getInstance().clearAll();
+        currentActiveRideId = null;
+        currentRole = null;
+        sharedPreferencesManager.logout();
+        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+        navController.navigate(R.id.nav_guest_home);
+    }
+
+    /**
+     * Parses the error message from a failed logout response (409 Conflict).
+     */
+    private String parseLogoutError(Response<?> response) {
+        try {
+            if (response.errorBody() != null) {
+                String errorBody = response.errorBody().string();
+                Gson gson = ClientUtils.getGson();
+                com.example.mobile.models.ErrorResponse err =
+                        gson.fromJson(errorBody, com.example.mobile.models.ErrorResponse.class);
+                if (err != null && err.getMessage() != null && !err.getMessage().isEmpty()) {
+                    return err.getMessage();
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to parse logout error", e);
+        }
+        return "You cannot log out because you are currently on a ride.";
+    }
+
+    /**
+     * Shows a dialog when the driver cannot log out (active ride / scheduled rides).
+     */
+    private void showCannotLogoutDialog(String message) {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Cannot Logout")
+                .setMessage(message)
+                .setPositiveButton("Go to Dashboard", (dialog, which) -> {
+                    dialog.dismiss();
+                    NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+                    navController.navigate(R.id.nav_driver_dashboard);
+                })
+                .setNegativeButton("Close", (dialog, which) -> dialog.dismiss())
+                .setCancelable(true)
+                .show();
     }
 
     // ======================== Notification Permission ========================

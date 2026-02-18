@@ -129,6 +129,7 @@ public class DriverDashboardFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (mapView != null) mapView.onResume();
+        loadDriverStatus();
         startPolling();
     }
 
