@@ -94,8 +94,41 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String body = data.getOrDefault("body", "");
         String type = data.getOrDefault("type", "GENERAL");
         String rideIdStr = data.get("rideId");
-
+        String notificationIdStr = data.get("notificationId");
         Log.d(TAG, "FCM data message received — type=" + type + ", rideId=" + rideIdStr);
+
+        // Support and ride-status notifications are handled by AppNotificationManager
+        // via WebSocket when the manager is active AND the WebSocket is actually connected.
+        // The personal notification queue (/user/{id}/queue/notifications) now handles
+        // RIDE_CREATED, RIDE_INVITE, DRIVER_ASSIGNMENT, and ride statuses when not
+        // subscribed to the specific ride topic. Skip all of these to avoid duplicates.
+        if (com.example.mobile.utils.AppNotificationManager.getInstance().isStarted()
+                && com.example.mobile.utils.WebSocketManager.getInstance().isConnected()) {
+
+            switch (type) {
+                case "SUPPORT":
+                    // Support is always handled via WS user topic
+                    Log.d(TAG, "Skipping SUPPORT FCM \u2014 handled by WebSocket");
+                    return;
+                case "RIDE_CREATED":
+                case "RIDE_INVITE":
+                case "DRIVER_ASSIGNMENT":
+                    // Handled by personal notification queue subscription
+                    Log.d(TAG, "Skipping " + type + " FCM \u2014 handled by personal queue WebSocket");
+                    return;
+                case "RIDE_STATUS":
+                case "RIDE_FINISHED":
+                case "RIDE_CANCELLED":
+                case "STOP_COMPLETED":
+                    // Handled by ride topic when subscribed, or personal queue otherwise
+                    Log.d(TAG, "Skipping " + type + " FCM \u2014 handled by WebSocket");
+                    return;
+                case "PANIC":
+                    // Handled by /topic/panic subscription (admin)
+                    Log.d(TAG, "Skipping PANIC FCM \u2014 handled by WebSocket");
+                    return;
+            }
+        }
 
         // Determine channel and priority based on notification type
         String channelId;
@@ -108,7 +141,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             case "RIDE_STATUS":
             case "RIDE_INVITE":
             case "RIDE_FINISHED":
+            case "RIDE_CANCELLED":
+            case "RIDE_CREATED":
             case "DRIVER_ASSIGNMENT":
+            case "STOP_COMPLETED":
                 channelId = NotificationHelper.CHANNEL_RIDE_UPDATES;
                 priority = NotificationCompat.PRIORITY_HIGH;
                 break;
@@ -125,6 +161,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         // Build deep-link intent
         Intent intent = buildDeepLinkIntent(type, rideIdStr);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        // Pass backend notification ID so it can be deleted when the user taps
+        if (notificationIdStr != null && !notificationIdStr.isEmpty()) {
+            try {
+                intent.putExtra("backendNotificationId", Long.parseLong(notificationIdStr));
+            } catch (NumberFormatException ignored) {}
+        }
 
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this,
@@ -153,15 +195,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             builder.setStyle(new NotificationCompat.BigTextStyle().bigText(body));
         }
 
-        // Display the system notification only when the app is in the background.
-        // When in the foreground, the in-app notification store + sound is enough.
-        if (!AppLifecycleTracker.isAppInForeground()) {
-            try {
-                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-                notificationManager.notify(notificationIdCounter.incrementAndGet(), builder.build());
-            } catch (SecurityException e) {
-                Log.w(TAG, "POST_NOTIFICATIONS permission not granted — cannot show notification");
-            }
+        // Always display the Android system notification so the user sees it
+        // regardless of whether the app is in the foreground or background.
+        try {
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+            notificationManager.notify(notificationIdCounter.incrementAndGet(), builder.build());
+        } catch (SecurityException e) {
+            Log.w(TAG, "POST_NOTIFICATIONS permission not granted — cannot show notification");
         }
 
         // Feed in-app notification store so bell badge and panel stay in sync
@@ -182,6 +222,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             case "DRIVER_ASSIGNMENT":
                 notifType = AppNotification.Type.DRIVER_ASSIGNED;
                 break;
+            case "STOP_COMPLETED":
+                notifType = AppNotification.Type.STOP_COMPLETED;
+                break;
             case "RIDE_STATUS":
             case "RIDE_INVITE":
                 notifType = AppNotification.Type.RIDE_STATUS;
@@ -194,6 +237,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 break;
         }
         AppNotification appNotif = new AppNotification(notifType, title, body);
+        // Set backend notification ID so it can be deleted when clicked in notification panel
+        if (notificationIdStr != null && !notificationIdStr.isEmpty()) {
+            try {
+                appNotif.setBackendId(Long.parseLong(notificationIdStr));
+            } catch (NumberFormatException ignored) {}
+        }
         if (rideIdStr != null && !rideIdStr.isEmpty()) {
             try {
                 long parsedId = Long.parseLong(rideIdStr);

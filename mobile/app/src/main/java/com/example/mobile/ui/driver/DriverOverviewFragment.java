@@ -1,6 +1,11 @@
 package com.example.mobile.ui.driver;
 
 import android.app.DatePickerDialog;
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -41,7 +46,7 @@ import retrofit2.Response;
 
 import com.example.mobile.utils.NavbarHelper;
 
-public class DriverOverviewFragment extends Fragment {
+public class DriverOverviewFragment extends Fragment implements SensorEventListener {
 
     private static final String TAG = "DriverOverview";
     private FragmentDriverOverviewBinding binding;
@@ -95,6 +100,13 @@ public class DriverOverviewFragment extends Fragment {
 
     private final SimpleDateFormat displayFormat = new SimpleDateFormat("MMM d, yyyy", Locale.US);
 
+    // Shake sensor
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private long lastShakeTime = 0;
+    private static final int SHAKE_THRESHOLD = 12;
+    private static final int SHAKE_COOLDOWN_MS = 1000;
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentDriverOverviewBinding.inflate(inflater, container, false);
@@ -113,6 +125,7 @@ public class DriverOverviewFragment extends Fragment {
         setupSortDirection();
         setupShowMore(root);
         setupListView();
+        setupShakeSensor();
         
         loadDriverStats();
         loadStatsRides();
@@ -556,6 +569,69 @@ public class DriverOverviewFragment extends Fragment {
         if (avgDistanceView != null) {
             double avgDist = finishedRides > 0 ? totalDistance / finishedRides : 0;
             avgDistanceView.setText(String.format(Locale.US, "Avg %.1f km/ride", avgDist));
+        }
+    }
+
+    // ==================== SHAKE SENSOR ====================
+
+    private void setupShakeSensor() {
+        sensorManager = (SensorManager) requireContext().getSystemService(Context.SENSOR_SERVICE);
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        }
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) return;
+
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
+
+        double acceleration = Math.sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH;
+
+        if (acceleration > SHAKE_THRESHOLD) {
+            long now = System.currentTimeMillis();
+            if (now - lastShakeTime > SHAKE_COOLDOWN_MS) {
+                lastShakeTime = now;
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        // Force sort field to Start Time and toggle direction
+                        sortField = "startTime";
+                        if (spinnerSort != null) {
+                            spinnerSort.setSelection(0); // "Start Time" is index 0
+                        }
+                        sortAsc = !sortAsc;
+                        updateSortDirectionUI();
+                        loadRides();
+                        Toast.makeText(getContext(),
+                                "Sort by start time: " + (sortAsc ? "Oldest first" : "Newest first"),
+                                Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // Not needed
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (sensorManager != null && accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(this);
         }
     }
 

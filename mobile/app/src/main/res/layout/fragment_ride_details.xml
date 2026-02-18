@@ -48,7 +48,7 @@
             app:cardCornerRadius="12dp"
             app:cardElevation="0dp">
 
-            <org.osmdroid.views.MapView
+            <com.example.mobile.ui.maps.TouchableMapView
                 android:id="@+id/map_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"

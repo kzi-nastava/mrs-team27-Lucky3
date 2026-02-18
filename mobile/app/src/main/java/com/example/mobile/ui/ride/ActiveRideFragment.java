@@ -24,6 +24,7 @@ import androidx.navigation.Navigation;
 import com.example.mobile.R;
 import com.example.mobile.models.LocationDto;
 import com.example.mobile.models.RideResponse;
+import com.example.mobile.models.SimulationLockResponse;
 import com.example.mobile.models.VehicleLocationResponse;
 import com.example.mobile.ui.maps.RideMapRenderer;
 import com.example.mobile.ui.ride.ReportInconsistencyDialog;
@@ -43,10 +44,14 @@ import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -122,6 +127,20 @@ public class ActiveRideFragment extends Fragment {
     // Last known vehicle position for stop ride
     private volatile double lastVehicleLatitude = 0;
     private volatile double lastVehicleLongitude = 0;
+
+    // ── Vehicle simulation (same principle as web frontend) ──
+    // Only one client (web tab or mobile) drives the vehicle at a time via a backend lock.
+    private final String simulationSessionId = UUID.randomUUID().toString();
+    private volatile boolean isSimulationLeader = false;
+    private volatile long simulatedVehicleId = -1;
+    private final Handler simulationHandler = new Handler(Looper.getMainLooper());
+    private boolean simulationRunning = false;
+    private boolean lockRefreshRunning = false;
+    private boolean waitingForNewBlueLine = false;
+    private final Random simRandom = new Random();
+
+    // The blue approach route polyline points — used by advanceVehicle() to walk along
+    private volatile List<GeoPoint> approachRoutePoints = new ArrayList<>();
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -595,6 +614,20 @@ public class ActiveRideFragment extends Fragment {
 
                     for (VehicleLocationResponse v : vehicles) {
                         if (driverId.equals(v.getDriverId())) {
+                            // Track vehicleId and try to become simulation leader
+                            if (simulatedVehicleId < 0 && v.getId() != null) {
+                                simulatedVehicleId = v.getId();
+                                tryBecomeSimulationLeader();
+                            }
+
+                            // If we're the simulation leader, skip WebSocket-driven map/route
+                            // updates — advanceVehicle() handles rendering directly
+                            if (isSimulationLeader) {
+                                lastVehicleLatitude = v.getLatitude();
+                                lastVehicleLongitude = v.getLongitude();
+                                break;
+                            }
+
                             lastVehicleLatitude = v.getLatitude();
                             lastVehicleLongitude = v.getLongitude();
                             updateVehicleOnMap(v);
@@ -883,10 +916,18 @@ public class ActiveRideFragment extends Fragment {
 
                         for (VehicleLocationResponse v : response.body()) {
                             if (driverId.equals(v.getDriverId())) {
+                                // Track vehicleId for simulation
+                                if (simulatedVehicleId < 0 && v.getId() != null) {
+                                    simulatedVehicleId = v.getId();
+                                    tryBecomeSimulationLeader();
+                                }
+
                                 lastVehicleLatitude = v.getLatitude();
                                 lastVehicleLongitude = v.getLongitude();
-                                updateVehicleOnMap(v);
-                                drawRoutes(v);
+                                if (!isSimulationLeader) {
+                                    updateVehicleOnMap(v);
+                                    drawRoutes(v);
+                                }
                                 // Only driver auto-completes stops and checks finish ride
                                 if ("DRIVER".equals(preferencesManager.getUserRole())) {
                                     checkStopCompletion(v);
@@ -992,6 +1033,7 @@ public class ActiveRideFragment extends Fragment {
 
                 double blueDistKm = 0;
                 Polyline blueOverlay = null;
+                List<GeoPoint> blueRouteGeoPoints = new ArrayList<>();
                 if (blueWaypoints.size() >= 2) {
                     Road blueRoad = roadManager.getRoad(blueWaypoints);
                     if (blueRoad.mStatus == Road.STATUS_OK) {
@@ -999,6 +1041,8 @@ public class ActiveRideFragment extends Fragment {
                         blueOverlay.setColor(Color.parseColor(panicActivated ? "#ef4444" : "#3b82f6"));
                         blueOverlay.setWidth(10f);
                         blueDistKm = blueRoad.mLength;
+                        // Capture the route geometry for vehicle simulation
+                        blueRouteGeoPoints = new ArrayList<>(blueOverlay.getPoints());
                     }
                 }
 
@@ -1034,6 +1078,7 @@ public class ActiveRideFragment extends Fragment {
 
                 final Polyline finalBlue = blueOverlay;
                 final Polyline finalYellow = yellowOverlay;
+                final List<GeoPoint> capturedBluePoints = blueRouteGeoPoints;
 
                 new Handler(Looper.getMainLooper()).post(() -> {
                     if (mapView == null || !isAdded()) return;
@@ -1051,6 +1096,10 @@ public class ActiveRideFragment extends Fragment {
                     if (finalBlue != null) {
                         approachRoute = finalBlue;
                         mapView.getOverlays().add(approachRoute);
+
+                        // Store blue route points for simulation; clear waiting flag
+                        approachRoutePoints = capturedBluePoints;
+                        waitingForNewBlueLine = false;
                     }
 
                     // Ensure vehicle marker stays on top of route overlays
@@ -1138,12 +1187,26 @@ public class ActiveRideFragment extends Fragment {
         clearRouteOverlays();
         placeRideMarkers();
         yellowRouteNeedsRedraw = true;
+        waitingForNewBlueLine = true; // Pause simulation until new blue route is computed
 
         // Rebuild route stops UI so completed dot turns green
         buildRouteStops();
 
         // Update finish ride button (may become enabled now)
         updateFinishRideButton();
+
+        // Trigger route redraw from current vehicle position so the new blue line
+        // is computed. Without this, the simulation leader would stay paused forever
+        // because advanceVehicle() returns early while waitingForNewBlueLine is true,
+        // and the WebSocket handler skips drawRoutes() for the leader.
+        if (lastVehicleLatitude != 0 || lastVehicleLongitude != 0) {
+            VehicleLocationResponse currentPos = new VehicleLocationResponse();
+            currentPos.setLatitude(lastVehicleLatitude);
+            currentPos.setLongitude(lastVehicleLongitude);
+            currentPos.setDriverId(ride.getDriverId() != null ? ride.getDriverId()
+                    : (ride.getDriver() != null ? ride.getDriver().getId() : null));
+            drawRoutes(currentPos);
+        }
     }
 
     private static double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
@@ -1636,11 +1699,271 @@ public class ActiveRideFragment extends Fragment {
         }
     }
 
+    // ========== Vehicle Simulation (follows blue line) ==========
+    // Mirrors the web frontend approach: one client (web tab OR mobile)
+    // acquires a backend lock and drives the vehicle along the approach route
+    // at 40-60 m every 2 seconds. Other clients see the movement via WebSocket.
+
+    /**
+     * Try to acquire the simulation lock from the backend.
+     * Only one client should drive the vehicle per ride.
+     */
+    private void tryBecomeSimulationLeader() {
+        tryBecomeSimulationLeader(0);
+    }
+
+    private void tryBecomeSimulationLeader(int retryCount) {
+        if (simulatedVehicleId < 0) return;
+        String token = "Bearer " + preferencesManager.getToken();
+
+        Map<String, String> body = new HashMap<>();
+        body.put("sessionId", simulationSessionId);
+
+        ClientUtils.vehicleService.acquireSimulationLock(simulatedVehicleId, body, token)
+                .enqueue(new Callback<SimulationLockResponse>() {
+                    @Override
+                    public void onResponse(Call<SimulationLockResponse> call,
+                                           Response<SimulationLockResponse> response) {
+                        if (!isAdded()) return;
+                        if (response.isSuccessful() && response.body() != null
+                                && response.body().isAcquired()) {
+                            isSimulationLeader = true;
+                            Log.i(TAG, "Acquired simulation lock for vehicle " + simulatedVehicleId);
+                            onSimulationLeaderAcquired();
+                        } else if (retryCount < 5) {
+                            // Lock held by another session (e.g. web tab). Retry after 3s;
+                            // stale locks expire after 15s TTL on the backend.
+                            Log.d(TAG, "Simulation lock not acquired, retry " + (retryCount + 1));
+                            simulationHandler.postDelayed(
+                                    () -> tryBecomeSimulationLeader(retryCount + 1), 3000);
+                        } else {
+                            Log.w(TAG, "Could not acquire simulation lock after retries");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<SimulationLockResponse> call, Throwable t) {
+                        if (!isAdded()) return;
+                        // Could not contact server — become leader as safe default
+                        Log.w(TAG, "Lock request failed, becoming leader by default", t);
+                        isSimulationLeader = true;
+                        onSimulationLeaderAcquired();
+                    }
+                });
+    }
+
+    private void onSimulationLeaderAcquired() {
+        startSimulation();
+        startLockRefresh();
+    }
+
+    /**
+     * Start advancing the vehicle every 2 seconds along the blue approach route.
+     */
+    private void startSimulation() {
+        if (simulationRunning) return;
+        simulationRunning = true;
+        simulationHandler.postDelayed(simulationRunnable, 2000);
+    }
+
+    private void stopSimulation() {
+        simulationRunning = false;
+        simulationHandler.removeCallbacks(simulationRunnable);
+    }
+
+    private final Runnable simulationRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!simulationRunning || !isAdded()) return;
+            advanceVehicle();
+            simulationHandler.postDelayed(this, 2000);
+        }
+    };
+
+    /**
+     * Refresh the simulation lock every 10 seconds (lock TTL is 15s on the backend).
+     */
+    private void startLockRefresh() {
+        if (lockRefreshRunning) return;
+        lockRefreshRunning = true;
+        simulationHandler.postDelayed(lockRefreshRunnable, 10_000);
+    }
+
+    private void stopLockRefresh() {
+        lockRefreshRunning = false;
+        simulationHandler.removeCallbacks(lockRefreshRunnable);
+    }
+
+    private final Runnable lockRefreshRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!lockRefreshRunning || !isAdded() || simulatedVehicleId < 0) return;
+            String token = "Bearer " + preferencesManager.getToken();
+            Map<String, String> body = new HashMap<>();
+            body.put("sessionId", simulationSessionId);
+
+            ClientUtils.vehicleService.acquireSimulationLock(simulatedVehicleId, body, token)
+                    .enqueue(new Callback<SimulationLockResponse>() {
+                        @Override
+                        public void onResponse(Call<SimulationLockResponse> call,
+                                               Response<SimulationLockResponse> response) {
+                            if (!isAdded()) return;
+                            if (response.isSuccessful() && response.body() != null
+                                    && !response.body().isAcquired()) {
+                                // Lost the lock (another client took over)
+                                isSimulationLeader = false;
+                                stopSimulation();
+                                Log.w(TAG, "Lost simulation lock");
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Call<SimulationLockResponse> call, Throwable t) {
+                            // Keep going on network errors
+                        }
+                    });
+            simulationHandler.postDelayed(this, 10_000);
+        }
+    };
+
+    /**
+     * Release the simulation lock on the backend (best-effort).
+     */
+    private void releaseSimulationLock() {
+        if (simulatedVehicleId < 0) return;
+        String token = "Bearer " + preferencesManager.getToken();
+        Map<String, String> body = new HashMap<>();
+        body.put("sessionId", simulationSessionId);
+
+        ClientUtils.vehicleService.releaseSimulationLock(simulatedVehicleId, body, token)
+                .enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        Log.d(TAG, "Released simulation lock");
+                    }
+
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        Log.w(TAG, "Failed to release simulation lock", t);
+                    }
+                });
+    }
+
+    /**
+     * Move the vehicle 40-60 m along the current blue approach route.
+     * Called every 2 seconds when this app instance is the simulation leader.
+     * Mirrors the web frontend's advanceVehicle() logic exactly.
+     */
+    private void advanceVehicle() {
+        if (!isSimulationLeader) return;
+        if (ride == null) return;
+
+        String status = ride.getStatus();
+        boolean active = "IN_PROGRESS".equals(status) || "PENDING".equals(status)
+                || "ACCEPTED".equals(status) || "SCHEDULED".equals(status);
+        if (!active) return;
+        if (waitingForNewBlueLine) return;
+
+        List<GeoPoint> routePoints = approachRoutePoints;
+        if (routePoints == null || routePoints.size() < 2) return;
+        if (lastVehicleLatitude == 0 && lastVehicleLongitude == 0) return;
+        if (simulatedVehicleId < 0) return;
+
+        double metersToMove = 40 + simRandom.nextDouble() * 20; // 40-60 m
+        double movedMeters = 0;
+
+        // Find the closest point on the blue line to the current vehicle position
+        int bestIdx = 0;
+        double bestDist = Double.MAX_VALUE;
+        for (int i = 0; i < routePoints.size(); i++) {
+            GeoPoint p = routePoints.get(i);
+            double d = haversineMeters(lastVehicleLatitude, lastVehicleLongitude,
+                    p.getLatitude(), p.getLongitude());
+            if (d < bestDist) {
+                bestDist = d;
+                bestIdx = i;
+            }
+        }
+
+        // Walk forward from the closest point along the polyline
+        double currentLat = routePoints.get(bestIdx).getLatitude();
+        double currentLng = routePoints.get(bestIdx).getLongitude();
+        int idx = bestIdx;
+
+        while (idx < routePoints.size() - 1 && movedMeters < metersToMove) {
+            GeoPoint next = routePoints.get(idx + 1);
+            double segmentMeters = haversineMeters(currentLat, currentLng,
+                    next.getLatitude(), next.getLongitude());
+            double remaining = metersToMove - movedMeters;
+
+            if (segmentMeters <= remaining) {
+                movedMeters += segmentMeters;
+                currentLat = next.getLatitude();
+                currentLng = next.getLongitude();
+                idx++;
+            } else {
+                // Interpolate within the segment
+                double fraction = remaining / segmentMeters;
+                currentLat = currentLat + fraction * (next.getLatitude() - currentLat);
+                currentLng = currentLng + fraction * (next.getLongitude() - currentLng);
+                movedMeters += remaining;
+                break;
+            }
+        }
+
+        // Update local state immediately for responsive UI
+        lastVehicleLatitude = currentLat;
+        lastVehicleLongitude = currentLng;
+
+        // Update vehicle marker on map
+        VehicleLocationResponse fakeUpdate = new VehicleLocationResponse();
+        fakeUpdate.setLatitude(currentLat);
+        fakeUpdate.setLongitude(currentLng);
+        fakeUpdate.setDriverId(ride.getDriverId() != null ? ride.getDriverId()
+                : (ride.getDriver() != null ? ride.getDriver().getId() : null));
+        updateVehicleOnMap(fakeUpdate);
+
+        // Redraw blue route from new position
+        drawRoutes(fakeUpdate);
+
+        // Check stop completion and finish ride eligibility
+        if ("DRIVER".equals(preferencesManager.getUserRole())) {
+            checkStopCompletion(fakeUpdate);
+            updateFinishRideButton();
+        }
+
+        // Sync to backend so all clients see the same position via WebSocket
+        // and RideCostTrackingService can track distance
+        LocationDto locationDto = new LocationDto("Simulated", currentLat, currentLng);
+        String token = "Bearer " + preferencesManager.getToken();
+        ClientUtils.vehicleService.updateVehicleLocation(simulatedVehicleId, locationDto, token)
+                .enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        // Location synced
+                    }
+
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        Log.d(TAG, "Failed to sync vehicle location to backend", t);
+                    }
+                });
+    }
+
+    // ========== Lifecycle ==========
+
     @Override
     public void onResume() {
         super.onResume();
         if (mapView != null) mapView.onResume();
         if (ride != null) startWebSocketSubscriptions();
+        // Re-acquire simulation lock if we were the leader before pause
+        if (simulatedVehicleId >= 0 && !isSimulationLeader) {
+            tryBecomeSimulationLeader();
+        } else if (isSimulationLeader) {
+            startSimulation();
+            startLockRefresh();
+        }
     }
 
     @Override
@@ -1649,7 +1972,14 @@ public class ActiveRideFragment extends Fragment {
         if (mapView != null) mapView.onPause();
         stopPolling();
         stopCostPolling();
+        stopSimulation();
+        stopLockRefresh();
         unsubscribeWebSocket();
+        // Release lock so other clients can take over
+        if (isSimulationLeader) {
+            releaseSimulationLock();
+            isSimulationLeader = false;
+        }
     }
 
     @Override
@@ -1657,7 +1987,13 @@ public class ActiveRideFragment extends Fragment {
         super.onDestroyView();
         stopPolling();
         stopCostPolling();
+        stopSimulation();
+        stopLockRefresh();
         unsubscribeWebSocket();
+        if (isSimulationLeader) {
+            releaseSimulationLock();
+            isSimulationLeader = false;
+        }
         if (mapView != null) mapView.onDetach();
     }
 }

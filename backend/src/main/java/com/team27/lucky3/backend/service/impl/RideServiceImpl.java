@@ -315,7 +315,17 @@ public class RideServiceImpl implements RideService {
         ride.setPetTransport(request.getRequirements().isPetTransport());
 
         // Set passenger info
-        ride.setPassengers(Set.of(passenger));
+        Set<User> allPassengers = new HashSet<>();
+        allPassengers.add(passenger);
+
+        // Resolve invited emails to registered users and add them as passengers
+        // so they appear in active ride queries and ride history
+        if (request.getPassengerEmails() != null) {
+            for (String email : request.getPassengerEmails()) {
+                userRepository.findByEmail(email).ifPresent(allPassengers::add);
+            }
+        }
+        ride.setPassengers(allPassengers);
         ride.setInvitedEmails(request.getPassengerEmails());
         ride.setCreatedBy(passenger);
 
@@ -498,6 +508,10 @@ public class RideServiceImpl implements RideService {
         notificationService.sendRideStatusNotification(savedRide,
                 "Your ride has been accepted by driver " + driver.getName() + " " + driver.getSurname() + ".");
 
+        // Notify linked passengers (from invitedEmails) about the acceptance
+        notificationService.notifyLinkedPassengersRideStatusChange(savedRide,
+                "Your ride has been accepted by driver " + driver.getName() + " " + driver.getSurname() + ".");
+
         // Broadcast ride update via WebSocket for real-time UI updates
         RideResponse response = mapToResponse(savedRide);
         rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
@@ -529,6 +543,10 @@ public class RideServiceImpl implements RideService {
 
         // Notify all passengers that the ride has started
         notificationService.sendRideStatusNotification(savedRide,
+                "Your ride has started. Driver is on the way!");
+
+        // Notify linked passengers (from invitedEmails) about the ride start
+        notificationService.notifyLinkedPassengersRideStatusChange(savedRide,
                 "Your ride has started. Driver is on the way!");
 
         // Broadcast ride update via WebSocket for real-time UI updates
@@ -1229,6 +1247,12 @@ public class RideServiceImpl implements RideService {
         // Save the ride with updated completedStopIndexes
         Ride savedRide = rideRepository.save(ride);
         RideResponse response = mapToResponse(savedRide);
+
+        // Notify all passengers and driver about stop completion
+        notificationService.sendStopCompletedNotification(savedRide, stopIndex);
+
+        // Notify linked passengers (from invitedEmails) about stop completion
+        notificationService.notifyLinkedPassengersStopCompleted(savedRide, stopIndex);
 
         // Broadcast so other participants (e.g. passengers) can sync their routes
         rideSocketService.broadcastRideUpdate(savedRide.getId(), response);

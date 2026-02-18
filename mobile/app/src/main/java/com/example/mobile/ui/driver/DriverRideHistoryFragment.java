@@ -1,5 +1,10 @@
 package com.example.mobile.ui.driver;
 
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -37,7 +42,7 @@ import retrofit2.Response;
 
 import com.example.mobile.utils.NavbarHelper;
 
-public class DriverRideHistoryFragment extends Fragment {
+public class DriverRideHistoryFragment extends Fragment implements SensorEventListener {
 
     private static final String TAG = "DriverRideHistory";
     private FragmentDriverRideHistoryBinding binding;
@@ -58,11 +63,21 @@ public class DriverRideHistoryFragment extends Fragment {
     // Time filter: today, week, month
     private String timeFilter = "week";
     
+    // Sort direction
+    private boolean sortAsc = false;
+
     // Pagination
     private int currentPage = 0;
     private int pageSize = 20;
     private boolean isLoading = false;
     private boolean hasMorePages = true;
+
+    // Shake sensor
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private long lastShakeTime = 0;
+    private static final int SHAKE_THRESHOLD = 12;
+    private static final int SHAKE_COOLDOWN_MS = 1000;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -77,6 +92,7 @@ public class DriverRideHistoryFragment extends Fragment {
         setupTimeFilterButtons();
         setupListView();
         setupScrollListener();
+        setupShakeSensor();
         
         loadDriverStats();
         loadRides();
@@ -212,7 +228,7 @@ public class DriverRideHistoryFragment extends Fragment {
             toDate,
             currentPage,
             pageSize,
-            "startTime,desc",
+            "startTime," + (sortAsc ? "asc" : "desc"),
             token
         ).enqueue(new Callback<PageResponse<RideResponse>>() {
             @Override
@@ -376,6 +392,73 @@ public class DriverRideHistoryFragment extends Fragment {
     private void showLoading(boolean show) {
         // Could add a ProgressBar to the layout
         // For now, just manage the state
+    }
+
+    // ==================== SHAKE SENSOR ====================
+
+    private void setupShakeSensor() {
+        sensorManager = (SensorManager) requireContext().getSystemService(Context.SENSOR_SERVICE);
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        }
+    }
+
+    private void toggleSortDirection() {
+        sortAsc = !sortAsc;
+        currentPage = 0;
+        hasMorePages = true;
+        rides.clear();
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
+        loadRides();
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) return;
+
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
+
+        double acceleration = Math.sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH;
+
+        if (acceleration > SHAKE_THRESHOLD) {
+            long now = System.currentTimeMillis();
+            if (now - lastShakeTime > SHAKE_COOLDOWN_MS) {
+                lastShakeTime = now;
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        toggleSortDirection();
+                        Toast.makeText(getContext(),
+                                "Sort order: " + (sortAsc ? "Oldest first" : "Newest first"),
+                                Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // Not needed
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (sensorManager != null && accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(this);
+        }
     }
 
     @Override

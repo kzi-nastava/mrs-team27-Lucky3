@@ -121,9 +121,6 @@ public class SupportChatServiceImpl implements SupportChatService {
         // Notify the user via their personal topic (used by mobile AppNotificationManager)
         socketService.notifyUser(chat.getUser().getId(), response);
 
-        // Send notification to the user about the admin reply
-        notificationService.sendSupportReplyToUser(chat.getUser(), chat.getId());
-
         log.info("Admin {} sent support message to chat {}", admin.getEmail(), chatId);
         return response;
     }

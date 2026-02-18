@@ -16,12 +16,14 @@ public class AppNotification implements Serializable {
         RIDE_CANCELLED,     // Ride cancelled
         RIDE_CREATED,       // Ride created (for creator + driver)
         DRIVER_ASSIGNED,    // Driver assigned to ride
+        STOP_COMPLETED,     // A ride stop has been completed
         PANIC_ALERT,        // Panic button pressed (admin)
         SUPPORT_MESSAGE,    // New support chat message
         GENERAL             // Fallback
     }
 
     private long id;
+    private Long backendId; // Backend DB ID for deletion via API
     private Type type;
     private String title;
     private String body;
@@ -48,6 +50,9 @@ public class AppNotification implements Serializable {
 
     public long getId() { return id; }
     public void setId(long id) { this.id = id; }
+
+    public Long getBackendId() { return backendId; }
+    public void setBackendId(Long backendId) { this.backendId = backendId; }
 
     public Type getType() { return type; }
     public void setType(Type type) { this.type = type; }

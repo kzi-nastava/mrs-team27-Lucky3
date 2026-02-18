@@ -13,6 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavOptions;
 import androidx.navigation.Navigation;
 
 import com.example.mobile.MainActivity;
@@ -177,20 +178,29 @@ public class LoginFragment extends Fragment {
 
         // Setup navigation based on role and navigate
         MainActivity activity = (MainActivity) requireActivity();
-        
+
+        // Pop the entire guest/login back stack so Back never returns to login
+        NavOptions loginNavOptions = new NavOptions.Builder()
+                .setPopUpTo(R.id.nav_guest_home, true)
+                .setLaunchSingleTop(true)
+                .build();
+
         switch (role.toUpperCase()) {
             case "ADMIN":
                 activity.setupNavigationForRole("ADMIN");
-                Navigation.findNavController(requireView()).navigate(R.id.nav_admin_dashboard);
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.nav_admin_dashboard, null, loginNavOptions);
                 break;
             case "DRIVER":
                 activity.setupNavigationForRole("DRIVER");
-                Navigation.findNavController(requireView()).navigate(R.id.nav_driver_dashboard);
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.nav_driver_dashboard, null, loginNavOptions);
                 break;
             case "PASSENGER":
             default:
                 activity.setupNavigationForRole("PASSENGER");
-                Navigation.findNavController(requireView()).navigate(R.id.nav_passenger_home);
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.nav_passenger_home, null, loginNavOptions);
                 break;
         }
     }

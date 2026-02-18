@@ -106,8 +106,9 @@ public class NotificationPanelFragment extends Fragment {
             if (position >= notifications.size()) return;
             AppNotification notif = notifications.get(position);
 
-            // Remove the notification (delete it, not just mark as read)
+            // Remove the notification locally and from backend
             NotificationStore.getInstance().removeNotification(notif.getId());
+            deleteFromBackend(notif.getBackendId());
 
             // Navigate based on type
             navigateToNotification(notif);
@@ -149,6 +150,23 @@ public class NotificationPanelFragment extends Fragment {
                         args.putLong("rideId", notif.getRideId());
                         Navigation.findNavController(requireView())
                                 .navigate(R.id.nav_active_ride, args);
+                    }
+                    break;
+
+                case STOP_COMPLETED:
+                    // Navigate to active ride if not already there;
+                    // if already on active ride, just dismiss the notification (already removed above)
+                    if (notif.getRideId() != null) {
+                        androidx.navigation.NavController stopNavCtrl =
+                                Navigation.findNavController(requireView());
+                        int currentDestId = stopNavCtrl.getCurrentDestination() != null
+                                ? stopNavCtrl.getCurrentDestination().getId() : -1;
+                        if (currentDestId != R.id.nav_active_ride) {
+                            Bundle stopArgs = new Bundle();
+                            stopArgs.putLong("rideId", notif.getRideId());
+                            stopNavCtrl.navigate(R.id.nav_active_ride, stopArgs);
+                        }
+                        // If already on active ride, the notification is already removed — nothing else to do
                     }
                     break;
 
@@ -195,23 +213,28 @@ public class NotificationPanelFragment extends Fragment {
         try {
             String role = new com.example.mobile.utils.SharedPreferencesManager(
                     requireContext()).getUserRole();
-            int destId;
+            androidx.navigation.NavController navController =
+                    Navigation.findNavController(requireView());
+            // Pop back to start destination so support chat replaces current page
+            // instead of stacking on top of it
+            androidx.navigation.NavOptions navOptions =
+                    new androidx.navigation.NavOptions.Builder()
+                            .setLaunchSingleTop(true)
+                            .setPopUpTo(navController.getGraph().getStartDestinationId(), false)
+                            .build();
             if ("ADMIN".equals(role)) {
                 if (chatId != null && chatId > 0) {
-                    // Navigate directly to the admin chat with this chatId
                     Bundle args = new Bundle();
                     args.putLong("chatId", chatId);
-                    Navigation.findNavController(requireView())
-                            .navigate(R.id.nav_admin_support_chat, args);
+                    navController.navigate(R.id.nav_admin_support_chat, args, navOptions);
                     return;
                 }
-                destId = R.id.nav_admin_support;
+                navController.navigate(R.id.nav_admin_support, null, navOptions);
             } else if ("DRIVER".equals(role)) {
-                destId = R.id.nav_driver_support;
+                navController.navigate(R.id.nav_driver_support, null, navOptions);
             } else {
-                destId = R.id.nav_passenger_support;
+                navController.navigate(R.id.nav_passenger_support, null, navOptions);
             }
-            Navigation.findNavController(requireView()).navigate(destId);
         } catch (Exception e) {
             // Ignore navigation errors
         }
@@ -265,8 +288,10 @@ public class NotificationPanelFragment extends Fragment {
             styleForType(holder, notif.getType());
 
             // Dismiss button
-            holder.btnDismiss.setOnClickListener(v ->
-                    NotificationStore.getInstance().removeNotification(notif.getId()));
+            holder.btnDismiss.setOnClickListener(v -> {
+                    NotificationStore.getInstance().removeNotification(notif.getId());
+                    deleteFromBackend(notif.getBackendId());
+            });
 
             return convertView;
         }
@@ -298,6 +323,12 @@ public class NotificationPanelFragment extends Fragment {
                     holder.tvTypeBadge.setBackgroundResource(R.drawable.bg_badge_green);
                     holder.ivTypeIcon.setImageResource(android.R.drawable.ic_dialog_email);
                     break;
+                case STOP_COMPLETED:
+                    holder.tvTypeBadge.setText("STOP");
+                    holder.tvTypeBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.green_500));
+                    holder.tvTypeBadge.setBackgroundResource(R.drawable.bg_badge_green);
+                    holder.ivTypeIcon.setImageResource(android.R.drawable.ic_menu_myplaces);
+                    break;
                 default:
                     holder.tvTypeBadge.setText("INFO");
                     holder.tvTypeBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray_400));
@@ -312,6 +343,30 @@ public class NotificationPanelFragment extends Fragment {
             View unreadDot;
             ImageView ivTypeIcon, btnDismiss;
         }
+    }
+
+    // ======================== Backend Delete ========================
+
+    /**
+     * Fire-and-forget deletion of a single notification from the backend
+     * so it doesn't reappear when the history is fetched again.
+     */
+    private void deleteFromBackend(Long backendId) {
+        if (backendId == null) return;
+        String token = new SharedPreferencesManager(requireContext()).getToken();
+        if (token == null) return;
+        ClientUtils.notificationService.deleteNotification("Bearer " + token, backendId)
+                .enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        // Deleted on backend
+                    }
+
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        // Best-effort: local removal already happened
+                    }
+                });
     }
 
     // ======================== Helpers ========================

@@ -15,15 +15,22 @@ import androidx.core.app.NotificationManagerCompat;
 import com.example.mobile.MainActivity;
 import com.example.mobile.R;
 import com.example.mobile.models.AppNotification;
+import com.example.mobile.models.NotificationResponseDTO;
+import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.PanicResponse;
 import com.example.mobile.models.RideResponse;
 import com.example.mobile.models.SupportChatListItemResponse;
 import com.example.mobile.models.SupportMessageResponse;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Central notification manager that subscribes to relevant WebSocket topics
@@ -59,6 +66,15 @@ public class AppNotificationManager {
     private Long currentUserId;
     private boolean started = false;
 
+    /**
+     * Returns true if the notification manager is actively listening via WebSocket.
+     * Used by {@link com.example.mobile.services.MyFirebaseMessagingService} to
+     * avoid duplicate notifications.
+     */
+    public boolean isStarted() {
+        return started;
+    }
+
     // Track active subscriptions so we can clean up
     private final List<String> activeSubscriptionIds = new ArrayList<>();
 
@@ -69,6 +85,13 @@ public class AppNotificationManager {
     // Track the ride ID we're subscribed to for ride updates
     private Long subscribedRideId = null;
     private String rideSubscriptionId = null;
+
+    // Track last known ride status to avoid duplicate notifications
+    // from periodic cost-tracking broadcasts that don't change the status
+    private String lastKnownRideStatus = null;
+
+    // Track completed stop indexes to detect new stop completions
+    private Set<Integer> lastKnownCompletedStops = new HashSet<>();
 
     private int systemNotifCounter = 0;
 
@@ -106,28 +129,41 @@ public class AppNotificationManager {
 
         Log.i(TAG, "Starting notification manager for role=" + role + " userId=" + userId);
 
+        // Load persisted notification history from backend so that notifications
+        // received while the app was completely killed appear in the panel.
+        fetchNotificationHistory();
+
         // Connect WebSocket if not already connected
-        WebSocketManager.getInstance().connect(appContext, new StompClient.ConnectionCallback() {
-            @Override
-            public void onConnected() {
-                Log.i(TAG, "WebSocket connected, subscribing to topics");
-                subscribeToTopics();
-            }
-
-            @Override
-            public void onDisconnected(String reason) {
-                Log.w(TAG, "WebSocket disconnected: " + reason);
-            }
-
-            @Override
-            public void onError(String error) {
-                Log.e(TAG, "WebSocket error: " + error);
-            }
-        });
-
-        // If already connected, subscribe immediately
         if (WebSocketManager.getInstance().isConnected()) {
+            // Already connected — subscribe immediately, skip connect callback
+            Log.i(TAG, "WebSocket already connected, subscribing to topics");
             subscribeToTopics();
+        } else {
+            WebSocketManager.getInstance().connect(appContext, new StompClient.ConnectionCallback() {
+                @Override
+                public void onConnected() {
+                    // On auto-reconnect, StompClient already resubscribes existing
+                    // SubscriptionInfo entries at the STOMP level. Only call
+                    // subscribeToTopics() on the FIRST connect (when activeSubscriptionIds
+                    // is empty) to avoid creating duplicate subscriptions.
+                    if (activeSubscriptionIds.isEmpty()) {
+                        Log.i(TAG, "WebSocket connected, subscribing to topics");
+                        subscribeToTopics();
+                    } else {
+                        Log.d(TAG, "WebSocket reconnected — StompClient resubscribed existing topics");
+                    }
+                }
+
+                @Override
+                public void onDisconnected(String reason) {
+                    Log.w(TAG, "WebSocket disconnected: " + reason);
+                }
+
+                @Override
+                public void onError(String error) {
+                    Log.e(TAG, "WebSocket error: " + error);
+                }
+            });
         }
     }
 
@@ -147,10 +183,68 @@ public class AppNotificationManager {
         knownPanicIds.clear();
     }
 
+    // ======================== History Loader ========================
+
+    /**
+     * Fetch the most recent notifications from the backend and populate
+     * {@link NotificationStore}. This ensures that notifications sent while
+     * the app was completely killed appear in the notification panel.
+     */
+    private void fetchNotificationHistory() {
+        if (appContext == null) return;
+
+        SharedPreferencesManager prefs = new SharedPreferencesManager(appContext);
+        String token = prefs.getToken();
+        if (token == null || token.isEmpty()) return;
+
+        ClientUtils.notificationService.getNotifications(
+                "Bearer " + token, 0, 50, "timestamp,desc"
+        ).enqueue(new Callback<PageResponse<NotificationResponseDTO>>() {
+            @Override
+            public void onResponse(Call<PageResponse<NotificationResponseDTO>> call,
+                                   Response<PageResponse<NotificationResponseDTO>> response) {
+                if (!response.isSuccessful() || response.body() == null
+                        || response.body().getContent() == null) {
+                    Log.w(TAG, "Failed to fetch notification history: " +
+                            (response.code()));
+                    return;
+                }
+
+                List<NotificationResponseDTO> dtos = response.body().getContent();
+                if (dtos.isEmpty()) {
+                    Log.d(TAG, "No notification history to load");
+                    return;
+                }
+
+                // Convert backend DTOs → AppNotification and add to store
+                // Reverse so oldest are added first (newest end up at the top)
+                List<NotificationResponseDTO> reversed = new ArrayList<>(dtos);
+                Collections.reverse(reversed);
+                for (NotificationResponseDTO dto : reversed) {
+                    NotificationStore.getInstance().addNotification(dto.toAppNotification());
+                }
+
+                Log.i(TAG, "Loaded " + dtos.size() + " notifications from history");
+            }
+
+            @Override
+            public void onFailure(Call<PageResponse<NotificationResponseDTO>> call,
+                                  Throwable t) {
+                Log.e(TAG, "Failed to fetch notification history", t);
+            }
+        });
+    }
+
     // ======================== Topic Subscriptions ========================
 
     private void subscribeToTopics() {
         if (!started || currentRole == null) return;
+
+        // All roles subscribe to the personal notification queue so that
+        // notifications delivered via sendNotification() on the backend
+        // (RIDE_CREATED, RIDE_INVITE, DRIVER_ASSIGNMENT, etc.) are received
+        // in real time without relying solely on FCM.
+        subscribeToPersonalNotifications();
 
         switch (currentRole) {
             case "ADMIN":
@@ -182,6 +276,8 @@ public class AppNotificationManager {
         }
 
         subscribedRideId = rideId;
+        lastKnownRideStatus = null;
+        lastKnownCompletedStops = new HashSet<>();
         String destination = "/topic/ride/" + rideId;
         rideSubscriptionId = WebSocketManager.getInstance().subscribe(
                 destination, RideResponse.class, this::onRideUpdate);
@@ -198,7 +294,18 @@ public class AppNotificationManager {
             activeSubscriptionIds.remove(rideSubscriptionId);
             rideSubscriptionId = null;
             subscribedRideId = null;
+            lastKnownRideStatus = null;
+            lastKnownCompletedStops = new HashSet<>();
         }
+    }
+
+    /**
+     * Returns true if the manager is currently subscribed to updates for the given ride.
+     * Used by {@link com.example.mobile.services.MyFirebaseMessagingService} to
+     * decide whether to skip an FCM notification (because WebSocket will handle it).
+     */
+    public boolean isSubscribedToRide(Long rideId) {
+        return rideId != null && rideId.equals(subscribedRideId) && rideSubscriptionId != null;
     }
 
     // ---- Panic (Admin) ----
@@ -242,6 +349,113 @@ public class AppNotificationManager {
         Log.d(TAG, "Subscribed to " + destination);
     }
 
+    // ---- Personal Notification Queue (All roles) ----
+
+    /**
+     * Subscribe to the user's personal notification queue. The backend's
+     * {@code sendNotification()} pushes every notification to
+     * {@code /user/{id}/queue/notifications} via WebSocket <em>and</em> via FCM.
+     * <p>
+     * By subscribing here we guarantee real-time delivery even when FCM is
+     * unavailable or delayed. Duplicates with role-specific topic handlers
+     * (ride, support, panic) are suppressed inside
+     * {@link #onPersonalNotification(NotificationResponseDTO)}.
+     */
+    private void subscribeToPersonalNotifications() {
+        if (currentUserId == null) return;
+        String destination = "/user/" + currentUserId + "/queue/notifications";
+        String subId = WebSocketManager.getInstance().subscribe(
+                destination, NotificationResponseDTO.class,
+                this::onPersonalNotification);
+        activeSubscriptionIds.add(subId);
+        Log.d(TAG, "Subscribed to personal queue: " + destination);
+    }
+
+    /**
+     * Handle a notification received on the personal WebSocket queue.
+     * <p>
+     * Types already handled by dedicated topic subscriptions are skipped to
+     * avoid duplicate in-app notifications:
+     * <ul>
+     *     <li>{@code SUPPORT} — handled by user/admin support topics</li>
+     *     <li>{@code PANIC} — handled by {@code /topic/panic} (admin)</li>
+     *     <li>Ride-specific statuses — handled by {@code /topic/ride/{id}}
+     *         <em>only when</em> we are subscribed to that ride</li>
+     * </ul>
+     */
+    private void onPersonalNotification(NotificationResponseDTO dto) {
+        if (dto == null) return;
+
+        String type = dto.getType();
+        Long relatedEntityId = dto.getRelatedEntityId();
+
+        // Skip types handled by dedicated WebSocket topic subscriptions
+        if ("SUPPORT".equals(type)) {
+            Log.d(TAG, "Skipping personal-queue SUPPORT — handled by support topic");
+            return;
+        }
+        if ("PANIC".equals(type)) {
+            Log.d(TAG, "Skipping personal-queue PANIC — handled by panic topic");
+            return;
+        }
+
+        // Skip ride lifecycle types when we're already subscribed to that ride's topic
+        if (relatedEntityId != null && isSubscribedToRide(relatedEntityId)) {
+            switch (type != null ? type : "") {
+                case "RIDE_STATUS":
+                case "RIDE_FINISHED":
+                case "RIDE_CANCELLED":
+                case "STOP_COMPLETED":
+                    Log.d(TAG, "Skipping personal-queue " + type
+                            + " for ride " + relatedEntityId + " — handled by ride topic");
+                    return;
+            }
+        }
+
+        // Convert backend DTO → in-app notification
+        AppNotification notification = dto.toAppNotification();
+        NotificationStore.getInstance().addNotification(notification);
+
+        // Determine Android notification channel and deep-link target
+        String channelId;
+        String navigateTo;
+        Long rideId = notification.getRideId();
+        Long chatId = notification.getChatId();
+
+        switch (notification.getType()) {
+            case PANIC_ALERT:
+                channelId = NotificationHelper.CHANNEL_PANIC_ALERTS;
+                navigateTo = "admin_panic";
+                break;
+            case RIDE_CREATED:
+            case RIDE_STATUS:
+            case DRIVER_ASSIGNED:
+            case STOP_COMPLETED:
+                channelId = NotificationHelper.CHANNEL_RIDE_UPDATES;
+                navigateTo = "active_ride";
+                break;
+            case RIDE_FINISHED:
+                channelId = NotificationHelper.CHANNEL_RIDE_UPDATES;
+                navigateTo = "ride_history";
+                break;
+            case RIDE_CANCELLED:
+                channelId = NotificationHelper.CHANNEL_RIDE_UPDATES;
+                navigateTo = "ride_history";
+                break;
+            case SUPPORT_MESSAGE:
+                channelId = NotificationHelper.CHANNEL_GENERAL;
+                navigateTo = "support";
+                break;
+            default:
+                channelId = NotificationHelper.CHANNEL_GENERAL;
+                navigateTo = null;
+                break;
+        }
+
+        postSystemNotification(notification.getTitle(), notification.getBody(),
+                channelId, navigateTo, rideId, chatId);
+    }
+
     private void unsubscribeAll() {
         WebSocketManager wsm = WebSocketManager.getInstance();
         for (String subId : activeSubscriptionIds) {
@@ -261,6 +475,53 @@ public class AppNotificationManager {
         if (ride == null) return;
         String status = ride.getStatus();
         if (status == null) return;
+
+        // ── Detect stop completion events ──
+        // Compare completedStopIndexes with our last-known set to find newly completed stops.
+        Set<Integer> currentCompleted = ride.getCompletedStopIndexes();
+        if (currentCompleted == null) currentCompleted = new HashSet<>();
+
+        Set<Integer> newlyCompleted = new HashSet<>(currentCompleted);
+        newlyCompleted.removeAll(lastKnownCompletedStops);
+        lastKnownCompletedStops = new HashSet<>(currentCompleted);
+
+        if (!newlyCompleted.isEmpty()) {
+            // Handle each newly completed stop
+            for (Integer stopIndex : newlyCompleted) {
+                String stopLabel;
+                if (stopIndex == -1) {
+                    stopLabel = "Start location";
+                } else {
+                    int displayNum = stopIndex + 1;
+                    stopLabel = "Stop " + displayNum;
+                    if (ride.getStops() != null && stopIndex < ride.getStops().size()
+                            && ride.getStops().get(stopIndex) != null
+                            && ride.getStops().get(stopIndex).getAddress() != null) {
+                        stopLabel += " (" + ride.getStops().get(stopIndex).getAddress() + ")";
+                    }
+                }
+
+                String title = "Stop Completed";
+                String body = stopLabel + " has been completed.";
+
+                AppNotification notification = new AppNotification(
+                        AppNotification.Type.STOP_COMPLETED, title, body);
+                notification.setRideId(ride.getId());
+
+                NotificationStore.getInstance().addNotification(notification);
+                postSystemNotification(title, body, NotificationHelper.CHANNEL_RIDE_UPDATES,
+                        "active_ride", ride.getId());
+            }
+
+            // If only stops changed but status didn't, we're done — don't create a status notification
+            if (status.equals(lastKnownRideStatus)) return;
+        }
+
+        // ── Handle ride status changes ──
+        // Skip repeated broadcasts with the same status (e.g. periodic cost-tracking
+        // updates that don't change the ride status)
+        if (status.equals(lastKnownRideStatus)) return;
+        lastKnownRideStatus = status;
 
         String title;
         String body;
@@ -310,7 +571,6 @@ public class AppNotificationManager {
 
         AppNotification.Type notifType;
         String navigateTo;
-
         switch (status) {
             case "FINISHED":
                 notifType = AppNotification.Type.RIDE_FINISHED;
@@ -407,7 +667,7 @@ public class AppNotificationManager {
 
         NotificationStore.getInstance().addNotification(notification);
         postSystemNotification(title, body, NotificationHelper.CHANNEL_GENERAL,
-                "support", null, null);
+                "support", null, msg.getChatId());
     }
 
     // ======================== System Notifications ========================
@@ -421,11 +681,9 @@ public class AppNotificationManager {
                                         String navigateTo, Long rideId, Long chatId) {
         if (appContext == null) return;
 
-        // When the app is in the foreground, play an in-app sound instead
-        // of posting an Android system notification.
+        // Play in-app sound when foregrounded (always, in addition to system notification)
         if (AppLifecycleTracker.isAppInForeground()) {
             playInAppSound(channelId);
-            return;
         }
 
         try {

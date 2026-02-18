@@ -19,8 +19,13 @@ import org.springframework.validation.FieldError;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String errorType, String message, String path) {
         ErrorResponse error = new ErrorResponse(
@@ -137,5 +142,29 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIOException(java.io.IOException ex, HttpServletRequest request) {
         ex.printStackTrace();
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "File Error", "File operation failed: " + ex.getMessage(), request.getRequestURI());
+    }
+
+    /**
+     * Handle client-disconnected exceptions silently.
+     * These occur when the mobile/web client drops the connection before the response
+     * is fully written (e.g. app goes to background, network switch). They are harmless
+     * and should not pollute the logs with full stack traces.
+     */
+    @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(
+            org.springframework.web.context.request.async.AsyncRequestNotUsableException ex,
+            HttpServletRequest request
+    ) {
+        log.debug("Client disconnected before response completed: {} {}", request.getMethod(), request.getRequestURI());
+        // No response can be sent — the client is already gone
+    }
+
+    @ExceptionHandler(org.apache.catalina.connector.ClientAbortException.class)
+    public void handleClientAbort(
+            org.apache.catalina.connector.ClientAbortException ex,
+            HttpServletRequest request
+    ) {
+        log.debug("Client aborted connection: {} {}", request.getMethod(), request.getRequestURI());
+        // No response can be sent — the client is already gone
     }
 }

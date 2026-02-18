@@ -134,13 +134,21 @@ public class MainActivity extends AppCompatActivity {
             if (role != null) {
                 currentRole = role;
                 setupNavigationForRole(role);
+
+                // Pop the entire guest/login back stack so Back never returns to login
+                androidx.navigation.NavOptions sessionNavOptions =
+                        new androidx.navigation.NavOptions.Builder()
+                                .setPopUpTo(R.id.nav_guest_home, true)
+                                .setLaunchSingleTop(true)
+                                .build();
+
                 // Navigate to the role's landing page
                 if ("DRIVER".equals(role)) {
-                    navController.navigate(R.id.nav_driver_dashboard);
+                    navController.navigate(R.id.nav_driver_dashboard, null, sessionNavOptions);
                 } else if ("ADMIN".equals(role)) {
-                    navController.navigate(R.id.nav_admin_dashboard);
+                    navController.navigate(R.id.nav_admin_dashboard, null, sessionNavOptions);
                 } else if ("PASSENGER".equals(role)) {
-                    navController.navigate(R.id.nav_passenger_home);
+                    navController.navigate(R.id.nav_passenger_home, null, sessionNavOptions);
                 }
             }
         }
@@ -487,14 +495,44 @@ public class MainActivity extends AppCompatActivity {
      * Handles deep-link navigation from FCM notification taps.
      * Checks the intent for {@code navigate_to} extra and navigates accordingly.
      */
+    /**
+     * Returns the navigation destination ID for the current role's home/landing page.
+     * Used to keep the role home on the back stack so pressing back never falls
+     * through to the guest login screen.
+     */
+    private int getRoleHomeDestinationId() {
+        if ("DRIVER".equals(currentRole)) return R.id.nav_driver_dashboard;
+        if ("ADMIN".equals(currentRole)) return R.id.nav_admin_dashboard;
+        if ("PASSENGER".equals(currentRole)) return R.id.nav_passenger_home;
+        // Fallback — should not happen for authenticated users
+        return R.id.nav_guest_home;
+    }
+
     private void handleFcmDeepLink(Intent intent) {
         if (intent == null || intent.getExtras() == null) return;
 
         String navigateTo = intent.getStringExtra("navigate_to");
         if (navigateTo == null) return;
 
+        // Restore role from prefs if lost (e.g. process death)
+        if (currentRole == null) {
+            String role = sharedPreferencesManager.getUserRole();
+            if (role != null) {
+                currentRole = role;
+            }
+        }
+
         try {
             NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+
+            // Build NavOptions that pop back to the role's home page (not guest home)
+            // so that pressing Back returns to home instead of the login screen.
+            int roleHome = getRoleHomeDestinationId();
+            androidx.navigation.NavOptions deepLinkNavOptions =
+                    new androidx.navigation.NavOptions.Builder()
+                            .setLaunchSingleTop(true)
+                            .setPopUpTo(roleHome, false)
+                            .build();
 
             switch (navigateTo) {
                 case "active_ride":
@@ -502,7 +540,7 @@ public class MainActivity extends AppCompatActivity {
                     if (rideId > 0) {
                         Bundle args = new Bundle();
                         args.putLong("rideId", rideId);
-                        navController.navigate(R.id.nav_active_ride, args);
+                        navController.navigate(R.id.nav_active_ride, args, deepLinkNavOptions);
                     }
                     break;
                 case "ride_history":
@@ -512,35 +550,33 @@ public class MainActivity extends AppCompatActivity {
                         histArgs.putLong("rideId", histRideId);
                         // Navigate to role-specific ride detail
                         if ("DRIVER".equals(currentRole)) {
-                            navController.navigate(R.id.nav_ride_details, histArgs);
+                            navController.navigate(R.id.nav_ride_details, histArgs, deepLinkNavOptions);
                         } else {
-                            navController.navigate(R.id.nav_passenger_ride_detail, histArgs);
+                            navController.navigate(R.id.nav_passenger_ride_detail, histArgs, deepLinkNavOptions);
                         }
                     }
                     break;
                 case "admin_panic":
-                    navController.navigate(R.id.nav_admin_panic);
+                    navController.navigate(R.id.nav_admin_panic, null, deepLinkNavOptions);
                     break;
                 case "support":
-                    // Navigate to role-specific support
                     if ("ADMIN".equals(currentRole)) {
                         long chatId = intent.getLongExtra("chatId", -1L);
                         if (chatId > 0) {
-                            // Deep-link directly to the specific chat
                             Bundle chatArgs = new Bundle();
                             chatArgs.putLong("chatId", chatId);
-                            navController.navigate(R.id.nav_admin_support_chat, chatArgs);
+                            navController.navigate(R.id.nav_admin_support_chat, chatArgs, deepLinkNavOptions);
                         } else {
-                            navController.navigate(R.id.nav_admin_support);
+                            navController.navigate(R.id.nav_admin_support, null, deepLinkNavOptions);
                         }
                     } else if ("DRIVER".equals(currentRole)) {
-                        navController.navigate(R.id.nav_driver_support);
+                        navController.navigate(R.id.nav_driver_support, null, deepLinkNavOptions);
                     } else {
-                        navController.navigate(R.id.nav_passenger_support);
+                        navController.navigate(R.id.nav_passenger_support, null, deepLinkNavOptions);
                     }
                     break;
                 case "notifications":
-                    navController.navigate(R.id.nav_notifications);
+                    navController.navigate(R.id.nav_notifications, null, deepLinkNavOptions);
                     break;
                 default:
                     Log.d(TAG, "Unknown deep-link target: " + navigateTo);
@@ -551,8 +587,35 @@ public class MainActivity extends AppCompatActivity {
             intent.removeExtra("navigate_to");
             intent.removeExtra("rideId");
             intent.removeExtra("chatId");
+
+            // Delete the backend notification so it doesn't reappear
+            long backendNotifId = intent.getLongExtra("backendNotificationId", -1L);
+            intent.removeExtra("backendNotificationId");
+            if (backendNotifId > 0) {
+                deleteBackendNotification(backendNotifId);
+            }
         } catch (Exception e) {
             Log.e(TAG, "FCM deep-link navigation failed: " + e.getMessage());
         }
+    }
+
+    /**
+     * Fire-and-forget deletion of a single notification from the backend.
+     */
+    private void deleteBackendNotification(long backendNotifId) {
+        String token = sharedPreferencesManager.getToken();
+        if (token == null) return;
+        ClientUtils.notificationService.deleteNotification("Bearer " + token, backendNotifId)
+                .enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        Log.d(TAG, "Backend notification #" + backendNotifId + " deleted");
+                    }
+
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        Log.w(TAG, "Failed to delete backend notification #" + backendNotifId);
+                    }
+                });
     }
 }

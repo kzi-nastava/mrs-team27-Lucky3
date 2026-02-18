@@ -393,7 +393,7 @@
                     android:layout_height="250dp"
                     android:background="@drawable/bg_card">
 
-                    <org.osmdroid.views.MapView
+                    <com.example.mobile.ui.maps.TouchableMapView
                         android:id="@+id/map_view"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
