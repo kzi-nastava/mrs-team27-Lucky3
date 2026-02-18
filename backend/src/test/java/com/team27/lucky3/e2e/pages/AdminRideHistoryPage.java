@@ -2,7 +2,6 @@ package com.team27.lucky3.e2e.pages;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -20,7 +19,6 @@ public class AdminRideHistoryPage {
 
     private WebDriver driver;
     private WebDriverWait wait;
-    private WebDriverWait shortWait;
 
     private static final String URL = "http://localhost:4200/admin/ride-history";
 
@@ -114,7 +112,6 @@ public class AdminRideHistoryPage {
     public AdminRideHistoryPage(WebDriver driver) {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        this.shortWait = new WebDriverWait(driver, Duration.ofSeconds(3));
         PageFactory.initElements(driver, this);
     }
 
@@ -127,7 +124,7 @@ public class AdminRideHistoryPage {
 
     private static final By RIDE_ROW_LOCATOR = By.cssSelector("#rides-table tbody tr[id^='ride-row-']");
     private static final By NO_RIDES_LOCATOR = By.id("no-rides-message");
-    private static final By TABLE_ROW_LOCATOR = By.cssSelector("#rides-table tbody tr");
+    private static final By TABLE_LOCATOR = By.id("rides-table");
 
     public void waitForTableToLoad() {
         wait.until(ExpectedConditions.visibilityOf(ridesTable));
@@ -142,31 +139,27 @@ public class AdminRideHistoryPage {
         ));
     }
 
-    /**
-     * Wait for the table data to refresh after a user action (filter, sort, search).
-     * Captures a reference to the first visible row, waits for it to become stale
-     * (Angular re-renders on data change), then waits for new content to appear.
-     *
-     * Uses a short timeout (3s) for staleness check as a non-fatal fast path:
-     * if Angular re-renders identical data the DOM may not become stale,
-     * so we fall through and simply wait for content to be present.
-     */
-    private void waitForDataRefresh() {
-        List<WebElement> currentRows = driver.findElements(TABLE_ROW_LOCATOR);
 
-        if (!currentRows.isEmpty()) {
-            WebElement firstRow = currentRows.get(0);
-            try {
-                // Short timeout: if Angular re-renders, row goes stale quickly.
-                // If data is identical, Angular may reuse the DOM — TimeoutException is non-fatal.
-                shortWait.until(ExpectedConditions.stalenessOf(firstRow));
-            } catch (TimeoutException ignored) {
-                // Row did not become stale — Angular may have kept the same DOM nodes.
-                // Fall through to content check below.
-            }
+    private String getCurrentLoadId() {
+        try {
+            WebElement table = driver.findElement(TABLE_LOCATOR);
+            return table.getAttribute("data-load-id");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+
+    private void waitForDataRefresh(String beforeLoadId) {
+        // Wait for data-load-id to change (Angular increments it on each API response)
+        if (beforeLoadId != null) {
+            wait.until(d -> {
+                String currentId = getCurrentLoadId();
+                return currentId != null && !currentId.equals(beforeLoadId);
+            });
         }
 
-        // After staleness (or timeout), wait for new content to appear
+        // After load-id changed, wait for content to be rendered
         wait.until(ExpectedConditions.or(
                 ExpectedConditions.presenceOfElementLocated(RIDE_ROW_LOCATOR),
                 ExpectedConditions.presenceOfElementLocated(NO_RIDES_LOCATOR)
@@ -176,36 +169,32 @@ public class AdminRideHistoryPage {
     // ----- Search Actions -----
 
     public void selectSearchTypeDriver() {
-        wait.until(ExpectedConditions.elementToBeClickable(searchTypeDriverBtn));
         searchTypeDriverBtn.click();
     }
 
     public void selectSearchTypePassenger() {
-        wait.until(ExpectedConditions.elementToBeClickable(searchTypePassengerBtn));
         searchTypePassengerBtn.click();
     }
 
     public void enterSearchId(String id) {
-        wait.until(ExpectedConditions.visibilityOf(searchIdInput));
         searchIdInput.clear();
         searchIdInput.sendKeys(id);
     }
 
     public void clearSearchId() {
-        wait.until(ExpectedConditions.visibilityOf(searchIdInput));
         searchIdInput.clear();
     }
 
     public void clickSearch() {
-        wait.until(ExpectedConditions.elementToBeClickable(searchBtn));
+        String loadId = getCurrentLoadId();
         searchBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void clickClearSearch() {
-        wait.until(ExpectedConditions.elementToBeClickable(clearSearchBtn));
+        String loadId = getCurrentLoadId();
         clearSearchBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void searchByDriverId(String driverId) {
@@ -232,15 +221,15 @@ public class AdminRideHistoryPage {
     // ----- Filter Actions -----
 
     public void setDateFromFilter(String date) {
-        wait.until(ExpectedConditions.visibilityOf(dateFromInput));
+        String loadId = getCurrentLoadId();
         setDateInputValue(dateFromInput, date);
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void setDateToFilter(String date) {
-        wait.until(ExpectedConditions.visibilityOf(dateToInput));
+        String loadId = getCurrentLoadId();
         setDateInputValue(dateToInput, date);
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void setDateRange(String from, String to) {
@@ -253,20 +242,19 @@ public class AdminRideHistoryPage {
     }
 
     public void clearDateFilter() {
-        wait.until(ExpectedConditions.elementToBeClickable(clearDateBtn));
+        String loadId = getCurrentLoadId();
         clearDateBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void selectStatus(String status) {
-        wait.until(ExpectedConditions.visibilityOf(statusFilterSelect));
+        String loadId = getCurrentLoadId();
         Select select = new Select(statusFilterSelect);
         select.selectByValue(status);
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public String getSelectedStatus() {
-        wait.until(ExpectedConditions.visibilityOf(statusFilterSelect));
         Select select = new Select(statusFilterSelect);
         return select.getFirstSelectedOption().getAttribute("value");
     }
@@ -286,34 +274,35 @@ public class AdminRideHistoryPage {
 
     // Click a specific page number button (0-based page index)
     public void goToPage(int pageIndex) {
+        String loadId = getCurrentLoadId();
         WebElement btn = wait.until(
                 ExpectedConditions.elementToBeClickable(By.id("page-btn-" + pageIndex)));
         btn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void clickNextPage() {
-        wait.until(ExpectedConditions.elementToBeClickable(pageNextBtn));
+        String loadId = getCurrentLoadId();
         pageNextBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void clickPrevPage() {
-        wait.until(ExpectedConditions.elementToBeClickable(pagePrevBtn));
+        String loadId = getCurrentLoadId();
         pagePrevBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void clickFirstPage() {
-        wait.until(ExpectedConditions.elementToBeClickable(pageFirstBtn));
+        String loadId = getCurrentLoadId();
         pageFirstBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void clickLastPage() {
-        wait.until(ExpectedConditions.elementToBeClickable(pageLastBtn));
+        String loadId = getCurrentLoadId();
         pageLastBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     // Check if the Next button is disabled
@@ -379,45 +368,45 @@ public class AdminRideHistoryPage {
     // ----- Sort Actions -----
 
     public void sortByStartTime() {
-        wait.until(ExpectedConditions.elementToBeClickable(sortStartTimeBtn));
+        String loadId = getCurrentLoadId();
         sortStartTimeBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void sortByEndTime() {
-        wait.until(ExpectedConditions.elementToBeClickable(sortEndTimeBtn));
+        String loadId = getCurrentLoadId();
         sortEndTimeBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void sortByRoute() {
-        wait.until(ExpectedConditions.elementToBeClickable(sortRouteBtn));
+        String loadId = getCurrentLoadId();
         sortRouteBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void sortByStatus() {
-        wait.until(ExpectedConditions.elementToBeClickable(sortStatusBtn));
+        String loadId = getCurrentLoadId();
         sortStatusBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void sortByCost() {
-        wait.until(ExpectedConditions.elementToBeClickable(sortCostBtn));
+        String loadId = getCurrentLoadId();
         sortCostBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void sortByCancelledBy() {
-        wait.until(ExpectedConditions.elementToBeClickable(sortCancelledByBtn));
+        String loadId = getCurrentLoadId();
         sortCancelledByBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     public void sortByPanic() {
-        wait.until(ExpectedConditions.elementToBeClickable(sortPanicBtn));
+        String loadId = getCurrentLoadId();
         sortPanicBtn.click();
-        waitForDataRefresh();
+        waitForDataRefresh(loadId);
     }
 
     // ----- Table Data Extraction -----

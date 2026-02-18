@@ -1,5 +1,6 @@
 package com.team27.lucky3.e2e.pages;
 
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -40,15 +41,45 @@ public class SidebarComponent {
     @FindBy(id = "sidebar-support")
     private WebElement supportLink;
 
+    private static final By SIDEBAR_HEADER = By.xpath("//h2[text()='Rides']");
+
     public SidebarComponent(WebDriver driver) {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         PageFactory.initElements(driver, this);
     }
 
+    /**
+     * Opens the sidebar if it is not already open.
+     * Waits for the "Rides" header to become visible to confirm the sidebar is expanded.
+     */
     public void openSidebar() {
+        // If sidebar is already open ("Rides" header visible), do nothing
+        if (isSidebarOpen()) {
+            return;
+        }
         wait.until(ExpectedConditions.elementToBeClickable(sidebarToggleButton));
         sidebarToggleButton.click();
+        waitForSidebarOpen();
+    }
+
+    /**
+     * Waits until the sidebar "Rides" header is visible, confirming the sidebar is fully open.
+     */
+    public void waitForSidebarOpen() {
+        wait.until(ExpectedConditions.visibilityOfElementLocated(SIDEBAR_HEADER));
+    }
+
+    /**
+     * Checks whether the sidebar is currently open by looking for the "Rides" header.
+     */
+    public boolean isSidebarOpen() {
+        try {
+            WebElement header = driver.findElement(SIDEBAR_HEADER);
+            return header.isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public void navigateToRideHistory() {

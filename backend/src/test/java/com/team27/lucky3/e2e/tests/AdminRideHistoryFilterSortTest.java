@@ -80,7 +80,6 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
         loginPage.loginAsAdmin();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         wait.until(ExpectedConditions.urlContains("/admin"));
-        sidebar.openSidebar();
         sidebar.navigateToRideHistory();
         wait.until(ExpectedConditions.urlContains("/admin/ride-history"));
         historyPage.waitForTableToLoad();

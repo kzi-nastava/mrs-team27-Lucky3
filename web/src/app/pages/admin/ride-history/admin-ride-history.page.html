@@ -350,7 +350,7 @@
     <!-- Rides Table -->
     <div id="rides-table-container" class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div class="overflow-x-auto">
-        <table id="rides-table" class="w-full text-sm text-left">
+        <table id="rides-table" [attr.data-load-id]="loadId" class="w-full text-sm text-left">
           <thead>
             <tr class="border-b border-gray-800 bg-gray-900/50">
               <th class="p-4 font-semibold text-gray-300">

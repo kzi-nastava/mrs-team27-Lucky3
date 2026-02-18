@@ -42,6 +42,9 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
   pageSize: number = 5;
   totalElements: number = 0;
   totalPages: number = 0;
+
+  // E2E test support: increments on each data load for fast refresh detection
+  loadId: number = 0;
   
   // User info for display
   selectedUserName: string = '';
@@ -147,6 +150,7 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
           this.rides = page.content || [];
           this.totalElements = page.totalElements || 0;
           this.totalPages = page.totalPages || 0;
+          this.loadId++;
           // Only set user info when searching by specific ID
           if (this.searchId && this.rides.length > 0) {
             if (this.searchType === 'driver' && this.rides[0].driver) {
