@@ -6,6 +6,8 @@ import com.team27.lucky3.backend.dto.response.VehiclePriceResponse;
 import com.team27.lucky3.backend.service.VehiclePriceService;
 import com.team27.lucky3.backend.service.VehicleService;
 import com.team27.lucky3.backend.service.VehicleSimulationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -22,21 +24,21 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Validated
 @CrossOrigin
+@Tag(name = "Vehicles", description = "Active vehicles, pricing & simulation locks")
 public class VehicleController {
 
     private final VehicleService vehicleService;
     private final VehiclePriceService vehiclePriceService;
     private final VehicleSimulationService vehicleSimulationService;
 
-    // 2.1.1 Display active vehicles on map (unregistered user)
-    // Returns vehicles of active drivers: green = FREE (not occupied), red = BUSY (occupied)
+    @Operation(summary = "Get active vehicles", description = "List all vehicles of active drivers on the map (public)", security = {})
     @GetMapping("/active")
     public ResponseEntity<List<VehicleLocationResponse>> getActiveVehicles() {
         List<VehicleLocationResponse> vehicles = vehicleService.getPublicMapVehicles();
         return ResponseEntity.ok(vehicles);
     }
 
-    // Public endpoint: get vehicle pricing for all types (used by ride estimation pages)
+    @Operation(summary = "Get vehicle prices", description = "Get pricing info for all vehicle types (public)", security = {})
     @GetMapping("/prices")
     public ResponseEntity<List<VehiclePriceResponse>> getVehiclePrices() {
         List<VehiclePriceResponse> prices = vehiclePriceService.getAllPrices().stream()
@@ -45,6 +47,7 @@ public class VehicleController {
         return ResponseEntity.ok(prices);
     }
 
+    @Operation(summary = "Update vehicle location", description = "Update lat/lng of a vehicle")
     @PutMapping("/{id}/location")
     public ResponseEntity<Void> updateLocation(@PathVariable Long id, @Valid @RequestBody LocationDto locationDto) {
         vehicleService.updateVehicleLocation(id, locationDto);
@@ -57,6 +60,7 @@ public class VehicleController {
 //     one browser tab drives the vehicle during a ride. The backend patrol simulation
 //     also respects this lock.
 
+    @Operation(summary = "Acquire simulation lock", description = "Claim leader status for vehicle simulation (called every ~10s)")
     @PutMapping("/{id}/simulation-lock")
     public ResponseEntity<Map<String, Object>> acquireSimulationLock(
             @PathVariable Long id,
@@ -70,9 +74,7 @@ public class VehicleController {
         return ResponseEntity.ok(Map.of("acquired", acquired));
     }
 
-    /**
-     * Release a simulation lock for a vehicle.
-     */
+    @Operation(summary = "Release simulation lock", description = "Give up simulation leader status for a vehicle")
     @DeleteMapping("/{id}/simulation-lock")
     public ResponseEntity<Void> releaseSimulationLock(
             @PathVariable Long id,

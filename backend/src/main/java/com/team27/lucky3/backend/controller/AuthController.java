@@ -12,6 +12,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,19 +29,20 @@ import java.io.IOException;
 @RequestMapping(value = "/api/auth", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Authentication", description = "Login, registration, password reset & account activation")
 public class AuthController {
 
     private final AuthService authService;
     private final TokenUtils tokenUtils;
 
-    // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
+    @Operation(summary = "Login", description = "Authenticate with email/password and receive a JWT token", security = {})
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         TokenResponse response = authService.login(loginRequest);
         return ResponseEntity.ok(response);
     }
 
-    // 2.2.2 User registration + email activation (unregistered -> registered user)
+    @Operation(summary = "Register passenger", description = "Register a new passenger account (multipart: JSON data + optional profile image)", security = {})
     @PostMapping(
             value = "/register",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -61,7 +65,7 @@ public class AuthController {
     }
 
 
-    // 2.2.2 User registration + email activation
+    @Operation(summary = "Activate account", description = "Activate account via email activation token", security = {})
     @GetMapping("/activate")
     public ResponseEntity<Void> activateAccount(@RequestParam @NotBlank String token) {
         // Activation logic using token
@@ -69,28 +73,28 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-    // 2.2.2 Resend activation email
+    @Operation(summary = "Resend activation email", description = "Resend the account activation email", security = {})
     @PostMapping(value = "/resend-activation", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> resendActivation(@Valid @RequestBody EmailRequest emailRequest) {
         authService.resendActivationEmail(emailRequest.getEmail());
         return ResponseEntity.ok().build();
     }
 
-    // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
+    @Operation(summary = "Forgot password", description = "Request a password reset email", security = {})
     @PostMapping(value = "/forgot-password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> forgotPassword(@Valid @RequestBody EmailRequest emailRequest) {
         authService.forgotPassword(emailRequest.getEmail());
         return ResponseEntity.noContent().build();
     }
 
-    // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
+    @Operation(summary = "Reset password", description = "Reset password using reset token + new password", security = {})
     @PostMapping(value = "/reset-password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody PasswordResetRequest resetRequest) {
         authService.resetPassword(resetRequest.getToken(), resetRequest.getNewPassword());
         return ResponseEntity.noContent().build();
     }
 
-    // 2.2.1 Login + forgot password + driver availability rules (registered user / driver)
+    @Operation(summary = "Logout", description = "Logout the current user (driver becomes inactive). Returns 409 if driver has active ride.")
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
@@ -110,14 +114,14 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
+    @Operation(summary = "Set initial driver password", description = "Driver sets password via activation token from email link", security = {})
     @PutMapping(value = "/driver-activation/password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody SetInitialPassword initialPassword) {
         authService.activateDriverWithPassword(initialPassword.getToken(), initialPassword.getPassword());
         return ResponseEntity.noContent().build();
     }
 
-    // Validate password reset token (for reset-password page pre-check)
+    @Operation(summary = "Validate reset token", description = "Check if a password reset token is still valid (204=valid, 404=invalid)", security = {})
     @GetMapping("/reset-password/validate")
     public ResponseEntity<Void> validateResetPasswordToken(@RequestParam @NotBlank String token) {
         boolean valid = authService.isPasswordResetTokenValid(token);

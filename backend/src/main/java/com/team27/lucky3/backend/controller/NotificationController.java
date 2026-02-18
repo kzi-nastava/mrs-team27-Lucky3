@@ -4,6 +4,8 @@ import com.team27.lucky3.backend.dto.response.NotificationResponse;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.entity.enums.NotificationType;
 import com.team27.lucky3.backend.service.NotificationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,31 +19,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * REST endpoints for the logged-in user's notification history and read-state
- * management.
- *
- * <ul>
- *   <li>{@code GET  /api/notification}           — paginated history</li>
- *   <li>{@code GET  /api/notification/unread}     — unread count (badge)</li>
- *   <li>{@code PUT  /api/notification/{id}/read}  — mark one as read</li>
- *   <li>{@code PUT  /api/notification/read-all}   — mark all as read</li>
- * </ul>
- */
 @RestController
 @RequestMapping(value = "/api/notification", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Notifications", description = "Notification history, read-state & cleanup")
 public class NotificationController {
 
     private final NotificationService notificationService;
 
-    /**
-     * Retrieve paginated notification history for the authenticated user.
-     * Optionally filter by {@code type} query parameter.
-     *
-     * <pre>GET /api/notification?page=0&size=20&type=PANIC</pre>
-     */
+    @Operation(summary = "Get notifications", description = "Paginated notification history, optionally filtered by type")
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<NotificationResponse>> getNotifications(
@@ -58,12 +45,7 @@ public class NotificationController {
         return ResponseEntity.ok(page);
     }
 
-    /**
-     * Returns the number of unread notifications for the badge/counter.
-     *
-     * <pre>GET /api/notification/unread</pre>
-     * Response: {@code { "unreadCount": 5 }}
-     */
+    @Operation(summary = "Get unread count", description = "Returns unread notification count for the badge")
     @GetMapping("/unread")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Long>> getUnreadCount(
@@ -72,11 +54,7 @@ public class NotificationController {
         return ResponseEntity.ok(Map.of("unreadCount", count));
     }
 
-    /**
-     * Mark a specific notification as read.
-     *
-     * <pre>PUT /api/notification/42/read</pre>
-     */
+    @Operation(summary = "Mark as read", description = "Mark a specific notification as read")
     @PutMapping("/{id}/read")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<NotificationResponse> markAsRead(
@@ -86,12 +64,7 @@ public class NotificationController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Mark <b>all</b> unread notifications as read for the current user.
-     *
-     * <pre>PUT /api/notification/read-all</pre>
-     * Response: {@code { "markedCount": 12 }}
-     */
+    @Operation(summary = "Mark all as read", description = "Mark all unread notifications as read")
     @PutMapping("/read-all")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Integer>> markAllAsRead(
@@ -100,12 +73,7 @@ public class NotificationController {
         return ResponseEntity.ok(Map.of("markedCount", count));
     }
 
-    /**
-     * Delete <b>all</b> notifications for the current user (clear history).
-     *
-     * <pre>DELETE /api/notification</pre>
-     * Response: {@code { "deletedCount": 8 }}
-     */
+    @Operation(summary = "Delete all notifications", description = "Clear entire notification history")
     @DeleteMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Integer>> deleteAll(
@@ -114,11 +82,7 @@ public class NotificationController {
         return ResponseEntity.ok(Map.of("deletedCount", count));
     }
 
-    /**
-     * Delete a single notification by ID.
-     *
-     * <pre>DELETE /api/notification/42</pre>
-     */
+    @Operation(summary = "Delete one notification", description = "Delete a single notification by ID")
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deleteOne(

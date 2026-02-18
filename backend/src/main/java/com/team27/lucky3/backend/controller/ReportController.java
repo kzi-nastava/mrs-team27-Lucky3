@@ -3,6 +3,8 @@ package com.team27.lucky3.backend.controller;
 import com.team27.lucky3.backend.dto.response.ReportResponse;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.service.ReportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +22,11 @@ import java.util.Map;
 @RequestMapping(value = "/api/reports", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Reports", description = "Analytics reports for users and admins")
 public class ReportController {
     private final ReportService reportService;
 
-    // 2.10 Generate reports (Admin, Driver, User)
+    @Operation(summary = "Get user report by ID", description = "Generate report for a user over a date range")
     @GetMapping("/{userId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ReportResponse> getReportForUser(
@@ -35,6 +38,7 @@ public class ReportController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Get user report by email (admin)", description = "Generate report for a user by email (ADMIN only)")
     @GetMapping("/user/{email}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReportResponse> getReportForUser(
@@ -46,7 +50,7 @@ public class ReportController {
         return ResponseEntity.ok(response);
     }
 
-    // Admin global report
+    @Operation(summary = "Get global report (admin)", description = "Generate a platform-wide report by type (rides/earnings/etc.)")
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReportResponse> getGlobalReport(

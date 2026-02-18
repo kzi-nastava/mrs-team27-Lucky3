@@ -12,6 +12,8 @@ import com.team27.lucky3.backend.repository.RideRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
 import com.team27.lucky3.backend.service.DriverChangeRequestService;
 import com.team27.lucky3.backend.service.VehiclePriceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 @RequestMapping(value = "/api/admin", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Admin", description = "Admin dashboard, vehicle pricing & statistics")
 public class AdminController {
 
     private final RideRepository rideRepository;
@@ -34,7 +37,7 @@ public class AdminController {
     private final ReviewRepository reviewRepository;
     private final VehiclePriceService vehiclePriceService;
 
-    // 2.14 Get all vehicle prices
+    @Operation(summary = "Get all vehicle prices", description = "Returns pricing for all vehicle types (ADMIN only)")
     @GetMapping("/vehicle-prices")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<VehiclePriceResponse>> getAllVehiclePrices() {
@@ -44,7 +47,7 @@ public class AdminController {
         return ResponseEntity.ok(prices);
     }
 
-    // 2.14 Update vehicle price
+    @Operation(summary = "Update vehicle price", description = "Update base fare and per-km rate for a vehicle type (ADMIN only)")
     @PutMapping("/vehicle-prices")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<VehiclePriceResponse> updateVehiclePrice(@Valid @RequestBody UpdateVehiclePriceRequest request) {
@@ -55,7 +58,7 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
 
-    // Admin dashboard statistics
+    @Operation(summary = "Get admin dashboard stats", description = "Active rides, avg rating, online drivers, total passengers")
     @GetMapping("/stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AdminStatsResponse> getAdminStats() {

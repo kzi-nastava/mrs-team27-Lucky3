@@ -77,6 +77,7 @@ public class WebSecurityConfig {
                 .requestMatchers("/api/reviews/with-token").permitAll() // Public review submission with token
                 .requestMatchers("/api/ride-tracking/**").permitAll() // Public ride tracking with token
                 .requestMatchers("/ws/**").permitAll() // WebSocket endpoint
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // OpenAPI / Swagger
                 .anyRequest().authenticated()
         );
 
