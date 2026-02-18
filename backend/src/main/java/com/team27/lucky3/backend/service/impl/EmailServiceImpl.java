@@ -23,6 +23,17 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendSimpleMessage(String to, String subject, String text) {
+        System.out.println("========== EMAIL SENDING ==========");
+        System.out.println("TO:      " + to);
+        System.out.println("SUBJECT: " + subject);
+        System.out.println("BODY:    " + text.replace("\n", " | "));
+        System.out.println("===================================");
+
+        if (to != null && to.endsWith("@example.com")) {
+            System.out.println("[EMAIL SKIP] Not sending — dummy address (" + to + ")");
+            return;
+        }
+
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("noreply@lucky3.com");
         message.setTo(to);
@@ -30,9 +41,9 @@ public class EmailServiceImpl implements EmailService {
         message.setText(text);
         try {
             mailSender.send(message);
-            System.out.println("EMAILING: " + to + " | " + subject + " | " + text);
+            System.out.println("[EMAIL OK] Successfully sent to " + to);
         } catch (Exception e) {
-            System.err.println("Failed to send email: " + e.getMessage());
+            System.err.println("[EMAIL FAIL] Could not send to " + to + ": " + e.getMessage());
             e.printStackTrace();
         }
     }

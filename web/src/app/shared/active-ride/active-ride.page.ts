@@ -124,6 +124,7 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly geocodeEnabled = true;
   private pollErrors = 0;
+  private beforeUnloadHandler: (() => void) | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -188,6 +189,12 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     if (this.locationSubscription) this.locationSubscription.unsubscribe();
     if (this.routeUpdateSubscription) this.routeUpdateSubscription.unsubscribe();
     if (this.rideUpdateSubscription) this.rideUpdateSubscription.unsubscribe();
+
+    // Remove beforeunload handler
+    if (this.beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+      this.beforeUnloadHandler = null;
+    }
 
     // Release simulation lock on destroy
     this.releaseSimulationLock();
@@ -769,6 +776,19 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         if (r.vehicleLocation && this.isValidCoordinate(r.vehicleLocation.latitude, r.vehicleLocation.longitude)) {
           this.driverLocation = { latitude: r.vehicleLocation.latitude, longitude: r.vehicleLocation.longitude };
         }
+        // Sync completed stops from backend (covers cases where WebSocket missed the update)
+        if (r.completedStopIndexes && r.completedStopIndexes.length > 0) {
+          let changed = false;
+          for (const idx of r.completedStopIndexes) {
+            if (!this.completedStopIndexes.has(idx)) {
+              this.completedStopIndexes.add(idx);
+              changed = true;
+            }
+          }
+          if (changed) {
+            this.updateRemainingRoute();
+          }
+        }
         this.cdr.detectChanges();
       },
       error: () => {
@@ -1162,6 +1182,9 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       next: (rideUpdate) => {
         console.log('Received ride update via WebSocket:', rideUpdate);
         
+        // Sync completedStopIndexes from the broadcast (e.g. after driver completes a stop)
+        this.syncCompletedStops(rideUpdate);
+
         // Check if ride status changed to a terminal state
         const newStatus = rideUpdate.status;
         if (newStatus && newStatus !== this.rideStatus) {
@@ -1375,6 +1398,31 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
     return Math.max(0, remaining);
   }
 
+  /**
+   * Sync completedStopIndexes from a WebSocket ride update.
+   * This lets the passenger (non-leader) update routes when the driver completes a stop.
+   */
+  private syncCompletedStops(rideUpdate: RideResponse): void {
+    const incoming = rideUpdate.completedStopIndexes ?? [];
+    if (!incoming.length) return;
+
+    let changed = false;
+    for (const idx of incoming) {
+      if (!this.completedStopIndexes.has(idx)) {
+        this.completedStopIndexes.add(idx);
+        changed = true;
+        this.showStopCompletedToast(idx);
+      }
+    }
+
+    if (changed && this.backendRide) {
+      // Update the stored backend ride so route calculations use fresh data
+      this.backendRide = { ...this.backendRide, completedStopIndexes: incoming };
+      this.updateRemainingRoute();
+      this.cdr.detectChanges();
+    }
+  }
+
   private updateCompletedStops(): void {
     if (!this.driverLocation || !this.rideMapData) return;
     // Only the simulation leader should complete stops (driver or passenger)
@@ -1413,6 +1461,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
             // Still mark locally completed to avoid repeated calls
             this.completedStopIndexes.add(idx);
             this.waitingForNewBlueLine = false;
+            // Recalculate routes even on failure so yellow line updates
+            this.updateRemainingRoute();
           }
         });
       }
@@ -1539,35 +1589,65 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
    * Try to acquire the simulation lock from the backend.
    * Only one tab (driver or passenger) should drive the vehicle per ride.
    */
-  private tryBecomeSimulationLeader(vehicleId: number): void {
+  private tryBecomeSimulationLeader(vehicleId: number, retryCount = 0): void {
     this.vehicleService.acquireSimulationLock(vehicleId, this.simulationSessionId).subscribe({
       next: (res) => {
         this.isSimulationLeader = res.acquired;
         if (this.isSimulationLeader) {
-          this.startSimulation();
-          // Refresh lock every 10s
-          this.lockRefreshTimer = setInterval(() => {
-            if (this.simulatedVehicleId != null) {
-              this.vehicleService.acquireSimulationLock(this.simulatedVehicleId, this.simulationSessionId)
-                .subscribe({
-                  next: (r) => {
-                    if (!r.acquired) {
-                      this.isSimulationLeader = false;
-                      this.stopSimulation();
-                    }
-                  },
-                  error: () => { /* keep going */ }
-                });
-            }
-          }, 10_000);
+          this.onSimulationLeaderAcquired();
+        } else if (retryCount < 5) {
+          // Lock held by a stale session (e.g. pre-refresh). Retry after a short delay;
+          // the old lock expires after 15s, so retrying every 3s covers the gap.
+          setTimeout(() => this.tryBecomeSimulationLeader(vehicleId, retryCount + 1), 3000);
         }
       },
       error: () => {
         // Could not contact server — fall back to being leader (safe default)
         this.isSimulationLeader = true;
-        this.startSimulation();
+        this.onSimulationLeaderAcquired();
       }
     });
+  }
+
+  private onSimulationLeaderAcquired(): void {
+    this.startSimulation();
+
+    // Refresh lock every 10s
+    this.lockRefreshTimer = setInterval(() => {
+      if (this.simulatedVehicleId != null) {
+        this.vehicleService.acquireSimulationLock(this.simulatedVehicleId, this.simulationSessionId)
+          .subscribe({
+            next: (r) => {
+              if (!r.acquired) {
+                this.isSimulationLeader = false;
+                this.stopSimulation();
+              }
+            },
+            error: () => { /* keep going */ }
+          });
+      }
+    }, 10_000);
+
+    // Register beforeunload to reliably release the lock on page refresh/close
+    if (this.beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+    }
+    this.beforeUnloadHandler = () => {
+      if (this.simulatedVehicleId != null) {
+        // Use fetch with keepalive to survive page unload
+        const url = `/api/vehicles/${this.simulatedVehicleId}/simulation-lock`;
+        try {
+          fetch(url, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json',
+                       'Authorization': `Bearer ${localStorage.getItem('user') ?? ''}` },
+            body: JSON.stringify({ sessionId: this.simulationSessionId }),
+            keepalive: true
+          });
+        } catch { /* best effort */ }
+      }
+    };
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
   }
 
   private startSimulation(): void {

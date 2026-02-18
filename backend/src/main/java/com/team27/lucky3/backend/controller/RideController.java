@@ -121,7 +121,7 @@ public class RideController {
     }
 
     @PutMapping("/{id}/stop/{stopIndex}/complete")
-    @PreAuthorize("hasRole('DRIVER')")
+    @PreAuthorize("hasRole('DRIVER') or hasRole('PASSENGER')")
     public ResponseEntity<RideResponse> completeStop(
             @PathVariable @Min(1) Long id,
             @PathVariable @Min(0) Integer stopIndex) {

@@ -1191,9 +1191,12 @@ public class RideServiceImpl implements RideService {
             throw new IllegalStateException("User must be authenticated.");
         }
 
-        // Validate that the user is the driver
-        if (ride.getDriver() == null || !ride.getDriver().getId().equals(currentUser.getId())) {
-            throw new IllegalStateException("Only the assigned driver can complete stops.");
+        // Validate that the user is a participant of this ride (driver or passenger)
+        boolean isDriver = ride.getDriver() != null && ride.getDriver().getId().equals(currentUser.getId());
+        boolean isPassenger = ride.getPassengers() != null && ride.getPassengers().stream()
+                .anyMatch(p -> p.getId().equals(currentUser.getId()));
+        if (!isDriver && !isPassenger) {
+            throw new IllegalStateException("Only ride participants can complete stops.");
         }
 
         // Validate ride is in progress
@@ -1225,7 +1228,12 @@ public class RideServiceImpl implements RideService {
 
         // Save the ride with updated completedStopIndexes
         Ride savedRide = rideRepository.save(ride);
-        return mapToResponse(savedRide);
+        RideResponse response = mapToResponse(savedRide);
+
+        // Broadcast so other participants (e.g. passengers) can sync their routes
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override

@@ -626,7 +626,7 @@ public class NotificationServiceImpl implements NotificationService {
      * Sends an HTML-style linked-passenger invite email with a deep link.
      */
     private void sendLinkedPassengerEmail(User passenger, Ride ride) {
-        if (passenger.getEmail() == null || passenger.getEmail().endsWith("@example.com")) return;
+        if (passenger.getEmail() == null) return;
 
         String rideLink = frontendUrl + "/passenger/ride/" + ride.getId();
         final String email = passenger.getEmail();
@@ -660,7 +660,7 @@ public class NotificationServiceImpl implements NotificationService {
      * Sends a ride-summary email after a ride finishes (async).
      */
     private void sendRideSummaryEmail(User passenger, Ride ride) {
-        if (passenger.getEmail() == null || passenger.getEmail().endsWith("@example.com")) return;
+        if (passenger.getEmail() == null) return;
 
         final String email = passenger.getEmail();
         final String name = passenger.getName() != null ? passenger.getName() : "Passenger";
@@ -715,7 +715,7 @@ public class NotificationServiceImpl implements NotificationService {
      */
     private void sendCancellationEmail(String toEmail, String recipientName, Ride ride,
                                         String cancellerName, String cancellerRole) {
-        if (toEmail == null || toEmail.endsWith("@example.com")) return;
+        if (toEmail == null) return;
 
         final String email = toEmail;
         final String name = recipientName != null ? recipientName : "User";
@@ -744,7 +744,7 @@ public class NotificationServiceImpl implements NotificationService {
         if (ride.getDriver() == null) return;
 
         String driverEmail = ride.getDriver().getEmail();
-        if (driverEmail == null || driverEmail.endsWith("@example.com")) return;
+        if (driverEmail == null) return;
 
         final String email = driverEmail;
         final String name = ride.getDriver().getName() != null ? ride.getDriver().getName() : "Driver";

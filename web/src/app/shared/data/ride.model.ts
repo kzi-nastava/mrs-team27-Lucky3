@@ -24,4 +24,5 @@ export interface Ride {
   cancelledBy?: 'passenger' | 'driver';
   cancellationReason?: string;
   vehicleType?: string;
+  inconsistencyReports?: { description: string; timestamp: string }[];
 }
