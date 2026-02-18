@@ -1377,8 +1377,8 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   private updateCompletedStops(): void {
     if (!this.driverLocation || !this.rideMapData) return;
-    // Only driver should complete stops
-    if (!this.isDriver || !this.isRideInProgress) return;
+    // Only the simulation leader should complete stops (driver or passenger)
+    if (!this.isSimulationLeader || !this.isRideInProgress) return;
 
     this.rideMapData.stops.forEach((stop, idx) => {
       // Skip if already completed or being processed
