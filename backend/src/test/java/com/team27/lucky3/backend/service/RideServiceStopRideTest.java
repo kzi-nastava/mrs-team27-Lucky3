@@ -365,8 +365,10 @@ class RideServiceStopRideTest {
     // ═══════════════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("stopRide - recalculates distance using Haversine (no stops)")
+    @DisplayName("stopRide - uses tracked distance from RideCostTrackingService (no stops)")
     void stopRide_recalculatesDistance_noStops() {
+        inProgressRide.setDistanceTraveled(3.5);
+
         mockSecurityContext(driverUser);
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
         when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -380,20 +382,20 @@ class RideServiceStopRideTest {
         verify(rideRepository).save(rideCaptor.capture());
         Ride saved = rideCaptor.getValue();
 
-        // Distance should be > 0 (Haversine from start to new end)
+        // Distance should equal the tracked distance
         assertTrue(saved.getDistance() > 0.0);
-        // Should not be the original distance since end location changed
-        assertNotEquals(5.0, saved.getDistance());
+        assertEquals(3.5, saved.getDistance());
     }
 
     @Test
-    @DisplayName("stopRide - recalculates distance including intermediate stops")
+    @DisplayName("stopRide - uses tracked distance even with intermediate stops")
     void stopRide_recalculatesDistance_withStops() {
         List<Location> stops = List.of(
                 new Location("Stop 1", 45.2630, 19.8360),
                 new Location("Stop 2", 45.2610, 19.8380)
         );
         inProgressRide.setStops(stops);
+        inProgressRide.setDistanceTraveled(5.2);
 
         mockSecurityContext(driverUser);
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
@@ -408,8 +410,9 @@ class RideServiceStopRideTest {
         verify(rideRepository).save(rideCaptor.capture());
         Ride saved = rideCaptor.getValue();
 
-        // With intermediate stops, distance should be >= direct distance
+        // Distance should equal the tracked distance
         assertTrue(saved.getDistance() > 0.0);
+        assertEquals(5.2, saved.getDistance());
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -751,6 +754,7 @@ class RideServiceStopRideTest {
         inProgressRide.setRequestedVehicleType(VehicleType.LUXURY);
         inProgressRide.setRateBaseFare(360.0);
         inProgressRide.setRatePricePerKm(120.0);
+        inProgressRide.setDistanceTraveled(2.0);
 
         mockSecurityContext(driverUser);
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
@@ -808,6 +812,8 @@ class RideServiceStopRideTest {
     @Test
     @DisplayName("stopRide - response contains recalculated cost and distance")
     void stopRide_responseContainsRecalculatedValues() {
+        inProgressRide.setDistanceTraveled(3.0);
+
         mockSecurityContext(driverUser);
         when(rideRepository.findById(1L)).thenReturn(Optional.of(inProgressRide));
         when(rideRepository.save(any(Ride.class))).thenAnswer(inv -> inv.getArgument(0));

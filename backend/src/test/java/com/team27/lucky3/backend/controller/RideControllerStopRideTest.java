@@ -355,7 +355,7 @@ class RideControllerStopRideTest {
             mockMvc.perform(put("/api/rides/1/stop")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().isBadRequest());
         }
 
         @Test
@@ -562,7 +562,7 @@ class RideControllerStopRideTest {
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{invalid json}"))
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().isBadRequest());
         }
 
         @Test
