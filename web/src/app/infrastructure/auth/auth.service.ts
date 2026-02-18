@@ -345,4 +345,16 @@ export class AuthService {
     const token = localStorage.getItem(this.userKey);
     return token != null && !this.jwtHelper.isTokenExpired(token);
   }
+
+  isBlocked(): boolean {
+    const token = localStorage.getItem(this.userKey);
+    if (!token) return false;
+
+    if (this.jwtHelper.isTokenExpired(token)) {
+      return false;
+    }
+
+    const decodedToken: any = this.jwtHelper.decodeToken(token);
+    return decodedToken?.blocked === true;
+  }
 }

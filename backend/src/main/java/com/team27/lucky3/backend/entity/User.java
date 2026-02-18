@@ -90,7 +90,7 @@ public class User implements UserDetails {
 
     @JsonIgnore
     @Override
-    public boolean isAccountNonLocked() { return !this.isBlocked; }
+    public boolean isAccountNonLocked() { return true; }
 
     @JsonIgnore
     @Override
@@ -98,6 +98,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return this.isEnabled && !this.isBlocked;
+        return this.isEnabled;
     }
 }

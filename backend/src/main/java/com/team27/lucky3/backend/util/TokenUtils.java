@@ -42,6 +42,7 @@ public class TokenUtils {
                 .setIssuedAt(new Date())
                 .claim("role", user.getRole().name())
                 .claim("id", user.getId())
+                .claim("blocked", user.isBlocked())
                 .setExpiration(new Date(new Date().getTime() + EXPIRES_IN))
                 .signWith(getKey(), SIGNATURE_ALGORITHM).compact();
     }

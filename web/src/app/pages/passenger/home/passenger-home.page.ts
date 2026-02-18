@@ -61,6 +61,9 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   // email linking form state
   showLinkForm: boolean = false;
   linkedPassengers: string[] = [];
+
+  // Blocked user state
+  isBlocked: boolean = false;
   
   // --- ICONS ---
 
@@ -148,7 +151,9 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
     
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.isBlocked = this.authService.isBlocked();
+  }
 
   ngAfterViewInit(): void {
     this.initMap();
@@ -222,6 +227,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   }
 
   toggleOrderingForm(): void {
+    if (this.isBlocked) return;
     this.showOrderingForm = !this.showOrderingForm;
     if (this.showOrderingForm) {
       this.showLinkForm = false;  // Close link form when opening ordering form
@@ -243,6 +249,7 @@ export class PassengerHomePage implements OnInit, AfterViewInit, OnDestroy  {
   }
 
   toggleLinkForm(): void {
+    if (this.isBlocked) return;
     this.showLinkForm = !this.showLinkForm;
     if (this.showLinkForm) {
       this.showOrderingForm = false;  // Close ordering form when opening link form

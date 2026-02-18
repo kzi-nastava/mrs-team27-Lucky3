@@ -50,6 +50,9 @@ export class DashboardPage implements OnInit, OnDestroy {
   statusMessage: string | null = null;    // Status message from backend
   driverName: string = 'James';
 
+  // Blocked user state
+  isUserBlocked: boolean = false;
+
   // Toast notification
   toastMessage: string = '';
   toastType: 'success' | 'error' | 'warning' | 'info' = 'info';
@@ -104,6 +107,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.driverId = this.authService.getUserId();
+    this.isUserBlocked = this.authService.isBlocked();
 
     // Load current driver status from backend
     this.loadDriverStatus();
