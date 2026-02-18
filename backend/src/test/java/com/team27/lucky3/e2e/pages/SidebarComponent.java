@@ -14,6 +14,9 @@ public class SidebarComponent {
     private WebDriver driver;
     private WebDriverWait wait;
 
+    @FindBy(id = "sidebar-toggle")
+    private WebElement sidebarToggleButton;
+
     @FindBy(id = "sidebar-history")
     private WebElement rideHistoryLink;
 
@@ -27,6 +30,11 @@ public class SidebarComponent {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         PageFactory.initElements(driver, this);
+    }
+
+    public void openSidebar() {
+        wait.until(ExpectedConditions.elementToBeClickable(sidebarToggleButton));
+        sidebarToggleButton.click();
     }
 
     public void navigateToRideHistory() {
