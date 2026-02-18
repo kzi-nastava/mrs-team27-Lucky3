@@ -602,6 +602,9 @@ public class RideServiceImpl implements RideService {
         // Send review request emails to passengers
         sendReviewRequestEmails(savedRide);
 
+        // Send leave-review in-app notification to the ride creator
+        notificationService.sendLeaveReviewNotification(savedRide);
+
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
 
@@ -945,6 +948,9 @@ public class RideServiceImpl implements RideService {
 
         // Send review request emails to passengers (same as endRide)
         sendReviewRequestEmails(savedRide);
+
+        // Send leave-review in-app notification to the ride creator (same as endRide)
+        notificationService.sendLeaveReviewNotification(savedRide);
 
         // Time-delayed Inactive Logic (same as endRide)
         checkAndHandleInactiveRequest(savedRide.getDriver());

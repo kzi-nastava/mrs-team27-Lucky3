@@ -105,7 +105,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         // The personal notification queue (/user/{id}/queue/notifications) now handles
         // RIDE_CREATED, RIDE_INVITE, DRIVER_ASSIGNMENT, and ride statuses when not
         // subscribed to the specific ride topic. Skip all of these to avoid duplicates.
-        if (com.example.mobile.utils.AppNotificationManager.getInstance().isStarted()
+        //
+        // IMPORTANT: only skip when the app is in the foreground. When backgrounded,
+        // Android may silently kill the idle TCP connection while the STOMP client still
+        // reports isConnected()=true (stale connection). Skipping FCM in that state means
+        // the notification is lost entirely — so we always fall through to show the system
+        // notification when the user is not actively using the app.
+        if (com.example.mobile.utils.AppLifecycleTracker.isAppInForeground()
+                && com.example.mobile.utils.AppNotificationManager.getInstance().isStarted()
                 && com.example.mobile.utils.WebSocketManager.getInstance().isConnected()) {
 
             switch (type) {
@@ -125,6 +132,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 case "STOP_COMPLETED":
                     // Handled by ride topic when subscribed, or personal queue otherwise
                     Log.d(TAG, "Skipping " + type + " FCM \u2014 handled by WebSocket");
+                    return;
+                case "LEAVE_REVIEW":
+                    // Handled by personal notification queue
+                    Log.d(TAG, "Skipping LEAVE_REVIEW FCM \u2014 handled by personal queue WebSocket");
                     return;
                 case "PANIC":
                     // Handled by /topic/panic subscription (admin)
@@ -149,6 +160,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             case "DRIVER_ASSIGNMENT":
             case "STOP_COMPLETED":
                 channelId = NotificationHelper.CHANNEL_RIDE_UPDATES;
+                priority = NotificationCompat.PRIORITY_HIGH;
+                break;
+            case "LEAVE_REVIEW":
+                channelId = NotificationHelper.CHANNEL_GENERAL;
                 priority = NotificationCompat.PRIORITY_HIGH;
                 break;
             case "SUPPORT":
@@ -236,6 +251,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             case "STOP_COMPLETED":
                 notifType = AppNotification.Type.STOP_COMPLETED;
                 break;
+            case "LEAVE_REVIEW":
+                notifType = AppNotification.Type.LEAVE_REVIEW;
+                break;
             case "RIDE_STATUS":
             case "RIDE_INVITE":
                 notifType = AppNotification.Type.RIDE_STATUS;
@@ -288,6 +306,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     intent.putExtra("chatId", Long.parseLong(rideIdStr));
                 } catch (NumberFormatException e) {
                     Log.w(TAG, "Invalid chatId in FCM data: " + rideIdStr);
+                }
+            }
+            return intent;
+        }
+
+        if ("LEAVE_REVIEW".equals(type)) {
+            intent.putExtra("navigate_to", "review");
+            if (rideIdStr != null && !rideIdStr.isEmpty()) {
+                try {
+                    intent.putExtra("rideId", Long.parseLong(rideIdStr));
+                } catch (NumberFormatException e) {
+                    Log.w(TAG, "Invalid rideId in FCM data: " + rideIdStr);
                 }
             }
             return intent;

@@ -399,12 +399,13 @@ public class AppNotificationManager {
             return;
         }
 
-        // Skip ride lifecycle types when we're already subscribed to that ride's topic
+        // Skip ride lifecycle types when we're already subscribed to that ride's topic.
+        // Terminal states (RIDE_FINISHED, RIDE_CANCELLED) are NOT suppressed here:
+        // sendRideFinishedNotification() only pushes to the personal queue, never to
+        // the ride topic, so we must always deliver them from this handler.
         if (relatedEntityId != null && isSubscribedToRide(relatedEntityId)) {
             switch (type != null ? type : "") {
                 case "RIDE_STATUS":
-                case "RIDE_FINISHED":
-                case "RIDE_CANCELLED":
                 case "STOP_COMPLETED":
                     Log.d(TAG, "Skipping personal-queue " + type
                             + " for ride " + relatedEntityId + " — handled by ride topic");
@@ -442,6 +443,10 @@ public class AppNotificationManager {
                 channelId = NotificationHelper.CHANNEL_RIDE_UPDATES;
                 navigateTo = "ride_history";
                 break;
+            case LEAVE_REVIEW:
+                channelId = NotificationHelper.CHANNEL_GENERAL;
+                navigateTo = "review";
+                break;
             case SUPPORT_MESSAGE:
                 channelId = NotificationHelper.CHANNEL_GENERAL;
                 navigateTo = "support";
@@ -454,6 +459,12 @@ public class AppNotificationManager {
 
         postSystemNotification(notification.getTitle(), notification.getBody(),
                 channelId, navigateTo, rideId, chatId);
+
+        // Clean up ride subscription when a terminal event arrives from the personal queue
+        // (backend only sends RIDE_FINISHED / RIDE_CANCELLED to this queue, not the ride topic)
+        if ("RIDE_FINISHED".equals(type) || "RIDE_CANCELLED".equals(type)) {
+            unsubscribeFromRideUpdates();
+        }
     }
 
     private void unsubscribeAll() {
@@ -535,30 +546,16 @@ public class AppNotificationManager {
                 body = "Your ride is now in progress.";
                 break;
             case "FINISHED":
-                title = "Ride Completed";
-                body = "Your ride has been completed. Total cost: " +
-                        String.format("%.0f RSD", ride.getEffectiveCost());
-                unsubscribeFromRideUpdates();
-                break;
             case "CANCELLED":
             case "CANCELLED_BY_DRIVER":
-                title = "Ride Cancelled";
-                body = "Your ride has been cancelled by the driver.";
-                unsubscribeFromRideUpdates();
-                break;
             case "CANCELLED_BY_PASSENGER":
-                title = "Ride Cancelled";
-                body = "The ride has been cancelled.";
-                unsubscribeFromRideUpdates();
-                break;
             case "REJECTED":
-                title = "Ride Rejected";
-                body = "Your ride request was rejected.";
-                if (ride.getRejectionReason() != null) {
-                    body += " Reason: " + ride.getRejectionReason();
-                }
+                // Terminal states: unsubscribe here and let the personal queue deliver
+                // the notification. sendRideFinishedNotification() only pushes to the
+                // personal queue, so delivering from onRideUpdate() would cause duplicates
+                // if the ride topic also fires, and would miss it otherwise.
                 unsubscribeFromRideUpdates();
-                break;
+                return;
             case "PANIC":
                 title = "\uD83D\uDEA8 Panic Activated";
                 body = "Panic button was pressed on your ride!";
@@ -752,16 +749,17 @@ public class AppNotificationManager {
                 int stream = NotificationHelper.CHANNEL_PANIC_ALERTS.equals(channelId)
                         ? AudioManager.STREAM_ALARM
                         : AudioManager.STREAM_NOTIFICATION;
-                ToneGenerator toneGen = new ToneGenerator(stream, 80);
+                int volume = NotificationHelper.CHANNEL_PANIC_ALERTS.equals(channelId)
+                        ? ToneGenerator.MAX_VOLUME   // 100 — maximum urgency for panic
+                        : 80;
+                ToneGenerator toneGen = new ToneGenerator(stream, volume);
 
                 if (NotificationHelper.CHANNEL_PANIC_ALERTS.equals(channelId)) {
-                    // Urgent triple-beep for panic
-                    toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
-                    Thread.sleep(250);
-                    toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
-                    Thread.sleep(250);
-                    toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
-                    Thread.sleep(200);
+                    // Urgent five-beep pattern for panic (more insistent than the old triple)
+                    for (int i = 0; i < 5; i++) {
+                        toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 200);
+                        Thread.sleep(350);
+                    }
                 } else {
                     // Single short tone for normal notifications
                     toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 200);

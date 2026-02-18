@@ -75,6 +75,9 @@ public class NotificationResponseDTO {
             case "STOP_COMPLETED":
                 notifType = AppNotification.Type.STOP_COMPLETED;
                 break;
+            case "LEAVE_REVIEW":
+                notifType = AppNotification.Type.LEAVE_REVIEW;
+                break;
             case "SUPPORT":
                 notifType = AppNotification.Type.SUPPORT_MESSAGE;
                 break;
@@ -93,6 +96,7 @@ public class NotificationResponseDTO {
             case DRIVER_ASSIGNED:  title = "Driver Assigned"; break;
             case RIDE_STATUS:      title = "Ride Update"; break;
             case STOP_COMPLETED:   title = "Stop Completed"; break;
+            case LEAVE_REVIEW:     title = "Leave a Review"; break;
             case SUPPORT_MESSAGE:  title = "Support"; break;
             default:               title = "Notification"; break;
         }

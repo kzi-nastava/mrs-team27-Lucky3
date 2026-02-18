@@ -17,6 +17,7 @@ public class AppNotification implements Serializable {
         RIDE_CREATED,       // Ride created (for creator + driver)
         DRIVER_ASSIGNED,    // Driver assigned to ride
         STOP_COMPLETED,     // A ride stop has been completed
+        LEAVE_REVIEW,       // Prompt to leave a review after ride finishes
         PANIC_ALERT,        // Panic button pressed (admin)
         SUPPORT_MESSAGE,    // New support chat message
         GENERAL             // Fallback

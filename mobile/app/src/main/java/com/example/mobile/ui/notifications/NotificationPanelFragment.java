@@ -12,6 +12,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.NavOptions;
 import androidx.navigation.Navigation;
 
 import com.google.android.material.card.MaterialCardView;
@@ -137,10 +138,31 @@ public class NotificationPanelFragment extends Fragment {
         });
     }
 
+    /**
+     * Builds NavOptions that pop the back stack up to (but not including) the role's
+     * home destination, then navigate to the target.  This mimics pressing a sidebar item:
+     * the notification panel and any intermediate fragments are removed so the target
+     * appears as a direct child of the home screen, not stacked on top of the panel.
+     */
+    private NavOptions buildNotifNavOptions(androidx.navigation.NavController navController) {
+        String role = new SharedPreferencesManager(requireContext()).getUserRole();
+        int roleHome;
+        if ("DRIVER".equals(role))        roleHome = R.id.nav_driver_dashboard;
+        else if ("ADMIN".equals(role))    roleHome = R.id.nav_admin_dashboard;
+        else                              roleHome = R.id.nav_passenger_home;
+
+        return new NavOptions.Builder()
+                .setLaunchSingleTop(true)
+                .setPopUpTo(roleHome, false)
+                .build();
+    }
+
     private void navigateToNotification(AppNotification notif) {
         try {
-            String role = new com.example.mobile.utils.SharedPreferencesManager(
-                    requireContext()).getUserRole();
+            String role = new SharedPreferencesManager(requireContext()).getUserRole();
+            androidx.navigation.NavController navController =
+                    Navigation.findNavController(requireView());
+            NavOptions navOptions = buildNotifNavOptions(navController);
 
             switch (notif.getType()) {
                 case RIDE_STATUS:
@@ -150,25 +172,20 @@ public class NotificationPanelFragment extends Fragment {
                     if (notif.getRideId() != null) {
                         Bundle args = new Bundle();
                         args.putLong("rideId", notif.getRideId());
-                        Navigation.findNavController(requireView())
-                                .navigate(R.id.nav_active_ride, args);
+                        navController.navigate(R.id.nav_active_ride, args, navOptions);
                     }
                     break;
 
                 case STOP_COMPLETED:
-                    // Navigate to active ride if not already there;
-                    // if already on active ride, just dismiss the notification (already removed above)
                     if (notif.getRideId() != null) {
-                        androidx.navigation.NavController stopNavCtrl =
-                                Navigation.findNavController(requireView());
-                        int currentDestId = stopNavCtrl.getCurrentDestination() != null
-                                ? stopNavCtrl.getCurrentDestination().getId() : -1;
+                        int currentDestId = navController.getCurrentDestination() != null
+                                ? navController.getCurrentDestination().getId() : -1;
                         if (currentDestId != R.id.nav_active_ride) {
                             Bundle stopArgs = new Bundle();
                             stopArgs.putLong("rideId", notif.getRideId());
-                            stopNavCtrl.navigate(R.id.nav_active_ride, stopArgs);
+                            navController.navigate(R.id.nav_active_ride, stopArgs, navOptions);
                         }
-                        // If already on active ride, the notification is already removed — nothing else to do
+                        // If already on active ride the notification was dismissed — nothing else to do
                     }
                     break;
 
@@ -177,25 +194,27 @@ public class NotificationPanelFragment extends Fragment {
                     if (notif.getRideId() != null) {
                         Bundle histArgs = new Bundle();
                         histArgs.putLong("rideId", notif.getRideId());
-                        // Navigate to role-specific ride detail
                         if ("DRIVER".equals(role)) {
-                            Navigation.findNavController(requireView())
-                                    .navigate(R.id.nav_ride_details, histArgs);
+                            navController.navigate(R.id.nav_ride_details, histArgs, navOptions);
                         } else {
-                            Navigation.findNavController(requireView())
-                                    .navigate(R.id.nav_passenger_ride_detail, histArgs);
+                            navController.navigate(R.id.nav_passenger_ride_detail, histArgs, navOptions);
                         }
                     }
                     break;
 
+                case LEAVE_REVIEW:
+                    if (notif.getRideId() != null) {
+                        Bundle reviewArgs = new Bundle();
+                        reviewArgs.putLong("rideId", notif.getRideId());
+                        navController.navigate(R.id.nav_review, reviewArgs, navOptions);
+                    }
+                    break;
+
                 case PANIC_ALERT:
-                    Navigation.findNavController(requireView())
-                            .navigate(R.id.nav_admin_panic);
+                    navController.navigate(R.id.nav_admin_panic, null, navOptions);
                     break;
 
                 case SUPPORT_MESSAGE:
-                    // Navigate to support chat — use role-specific destination
-                    // Pass chatId for admin direct navigation to the specific chat
                     navigateToSupport(notif.getChatId());
                     break;
 
@@ -213,17 +232,11 @@ public class NotificationPanelFragment extends Fragment {
 
     private void navigateToSupport(Long chatId) {
         try {
-            String role = new com.example.mobile.utils.SharedPreferencesManager(
-                    requireContext()).getUserRole();
             androidx.navigation.NavController navController =
                     Navigation.findNavController(requireView());
-            // Pop back to start destination so support chat replaces current page
-            // instead of stacking on top of it
-            androidx.navigation.NavOptions navOptions =
-                    new androidx.navigation.NavOptions.Builder()
-                            .setLaunchSingleTop(true)
-                            .setPopUpTo(navController.getGraph().getStartDestinationId(), false)
-                            .build();
+            NavOptions navOptions = buildNotifNavOptions(navController);
+
+            String role = new SharedPreferencesManager(requireContext()).getUserRole();
             if ("ADMIN".equals(role)) {
                 if (chatId != null && chatId > 0) {
                     Bundle args = new Bundle();

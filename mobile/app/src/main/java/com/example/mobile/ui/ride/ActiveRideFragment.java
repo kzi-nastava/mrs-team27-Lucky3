@@ -561,6 +561,19 @@ public class ActiveRideFragment extends Fragment {
         if (ride == null || rideId <= 0) return;
 
         WebSocketManager ws = WebSocketManager.getInstance();
+
+        // If AppNotificationManager already holds a live connection, reuse it.
+        // Calling connect() again would create a duplicate connection/callback chain.
+        if (ws.isConnected()) {
+            wsConnected = true;
+            Log.i(TAG, "WebSocket already connected — subscribing to ride topics");
+            subscribeToVehicleLocation();
+            subscribeToRideUpdates();
+            stopPolling();
+            pollVehicleLocation();
+            return;
+        }
+
         ws.connect(requireContext(), new StompClient.ConnectionCallback() {
             @Override
             public void onConnected() {
@@ -632,7 +645,8 @@ public class ActiveRideFragment extends Fragment {
                             lastVehicleLongitude = v.getLongitude();
                             updateVehicleOnMap(v);
                             drawRoutes(v);
-                            if ("DRIVER".equals(preferencesManager.getUserRole())) {
+                            // Simulation leader completes stops (any role, matching web)
+                            if (isSimulationLeader) {
                                 checkStopCompletion(v);
                                 updateFinishRideButton();
                             }
@@ -928,8 +942,8 @@ public class ActiveRideFragment extends Fragment {
                                     updateVehicleOnMap(v);
                                     drawRoutes(v);
                                 }
-                                // Only driver auto-completes stops and checks finish ride
-                                if ("DRIVER".equals(preferencesManager.getUserRole())) {
+                                // Simulation leader completes stops (any role, matching web)
+                                if (isSimulationLeader) {
                                     checkStopCompletion(v);
                                     updateFinishRideButton();
                                 }
@@ -1926,11 +1940,10 @@ public class ActiveRideFragment extends Fragment {
         // Redraw blue route from new position
         drawRoutes(fakeUpdate);
 
-        // Check stop completion and finish ride eligibility
-        if ("DRIVER".equals(preferencesManager.getUserRole())) {
-            checkStopCompletion(fakeUpdate);
-            updateFinishRideButton();
-        }
+        // Simulation leader completes stops regardless of role (matching web behavior).
+        // Non-leader clients receive stop updates via WebSocket ride subscription.
+        checkStopCompletion(fakeUpdate);
+        updateFinishRideButton();
 
         // Sync to backend so all clients see the same position via WebSocket
         // and RideCostTrackingService can track distance

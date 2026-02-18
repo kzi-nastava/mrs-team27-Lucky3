@@ -346,6 +346,7 @@ export class NotificationService implements OnDestroy {
       case 'RIDE_SCHEDULED_REMINDER': return 'ride_scheduled_reminder';
       case 'SUPPORT':         return 'support';
       case 'DRIVER_ASSIGNMENT': return 'driver_assignment';
+      case 'LEAVE_REVIEW':    return 'leave_review';
       default:                return 'system';
     }
   }
@@ -361,6 +362,7 @@ export class NotificationService implements OnDestroy {
       case 'RIDE_SCHEDULED_REMINDER': return 'Ride Reminder';
       case 'SUPPORT':           return 'Support Message';
       case 'DRIVER_ASSIGNMENT': return 'New Ride Assignment';
+      case 'LEAVE_REVIEW':      return 'Leave a Review';
       default:                  return 'Notification';
     }
   }
@@ -387,6 +389,9 @@ export class NotificationService implements OnDestroy {
         return `/passenger/ride/${relatedEntityId}`;
       }
       case 'DRIVER_ASSIGNMENT': return `/driver/dashboard`;
+      case 'LEAVE_REVIEW': {
+        return `/review?rideId=${relatedEntityId}`;
+      }
       case 'SUPPORT': {
         if (role === 'ADMIN') {
           return `/admin/support?chatId=${relatedEntityId}`;

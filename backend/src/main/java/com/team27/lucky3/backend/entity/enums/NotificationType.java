@@ -22,5 +22,6 @@ public enum NotificationType {
     RIDE_CREATED,
     RIDE_CANCELLED,
     RIDE_SCHEDULED_REMINDER,
-    STOP_COMPLETED
+    STOP_COMPLETED,
+    LEAVE_REVIEW
 }

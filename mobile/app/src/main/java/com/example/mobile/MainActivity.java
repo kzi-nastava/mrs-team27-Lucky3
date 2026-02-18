@@ -2,10 +2,13 @@ package com.example.mobile;
 
 import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.Menu;
@@ -90,6 +93,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Request notification permission on every launch if not granted (Android 13+)
         requestNotificationPermission();
+
+        // Ask the OS to stop killing the Firebase process when the app is backgrounded.
+        // Without this, Doze mode can block FCM delivery after ~5 seconds in the background.
+        requestBatteryOptimizationExemption();
 
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -553,6 +560,23 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Ask the OS to exempt Lucky3 from battery optimization (Doze mode).
+     * Without this, the system may block FCM delivery after ~5 s in the background.
+     * The dialog is only shown once — after the user grants or denies, the OS
+     * remembers and {@link PowerManager#isIgnoringBatteryOptimizations} returns true.
+     */
+    private void requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            }
+        }
+    }
+
     private void stylePanicMenuItem() {
         NavigationView navigationView = findViewById(R.id.nav_view);
         if (navigationView == null) return;
@@ -682,6 +706,14 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case "notifications":
                     navController.navigate(R.id.nav_notifications, null, deepLinkNavOptions);
+                    break;
+                case "review":
+                    long reviewRideId = intent.getLongExtra("rideId", -1L);
+                    if (reviewRideId > 0) {
+                        Bundle reviewArgs = new Bundle();
+                        reviewArgs.putLong("rideId", reviewRideId);
+                        navController.navigate(R.id.nav_review, reviewArgs, deepLinkNavOptions);
+                    }
                     break;
                 default:
                     Log.d(TAG, "Unknown deep-link target: " + navigateTo);

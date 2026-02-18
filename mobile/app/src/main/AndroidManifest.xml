@@ -13,6 +13,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- For panic alert vibration -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Keeps FCM delivery reliable when the app is in the background.
+         Shows a one-time system dialog asking the user to exempt the app from
+         battery optimization (Doze mode), preventing the OS from killing the
+         Firebase process and stopping background notifications. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:allowBackup="true"

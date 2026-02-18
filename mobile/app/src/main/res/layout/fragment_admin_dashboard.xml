@@ -10,6 +10,16 @@
         android:id="@+id/navbar"
         layout="@layout/view_custom_navbar" />
 
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
     <!-- Stats Cards Row -->
     <HorizontalScrollView
         android:layout_width="match_parent"
@@ -304,15 +314,15 @@
     <ListView
         android:id="@+id/lv_active_rides"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:paddingHorizontal="12dp"
         android:paddingTop="8dp"
         android:divider="@android:color/transparent"
         android:dividerHeight="12dp"
         android:scrollbars="vertical"
         android:clipToPadding="false"
-        android:paddingBottom="8dp" />
+        android:paddingBottom="8dp"
+        android:nestedScrollingEnabled="true" />
 
     <!-- Load More button -->
     <TextView
@@ -336,12 +346,12 @@
     <TextView
         android:id="@+id/tv_empty"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:gravity="center"
         android:text="No active rides found"
         android:textColor="@color/gray_400"
         android:textSize="14sp"
+        android:padding="32dp"
         android:visibility="gone" />
 
     <!-- Loading indicator -->
@@ -351,5 +361,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:visibility="gone" />
+
+        </LinearLayout>
+    </ScrollView>
 
 </LinearLayout>

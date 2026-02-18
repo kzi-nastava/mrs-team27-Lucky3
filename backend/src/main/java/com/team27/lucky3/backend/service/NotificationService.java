@@ -71,6 +71,9 @@ public interface NotificationService {
     /** SCHEDULED RIDE REMINDER — 15 min before scheduled start. */
     void sendScheduledRideReminder(Ride ride);
 
+    /** LEAVE REVIEW — Sent to ride creator when ride finishes (end or stop early). */
+    void sendLeaveReviewNotification(Ride ride);
+
     // ─── linked passenger notifications (email + token) ───────────────
 
     /**

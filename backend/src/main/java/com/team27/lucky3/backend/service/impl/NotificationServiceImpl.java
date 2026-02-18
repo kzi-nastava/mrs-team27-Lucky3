@@ -190,16 +190,13 @@ public class NotificationServiceImpl implements NotificationService {
     public void sendRideStatusNotification(Ride ride, String statusMessage) {
         String text = String.format("Ride #%d: %s", ride.getId(), statusMessage);
 
-        // Notify all passengers
+        // Notify all passengers only — this method is called for driver-initiated
+        // actions (acceptRide, startRide), so the driver already knows and must not
+        // receive a notification for their own action.
         if (ride.getPassengers() != null) {
             for (User passenger : ride.getPassengers()) {
                 sendNotification(passenger, text, NotificationType.RIDE_STATUS, ride.getId());
             }
-        }
-
-        // Notify driver (if assigned)
-        if (ride.getDriver() != null) {
-            sendNotification(ride.getDriver(), text, NotificationType.RIDE_STATUS, ride.getId());
         }
     }
 
@@ -354,6 +351,30 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     // ════════════════════════════════════════════════════════════════════
+    //  LEAVE REVIEW — Ride creator only, after ride finishes
+    // ════════════════════════════════════════════════════════════════════
+
+    @Override
+    @Transactional
+    public void sendLeaveReviewNotification(Ride ride) {
+        // Determine ride creator (fallback to first passenger for legacy rides)
+        User creator = ride.getCreatedBy();
+        if (creator == null && ride.getPassengers() != null && !ride.getPassengers().isEmpty()) {
+            creator = ride.getPassengers().iterator().next();
+        }
+        if (creator == null) {
+            log.warn("No creator found for ride #{} — skipping review notification", ride.getId());
+            return;
+        }
+
+        String text = String.format("Leave a review for ride #%d", ride.getId());
+
+        sendNotification(creator, text, NotificationType.LEAVE_REVIEW, ride.getId());
+
+        log.info("Leave-review notification sent to user {} for ride #{}", creator.getId(), ride.getId());
+    }
+
+    // ════════════════════════════════════════════════════════════════════
     //  RIDE CREATED — Notify passengers
     // ════════════════════════════════════════════════════════════════════
 
@@ -370,9 +391,16 @@ public class NotificationServiceImpl implements NotificationService {
                 ride.getId(), departure, destination, ride.getEstimatedCost()
         );
 
-        // Push notification to ALL registered passengers (includes the creator)
+        // Push notification to ALL registered passengers EXCEPT the ride creator
+        // (the creator already knows — they just created it)
+        User creator = ride.getCreatedBy();
         if (ride.getPassengers() != null) {
             for (User passenger : ride.getPassengers()) {
+                if (creator != null && creator.getId().equals(passenger.getId())) {
+                    log.debug("Skipping RIDE_CREATED notification for creator {} on ride #{}",
+                            creator.getId(), ride.getId());
+                    continue;
+                }
                 sendNotification(passenger, text, NotificationType.RIDE_CREATED, ride.getId());
             }
         }
@@ -613,6 +641,9 @@ public class NotificationServiceImpl implements NotificationService {
             case STOP_COMPLETED:
                 title = "Stop Completed";
                 break;
+            case LEAVE_REVIEW:
+                title = "Leave a Review";
+                break;
             case SUPPORT:
                 title = "Support Message";
                 break;
@@ -652,6 +683,11 @@ public class NotificationServiceImpl implements NotificationService {
             case STOP_COMPLETED:
                 if (relatedEntityId != null) {
                     data.put("navigate_to", "active_ride");
+                }
+                break;
+            case LEAVE_REVIEW:
+                if (relatedEntityId != null) {
+                    data.put("navigate_to", "review");
                 }
                 break;
             default:
