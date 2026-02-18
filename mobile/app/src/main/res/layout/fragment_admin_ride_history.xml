@@ -301,7 +301,7 @@
                 android:id="@+id/tv_shake_hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="📱 Shake device to toggle sort direction"
+                android:text="📱 Shake device to sort by start time"
                 android:textColor="@color/gray_400"
                 android:textSize="11sp"
                 android:gravity="center"

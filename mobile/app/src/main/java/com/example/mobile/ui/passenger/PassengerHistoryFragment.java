@@ -334,9 +334,20 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
                 lastShakeTime = now;
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
-                        toggleSortDirection();
+                        // Force sort field to Start Time and toggle direction
+                        sortField = "startTime";
+                        if (spinnerSort != null) {
+                            spinnerSort.setSelection(0); // "Start Time" is index 0
+                        }
+                        sortAsc = !sortAsc;
+                        updateSortDirectionUI();
+                        currentPage = 0;
+                        hasMorePages = true;
+                        rides.clear();
+                        adapter.notifyDataSetChanged();
+                        loadRides();
                         Toast.makeText(getContext(),
-                                "Sort order: " + (sortAsc ? "Oldest first" : "Newest first"),
+                                "Sort by start time: " + (sortAsc ? "Oldest first" : "Newest first"),
                                 Toast.LENGTH_SHORT).show();
                     });
                 }

@@ -47,10 +47,10 @@ import com.example.mobile.utils.NavbarHelper;
  * Admin Ride History Fragment.
  * Allows administrators to view ride history for any driver or passenger.
  * Features: search by driver/passenger ID, date filtering, status filtering,
- * sorting by any field, pagination, and shake-to-toggle-sort.
+ * sorting by any field, pagination, and shake-to-sort.
  *
  * Uses AdminRideHistoryViewModel to survive configuration changes (e.g. orientation).
- * Implements SensorEventListener to detect device shake events that toggle sort direction.
+ * Implements SensorEventListener to detect device shake events that sort by start time.
  */
 public class AdminRideHistoryFragment extends Fragment implements SensorEventListener {
 
@@ -174,15 +174,23 @@ public class AdminRideHistoryFragment extends Fragment implements SensorEventLis
 
     /**
      * Called when a shake event is detected.
-     * Toggles the sorting direction (ASC / DESC) by date and reloads rides.
+     * Forces sort by start time and toggles the sorting direction (ASC / DESC), then reloads rides.
      */
     private void onShakeDetected() {
         if (getActivity() == null) return;
         requireActivity().runOnUiThread(() -> {
+            // Force sort field to Start Time and toggle direction
+            viewModel.setSortField("startTime");
+            viewModel.setSortSpinnerPosition(0);
+            if (spinnerSort != null) {
+                suppressSpinnerCallbacks = true;
+                spinnerSort.setSelection(0); // "Start Time" is index 0
+                spinnerSort.post(() -> suppressSpinnerCallbacks = false);
+            }
             viewModel.toggleSortDirection();
-            String direction = viewModel.isSortAsc() ? "Ascending" : "Descending";
             Toast.makeText(getContext(),
-                    "Shake detected! Sort: " + direction, Toast.LENGTH_SHORT).show();
+                    "Sort by start time: " + (viewModel.isSortAsc() ? "Oldest first" : "Newest first"),
+                    Toast.LENGTH_SHORT).show();
         });
     }
 
