@@ -58,8 +58,6 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TABLE_DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-
-
     private static LocalDate parseTableDate(String displayed) {
         if (displayed == null || displayed.isBlank() || displayed.equals("\u2014")) return null;
         return LocalDate.parse(displayed.trim(), TABLE_DATE_FMT);

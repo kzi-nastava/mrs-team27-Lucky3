@@ -84,17 +84,25 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
     private List<RideResponse> rides = new ArrayList<>();
     private PassengerRidesAdapter adapter;
 
+    // Prevent spinner callbacks during programmatic setup
+    private boolean suppressSpinnerCallbacks = true;
+
     // Sort options
     private static final String[] SORT_OPTIONS = {
             "Start Time", "End Time", "Total Cost", "Distance", "Panic"
     };
     private static final String[] SORT_FIELDS = {
-            "startTime", "endTime", "totalCost", "distanceKm", "panicPressed"
+            "startTime", "endTime", "totalCost", "distance", "panicPressed"
     };
 
-    // Status filter options (matching admin)
+    // Status filter options
     private static final String[] STATUS_OPTIONS = {
             "All", "FINISHED", "CANCELLED", "CANCELLED_BY_DRIVER", "CANCELLED_BY_PASSENGER"
+    };
+    // API values: "CANCELLED" sends all three cancellation types combined
+    private static final String[] STATUS_VALUES = {
+            null, "FINISHED", "CANCELLED,CANCELLED_BY_DRIVER,CANCELLED_BY_PASSENGER",
+            "CANCELLED_BY_DRIVER", "CANCELLED_BY_PASSENGER"
     };
 
     // Shake sensor
@@ -120,6 +128,9 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
         setupLoadMore();
         setupListView();
         setupShakeSensor();
+
+        // Enable spinner callbacks after setup is complete
+        spinnerStatus.post(() -> suppressSpinnerCallbacks = false);
 
         // Load all rides by default
         loadRides();
@@ -159,7 +170,8 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
         spinnerStatus.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                statusFilter = position == 0 ? DEFAULT_STATUS_FILTER : STATUS_OPTIONS[position];
+                if (suppressSpinnerCallbacks) return;
+                statusFilter = position == 0 ? DEFAULT_STATUS_FILTER : STATUS_VALUES[position];
                 currentPage = 0;
                 hasMorePages = true;
                 rides.clear();
@@ -241,14 +253,13 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
         spinnerSort.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (suppressSpinnerCallbacks) return;
                 sortField = SORT_FIELDS[position];
-                if (!rides.isEmpty()) {
-                    currentPage = 0;
-                    hasMorePages = true;
-                    rides.clear();
-                    adapter.notifyDataSetChanged();
-                    loadRides();
-                }
+                currentPage = 0;
+                hasMorePages = true;
+                rides.clear();
+                adapter.notifyDataSetChanged();
+                loadRides();
             }
 
             @Override
@@ -536,12 +547,9 @@ public class PassengerHistoryFragment extends Fragment implements SensorEventLis
             }
 
             // Cancelled by
-            String status = ride.getStatus();
-            if ("CANCELLED_BY_DRIVER".equals(status)) {
-                holder.tvCancelledBy.setText("Cancelled by Driver");
-                holder.tvCancelledBy.setVisibility(View.VISIBLE);
-            } else if ("CANCELLED_BY_PASSENGER".equals(status)) {
-                holder.tvCancelledBy.setText("Cancelled by Passenger");
+            if (ride.isCancelled()) {
+                String cancelledBy = ride.getCancelledBy();
+                holder.tvCancelledBy.setText("Cancelled by " + cancelledBy);
                 holder.tvCancelledBy.setVisibility(View.VISIBLE);
             } else {
                 holder.tvCancelledBy.setVisibility(View.GONE);

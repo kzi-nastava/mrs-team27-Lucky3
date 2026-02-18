@@ -1,6 +1,10 @@
 package com.example.mobile.viewmodels;
 
 import android.app.Application;
+import android.content.ContentResolver;
+import android.database.Cursor;
+import android.net.Uri;
+import android.provider.OpenableColumns;
 import android.util.Log;
 import android.util.Patterns;
 
@@ -16,7 +20,11 @@ import com.example.mobile.utils.ClientUtils;
 
 import com.google.gson.Gson;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -315,8 +323,21 @@ public class RegisterViewModel extends AndroidViewModel {
         String jsonData = gson.toJson(registrationRequest);
         RequestBody dataBody = RequestBody.create(jsonData, MediaType.parse("application/json"));
 
-        // Call API (without profile image for now)
-        ClientUtils.userService.registerWithoutImage(dataBody).enqueue(new Callback<UserResponse>() {
+        // Build the API call — with or without profile image
+        Call<UserResponse> apiCall;
+        String photoUri = profilePhotoUri.getValue();
+        if (photoUri != null && !photoUri.isEmpty()) {
+            MultipartBody.Part imagePart = buildImagePart(Uri.parse(photoUri));
+            if (imagePart != null) {
+                apiCall = ClientUtils.userService.register(dataBody, imagePart);
+            } else {
+                apiCall = ClientUtils.userService.registerWithoutImage(dataBody);
+            }
+        } else {
+            apiCall = ClientUtils.userService.registerWithoutImage(dataBody);
+        }
+
+        apiCall.enqueue(new Callback<UserResponse>() {
             @Override
             public void onResponse(@NonNull Call<UserResponse> call, @NonNull Response<UserResponse> response) {
                 isLoading.postValue(false);
@@ -415,5 +436,46 @@ public class RegisterViewModel extends AndroidViewModel {
         addressError.setValue(null);
         passwordError.setValue(null);
         confirmPasswordError.setValue(null);
+    }
+
+    /**
+     * Builds a MultipartBody.Part from the selected photo content URI.
+     * Reads the image bytes via ContentResolver on the calling thread.
+     */
+    private MultipartBody.Part buildImagePart(Uri uri) {
+        try {
+            ContentResolver resolver = getApplication().getContentResolver();
+            String mimeType = resolver.getType(uri);
+            if (mimeType == null) mimeType = "image/jpeg";
+
+            // Read bytes from content URI
+            InputStream inputStream = resolver.openInputStream(uri);
+            if (inputStream == null) return null;
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(chunk)) != -1) {
+                buffer.write(chunk, 0, bytesRead);
+            }
+            inputStream.close();
+            byte[] imageBytes = buffer.toByteArray();
+
+            // Determine file name from URI
+            String fileName = "profile_image.jpg";
+            try (Cursor cursor = resolver.query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex >= 0) {
+                        fileName = cursor.getString(nameIndex);
+                    }
+                }
+            }
+
+            RequestBody requestBody = RequestBody.create(imageBytes, MediaType.parse(mimeType));
+            return MultipartBody.Part.createFormData("profileImage", fileName, requestBody);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to build image part from URI", e);
+            return null;
+        }
     }
 }

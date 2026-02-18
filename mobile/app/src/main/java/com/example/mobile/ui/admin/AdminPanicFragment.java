@@ -465,7 +465,10 @@ public class AdminPanicFragment extends Fragment {
                     .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setColor(Color.RED)
+                    .setColorized(true)
                     .setAutoCancel(true)
+                    .setOngoing(true)
                     .setVibrate(new long[]{0, 500, 200, 500, 200, 500})
                     .setLights(Color.RED, 1000, 300);
 

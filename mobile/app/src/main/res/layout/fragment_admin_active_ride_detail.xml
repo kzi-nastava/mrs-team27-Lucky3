@@ -88,7 +88,7 @@
                 android:id="@+id/tv_panic_banner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⚠ PANIC"
+                android:text="🚨 PANIC"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:textColor="@color/red_500"
@@ -559,7 +559,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⚠ Panic Alert"
+                android:text="🚨 Panic Alert"
                 android:textColor="@color/red_500"
                 android:textSize="15sp"
                 android:textStyle="bold"

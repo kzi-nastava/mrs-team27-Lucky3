@@ -2,6 +2,9 @@ package com.example.mobile.services;
 
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.graphics.Color;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -185,7 +188,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         // Vibration for ride and panic notifications
         if ("PANIC".equals(type)) {
-            builder.setVibrate(new long[]{0, 500, 200, 500, 200, 500});
+            builder.setVibrate(new long[]{0, 500, 200, 500, 200, 500})
+                    .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                    .setColor(Color.RED)
+                    .setColorized(true)
+                    .setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setLights(Color.RED, 1000, 300)
+                    .setOngoing(true);
+            // Play urgent alarm sound for panic
+            playPanicAlarm();
         } else if (channelId.equals(NotificationHelper.CHANNEL_RIDE_UPDATES)) {
             builder.setVibrate(new long[]{0, 300, 150, 300});
         }
@@ -348,5 +359,30 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         Log.e(TAG, "FCM token sync network error: " + t.getMessage());
                     }
                 });
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  PANIC ALARM SOUND
+    // ════════════════════════════════════════════════════════════════════
+
+    /**
+     * Plays an urgent triple-beep alarm sound for PANIC notifications.
+     * Uses ToneGenerator on a background thread so no audio file is needed.
+     */
+    private void playPanicAlarm() {
+        new Thread(() -> {
+            try {
+                ToneGenerator toneGen = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
+                toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
+                Thread.sleep(250);
+                toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
+                Thread.sleep(250);
+                toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 150);
+                Thread.sleep(200);
+                toneGen.release();
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to play panic alarm sound", e);
+            }
+        }).start();
     }
 }

@@ -17,6 +17,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
@@ -108,7 +109,22 @@ public class MainActivity extends AppCompatActivity {
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupWithNavController(navigationView, navController);
-            
+
+            // Lock the drawer on guest/unauthenticated pages
+            navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+                int id = destination.getId();
+                if (id == R.id.nav_guest_home || id == R.id.nav_login || id == R.id.nav_register
+                        || id == R.id.nav_forgot_password || id == R.id.nav_forgot_password_sent
+                        || id == R.id.nav_register_verification
+                        || id == R.id.nav_reset_password || id == R.id.nav_reset_password_success) {
+                    binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
+                    navigationView.setVisibility(View.GONE);
+                } else {
+                    binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED);
+                    navigationView.setVisibility(View.VISIBLE);
+                }
+            });
+
             // Only navigate on fresh start — NOT on configuration changes (e.g. orientation)
             if (savedInstanceState == null) {
                 // Restore session

@@ -352,7 +352,7 @@ public class AdminRideHistoryFragment extends Fragment implements SensorEventLis
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (suppressSpinnerCallbacks) return;
                 viewModel.setStatusSpinnerPosition(position);
-                viewModel.setStatusFilter(position == 0 ? null : AdminRideHistoryViewModel.STATUS_OPTIONS[position]);
+                viewModel.setStatusFilter(position == 0 ? null : AdminRideHistoryViewModel.STATUS_VALUES[position]);
                 viewModel.resetAndLoad();
             }
 

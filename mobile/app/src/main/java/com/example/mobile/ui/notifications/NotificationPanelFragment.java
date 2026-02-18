@@ -14,6 +14,8 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
+import com.google.android.material.card.MaterialCardView;
+
 import com.example.mobile.R;
 import com.example.mobile.models.AppNotification;
 import com.example.mobile.utils.ClientUtils;
@@ -261,6 +263,8 @@ public class NotificationPanelFragment extends Fragment {
                 convertView = LayoutInflater.from(requireContext())
                         .inflate(R.layout.item_notification, parent, false);
                 holder = new ViewHolder();
+                holder.card = convertView.findViewById(R.id.card_notification);
+                holder.iconBackground = convertView.findViewById(R.id.icon_background);
                 holder.tvTitle = convertView.findViewById(R.id.tv_title);
                 holder.tvBody = convertView.findViewById(R.id.tv_body);
                 holder.tvTime = convertView.findViewById(R.id.tv_time);
@@ -280,7 +284,11 @@ public class NotificationPanelFragment extends Fragment {
             holder.tvTime.setText(formatTimeAgo(notif.getTimestamp()));
 
             // Unread indicator
+            boolean isPanic = notif.getType() == AppNotification.Type.PANIC_ALERT;
             holder.unreadDot.setVisibility(notif.isRead() ? View.GONE : View.VISIBLE);
+            // Panic unread dot is red instead of green
+            holder.unreadDot.setBackgroundResource(
+                    isPanic ? R.drawable.bg_dot_red : R.drawable.bg_dot_green);
             holder.tvTitle.setTextColor(ContextCompat.getColor(requireContext(),
                     notif.isRead() ? R.color.gray_400 : R.color.white));
 
@@ -312,10 +320,17 @@ public class NotificationPanelFragment extends Fragment {
                     holder.ivTypeIcon.setImageResource(android.R.drawable.ic_menu_send);
                     break;
                 case PANIC_ALERT:
-                    holder.tvTypeBadge.setText("PANIC");
+                    holder.tvTypeBadge.setText("🚨 PANIC");
                     holder.tvTypeBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.red_500));
                     holder.tvTypeBadge.setBackgroundResource(R.drawable.bg_badge_cancelled);
                     holder.ivTypeIcon.setImageResource(android.R.drawable.ic_dialog_alert);
+                    holder.ivTypeIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.red_500));
+                    holder.iconBackground.setBackgroundResource(R.drawable.bg_icon_box_red);
+                    holder.card.setCardBackgroundColor(
+                            ContextCompat.getColor(requireContext(), R.color.red_500_10));
+                    holder.card.setStrokeColor(
+                            ContextCompat.getColor(requireContext(), R.color.red_500_20));
+                    holder.card.setStrokeWidth(2);
                     break;
                 case SUPPORT_MESSAGE:
                     holder.tvTypeBadge.setText("SUPPORT");
@@ -336,9 +351,20 @@ public class NotificationPanelFragment extends Fragment {
                     holder.ivTypeIcon.setImageResource(R.drawable.ic_notification_bell);
                     break;
             }
+
+            // Reset card styling for non-panic types (ViewHolder recycling)
+            if (type != AppNotification.Type.PANIC_ALERT) {
+                holder.card.setCardBackgroundColor(
+                        ContextCompat.getColor(requireContext(), R.color.gray_900));
+                holder.card.setStrokeWidth(0);
+                holder.ivTypeIcon.clearColorFilter();
+                holder.iconBackground.setBackgroundResource(R.drawable.bg_icon_box_circle);
+            }
         }
 
         class ViewHolder {
+            MaterialCardView card;
+            View iconBackground;
             TextView tvTitle, tvBody, tvTime, tvTypeBadge;
             View unreadDot;
             ImageView ivTypeIcon, btnDismiss;

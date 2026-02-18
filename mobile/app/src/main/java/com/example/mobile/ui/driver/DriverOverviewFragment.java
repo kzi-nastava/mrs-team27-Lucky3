@@ -86,7 +86,7 @@ public class DriverOverviewFragment extends Fragment implements SensorEventListe
             "Start Time", "End Time", "Total Cost", "Distance"
     };
     private static final String[] SORT_FIELDS = {
-            "startTime", "endTime", "totalCost", "distanceKm"
+            "startTime", "endTime", "totalCost", "distance"
     };
 
     // UI elements for ride history filters

@@ -39,11 +39,16 @@ public class AdminRideHistoryViewModel extends AndroidViewModel {
     public static final String[] STATUS_OPTIONS = {
             "All", "FINISHED", "CANCELLED", "CANCELLED_BY_DRIVER", "CANCELLED_BY_PASSENGER"
     };
+    // API values: "CANCELLED" sends all three cancellation types combined
+    public static final String[] STATUS_VALUES = {
+            null, "FINISHED", "CANCELLED,CANCELLED_BY_DRIVER,CANCELLED_BY_PASSENGER",
+            "CANCELLED_BY_DRIVER", "CANCELLED_BY_PASSENGER"
+    };
     public static final String[] SORT_OPTIONS = {
             "Start Time", "End Time", "Total Cost", "Status", "Distance", "Panic"
     };
     public static final String[] SORT_FIELDS = {
-            "startTime", "endTime", "totalCost", "status", "distanceKm", "panicPressed"
+            "startTime", "endTime", "totalCost", "status", "distance", "panicPressed"
     };
 
     private final SharedPreferencesManager preferencesManager;

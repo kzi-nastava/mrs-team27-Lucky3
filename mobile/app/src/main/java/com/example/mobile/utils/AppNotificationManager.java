@@ -560,7 +560,7 @@ public class AppNotificationManager {
                 unsubscribeFromRideUpdates();
                 break;
             case "PANIC":
-                title = "\u26A0 Panic Activated";
+                title = "\uD83D\uDEA8 Panic Activated";
                 body = "Panic button was pressed on your ride!";
                 break;
             default:
@@ -603,11 +603,8 @@ public class AppNotificationManager {
         if (knownPanicIds.contains(panic.getId())) return;
         knownPanicIds.add(panic.getId());
 
-        // Skip notifications on first load (initial state sync)
-        if (panicFirstLoad) {
-            panicFirstLoad = false;
-            return;
-        }
+        // Note: WebSocket topics only deliver messages sent AFTER subscription,
+        // so every message is a genuine new panic — no need to skip any.
 
         String userName = panic.getUser() != null ? panic.getUser().getFullName() : "Unknown";
         Long rideId = panic.getRide() != null ? panic.getRide().getId() : null;
@@ -681,8 +678,10 @@ public class AppNotificationManager {
                                         String navigateTo, Long rideId, Long chatId) {
         if (appContext == null) return;
 
-        // Play in-app sound when foregrounded (always, in addition to system notification)
-        if (AppLifecycleTracker.isAppInForeground()) {
+        // Play in-app sound when foregrounded — or ALWAYS for panic alerts
+        // (panic alarm must be audible regardless of app state)
+        if (AppLifecycleTracker.isAppInForeground()
+                || NotificationHelper.CHANNEL_PANIC_ALERTS.equals(channelId)) {
             playInAppSound(channelId);
         }
 
@@ -717,9 +716,12 @@ public class AppNotificationManager {
             // Channel-specific styling
             if (NotificationHelper.CHANNEL_PANIC_ALERTS.equals(channelId)) {
                 builder.setSmallIcon(android.R.drawable.ic_dialog_alert)
+                        .setColor(Color.RED)
+                        .setColorized(true)
                         .setVibrate(new long[]{0, 500, 200, 500, 200, 500})
                         .setLights(Color.RED, 1000, 300)
-                        .setCategory(NotificationCompat.CATEGORY_ALARM);
+                        .setCategory(NotificationCompat.CATEGORY_ALARM)
+                        .setOngoing(true);
             } else if (NotificationHelper.CHANNEL_RIDE_UPDATES.equals(channelId)) {
                 builder.setVibrate(new long[]{0, 300, 150, 300})
                         .setLights(Color.BLUE, 1000, 300);
