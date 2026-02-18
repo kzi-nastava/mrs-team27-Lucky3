@@ -19,12 +19,8 @@ public class SidebarComponent {
     private WebDriver driver;
     private WebDriverWait wait;
 
-    // ---- Sidebar toggle (lives in the navbar) ----
-
     @FindBy(css = "[data-testid='sidebar-toggle']")
     private WebElement sidebarToggleButton;
-
-    // ---- Sidebar navigation links (id pattern: sidebar-{icon}) ----
 
     @FindBy(id = "sidebar-history")
     private WebElement rideHistoryLink;
@@ -50,15 +46,9 @@ public class SidebarComponent {
         PageFactory.initElements(driver, this);
     }
 
-    /**
-     * Opens the sidebar by clicking the hamburger toggle button in the navbar.
-     * The sidebar starts collapsed (width 0) so we need to expand it first.
-     * Waits until a sidebar link becomes visible before returning.
-     */
     public void openSidebar() {
         wait.until(ExpectedConditions.elementToBeClickable(sidebarToggleButton));
         sidebarToggleButton.click();
-        wait.until(ExpectedConditions.visibilityOf(rideHistoryLink));
     }
 
     public void navigateToRideHistory() {
