@@ -72,9 +72,6 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
     private SidebarComponent sidebar;
     private AdminRideHistoryPage historyPage;
 
-    /**
-     * Create browser and login once for all tests in this class.
-     */
     @BeforeAll
     public void initBrowser() {
         super.setUp();
@@ -86,18 +83,11 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
                 .until(ExpectedConditions.urlContains("/admin"));
     }
 
-    /**
-     * Override parent @BeforeEach — browser is created once in @BeforeAll.
-     */
     @Override
     public void setUp() {
         // No-op: browser is reused across all tests
     }
 
-    /**
-     * Before each test, navigate directly to the ride history page
-     * (auth token persists in localStorage) and wait for the table.
-     */
     @BeforeEach
     public void setUpPages() {
         driver.get("http://localhost:4200/admin/ride-history");
@@ -107,17 +97,12 @@ public class AdminRideHistoryFilterSortTest extends BaseTest {
         totalPages = (int) Math.ceil((double) totalHistoryRides / UI_PAGE_SIZE);
     }
 
-    /**
-     * Override parent @AfterEach — don't quit browser after each test.
-     */
+    // Override parent @AfterEach — don't quit browser after each test.
     @Override
     public void tearDown() {
         // No-op: browser is reused across all tests
     }
 
-    /**
-     * Quit browser once after all tests.
-     */
     @AfterAll
     public void closeBrowser() {
         if (driver != null) {

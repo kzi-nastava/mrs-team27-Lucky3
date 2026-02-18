@@ -49,10 +49,6 @@ public class SidebarComponent {
         PageFactory.initElements(driver, this);
     }
 
-    /**
-     * Opens the sidebar if it is not already open.
-     * Waits for the "Rides" header to become visible to confirm the sidebar is expanded.
-     */
     public void openSidebar() {
         // If sidebar is already open ("Rides" header visible), do nothing
         if (isSidebarOpen()) {
@@ -63,16 +59,10 @@ public class SidebarComponent {
         waitForSidebarOpen();
     }
 
-    /**
-     * Waits until the sidebar "Rides" header is visible, confirming the sidebar is fully open.
-     */
     public void waitForSidebarOpen() {
         wait.until(ExpectedConditions.visibilityOfElementLocated(SIDEBAR_HEADER));
     }
 
-    /**
-     * Checks whether the sidebar is currently open by looking for the "Rides" header.
-     */
     public boolean isSidebarOpen() {
         try {
             WebElement header = driver.findElement(SIDEBAR_HEADER);

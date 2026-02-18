@@ -643,10 +643,6 @@ public class AdminRideHistoryPage {
     // ----- Dynamic Count Helpers -----
 
     public int getTotalRidesFromBadge() {
-        // Check both badges immediately without waiting — data is already loaded
-        // by the time this method is called (after waitForDataRefresh or waitForTableToLoad).
-        // "all-rides-count" is shown when no search is active (*ngIf="!searchId && rides.length > 0")
-        // "rides-count" is shown when searching by driver/passenger ID (*ngIf="selectedUserName")
         try {
             if (allRidesCount.isDisplayed()) {
                 String text = allRidesCount.getText().trim();
