@@ -11,4 +11,5 @@ public interface UserBlockingService{
     BlockUserResponse unblockUser(String email);
     List<UserProfile> getBlockedUsers();
     List<UserProfile> getUnblockedUsers();
+    String isBlocked(Long id);
 }

@@ -67,10 +67,10 @@ export class Sidebar implements OnInit, OnDestroy {
     { icon: 'drivers', label: 'Drivers', route: '/admin/drivers', active: false },
     { icon: 'pricing', label: 'Pricing', route: '/admin/pricing', active: false },
     { icon: 'panic', label: 'Panic Alerts', route: '/admin/panic', active: false, variant: 'danger' },
-    { icon: 'profile', label: 'Profile', route: '/admin/profile', active: false },
+    { icon: 'block', label: 'Blocking Users', route: '/admin/blocking-users', active: false },
     { icon: 'support', label: 'Support', route: '/admin/support', active: false },
-    { icon: 'logout', label: 'Logout', route: '/login', variant: 'danger' },
-    { icon: 'block', label: 'Blocking Users', route: '/admin/blocking-users', active: false }
+    { icon: 'profile', label: 'Profile', route: '/admin/profile', active: false },
+    { icon: 'logout', label: 'Logout', route: '/login', variant: 'danger' }
   ];
 
   constructor(

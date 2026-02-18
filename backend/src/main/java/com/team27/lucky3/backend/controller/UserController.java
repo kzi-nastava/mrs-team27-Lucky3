@@ -8,6 +8,7 @@ import com.team27.lucky3.backend.dto.response.UserProfile;
 import com.team27.lucky3.backend.entity.Image;
 import com.team27.lucky3.backend.entity.User;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
+import com.team27.lucky3.backend.service.UserBlockingService;
 import com.team27.lucky3.backend.service.UserService;
 import com.team27.lucky3.backend.util.DummyData;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ import java.util.List;
 @Validated
 public class UserController {
     private final UserService userService;
+    private final UserBlockingService userBlockingService;
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
@@ -169,5 +171,12 @@ public class UserController {
             @Valid @RequestBody FcmTokenRequest request) {
         userService.updateFcmToken(id, request.getToken());
         return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('DRIVER') or hasRole('PASSENGER')") // Ensure only driver and passenger can access this endpoint
+    @GetMapping("/is-blocked")
+    public ResponseEntity<String> isUserBlocked(@RequestParam Long id) {
+        String blockReason = userBlockingService.isBlocked(id);
+        return ResponseEntity.ok(blockReason != null ? blockReason : "");
     }
 }

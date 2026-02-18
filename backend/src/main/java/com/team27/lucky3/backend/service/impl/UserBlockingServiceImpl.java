@@ -94,5 +94,17 @@ public class UserBlockingServiceImpl implements UserBlockingService {
     private UserProfile mapToUserProfile(User user) {
         return new UserProfile(user.getName(), user.getSurname(), user.getEmail(), user.getPhoneNumber(), user.getAddress(), "/api/users/" + user.getId() + "/profile-image");
     }
+
+    @Override
+    public String isBlocked(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + id));
+        if(user.isBlocked()){
+            return user.getBlockReason();
+        }
+        else{
+            return null;
+        }
+    }
 }
 
