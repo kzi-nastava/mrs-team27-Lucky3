@@ -61,6 +61,15 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
   private lastDriverLocation: MapPoint | null = null;
   private rideStartLocation: MapPoint | null = null; // Track ride start for distance calculation
 
+  // ── Vehicle movement simulation ──────────────────────────────────────
+  private simulationSessionId = crypto.randomUUID(); // unique per tab
+  private isSimulationLeader = false;
+  private simulationTimer: any; // fires every 5s to advance vehicle
+  private lockRefreshTimer: any; // fires every 10s to renew lock
+  private simulatedVehicleId: number | null = null;
+  private waitingForNewBlueLine = false; // pause sim while stop route recalculates
+  // ─────────────────────────────────────────────────────────────────────
+
   currentCost = 0;
   timeLeftMin: number | null = null;
   distanceLeftKm: number | null = null;
@@ -166,15 +175,22 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
     // Subscribe to real-time ride status updates via WebSocket
     this.subscribeToRideUpdates();
+
+    // Start vehicle movement simulation (leader election happens once vehicle is found)
   }
 
   ngOnDestroy(): void {
     if (this.updateTimer) clearInterval(this.updateTimer);
     if (this.locationPoller) clearInterval(this.locationPoller);
     if (this.ridePoller) clearInterval(this.ridePoller);
+    if (this.simulationTimer) clearInterval(this.simulationTimer);
+    if (this.lockRefreshTimer) clearInterval(this.lockRefreshTimer);
     if (this.locationSubscription) this.locationSubscription.unsubscribe();
     if (this.routeUpdateSubscription) this.routeUpdateSubscription.unsubscribe();
     if (this.rideUpdateSubscription) this.rideUpdateSubscription.unsubscribe();
+
+    // Release simulation lock on destroy
+    this.releaseSimulationLock();
   }
 
   goBack(): void {
@@ -983,11 +999,14 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
                    this.approachRoute = res.routePoints
                      .sort((a, b) => a.order - b.order)
                      .map(p => ({ latitude: p.location.latitude, longitude: p.location.longitude }));
+                   // New blue line is ready — resume simulation
+                   this.waitingForNewBlueLine = false;
                    this.cdr.detectChanges();
               }
           },
           error: () => {
               // Keep fallback route on error
+              this.waitingForNewBlueLine = false;
           }
       });
   }
@@ -1175,6 +1194,12 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
 
   private subscribeToVehicleSocket(vehicleId: number): void {
       if (this.locationSubscription) return;
+      
+      // Track vehicle ID for simulation
+      this.simulatedVehicleId = vehicleId;
+      
+      // Try to become the simulation leader
+      this.tryBecomeSimulationLeader(vehicleId);
       
       this.locationSubscription = this.socketService.getVehicleLocationUpdates(vehicleId).subscribe({
           next: (location) => {
@@ -1364,6 +1389,9 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
         // Mark as pending to prevent duplicate calls
         this.pendingStopCompletions.add(idx);
         
+        // Pause simulation while we complete the stop and recalculate routes
+        this.waitingForNewBlueLine = true;
+        
         // Call backend to complete the stop
         this.rideService.completeStop(this.rideId!, idx).subscribe({
           next: (res) => {
@@ -1377,12 +1405,14 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
             this.showStopCompletedToast(idx);
             
             this.cdr.detectChanges();
+            // waitingForNewBlueLine will be cleared when fetchApproachRoute completes
           },
           error: (err) => {
             console.error('Failed to complete stop', err);
             this.pendingStopCompletions.delete(idx);
             // Still mark locally completed to avoid repeated calls
             this.completedStopIndexes.add(idx);
+            this.waitingForNewBlueLine = false;
           }
         });
       }
@@ -1502,6 +1532,140 @@ export class ActiveRidePage implements OnInit, AfterViewInit, OnDestroy {
       }
     });
   }
+
+  // ── Vehicle movement simulation ──────────────────────────────────────
+
+  /**
+   * Try to acquire the simulation lock from the backend.
+   * Only one tab (driver or passenger) should drive the vehicle per ride.
+   */
+  private tryBecomeSimulationLeader(vehicleId: number): void {
+    this.vehicleService.acquireSimulationLock(vehicleId, this.simulationSessionId).subscribe({
+      next: (res) => {
+        this.isSimulationLeader = res.acquired;
+        if (this.isSimulationLeader) {
+          this.startSimulation();
+          // Refresh lock every 10s
+          this.lockRefreshTimer = setInterval(() => {
+            if (this.simulatedVehicleId != null) {
+              this.vehicleService.acquireSimulationLock(this.simulatedVehicleId, this.simulationSessionId)
+                .subscribe({
+                  next: (r) => {
+                    if (!r.acquired) {
+                      this.isSimulationLeader = false;
+                      this.stopSimulation();
+                    }
+                  },
+                  error: () => { /* keep going */ }
+                });
+            }
+          }, 10_000);
+        }
+      },
+      error: () => {
+        // Could not contact server — fall back to being leader (safe default)
+        this.isSimulationLeader = true;
+        this.startSimulation();
+      }
+    });
+  }
+
+  private startSimulation(): void {
+    if (this.simulationTimer) return;
+    this.simulationTimer = setInterval(() => this.advanceVehicle(), 2000);
+  }
+
+  private stopSimulation(): void {
+    if (this.simulationTimer) {
+      clearInterval(this.simulationTimer);
+      this.simulationTimer = null;
+    }
+  }
+
+  private releaseSimulationLock(): void {
+    if (this.simulatedVehicleId != null) {
+      this.vehicleService.releaseSimulationLock(this.simulatedVehicleId, this.simulationSessionId)
+        .subscribe({ error: () => { /* best effort */ } });
+    }
+  }
+
+  /**
+   * Move the vehicle 40-60 m along the current blue line (approach route).
+   * Called every 2 seconds when this tab is the simulation leader.
+   * Works for any active ride status (PENDING, ACCEPTED, SCHEDULED, IN_PROGRESS, ACTIVE).
+   */
+  private advanceVehicle(): void {
+    if (!this.isSimulationLeader) return;
+    if (!this.isRideInProgress && !this.isRidePending) return;
+    if (this.waitingForNewBlueLine) return; // Wait for route recalculation after stop
+    if (!this.driverLocation) return;
+    if (!this.approachRoute || this.approachRoute.length < 2) return;
+    if (this.simulatedVehicleId == null) return;
+
+    const metersToMove = 40 + Math.random() * 20; // 40-60 m
+    let movedMeters = 0;
+
+    // Find the closest point on the blue line to the current driver position
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < this.approachRoute.length; i++) {
+      const d = this.haversineKm(this.driverLocation, this.approachRoute[i]) * 1000;
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+
+    // Walk forward from the closest point
+    let currentLat = this.approachRoute[bestIdx].latitude;
+    let currentLng = this.approachRoute[bestIdx].longitude;
+    let idx = bestIdx;
+
+    while (idx < this.approachRoute.length - 1 && movedMeters < metersToMove) {
+      const next = this.approachRoute[idx + 1];
+      const segmentMeters = this.haversineKm(
+        { latitude: currentLat, longitude: currentLng },
+        next
+      ) * 1000;
+      const remaining = metersToMove - movedMeters;
+
+      if (segmentMeters <= remaining) {
+        movedMeters += segmentMeters;
+        currentLat = next.latitude;
+        currentLng = next.longitude;
+        idx++;
+      } else {
+        // Interpolate within segment
+        const fraction = remaining / segmentMeters;
+        currentLat = currentLat + fraction * (next.latitude - currentLat);
+        currentLng = currentLng + fraction * (next.longitude - currentLng);
+        movedMeters += remaining;
+        break;
+      }
+    }
+
+    // Update local state immediately (responsive UI)
+    const newLocation: MapPoint = { latitude: currentLat, longitude: currentLng };
+    this.driverLocation = newLocation;
+    this.lastDriverLocation = newLocation;
+    this.cdr.detectChanges();
+
+    // Push to route update subject so the blue line recalculates
+    if (this.backendRide) {
+      this.locationUpdates$.next({ ride: this.backendRide, location: newLocation });
+    }
+
+    // Sync to backend so RideCostTrackingService can track distance
+    this.vehicleService.updateVehicleLocation(this.simulatedVehicleId, {
+      address: 'Simulated',
+      latitude: currentLat,
+      longitude: currentLng
+    }).subscribe({
+      error: (err) => console.debug('Failed to sync vehicle location to backend', err)
+    });
+  }
+
+  // ── End of simulation methods ────────────────────────────────────────
 
   private haversineKm(a: MapPoint, b: MapPoint): number {
     const toRad = (deg: number) => (deg * Math.PI) / 180;
