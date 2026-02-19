@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Ride } from '../../data/mock-data';
+import { Ride } from '../../data/ride.model';
 
 @Component({
   selector: 'app-ride-vehicle',

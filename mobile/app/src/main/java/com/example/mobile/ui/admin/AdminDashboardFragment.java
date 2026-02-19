@@ -21,12 +21,13 @@ public class AdminDashboardFragment extends Fragment {
         binding = FragmentAdminDashboardBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
+        // Navbar setup
         View navbar = root.findViewById(R.id.navbar);
         if (navbar != null) {
             navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
                 ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
             });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Dashboard");
+            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Admin Dashboard");
         }
         return root;
     }

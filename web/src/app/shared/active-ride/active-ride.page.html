@@ -1,0 +1,697 @@
+<div class="bg-black text-white h-full overflow-hidden" *ngIf="ride; else loading">
+  <div class="h-full flex flex-col lg:grid lg:grid-cols-4">
+    <div class="lg:col-span-3 relative flex-none basis-[40%] lg:basis-auto lg:h-full">
+      <app-active-ride-map 
+        class="absolute inset-0 z-0" 
+        [ride]="rideMapData" 
+        [routePolyline]="routePolyline" 
+        [approachRoute]="approachRoute"
+        [remainingRoute]="remainingRoute"
+        [driverLocation]="driverLocation"
+        [completedStopIndexes]="completedStopIndexes"
+        [isRideInProgress]="isRideInProgress"
+        [panicActivated]="panicActivated">
+      </app-active-ride-map>
+
+      <app-toast 
+        *ngIf="showSuccessToast"
+        [message]="successMessage"
+        type="success"
+        [show]="showSuccessToast"
+        (close)="onToastClose('success')">
+      </app-toast>
+
+      <!-- Error Toast -->
+      <app-toast 
+        *ngIf="showErrorToast"
+        [message]="errorMessage"
+        type="error"
+        [show]="showErrorToast"
+        (close)="onToastClose('error')">
+      </app-toast>
+
+      <div class="absolute top-4 left-4 z-[2000] flex items-center gap-2 pointer-events-auto">
+        <button (click)="goBack()" type="button" class="bg-gray-900/80 hover:bg-gray-900 text-gray-200 border border-gray-800 backdrop-blur px-3 py-2 rounded-lg text-sm">
+          Back
+        </button>
+        <div class="bg-gray-900/80 border border-gray-800 backdrop-blur px-3 py-2 rounded-lg text-sm"
+             [ngClass]="{
+               'text-yellow-500 border-yellow-500/30': isRideInProgress,
+               'text-blue-400 border-blue-400/30': isRidePending
+             }">
+          {{ statusDisplayText }}
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-1 border-l border-gray-900 bg-[#0B0B0C] p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div class="space-y-4 flex-1 overflow-auto">
+        <div class="bg-[#1C1C1E] rounded-xl border border-gray-800 p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="text-xs text-gray-400">Ride Type</div>
+              <div class="font-semibold">{{ ride!.type || '—' }}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-gray-400">{{ isRideInProgress ? 'Current Cost' : 'Est. Cost' }}</div>
+              <div class="text-yellow-500 font-bold">{{ currentCostDisplay }}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mt-4">
+            <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+              <div class="text-xs text-gray-400">{{ isRideInProgress ? 'Time Left' : 'Time Est.' }}</div>
+              <div class="font-semibold">{{ timeLeftDisplay }}</div>
+            </div>
+            <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+              <div class="text-xs text-gray-400">{{ isRideInProgress ? 'Distance Left' : 'Distance' }}</div>
+              <div class="font-semibold">{{ distanceLeftDisplay }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-[#1C1C1E] rounded-xl border border-gray-800 p-4">
+          <div class="font-bold mb-3">Route</div>
+
+          <div class="space-y-4 relative pl-1">
+            <div class="absolute left-[13px] top-3 bottom-3 w-0.5 bg-gray-800 border-l border-dashed border-gray-600"></div>
+
+            <div class="flex gap-3 relative">
+              <div class="mt-1 w-3 h-3 rounded-full bg-green-500 shrink-0"></div>
+              <div>
+                <div class="text-xs text-gray-400">Start</div>
+                <div class="text-sm text-gray-200 break-words">{{ ride!.pickup || '—' }}</div>
+              </div>
+            </div>
+
+            <ng-container *ngFor="let s of rideStops; let i = index">
+              <div class="flex gap-3 relative">
+                <div class="mt-1 w-3 h-3 rounded-full" [ngClass]="isStopCompleted(i) ? 'bg-green-500' : 'bg-gray-500'" ></div>
+                <div>
+                  <div class="text-xs" [ngClass]="isStopCompleted(i) ? 'text-green-500' : 'text-gray-400'">
+                    Stop {{ i + 1 }} {{ isStopCompleted(i) ? '✓' : '' }}
+                  </div>
+                  <div class="text-sm text-gray-200 break-words">{{ s.address }}</div>
+                </div>
+              </div>
+            </ng-container>
+
+            <div class="flex gap-3 relative">
+              <div class="mt-1 w-3 h-3 rounded-full bg-red-500 shrink-0"></div>
+              <div>
+                <div class="text-xs text-gray-400">End</div>
+                <div class="text-sm text-gray-200 break-words">{{ ride!.dropoff || '—' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-4 sticky bottom-0 bg-[#0B0B0C] space-y-3">
+        <!-- DRIVER BUTTONS -->
+        <ng-container *ngIf="isDriver">
+          <ng-container *ngIf="rideStatus === 'PENDING' || rideStatus === 'ACCEPTED' || rideStatus === 'SCHEDULED'">
+            <button type="button" (click)="startRide()" class="w-full py-3 rounded-xl font-bold bg-yellow-500 hover:bg-yellow-400 text-black transition-colors">
+              Start Ride
+            </button>
+            <button type="button" (click)="openCancelModal()" class="w-full py-3 rounded-xl font-bold bg-red-500 hover:bg-red-400 text-white transition-colors">
+              Cancel Ride
+            </button>
+          </ng-container>
+
+          <ng-container *ngIf="rideStatus === 'IN_PROGRESS' || rideStatus === 'ACTIVE'">
+            <button 
+              type="button" 
+              (click)="openStopEarlyModal()" 
+              class="w-full py-3 rounded-xl font-bold bg-orange-600 hover:bg-orange-500 text-white transition-colors shadow-lg shadow-orange-900/20">
+              Stop Early (at current location)
+            </button>
+            <div class="space-y-1">
+              <button 
+                type="button" 
+                (click)="openEndModal()" 
+                [disabled]="!canEndRide"
+                class="w-full py-3 rounded-xl font-bold transition-colors"
+                [ngClass]="canEndRide 
+                  ? 'bg-red-500 hover:bg-red-400 text-white cursor-pointer' 
+                  : 'bg-gray-700 text-gray-400 cursor-not-allowed'">
+                End Ride
+              </button>
+              <p *ngIf="endRideDisabledReason" class="text-xs text-gray-400 text-center">
+                {{ endRideDisabledReason }}
+              </p>
+            </div>
+            <!-- PANIC Button for Driver -->
+            <button 
+              *ngIf="!panicActivated"
+              type="button" 
+              (click)="openPanicModal()" 
+              class="w-full py-3 rounded-xl font-bold bg-red-700 hover:bg-red-600 text-white transition-colors shadow-lg shadow-red-900/30 border-2 border-red-500 animate-pulse">
+              🚨 PANIC
+            </button>
+            <!-- Panic already activated indicator -->
+            <div *ngIf="panicActivated" class="w-full py-3 rounded-xl font-bold bg-red-900/50 text-red-300 text-center border-2 border-red-500/50">
+              🚨 PANIC ACTIVATED - Help is on the way
+            </div>
+          </ng-container>
+        </ng-container>
+
+        <!-- PASSENGER BUTTONS -->
+        <ng-container *ngIf="isPassenger">
+          <!-- Pending ride - can cancel -->
+          <ng-container *ngIf="isRidePending">
+            <button type="button" (click)="openPassengerCancelModal()" class="w-full py-3 rounded-xl font-bold bg-red-500 hover:bg-red-400 text-white transition-colors">
+              Cancel Ride
+            </button>
+          </ng-container>
+
+          <!-- In progress - can report inconsistency -->
+          <ng-container *ngIf="isRideInProgress">
+            <button 
+              type="button" 
+              (click)="openReportModal()" 
+              class="w-full py-3 rounded-xl font-bold bg-orange-600 hover:bg-orange-500 text-white transition-colors shadow-lg shadow-orange-900/20">
+              Report Inconsistency
+            </button>
+            <!-- PANIC Button for Passenger -->
+            <button 
+              *ngIf="!panicActivated"
+              type="button" 
+              (click)="openPanicModal()" 
+              class="w-full py-3 rounded-xl font-bold bg-red-700 hover:bg-red-600 text-white transition-colors shadow-lg shadow-red-900/30 border-2 border-red-500 animate-pulse">
+              🚨 PANIC
+            </button>
+            <!-- Panic already activated indicator -->
+            <div *ngIf="panicActivated" class="w-full py-3 rounded-xl font-bold bg-red-900/50 text-red-300 text-center border-2 border-red-500/50">
+              🚨 PANIC ACTIVATED - Help is on the way
+            </div>
+          </ng-container>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Inconsistency Modal (Passenger) -->
+  <div *ngIf="showReportModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4" (click)="closeReportModal()">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm z-[9998]"></div>
+
+    <div class="relative z-[9999] w-full max-w-lg bg-[#111113] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+        <div class="font-bold text-lg text-white flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          Report Inconsistency
+        </div>
+        <button type="button" (click)="closeReportModal()" class="text-gray-400 hover:text-white transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5" *ngIf="!reportSuccess">
+        <div class="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+          <div class="flex items-start gap-3">
+            <div class="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0"></div>
+            <div>
+              <div class="text-orange-400 font-semibold text-sm">Report an Issue</div>
+              <div class="text-orange-300/80 text-xs mt-1">Describe any inconsistency or issue you've noticed during this ride. This will be reviewed by our team.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
+          <textarea 
+            [(ngModel)]="reportRemark" 
+            class="w-full bg-[#1C1C1E] border border-gray-700 text-white rounded-xl p-3 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all placeholder-gray-500"
+            rows="4" 
+            placeholder="Please describe what happened..."></textarea>
+          <p class="text-xs text-gray-500 mt-1">Maximum 500 characters.</p>
+        </div>
+
+        <div *ngIf="reportError" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
+          <div class="w-2 h-2 rounded-full bg-red-500 shrink-0"></div>
+          <span class="text-red-300 text-sm font-medium">{{ reportError }}</span>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="button" (click)="closeReportModal()" class="flex-1 py-3 rounded-xl font-bold bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button 
+            type="button" 
+            (click)="confirmReport()" 
+            [disabled]="isReporting || !reportRemark.trim()"
+            class="flex-1 py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+            [ngClass]="(!reportRemark.trim() || isReporting) ? 'bg-orange-900/50 text-orange-200/50 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-900/20'">
+            {{ isReporting ? 'Sending...' : 'Send Report' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Success state -->
+      <div class="p-6 space-y-5" *ngIf="reportSuccess">
+        <div class="flex flex-col items-center py-8">
+          <div class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="text-green-500 font-bold text-lg">Report Submitted</div>
+          <div class="text-gray-400 text-sm mt-1">Thank you for your feedback.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Passenger Cancel Modal -->
+  <div *ngIf="showPassengerCancelModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4" (click)="closePassengerCancelModal()">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm z-[9998]"></div>
+
+    <div class="relative z-[9999] w-full max-w-lg bg-[#111113] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+        <div class="font-bold text-lg text-white flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Cancel Ride
+        </div>
+        <button type="button" (click)="closePassengerCancelModal()" class="text-gray-400 hover:text-white transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <div class="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+          <div class="flex items-start gap-3">
+            <div class="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0"></div>
+            <div>
+              <div class="text-red-400 font-semibold text-sm">Cancel this ride?</div>
+              <div class="text-red-300/80 text-xs mt-1">This action cannot be undone. The ride will be cancelled.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Reason for cancellation <span class="text-gray-500">(optional)</span></label>
+          <textarea 
+            [(ngModel)]="passengerCancelReason" 
+            class="w-full bg-[#1C1C1E] border border-gray-700 text-white rounded-xl p-3 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all placeholder-gray-500"
+            rows="3" 
+            placeholder="Let us know why you're cancelling (optional)..."></textarea>
+        </div>
+
+        <div *ngIf="passengerCancelError" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
+          <div class="w-2 h-2 rounded-full bg-red-500 shrink-0"></div>
+          <span class="text-red-300 text-sm font-medium">{{ passengerCancelError }}</span>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="button" (click)="closePassengerCancelModal()" class="flex-1 py-3 rounded-xl font-bold bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors">
+            Keep Ride
+          </button>
+          <button 
+            type="button" 
+            (click)="confirmPassengerCancel()" 
+            [disabled]="isPassengerCancelling"
+            class="flex-1 py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+            [ngClass]="isPassengerCancelling ? 'bg-red-900/50 text-red-200/50 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20'">
+            {{ isPassengerCancelling ? 'Cancelling...' : 'Confirm Cancel' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="showCancelModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4" (click)="closeCancelModal()">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm z-[9998]"></div>
+
+    <div class="relative z-[9999] w-full max-w-lg bg-[#111113] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+        <div class="font-bold text-lg text-white">Cancel Ride</div>
+        <button type="button" (click)="closeCancelModal()" class="text-gray-400 hover:text-white transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <!-- Cost Summary - HIDDEN per requirement -->
+        <!-- <div class="bg-black/40 border border-gray-800 rounded-xl p-4">
+          <div class="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wide">Cost Summary</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-[#1C1C1E] border border-gray-700 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Current Cost</div>
+              <div class="font-bold text-yellow-500 text-lg">{{ currentCostDisplay }}</div>
+            </div>
+            <div class="bg-[#1C1C1E] border border-gray-700 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Total Estimated</div>
+              <div class="font-bold text-white text-lg">{{ (backendRide?.totalCost ?? backendRide?.estimatedCost) ? ((backendRide?.totalCost ?? backendRide?.estimatedCost) | currency:'RSD ':'symbol':'1.0-0') : '—' }}</div>
+            </div>
+          </div>
+          <div class="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-center justify-between">
+            <div>
+              <div class="text-xs text-red-400">Potential Loss</div>
+              <div class="text-[10px] text-gray-500">Revenue not earned</div>
+            </div>
+            <div class="font-bold text-red-400 text-lg">
+              {{ (backendRide?.totalCost ?? backendRide?.estimatedCost) ? (((backendRide?.totalCost ?? backendRide?.estimatedCost ?? 0) - (currentCost || 0)) | currency:'RSD ':'symbol':'1.0-0') : '—' }}
+            </div>
+          </div>
+        </div> -->
+
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Reason for cancellation</label>
+          <textarea 
+            [(ngModel)]="cancelReason" 
+            class="w-full bg-[#1C1C1E] border border-gray-700 text-white rounded-xl p-3 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all placeholder-gray-500"
+            rows="4" 
+            placeholder="Please describe why you are cancelling this ride..."></textarea>
+          <p class="text-xs text-gray-500 mt-1">This reason will be visible to the passenger and admins.</p>
+        </div>
+
+        <div *ngIf="cancelRideError" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
+          <div class="w-2 h-2 rounded-full bg-red-500 shrink-0"></div>
+          <span class="text-red-300 text-sm font-medium">{{ cancelRideError }}</span>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="button" (click)="closeCancelModal()" class="flex-1 py-3 rounded-xl font-bold bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors">
+            Keep Ride
+          </button>
+          <button 
+            type="button" 
+            (click)="confirmCancelRide()" 
+            [disabled]="isCancelling || !cancelReason.trim()"
+            class="flex-1 py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+            [ngClass]="(!cancelReason.trim() || isCancelling) ? 'bg-red-900/50 text-red-200/50 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20'">
+            {{ isCancelling ? 'Cancelling...' : 'Confirm Cancel' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stop Early Modal -->
+  <div *ngIf="showStopEarlyModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4" (click)="closeStopEarlyModal()">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm z-[9998]"></div>
+
+    <div class="relative z-[9999] w-full max-w-lg bg-[#111113] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+        <div class="font-bold text-lg text-white flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          Stop Ride Early
+        </div>
+        <button type="button" (click)="closeStopEarlyModal()" class="text-gray-400 hover:text-white transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- Warning Banner -->
+        <div class="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+          <div class="flex items-start gap-3">
+            <div class="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0 animate-pulse"></div>
+            <div>
+              <div class="text-orange-400 font-semibold text-sm">Price Recalculation</div>
+              <div class="text-orange-300/80 text-xs mt-1">The ride will end at your current location and the final price will be recalculated based on the actual distance traveled.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cost Summary -->
+        <div class="bg-black/40 border border-gray-800 rounded-xl p-4">
+          <div class="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wide">Cost Summary</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-[#1C1C1E] border border-gray-700 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Current Cost</div>
+              <div class="font-bold text-yellow-500 text-lg">{{ currentCostDisplay }}</div>
+            </div>
+            <div class="bg-[#1C1C1E] border border-gray-700 rounded-lg p-3">
+              <div class="text-xs text-gray-400">Total Estimated</div>
+              <div class="font-bold text-white text-lg">{{ (backendRide?.totalCost ?? backendRide?.estimatedCost) ? ((backendRide?.totalCost ?? backendRide?.estimatedCost) | currency:'RSD ':'symbol':'1.0-0') : '—' }}</div>
+            </div>
+          </div>
+          <div class="mt-3 bg-green-500/10 border border-green-500/30 rounded-lg p-3 flex items-center justify-between">
+            <div>
+              <div class="text-xs text-green-400">You Save</div>
+              <div class="text-[10px] text-gray-500">By stopping early</div>
+            </div>
+            <div class="font-bold text-green-400 text-lg">
+              {{ (backendRide?.totalCost ?? backendRide?.estimatedCost) ? (((backendRide?.totalCost ?? backendRide?.estimatedCost ?? 0) - (currentCost || 0)) | currency:'RSD ':'symbol':'1.0-0') : '—' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Current Ride Stats -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+            <div class="text-xs text-gray-400">Ride Type</div>
+            <div class="font-semibold">{{ ride!.type || '—' }}</div>
+          </div>
+          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+            <div class="text-xs text-gray-400">Time Left</div>
+            <div class="font-semibold text-blue-400">{{ timeLeftDisplay !== '—' ? timeLeftDisplay + ' left' : '—' }}</div>
+          </div>
+        </div>
+
+        <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+          <div class="text-xs text-gray-400">Distance Left</div>
+          <div class="font-semibold text-blue-400">{{ distanceLeftDisplay }}</div>
+        </div>
+
+        <!-- Route Info -->
+        <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+          <div class="text-xs text-gray-400 mb-2">Original Route</div>
+          <div class="flex items-start gap-2 text-sm">
+            <div class="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0"></div>
+            <div class="text-gray-200 break-words">{{ ride!.pickup || '—' }}</div>
+          </div>
+          <div class="flex items-start gap-2 text-sm mt-2">
+            <div class="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0"></div>
+            <div class="text-gray-200 break-words line-through opacity-50">{{ ride!.dropoff || '—' }}</div>
+          </div>
+          <div class="flex items-start gap-2 text-sm mt-2">
+            <div class="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0 animate-pulse"></div>
+            <div class="text-orange-400 font-medium break-words">{{ currentLocationAddress }}</div>
+          </div>
+        </div>
+
+        <!-- Completed Stops -->
+        <div *ngIf="completedStopLabels.length > 0" class="bg-black/40 border border-gray-800 rounded-lg p-3">
+          <div class="text-xs text-gray-400 mb-2">Stops Completed</div>
+          <div class="space-y-1">
+            <div *ngFor="let label of completedStopLabels" class="flex items-center gap-2 text-sm text-gray-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+              </svg>
+              {{ label }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="stopEarlyError" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
+          <div class="w-2 h-2 rounded-full bg-red-500 shrink-0"></div>
+          <span class="text-red-300 text-sm font-medium">{{ stopEarlyError }}</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3 pt-2">
+          <button type="button" (click)="closeStopEarlyModal()" class="flex-1 py-3 rounded-xl font-bold bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors">
+            Continue Ride
+          </button>
+          <button 
+            type="button" 
+            (click)="confirmStopEarly()" 
+            [disabled]="isStoppingEarly"
+            class="flex-1 py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:active:scale-100"
+            [ngClass]="isStoppingEarly ? 'bg-orange-900/50 text-orange-200/50 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-900/30'">
+            {{ isStoppingEarly ? 'Stopping...' : 'Confirm Stop' }}
+          </button>
+        </div>
+
+        <div class="text-[11px] text-gray-500 text-center">
+          This action cannot be undone. The ride will end immediately.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="showEndModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4" (click)="closeEndModal()">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm z-[9998]"></div>
+
+    <div class="relative z-[9999] w-full max-w-lg bg-[#111113] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+        <div class="font-bold text-lg text-white">Confirm End Ride</div>
+        <button type="button" (click)="closeEndModal()" class="text-gray-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+            <div class="text-xs text-gray-400">Type</div>
+            <div class="font-semibold">{{ ride!.type || '—' }}</div>
+          </div>
+          <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+            <div class="text-xs text-gray-400">Cost to Pay</div>
+            <div class="font-bold text-yellow-500">{{ currentCostDisplay }}</div>
+          </div>
+        </div>
+
+        <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+          <div class="text-xs text-gray-400 mb-1">Start</div>
+          <div class="text-sm text-gray-200 break-words">{{ ride!.pickup || '—' }}</div>
+          <div class="text-xs text-gray-400 mt-3 mb-1">End</div>
+          <div class="text-sm text-gray-200 break-words">{{ ride!.dropoff || '—' }}</div>
+        </div>
+
+        <div class="bg-black/40 border border-gray-800 rounded-lg p-3">
+          <div class="text-xs text-gray-400 mb-2">Stops completed</div>
+          <div *ngIf="completedStopLabels.length > 0; else noCompleted" class="space-y-1">
+            <div *ngFor="let label of completedStopLabels" class="text-sm text-gray-200">• {{ label }}</div>
+          </div>
+          <ng-template #noCompleted>
+            <div class="text-sm text-gray-500">None yet</div>
+          </ng-template>
+        </div>
+
+        <div *ngIf="endRideError" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm">
+          {{ endRideError }}
+        </div>
+
+        <label class="flex items-center gap-3 bg-black/40 border border-gray-800 rounded-lg p-3 cursor-pointer hover:bg-black/60 transition-colors">
+          <input
+            type="checkbox"
+            name="passengersLeft"
+            class="accent-yellow-500 w-4 h-4"
+            [(ngModel)]="passengersLeft"
+            [ngModelOptions]="{ standalone: true }"
+          />
+          <span class="text-sm text-gray-200">Passengers left</span>
+        </label>
+
+        <label class="flex items-center gap-3 bg-black/40 border border-gray-800 rounded-lg p-3 cursor-pointer hover:bg-black/60 transition-colors">
+          <input
+            type="checkbox"
+            name="passengersPaid"
+            class="accent-yellow-500 w-4 h-4"
+            [(ngModel)]="passengersPaid"
+            [ngModelOptions]="{ standalone: true }"
+          />
+          <span class="text-sm text-gray-200">Passengers paid</span>
+        </label>
+
+        <button
+          type="button"
+          (click)="confirmEndRide()"
+          [disabled]="!passengersLeft || !passengersPaid || isEnding"
+          class="w-full py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:active:scale-100"
+          [ngClass]="(!passengersLeft || !passengersPaid || isEnding)
+            ? 'bg-red-500/30 text-red-200 cursor-not-allowed'
+            : 'bg-red-500 hover:bg-red-400 text-white'"
+        >
+          {{ isEnding ? 'Ending...' : 'End Ride' }}
+        </button>
+
+        <div class="text-[11px] text-gray-500 text-center">
+          This will finish the ride and return you to the dashboard.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANIC Modal -->
+  <div *ngIf="showPanicModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4" (click)="closePanicModal()">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm z-[9998]"></div>
+
+    <div class="relative z-[9999] w-full max-w-lg bg-[#111113] border border-red-800 rounded-2xl shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-red-800 bg-red-900/30 flex items-center justify-between">
+        <div class="font-bold text-lg text-white flex items-center gap-2">
+          <span class="text-2xl">🚨</span>
+          PANIC - Emergency Alert
+        </div>
+        <button type="button" (click)="closePanicModal()" class="text-gray-400 hover:text-white transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Success state -->
+      <div class="p-6 space-y-5" *ngIf="panicSuccess">
+        <div class="flex flex-col items-center py-8">
+          <div class="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4 animate-pulse">
+            <span class="text-4xl">🚨</span>
+          </div>
+          <div class="text-red-400 font-bold text-lg">Panic Alert Sent!</div>
+          <div class="text-gray-400 text-sm mt-1">Administrators have been notified.</div>
+          <div class="text-gray-500 text-xs mt-2">The vehicle is now marked on the map.</div>
+        </div>
+      </div>
+
+      <!-- Normal content -->
+      <div class="p-6 space-y-5" *ngIf="!panicSuccess">
+        <div class="p-4 bg-red-500/20 border border-red-500/50 rounded-xl">
+          <div class="flex items-start gap-3">
+            <div class="w-3 h-3 rounded-full bg-red-500 mt-1 shrink-0 animate-pulse"></div>
+            <div>
+              <div class="text-red-400 font-semibold text-sm">Emergency Alert</div>
+              <div class="text-red-300/80 text-xs mt-1">Pressing this button will immediately notify administrators that there is a serious issue with this ride. The ride will continue but the vehicle will be marked on the map. Use only in case of emergency.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Reason (optional)</label>
+          <textarea 
+            [(ngModel)]="panicReason" 
+            class="w-full bg-[#1C1C1E] border border-gray-700 text-white rounded-xl p-3 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all placeholder-gray-500"
+            rows="3" 
+            placeholder="Describe the emergency situation..."></textarea>
+        </div>
+
+        <div *ngIf="panicError" class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
+          <div class="w-2 h-2 rounded-full bg-red-500 shrink-0"></div>
+          <span class="text-red-300 text-sm font-medium">{{ panicError }}</span>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="button" (click)="closePanicModal()" class="flex-1 py-3 rounded-xl font-bold bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button 
+            type="button" 
+            (click)="confirmPanic()" 
+            [disabled]="isPanicking"
+            class="flex-1 py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/30">
+            {{ isPanicking ? 'Sending Alert...' : '🚨 CONFIRM PANIC' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #loading>
+  <div class="h-full w-full flex items-center justify-center bg-black text-white">
+    <div class="flex flex-col items-center gap-4" *ngIf="!loadingError">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      <div class="text-gray-400">Loading ride details...</div>
+    </div>
+    <div class="flex flex-col items-center gap-4" *ngIf="loadingError">
+      <div class="text-red-500 font-bold text-xl">Error</div>
+      <div class="text-gray-400">{{ loadingError }}</div>
+      <button (click)="goBack()" class="mt-4 bg-gray-800 px-4 py-2 rounded text-white">Back to Dashboard</button>
+    </div>
+  </div>
+</ng-template>

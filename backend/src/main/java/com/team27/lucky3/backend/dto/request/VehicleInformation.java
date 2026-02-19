@@ -30,4 +30,6 @@ public class VehicleInformation {
 
     @NotNull
     private Boolean petTransport;
+
+    private Long driverId;
 }

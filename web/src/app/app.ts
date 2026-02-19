@@ -30,10 +30,14 @@ export class App implements OnInit {
         '/reset-password-sent', 
         '/reset-password',
         '/reset-password-success',
-        '/register-verification-sent'
+        '/register-verification-sent',
+        '/activate',
+        '/home',
+        '/review'
       ];
       const url = event.urlAfterRedirects || event.url;
-      this.showLayout = !hiddenRoutes.some(route => url.startsWith(route));
+      // Hide layout for home page (root) and other auth routes
+      this.showLayout = url !== '/' && !hiddenRoutes.some(route => url.startsWith(route));
     });
   }
 

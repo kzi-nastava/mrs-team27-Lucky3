@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -31,6 +32,7 @@ public class RideResponse {
     private Integer estimatedTimeInMinutes;
     private String rejectionReason;
     private Boolean panicPressed;
+    private String panicReason;
     private LocationDto departure;
     private LocationDto destination;
     private LocalDateTime scheduledTime;
@@ -39,4 +41,10 @@ public class RideResponse {
     private Boolean babyTransport;
     private Boolean paid;
     private Boolean passengersExited;
+    private List<LocationDto> stops;
+    private Set<Integer> completedStopIndexes;
+    private Double distanceTraveled; // Distance traveled so far (for cost calculation)
+    private Double rateBaseFare; // Snapshot: base fare at ride creation
+    private Double ratePricePerKm; // Snapshot: price per km at ride creation
+    private List<ReviewResponse> reviews;
 }

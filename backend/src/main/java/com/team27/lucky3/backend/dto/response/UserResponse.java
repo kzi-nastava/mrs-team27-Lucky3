@@ -13,7 +13,8 @@ public class UserResponse {
     private String name;
     private String surname;
     private String email;
-    private String profilePictureUrl;
+    private String profilePictureUrl;   //this is a url to the profile picture endpoint!
     private UserRole role;
     private String phoneNumber;
+    private String address;
 }
