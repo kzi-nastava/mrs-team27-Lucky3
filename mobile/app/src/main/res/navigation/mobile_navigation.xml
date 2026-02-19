@@ -91,7 +91,12 @@
         android:id="@+id/nav_register_verification"
         android:name="com.example.mobile.ui.auth.RegisterVerificationFragment"
         android:label="Verify Email"
-        tools:layout="@layout/fragment_register_verification" />
+        tools:layout="@layout/fragment_register_verification">
+        <action
+            android:id="@+id/action_nav_register_verification_to_nav_login"
+            app:destination="@id/nav_login"
+            app:popUpTo="@id/nav_guest_home" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_driver_overview"

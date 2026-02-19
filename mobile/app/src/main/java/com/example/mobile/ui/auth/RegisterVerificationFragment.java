@@ -20,7 +20,7 @@ public class RegisterVerificationFragment extends Fragment {
         View root = binding.getRoot();
 
         binding.btnLogin.setOnClickListener(v -> {
-            Navigation.findNavController(v).popBackStack(R.id.nav_login, false);
+            Navigation.findNavController(v).navigate(R.id.action_nav_register_verification_to_nav_login);
         });
 
         return root;
