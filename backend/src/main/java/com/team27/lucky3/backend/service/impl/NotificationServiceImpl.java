@@ -12,6 +12,7 @@ import com.team27.lucky3.backend.repository.NotificationRepository;
 import com.team27.lucky3.backend.repository.RideTrackingTokenRepository;
 import com.team27.lucky3.backend.repository.UserRepository;
 import com.team27.lucky3.backend.service.EmailService;
+import com.team27.lucky3.backend.service.FcmService;
 import com.team27.lucky3.backend.service.NotificationService;
 import com.team27.lucky3.backend.util.RideTrackingTokenUtils;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +60,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final RideTrackingTokenRepository rideTrackingTokenRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final EmailService emailService;
+    private final FcmService fcmService;
     private final RideTrackingTokenUtils rideTrackingTokenUtils;
 
     @Value("${frontend.url}")
@@ -104,7 +106,10 @@ public class NotificationServiceImpl implements NotificationService {
         // 2. Push via WebSocket → /user/{id}/queue/notifications
         pushWebSocket(recipient.getId(), dto);
 
-        // 3. Conditional email (async)
+        // 3. Push via FCM (async, non-blocking)
+        pushFcm(recipient, text, type, relatedEntityId, saved.getId());
+
+        // 4. Conditional email (async)
         if (type == NotificationType.RIDE_INVITE || type == NotificationType.RIDE_FINISHED) {
             sendEmailAsync(recipient.getEmail(), type, text, relatedEntityId);
         }
@@ -135,6 +140,9 @@ public class NotificationServiceImpl implements NotificationService {
         NotificationResponse dto = mapToResponse(entity);
         pushWebSocket(invitedPassenger.getId(), dto);
 
+        // Push via FCM (async, non-blocking)
+        pushFcm(invitedPassenger, text, NotificationType.RIDE_INVITE, ride.getId(), entity.getId());
+
         // Send HTML email with accept link
         sendLinkedPassengerEmail(invitedPassenger, ride);
 
@@ -164,6 +172,9 @@ public class NotificationServiceImpl implements NotificationService {
                     NotificationType.PANIC, ride.getId(), PRIORITY_CRITICAL);
             NotificationResponse dto = mapToResponse(entity);
             pushWebSocket(admin.getId(), dto);
+
+            // Push via FCM (async, non-blocking)
+            pushFcm(admin, text, NotificationType.PANIC, ride.getId(), entity.getId());
         }
 
         log.warn("PANIC notification broadcast to {} admins for ride #{}",
@@ -179,16 +190,84 @@ public class NotificationServiceImpl implements NotificationService {
     public void sendRideStatusNotification(Ride ride, String statusMessage) {
         String text = String.format("Ride #%d: %s", ride.getId(), statusMessage);
 
-        // Notify all passengers
+        // Notify all passengers only — this method is called for driver-initiated
+        // actions (acceptRide, startRide), so the driver already knows and must not
+        // receive a notification for their own action.
         if (ride.getPassengers() != null) {
             for (User passenger : ride.getPassengers()) {
                 sendNotification(passenger, text, NotificationType.RIDE_STATUS, ride.getId());
             }
         }
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  STOP COMPLETED — Notify all participants
+    // ════════════════════════════════════════════════════════════════════
+
+    @Override
+    @Transactional
+    public void sendStopCompletedNotification(Ride ride, int stopIndex) {
+        String stopLabel;
+        if (stopIndex == -1) {
+            stopLabel = "Start location";
+        } else {
+            stopLabel = "Stop " + (stopIndex + 1);
+            if (ride.getStops() != null && stopIndex < ride.getStops().size()) {
+                String address = ride.getStops().get(stopIndex).getAddress();
+                if (address != null && !address.isEmpty()) {
+                    stopLabel += " (" + address + ")";
+                }
+            }
+        }
+
+        String text = String.format("Ride #%d: %s has been completed.", ride.getId(), stopLabel);
+
+        // Notify all passengers
+        if (ride.getPassengers() != null) {
+            for (User passenger : ride.getPassengers()) {
+                sendNotification(passenger, text, NotificationType.STOP_COMPLETED, ride.getId());
+            }
+        }
 
         // Notify driver (if assigned)
         if (ride.getDriver() != null) {
-            sendNotification(ride.getDriver(), text, NotificationType.RIDE_STATUS, ride.getId());
+            sendNotification(ride.getDriver(), text, NotificationType.STOP_COMPLETED, ride.getId());
+        }
+
+        log.info("Stop completed notification sent for ride #{}, stop index {}", ride.getId(), stopIndex);
+    }
+
+    @Override
+    @Transactional
+    public void notifyLinkedPassengersStopCompleted(Ride ride, int stopIndex) {
+        List<String> invitedEmails = ride.getInvitedEmails();
+        if (invitedEmails == null || invitedEmails.isEmpty()) {
+            return;
+        }
+
+        String stopLabel;
+        if (stopIndex == -1) {
+            stopLabel = "Start location";
+        } else {
+            stopLabel = "Stop " + (stopIndex + 1);
+            if (ride.getStops() != null && stopIndex < ride.getStops().size()) {
+                String address = ride.getStops().get(stopIndex).getAddress();
+                if (address != null && !address.isEmpty()) {
+                    stopLabel += " (" + address + ")";
+                }
+            }
+        }
+
+        String text = String.format("Ride #%d: %s has been completed.", ride.getId(), stopLabel);
+
+        for (String email : invitedEmails) {
+            Optional<User> registeredUser = userRepository.findByEmail(email);
+            if (registeredUser.isPresent()) {
+                User user = registeredUser.get();
+                sendNotification(user, text, NotificationType.STOP_COMPLETED, ride.getId());
+                log.info("Sent stop completed notification to linked passenger {} for ride #{}",
+                        email, ride.getId());
+            }
         }
     }
 
@@ -203,7 +282,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         String text = buildRideSummaryText(ride);
 
-        // Notify all passengers (push + email)
+        // Notify all passengers (push + FCM + email) — driver does NOT get this notification
         Set<User> passengers = ride.getPassengers();
         if (passengers != null) {
             for (User passenger : passengers) {
@@ -212,17 +291,15 @@ public class NotificationServiceImpl implements NotificationService {
                 NotificationResponse dto = mapToResponse(entity);
                 pushWebSocket(passenger.getId(), dto);
 
+                // Send FCM push notification (async, non-blocking)
+                pushFcm(passenger, text, NotificationType.RIDE_FINISHED, ride.getId(), entity.getId());
+
                 // Send ride-summary email (async, skip dummy emails)
                 sendRideSummaryEmail(passenger, ride);
             }
         }
 
-        // Notify the driver (push only, no email)
-        if (ride.getDriver() != null) {
-            String driverText = String.format("Ride #%d completed. Cost: %.2f RSD, Distance: %.2f km",
-                    ride.getId(), ride.getTotalCost(), ride.getDistance());
-            sendNotification(ride.getDriver(), driverText, NotificationType.RIDE_FINISHED, ride.getId());
-        }
+        // Driver does NOT receive a ride-finished notification
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -274,15 +351,27 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     // ════════════════════════════════════════════════════════════════════
-    //  SUPPORT CHAT — Admin reply → Notify the user
+    //  LEAVE REVIEW — Ride creator only, after ride finishes
     // ════════════════════════════════════════════════════════════════════
 
     @Override
     @Transactional
-    public void sendSupportReplyToUser(User chatOwner, Long chatId) {
-        String text = "Support team has replied to your message. Click to view.";
-        sendNotification(chatOwner, text, NotificationType.SUPPORT, chatId);
-        log.info("Support reply notification sent to user {} for chat #{}", chatOwner.getEmail(), chatId);
+    public void sendLeaveReviewNotification(Ride ride) {
+        // Determine ride creator (fallback to first passenger for legacy rides)
+        User creator = ride.getCreatedBy();
+        if (creator == null && ride.getPassengers() != null && !ride.getPassengers().isEmpty()) {
+            creator = ride.getPassengers().iterator().next();
+        }
+        if (creator == null) {
+            log.warn("No creator found for ride #{} — skipping review notification", ride.getId());
+            return;
+        }
+
+        String text = String.format("Leave a review for ride #%d", ride.getId());
+
+        sendNotification(creator, text, NotificationType.LEAVE_REVIEW, ride.getId());
+
+        log.info("Leave-review notification sent to user {} for ride #{}", creator.getId(), ride.getId());
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -302,11 +391,30 @@ public class NotificationServiceImpl implements NotificationService {
                 ride.getId(), departure, destination, ride.getEstimatedCost()
         );
 
-        // Notify all passengers
+        // Push notification to ALL registered passengers EXCEPT the ride creator
+        // (the creator already knows — they just created it)
+        User creator = ride.getCreatedBy();
         if (ride.getPassengers() != null) {
             for (User passenger : ride.getPassengers()) {
+                if (creator != null && creator.getId().equals(passenger.getId())) {
+                    log.debug("Skipping RIDE_CREATED notification for creator {} on ride #{}",
+                            creator.getId(), ride.getId());
+                    continue;
+                }
                 sendNotification(passenger, text, NotificationType.RIDE_CREATED, ride.getId());
             }
+        }
+
+        // Push notification to the driver
+        if (ride.getDriver() != null) {
+            String driverText = String.format(
+                    "New ride request #%d assigned to you. Pickup: %s \u2192 Destination: %s. Estimated cost: %.2f RSD.",
+                    ride.getId(), departure, destination, ride.getEstimatedCost()
+            );
+            sendNotification(ride.getDriver(), driverText, NotificationType.DRIVER_ASSIGNMENT, ride.getId());
+
+            // Send email to the driver about the new assignment (async)
+            sendRideCreatedEmailToDriver(ride);
         }
 
         log.info("Ride created notification sent for ride #{}", ride.getId());
@@ -322,67 +430,38 @@ public class NotificationServiceImpl implements NotificationService {
         String cancellerName = cancelledBy.getName() + " " + cancelledBy.getSurname();
         boolean cancelledByDriver = ride.getDriver() != null 
                 && ride.getDriver().getId().equals(cancelledBy.getId());
+        String cancellerRole = cancelledByDriver ? "driver" : "passenger";
 
         String reason = ride.getRejectionReason() != null && !ride.getRejectionReason().isEmpty()
                 ? " Reason: " + ride.getRejectionReason()
                 : "";
 
-        if (cancelledByDriver) {
-            // Driver cancelled → notify all passengers (push + email)
-            String text = String.format(
-                    "Ride #%d has been cancelled by driver %s.%s",
-                    ride.getId(), cancellerName, reason
-            );
+        String text = String.format(
+                "Ride #%d has been cancelled by %s %s.%s",
+                ride.getId(), cancellerRole, cancellerName, reason
+        );
 
-            if (ride.getPassengers() != null) {
-                for (User passenger : ride.getPassengers()) {
-                    // Send push notification
-                    sendNotification(passenger, text, NotificationType.RIDE_CANCELLED, ride.getId());
-                    
-                    // Send email to each passenger (including the ride creator) - async
-                    final String passengerEmail = passenger.getEmail();
-                    final String passengerName = passenger.getName();
-                    final Long rideId = ride.getId();
-                    final String startAddr = ride.getStartLocation() != null ? ride.getStartLocation().getAddress() : "Unknown";
-                    final String endAddr = ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : "Unknown";
-                    final double cost = ride.getEstimatedCost();
-                    final String cancellerNameCopy = cancellerName;
-                    final String rejectionReason = ride.getRejectionReason();
-                    
-                    CompletableFuture.runAsync(() -> {
-                        try {
-                            emailService.sendLinkedPassengerRideCancelledEmail(
-                                    passengerEmail, 
-                                    passengerName, 
-                                    rideId,
-                                    startAddr,
-                                    endAddr,
-                                    cost,
-                                    cancellerNameCopy, 
-                                    "driver",
-                                    rejectionReason
-                            );
-                            log.info("Sent ride-cancelled email to passenger {} for ride #{}", 
-                                    passengerEmail, rideId);
-                        } catch (Exception e) {
-                            log.error("Failed to send ride-cancelled email to {}: {}", 
-                                    passengerEmail, e.getMessage());
-                        }
-                    });
+        // Push notification + email to ALL registered passengers except the canceller
+        if (ride.getPassengers() != null) {
+            for (User passenger : ride.getPassengers()) {
+                if (passenger.getId().equals(cancelledBy.getId())) {
+                    continue; // Skip the person who cancelled
                 }
-            }
-            log.info("Ride cancelled notification sent to passengers for ride #{}", ride.getId());
-        } else {
-            // Passenger cancelled → notify driver
-            if (ride.getDriver() != null) {
-                String text = String.format(
-                        "Ride #%d has been cancelled by passenger %s.%s",
-                        ride.getId(), cancellerName, reason
-                );
-                sendNotification(ride.getDriver(), text, NotificationType.RIDE_CANCELLED, ride.getId());
-                log.info("Ride cancelled notification sent to driver for ride #{}", ride.getId());
+                sendNotification(passenger, text, NotificationType.RIDE_CANCELLED, ride.getId());
+                // Send cancellation email to this passenger (async)
+                sendCancellationEmail(passenger.getEmail(), passenger.getName(), ride, cancellerName, cancellerRole);
             }
         }
+
+        // Push notification + email to the driver (if not the canceller)
+        if (ride.getDriver() != null && !ride.getDriver().getId().equals(cancelledBy.getId())) {
+            sendNotification(ride.getDriver(), text, NotificationType.RIDE_CANCELLED, ride.getId());
+            // Send cancellation email to the driver (async)
+            sendCancellationEmail(ride.getDriver().getEmail(), ride.getDriver().getName(), ride, cancellerName, cancellerRole);
+        }
+
+        log.info("Ride cancelled notification sent for ride #{} (cancelled by {} {})",
+                ride.getId(), cancellerRole, cancellerName);
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -470,6 +549,26 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.countByRecipientIdAndIsReadFalse(userId);
     }
 
+    @Override
+    @Transactional
+    public int deleteAllForUser(Long userId) {
+        return notificationRepository.deleteAllForUser(userId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteNotification(Long notificationId, Long userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Notification not found with id: " + notificationId));
+
+        if (!notification.getRecipient().getId().equals(userId)) {
+            throw new IllegalStateException("Cannot delete another user's notification");
+        }
+
+        notificationRepository.delete(notification);
+    }
+
     // ════════════════════════════════════════════════════════════════════
     //  PRIVATE HELPERS
     // ════════════════════════════════════════════════════════════════════
@@ -496,6 +595,110 @@ public class NotificationServiceImpl implements NotificationService {
         } catch (Exception e) {
             // WebSocket failure must never break the persist-first contract
             log.warn("Failed to push WS notification to {}: {}", dest, e.getMessage());
+        }
+    }
+
+    /**
+     * Sends an FCM push notification to the user's registered device.
+     * Executes asynchronously and never throws — a failed FCM push must not
+     * break the persist-first notification contract.
+     */
+    private void pushFcm(User recipient, String text,
+                         NotificationType type, Long relatedEntityId,
+                         Long notificationId) {
+        if (!fcmService.isAvailable()) return;
+
+        String fcmToken = recipient.getFcmToken();
+        if (fcmToken == null || fcmToken.isBlank()) {
+            log.debug("No FCM token for user {} — skipping push", recipient.getId());
+            return;
+        }
+
+        // Build a descriptive title based on notification type
+        String title;
+        switch (type) {
+            case RIDE_STATUS:
+                title = "Ride Update";
+                break;
+            case RIDE_INVITE:
+                title = "Ride Invitation";
+                break;
+            case PANIC:
+                title = "⚠ PANIC Alert";
+                break;
+            case DRIVER_ASSIGNMENT:
+                title = "Driver Assigned";
+                break;
+            case RIDE_FINISHED:
+                title = "Ride Completed";
+                break;
+            case RIDE_CREATED:
+                title = "Ride Created";
+                break;
+            case RIDE_CANCELLED:
+                title = "Ride Cancelled";
+                break;
+            case STOP_COMPLETED:
+                title = "Stop Completed";
+                break;
+            case LEAVE_REVIEW:
+                title = "Leave a Review";
+                break;
+            case SUPPORT:
+                title = "Support Message";
+                break;
+            default:
+                title = "Lucky3 Notification";
+        }
+
+        // Extra data for deep-linking on the client
+        java.util.Map<String, String> data = new java.util.HashMap<>();
+        data.put("type", type.name());
+        if (relatedEntityId != null) {
+            data.put("rideId", String.valueOf(relatedEntityId));
+        }
+        if (notificationId != null) {
+            data.put("notificationId", String.valueOf(notificationId));
+        }
+        data.put("userId", String.valueOf(recipient.getId()));
+
+        // Add navigate_to hint for mobile deep-linking
+        switch (type) {
+            case SUPPORT:
+                data.put("navigate_to", "support");
+                break;
+            case PANIC:
+                data.put("navigate_to", "admin_panic");
+                break;
+            case RIDE_FINISHED:
+            case RIDE_CANCELLED:
+                if (relatedEntityId != null) {
+                    data.put("navigate_to", "ride_history");
+                }
+                break;
+            case RIDE_STATUS:
+            case RIDE_INVITE:
+            case RIDE_CREATED:
+            case DRIVER_ASSIGNMENT:
+            case STOP_COMPLETED:
+                if (relatedEntityId != null) {
+                    data.put("navigate_to", "active_ride");
+                }
+                break;
+            case LEAVE_REVIEW:
+                if (relatedEntityId != null) {
+                    data.put("navigate_to", "review");
+                }
+                break;
+            default:
+                break;
+        }
+
+        try {
+            fcmService.sendToDevice(fcmToken, title, text, data);
+        } catch (Exception e) {
+            // FCM failure must never break the persist-first contract
+            log.warn("Failed to push FCM notification to user {}: {}", recipient.getId(), e.getMessage());
         }
     }
 
@@ -532,7 +735,7 @@ public class NotificationServiceImpl implements NotificationService {
      * Sends an HTML-style linked-passenger invite email with a deep link.
      */
     private void sendLinkedPassengerEmail(User passenger, Ride ride) {
-        if (passenger.getEmail() == null || passenger.getEmail().endsWith("@example.com")) return;
+        if (passenger.getEmail() == null) return;
 
         String rideLink = frontendUrl + "/passenger/ride/" + ride.getId();
         final String email = passenger.getEmail();
@@ -566,7 +769,7 @@ public class NotificationServiceImpl implements NotificationService {
      * Sends a ride-summary email after a ride finishes (async).
      */
     private void sendRideSummaryEmail(User passenger, Ride ride) {
-        if (passenger.getEmail() == null || passenger.getEmail().endsWith("@example.com")) return;
+        if (passenger.getEmail() == null) return;
 
         final String email = passenger.getEmail();
         final String name = passenger.getName() != null ? passenger.getName() : "Passenger";
@@ -614,6 +817,75 @@ public class NotificationServiceImpl implements NotificationService {
                 ride.getDistance() != null ? ride.getDistance() : 0.0,
                 ride.getTotalCost() != null ? ride.getTotalCost() : 0.0
         );
+    }
+
+    /**
+     * Sends a cancellation email to a registered user (async).
+     */
+    private void sendCancellationEmail(String toEmail, String recipientName, Ride ride,
+                                        String cancellerName, String cancellerRole) {
+        if (toEmail == null) return;
+
+        final String email = toEmail;
+        final String name = recipientName != null ? recipientName : "User";
+        final Long rideId = ride.getId();
+        final String startAddr = ride.getStartLocation() != null ? ride.getStartLocation().getAddress() : "Unknown";
+        final String endAddr = ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : "Unknown";
+        final double cost = ride.getEstimatedCost() != null ? ride.getEstimatedCost() : 0.0;
+        final String rejectionReason = ride.getRejectionReason();
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                emailService.sendLinkedPassengerRideCancelledEmail(
+                        email, name, rideId, startAddr, endAddr,
+                        cost, cancellerName, cancellerRole, rejectionReason);
+                log.info("Sent ride-cancelled email to {} for ride #{}", email, rideId);
+            } catch (Exception e) {
+                log.error("Failed to send ride-cancelled email to {}: {}", email, e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Sends a ride-creation email to the assigned driver (async).
+     */
+    private void sendRideCreatedEmailToDriver(Ride ride) {
+        if (ride.getDriver() == null) return;
+
+        String driverEmail = ride.getDriver().getEmail();
+        if (driverEmail == null) return;
+
+        final String email = driverEmail;
+        final String name = ride.getDriver().getName() != null ? ride.getDriver().getName() : "Driver";
+        final Long rideId = ride.getId();
+        final String startAddr = ride.getStartLocation() != null ? ride.getStartLocation().getAddress() : "Unknown";
+        final String endAddr = ride.getEndLocation() != null ? ride.getEndLocation().getAddress() : "Unknown";
+        final double estimatedCost = ride.getEstimatedCost() != null ? ride.getEstimatedCost() : 0.0;
+        final String scheduledTime = ride.getScheduledTime() != null
+                ? ride.getScheduledTime().format(FMT) : "As soon as possible";
+
+        CompletableFuture.runAsync(() -> {
+            String body = String.format(
+                    "Hi %s,\n\n" +
+                    "A new ride has been assigned to you on Lucky3!\n\n" +
+                    "═══ Ride Details ═══\n" +
+                    "Ride #%d\n" +
+                    "Pickup:    %s\n" +
+                    "Drop-off:  %s\n" +
+                    "Estimated cost: %.2f RSD\n" +
+                    "Scheduled: %s\n\n" +
+                    "Please check your dashboard to accept the ride.\n\n" +
+                    "— The Lucky3 Team",
+                    name, rideId, startAddr, endAddr, estimatedCost, scheduledTime
+            );
+
+            try {
+                emailService.sendSimpleMessage(email, "Lucky3 — New Ride #" + rideId + " Assigned", body);
+                log.info("Sent ride-created email to driver {} for ride #{}", email, rideId);
+            } catch (Exception e) {
+                log.error("Failed to send ride-created email to driver {}: {}", email, e.getMessage());
+            }
+        });
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -743,6 +1015,26 @@ public class NotificationServiceImpl implements NotificationService {
         rideTrackingTokenRepository.revokeAllByRideId(ride.getId());
         log.info("Revoked tracking tokens and notified {} linked passengers for completed ride #{}", 
                 invitedEmails.size(), ride.getId());
+    }
+
+    @Override
+    @Transactional
+    public void notifyLinkedPassengersRideStatusChange(Ride ride, String statusMessage) {
+        List<String> invitedEmails = ride.getInvitedEmails();
+        if (invitedEmails == null || invitedEmails.isEmpty()) {
+            log.debug("No linked passengers to notify for ride #{} status change", ride.getId());
+            return;
+        }
+
+        for (String email : invitedEmails) {
+            Optional<User> registeredUser = userRepository.findByEmail(email);
+            if (registeredUser.isPresent()) {
+                User user = registeredUser.get();
+                sendNotification(user, statusMessage, NotificationType.RIDE_STATUS, ride.getId());
+                log.info("Sent ride status change notification to linked passenger {} for ride #{}",
+                        email, ride.getId());
+            }
+        }
     }
 
     @Override

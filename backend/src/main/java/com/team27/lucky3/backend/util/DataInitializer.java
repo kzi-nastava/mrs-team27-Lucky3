@@ -318,17 +318,19 @@ public class DataInitializer implements CommandLineRunner {
         rideScheduled.setRatePricePerKm(120.0);
         rideRepository.save(rideScheduled);
 
-        // Ride 7: CANCELLED (Yesterday) - Driver 1 with passenger2
+        // Ride 7: CANCELLED_BY_PASSENGER (Yesterday) - Driver 1 with passenger2
         Ride rideCancelled = new Ride();
         rideCancelled.setDriver(driver);
         rideCancelled.setPassengers(Collections.singleton(passenger2));
-        rideCancelled.setStatus(RideStatus.CANCELLED);
+        rideCancelled.setStatus(RideStatus.CANCELLED_BY_PASSENGER);
         rideCancelled.setStartLocation(new Location("Liman 4, Novi Sad", 45.2350, 19.8250));
         rideCancelled.setEndLocation(new Location("Telep, Novi Sad", 45.2300, 19.8000));
-        rideCancelled.setScheduledTime(LocalDateTime.now().minusDays(1).withHour(10).withMinute(0));
+        rideCancelled.setStartTime(LocalDateTime.now().minusDays(1).withHour(10).withMinute(0));
+        rideCancelled.setEndTime(LocalDateTime.now().minusDays(1).withHour(10).withMinute(15));
         rideCancelled.setEstimatedCost(480.00);
+        rideCancelled.setTotalCost(480.00);
         rideCancelled.setDistance(3.0);
-        rideCancelled.setRejectionReason("Passenger cancelled");
+        rideCancelled.setRejectionReason("Driver had vehicle issue");
         rideCancelled.setRequestedVehicleType(VehicleType.STANDARD);
         rideCancelled.setPanicPressed(false);
         rideCancelled.setPaid(false);
@@ -389,6 +391,148 @@ public class DataInitializer implements CommandLineRunner {
         ridePanicHistory.setRateBaseFare(180.0);
         ridePanicHistory.setRatePricePerKm(120.0);
         rideRepository.save(ridePanicHistory);
+
+        // Ride 10: Freshly finished about 6h ago. We leave this one without 
+        // reviews specifically for our E2E automation tests.
+        Ride rideE2ETest = new Ride();
+        rideE2ETest.setDriver(driver);
+        rideE2ETest.setPassengers(Collections.singleton(passenger3));
+        rideE2ETest.setStatus(RideStatus.FINISHED);
+        rideE2ETest.setStartLocation(new Location("Bulevar Oslobodjenja 50, Novi Sad", 45.2500, 19.8400));
+        rideE2ETest.setEndLocation(new Location("Futoski Park, Novi Sad", 45.2620, 19.8310));
+        rideE2ETest.setStartTime(LocalDateTime.now().minusHours(7));
+        rideE2ETest.setEndTime(LocalDateTime.now().minusHours(6));
+        rideE2ETest.setTotalCost(240.00);
+        rideE2ETest.setEstimatedCost(240.00);
+        rideE2ETest.setDistance(1.0);
+        rideE2ETest.setRequestedVehicleType(VehicleType.STANDARD);
+        rideE2ETest.setPanicPressed(false);
+        rideE2ETest.setPaid(true);
+        rideE2ETest.setPassengersExited(true);
+        rideE2ETest.setDistanceTraveled(1.0);
+        rideE2ETest.setPetTransport(false);
+        rideE2ETest.setBabyTransport(false);
+        rideE2ETest.setRateBaseFare(120.0);
+        rideE2ETest.setRatePricePerKm(120.0);
+        rideRepository.save(rideE2ETest);
+
+        // Ride 11: CANCELLED_BY_DRIVER (6 days ago) - Driver 2 cancelled
+        Ride rideCancelledByDriver = new Ride();
+        rideCancelledByDriver.setDriver(driver2);
+        rideCancelledByDriver.setPassengers(Collections.singleton(passenger));
+        rideCancelledByDriver.setStatus(RideStatus.CANCELLED_BY_DRIVER);
+        rideCancelledByDriver.setStartLocation(new Location("Bulevar Cara Lazara, Novi Sad", 45.2440, 19.8420));
+        rideCancelledByDriver.setEndLocation(new Location("Futoska Pijaca, Novi Sad", 45.2530, 19.8200));
+        rideCancelledByDriver.setStartTime(LocalDateTime.now().minusDays(6).minusHours(5));
+        rideCancelledByDriver.setEndTime(LocalDateTime.now().minusDays(6).minusHours(5).plusMinutes(5));
+        rideCancelledByDriver.setTotalCost(540.00);
+        rideCancelledByDriver.setEstimatedCost(540.00);
+        rideCancelledByDriver.setDistance(3.5);
+        rideCancelledByDriver.setRejectionReason("Vehicle broke down");
+        rideCancelledByDriver.setRequestedVehicleType(VehicleType.VAN);
+        rideCancelledByDriver.setPanicPressed(false);
+        rideCancelledByDriver.setPaid(false);
+        rideCancelledByDriver.setPassengersExited(false);
+        rideCancelledByDriver.setDistanceTraveled(0.0);
+        rideCancelledByDriver.setPetTransport(false);
+        rideCancelledByDriver.setBabyTransport(false);
+        rideCancelledByDriver.setRateBaseFare(180.0);
+        rideCancelledByDriver.setRatePricePerKm(120.0);
+        rideRepository.save(rideCancelledByDriver);
+
+        // Ride 12: CANCELLED_BY_PASSENGER (7 days ago) - passenger2 cancelled
+        Ride rideCancelledByPassenger = new Ride();
+        rideCancelledByPassenger.setDriver(driver);
+        rideCancelledByPassenger.setPassengers(Collections.singleton(passenger2));
+        rideCancelledByPassenger.setStatus(RideStatus.CANCELLED_BY_PASSENGER);
+        rideCancelledByPassenger.setStartLocation(new Location("Zmaj Jovina, Novi Sad", 45.2551, 19.8450));
+        rideCancelledByPassenger.setEndLocation(new Location("Sajmiste, Novi Sad", 45.2580, 19.8200));
+        rideCancelledByPassenger.setStartTime(LocalDateTime.now().minusDays(7).minusHours(2));
+        rideCancelledByPassenger.setEndTime(LocalDateTime.now().minusDays(7).minusHours(2).plusMinutes(3));
+        rideCancelledByPassenger.setTotalCost(360.00);
+        rideCancelledByPassenger.setEstimatedCost(360.00);
+        rideCancelledByPassenger.setDistance(2.0);
+        rideCancelledByPassenger.setRejectionReason("Changed plans");
+        rideCancelledByPassenger.setRequestedVehicleType(VehicleType.STANDARD);
+        rideCancelledByPassenger.setPanicPressed(false);
+        rideCancelledByPassenger.setPaid(false);
+        rideCancelledByPassenger.setPassengersExited(false);
+        rideCancelledByPassenger.setDistanceTraveled(0.0);
+        rideCancelledByPassenger.setPetTransport(false);
+        rideCancelledByPassenger.setBabyTransport(false);
+        rideCancelledByPassenger.setRateBaseFare(120.0);
+        rideCancelledByPassenger.setRatePricePerKm(120.0);
+        rideRepository.save(rideCancelledByPassenger);
+
+        // Ride 13: FINISHED (10 days ago) - older ride for date range testing
+        Ride rideOldFinished1 = new Ride();
+        rideOldFinished1.setDriver(driver);
+        rideOldFinished1.setPassengers(Collections.singleton(passenger3));
+        rideOldFinished1.setStatus(RideStatus.FINISHED);
+        rideOldFinished1.setStartLocation(new Location("Univerza, Novi Sad", 45.2461, 19.8519));
+        rideOldFinished1.setEndLocation(new Location("Podbara, Novi Sad", 45.2620, 19.8420));
+        rideOldFinished1.setStartTime(LocalDateTime.now().minusDays(10).minusHours(6));
+        rideOldFinished1.setEndTime(LocalDateTime.now().minusDays(10).minusHours(5));
+        rideOldFinished1.setTotalCost(180.00);
+        rideOldFinished1.setEstimatedCost(180.00);
+        rideOldFinished1.setDistance(0.5);
+        rideOldFinished1.setRequestedVehicleType(VehicleType.STANDARD);
+        rideOldFinished1.setPanicPressed(false);
+        rideOldFinished1.setPaid(true);
+        rideOldFinished1.setPassengersExited(true);
+        rideOldFinished1.setDistanceTraveled(0.5);
+        rideOldFinished1.setPetTransport(false);
+        rideOldFinished1.setBabyTransport(false);
+        rideOldFinished1.setRateBaseFare(120.0);
+        rideOldFinished1.setRatePricePerKm(120.0);
+        rideRepository.save(rideOldFinished1);
+
+        // Ride 14: FINISHED (14 days ago) - for pagination & date filtering
+        Ride rideOldFinished2 = new Ride();
+        rideOldFinished2.setDriver(driver2);
+        rideOldFinished2.setPassengers(Collections.singleton(passenger2));
+        rideOldFinished2.setStatus(RideStatus.FINISHED);
+        rideOldFinished2.setStartLocation(new Location("Kej, Novi Sad", 45.2555, 19.8620));
+        rideOldFinished2.setEndLocation(new Location("Spens, Novi Sad", 45.2465, 19.8480));
+        rideOldFinished2.setStartTime(LocalDateTime.now().minusDays(14).minusHours(3));
+        rideOldFinished2.setEndTime(LocalDateTime.now().minusDays(14).minusHours(2));
+        rideOldFinished2.setTotalCost(420.00);
+        rideOldFinished2.setEstimatedCost(420.00);
+        rideOldFinished2.setDistance(2.5);
+        rideOldFinished2.setRequestedVehicleType(VehicleType.VAN);
+        rideOldFinished2.setPanicPressed(false);
+        rideOldFinished2.setPaid(true);
+        rideOldFinished2.setPassengersExited(true);
+        rideOldFinished2.setDistanceTraveled(2.5);
+        rideOldFinished2.setPetTransport(true);
+        rideOldFinished2.setBabyTransport(false);
+        rideOldFinished2.setRateBaseFare(180.0);
+        rideOldFinished2.setRatePricePerKm(120.0);
+        rideRepository.save(rideOldFinished2);
+
+        // Ride 15: CANCELLED (20 days ago) - old cancelled ride for date range edge case
+        Ride rideOldCancelled = new Ride();
+        rideOldCancelled.setDriver(driver);
+        rideOldCancelled.setPassengers(Collections.singleton(passenger));
+        rideOldCancelled.setStatus(RideStatus.CANCELLED);
+        rideOldCancelled.setStartLocation(new Location("Novo Naselje, Novi Sad", 45.2350, 19.8100));
+        rideOldCancelled.setEndLocation(new Location("Centar, Novi Sad", 45.2550, 19.8450));
+        rideOldCancelled.setStartTime(LocalDateTime.now().minusDays(20).minusHours(4));
+        rideOldCancelled.setEndTime(LocalDateTime.now().minusDays(20).minusHours(4).plusMinutes(2));
+        rideOldCancelled.setTotalCost(720.00);
+        rideOldCancelled.setEstimatedCost(720.00);
+        rideOldCancelled.setDistance(5.0);
+        rideOldCancelled.setRejectionReason("Schedule conflict");
+        rideOldCancelled.setRequestedVehicleType(VehicleType.STANDARD);
+        rideOldCancelled.setPanicPressed(false);
+        rideOldCancelled.setPaid(false);
+        rideOldCancelled.setPassengersExited(false);
+        rideOldCancelled.setDistanceTraveled(0.0);
+        rideOldCancelled.setPetTransport(false);
+        rideOldCancelled.setBabyTransport(false);
+        rideOldCancelled.setRateBaseFare(120.0);
+        rideOldCancelled.setRatePricePerKm(120.0);
+        rideRepository.save(rideOldCancelled);
 
         // ==========================================
         // 6. Create Reviews for finished rides
@@ -563,8 +707,10 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("  Active (IN_PROGRESS) Ride ID: " + rideActive.getId() + " - Start completed, heading to stop 1");
         System.out.println("  Scheduled Ride (Later Today) ID: " + ridePending.getId());
         System.out.println("  Scheduled Ride (Tomorrow) ID: " + rideScheduled.getId());
-        System.out.println("  Finished Rides: " + rideFinished.getId() + ", " + rideFinished2.getId() + ", " + rideFinished3.getId() + ", " + rideMultiPassenger.getId() + ", " + ridePanicHistory.getId() + " (panic)");
-        System.out.println("  Cancelled Ride ID: " + rideCancelled.getId());
+        System.out.println("  Finished Rides: " + rideFinished.getId() + ", " + rideFinished2.getId() + ", " + rideFinished3.getId() + ", " + rideMultiPassenger.getId() + ", " + ridePanicHistory.getId() + " (panic), " + rideE2ETest.getId() + " (E2E test - no reviews), " + rideOldFinished1.getId() + ", " + rideOldFinished2.getId());
+        System.out.println("  Cancelled Ride ID: " + rideCancelled.getId() + ", " + rideOldCancelled.getId());
+        System.out.println("  Cancelled By Driver Ride ID: " + rideCancelledByDriver.getId());
+        System.out.println("  Cancelled By Passenger Ride ID: " + rideCancelledByPassenger.getId());
         System.out.println("===========================================");
         System.out.println("REVIEWS: " + reviewRepository.count() + " reviews created");
         System.out.println("FAVORITE ROUTES: " + favoriteRouteRepository.count() + " routes created");

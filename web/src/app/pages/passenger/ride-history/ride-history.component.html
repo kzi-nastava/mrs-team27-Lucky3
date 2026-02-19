@@ -1,231 +1,256 @@
 <div class="min-h-screen bg-black text-white p-6">
   <div class="max-w-7xl mx-auto">
-    
-    <!-- Header Section -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 mb-6">
+
+    <!-- Header -->
+    <div class="flex flex-col gap-4 pt-4 mb-6">
       <h2 class="text-2xl font-bold">Ride History</h2>
-      
-      <!-- Filters -->
-      <div class="flex flex-wrap items-center gap-2">
-        
-        <!-- Date Filter -->
-        <div class="relative flex items-center gap-2">
+      <p class="text-gray-400 text-sm">View your past rides, reviews, and re-order routes</p>
+    </div>
+
+    <!-- Controls for slicing and dicing the data (dates and status) -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
+      <div class="flex flex-wrap items-end gap-4">
+
+        <!-- Date Range Filter -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs text-gray-400 uppercase tracking-wider">From</label>
           <div class="relative">
             <input
               type="date"
-              [(ngModel)]="dateFilter"
-              (change)="updateView()"
-              class="pl-10 pr-3 py-2 bg-gray-900 border border-gray-800 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
-              placeholder="mm/dd/yyyy"
+              [(ngModel)]="dateFrom"
+              (ngModelChange)="currentPage = 0; loadRides()"
+              class="pl-10 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
             />
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="16" 
-              height="16" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              stroke-width="2" 
-              stroke-linecap="round" 
-              stroke-linejoin="round" 
-              class="text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            >
-              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-              <line x1="16" x2="16" y1="2" y2="6"/>
-              <line x1="8" x2="8" y1="2" y2="6"/>
-              <line x1="3" x2="21" y1="10" y2="10"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>
             </svg>
           </div>
-          
-          <button
-            *ngIf="dateFilter"
-            (click)="dateFilter = ''; updateView()"
-            class="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            title="Reset date filter"
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="16" 
-              height="16" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              stroke-width="2" 
-              stroke-linecap="round" 
-              stroke-linejoin="round" 
-              class="text-gray-400"
-            >
-              <path d="M18 6 6 18"/>
-              <path d="m6 6 12 12"/>
-            </svg>
-          </button>
         </div>
-        <!--- Possible Status Values:
-    PENDING, ACCEPTED, SCHEDULED, ACTIVE, IN_PROGRESS, FINISHED, REJECTED, PANIC, CANCELLED
-}-->
-        <!-- Status Filter Buttons -->
-        <div class="flex gap-2 bg-gray-900 p-1 rounded-lg">
-          <button
-            *ngFor="let status of ['all', 'Pending', 'Accepted', 'Finished', 'Rejected', 'Cancelled']"
-            (click)="setFilter($any(status))"
-            class="px-4 py-1.5 rounded-md text-sm font-medium transition-all capitalize"
-            [ngClass]="{
-              'bg-yellow-500 text-black': filter === status,
-              'text-gray-400 hover:text-white hover:bg-gray-800': filter !== status
-            }"
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs text-gray-400 uppercase tracking-wider">To</label>
+          <div class="relative flex items-center gap-2">
+            <div class="relative">
+              <input
+                type="date"
+                [(ngModel)]="dateTo"
+                (ngModelChange)="currentPage = 0; loadRides()"
+                class="pl-10 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+              />
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>
+              </svg>
+            </div>
+            <button
+              *ngIf="dateFrom || dateTo"
+              (click)="dateFrom = ''; dateTo = ''; currentPage = 0; loadRides()"
+              class="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              title="Clear date filter"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex-1"></div>
+
+        <!-- Status Filter -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs text-gray-400 uppercase tracking-wider">Status</label>
+          <select
+            [(ngModel)]="statusFilter"
+            (change)="currentPage = 0; loadRides()"
+            data-testid="status-filter"
+            class="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
           >
-            {{ status }}
-          </button>
+            <option *ngFor="let status of statusOptions" [value]="status">
+              {{ status === 'all' ? 'All Statuses' : formatStatus(status) }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Quick counter showing how many rides matched the filters -->
+      <div *ngIf="rides.length > 0" class="mt-4 pt-4 border-t border-gray-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center text-gray-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-white">Your Rides</p>
+          <p class="text-xs text-gray-400">Showing your ride history</p>
+        </div>
+        <div class="ml-4 px-3 py-1 rounded-full bg-gray-800 border border-gray-700 text-xs text-gray-300">
+          {{ totalElements }} ride{{ totalElements !== 1 ? 's' : '' }} found
         </div>
       </div>
     </div>
 
-    <!-- Selected Ride Details -->
-    <div *ngIf="selectedRide" class="mb-6 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+    <!-- The expanded detail view for a specific ride. Shows the map and extra info. -->
+    <div *ngIf="selectedRide" class="mb-6 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-lg" data-testid="ride-detail-panel">
       <div class="p-4 border-b border-gray-800 flex flex-col sm:flex-row justify-between items-center bg-gray-800/50 gap-4">
         <div class="flex items-center gap-3">
-          <h3 class="text-lg font-semibold text-white">Ride Details</h3>
-          <button (click)="closeDetails()" class="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors" title="Close">
+          <h3 class="text-lg font-semibold text-white" data-testid="ride-detail-heading">Ride Details</h3>
+
+          <span class="text-xs px-2 py-1 rounded border" [ngClass]="getStatusClass(selectedRide.status)">
+            {{ formatStatus(selectedRide.status) }}
+          </span>
+          <span *ngIf="selectedRide.panicPressed" class="text-xs px-2 py-1 rounded bg-red-600/30 text-red-300 border border-red-600/50 flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            PANIC
+          </span>
+
+          <button (click)="closeDetails()" class="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors" title="Close" data-testid="ride-details-close-button">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
         </div>
         <div class="flex flex-wrap gap-2">
+          <button *ngIf="canReviewSelectedRide()" (click)="onReviewRide()" data-testid="leave-review-button" class="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-400 transition-colors">Leave a Review</button>
           <button (click)="orderAgain()" class="px-3 py-1.5 bg-yellow-500 text-black rounded-lg text-sm font-medium hover:bg-yellow-400 transition-colors">Order Again</button>
           <button (click)="scheduleLater()" class="px-3 py-1.5 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">Schedule Later</button>
-          <button (click)="addToFavorites(selectedRide)" class="px-3 py-1.5 border border-yellow-500 text-yellow-500 rounded-lg text-sm font-medium hover:bg-yellow-500/10 transition-colors flex items-center gap-1">
+          <button (click)="addToFavorites()" class="px-3 py-1.5 border border-yellow-500 text-yellow-500 rounded-lg text-sm font-medium hover:bg-yellow-500/10 transition-colors flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
             Favorite
           </button>
         </div>
       </div>
 
-      <div class="flex flex-col lg:flex-row h-[500px] lg:h-[400px]">
-        <!-- Map -->
+      <div class="flex flex-col lg:flex-row h-[500px] lg:h-[450px]">
+        <!-- Map Canvas -->
         <div class="w-full lg:w-1/2 h-1/2 lg:h-full bg-gray-950 relative border-b lg:border-b-0 lg:border-r border-gray-800">
           <div id="history-map" class="w-full h-full z-0"></div>
         </div>
-        
-        <!-- Info -->
+
+        <!-- Sidebar Info -->
         <div class="w-full lg:w-1/2 p-6 overflow-y-auto space-y-6 custom-scrollbar bg-gray-900">
-          
-          <!-- Route -->
+
+          <!-- Pickup and destination timestamps and addresses -->
           <div class="space-y-4">
             <div class="flex items-start gap-3">
               <div class="mt-1.5 w-2 h-2 rounded-full bg-green-500 shrink-0 shadow-[0_0_8px_#22c55e]"></div>
               <div>
                 <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Pickup</p>
-                <p class="text-sm font-medium text-white">{{ selectedRide.pickup.address }}</p>
-                <p class="text-xs text-gray-500 mt-0.5">{{ formatDate(selectedRide.startedAt) }}</p>
+                <p class="text-sm font-medium text-white">{{ getLocationAddress(selectedRide, 'start') }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">{{ formatDate(selectedRide.startTime) }}</p>
               </div>
             </div>
             <div class="flex items-start gap-3">
               <div class="mt-1.5 w-2 h-2 rounded-full bg-red-500 shrink-0 shadow-[0_0_8px_#ef4444]"></div>
               <div>
                 <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Destination</p>
-                <p class="text-sm font-medium text-white">{{ selectedRide.destination.address }}</p>
-                <p class="text-xs text-gray-500 mt-0.5">{{ formatDate(selectedRide.completedAt) }}</p>
+                <p class="text-sm font-medium text-white">{{ getLocationAddress(selectedRide, 'end') }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">{{ formatDate(selectedRide.endTime) }}</p>
               </div>
             </div>
+          </div>
+
+          <!-- Ride Stats -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+              <p class="text-[10px] text-gray-500 uppercase tracking-wider">Cost</p>
+              <p class="text-lg font-bold text-yellow-500">{{ formatPrice(selectedRide.totalCost) }}</p>
+            </div>
+            <div class="p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+              <p class="text-[10px] text-gray-500 uppercase tracking-wider">Distance</p>
+              <p class="text-lg font-bold text-white">{{ formatDistance(selectedRide.distanceKm || selectedRide.estimatedDistance) }}</p>
+            </div>
+          </div>
+
+          <!-- Cancellation Info -->
+          <div *ngIf="selectedRide.status?.includes('CANCELLED')" class="p-4 bg-red-950/30 border border-red-900/30 rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+              <p class="text-sm text-red-400 font-medium">Cancelled by {{ getCancelledBy(selectedRide) }}</p>
+            </div>
+            <p *ngIf="selectedRide.rejectionReason" class="text-xs text-red-300 pl-6">{{ selectedRide.rejectionReason }}</p>
+          </div>
+
+          <!-- Panic Info -->
+          <div *ngIf="selectedRide.panicPressed" class="p-4 bg-red-950/30 border border-red-900/30 rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <p class="text-sm text-red-400 font-medium">PANIC Button Activated</p>
+            </div>
+            <p *ngIf="selectedRide.panicReason" class="text-xs text-red-300 pl-6">{{ selectedRide.panicReason }}</p>
           </div>
 
           <div class="w-full h-px bg-gray-800"></div>
 
           <!-- Driver -->
-          <div *ngIf="selectedRideDetails?.driver" class="space-y-4">
+          <div *ngIf="selectedRide.driver" class="space-y-4">
+            <h4 class="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Driver
+            </h4>
             <div class="flex items-center gap-4">
-              <div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-yellow-500/30 flex items-center justify-center text-gray-400 overflow-hidden shrink-0">
-                <img *ngIf="selectedRideDetails?.driver?.profilePictureUrl" [src]="selectedRideDetails?.driver?.profilePictureUrl" class="w-full h-full object-cover">
-                <span *ngIf="!selectedRideDetails?.driver?.profilePictureUrl" class="text-xl font-bold text-yellow-500">{{ selectedRideDetails?.driver?.name?.charAt(0) }}</span>
+              <div class="w-12 h-12 rounded-full bg-gray-800 border-2 border-yellow-500/30 flex items-center justify-center text-gray-400 overflow-hidden shrink-0">
+                <img *ngIf="selectedRide.driver.profilePictureUrl" [src]="selectedRide.driver.profilePictureUrl" class="w-full h-full object-cover">
+                <span *ngIf="!selectedRide.driver.profilePictureUrl" class="text-lg font-bold text-yellow-500">{{ selectedRide.driver.name?.charAt(0) }}</span>
               </div>
               <div class="flex-1">
-                <p class="text-base font-semibold text-white">{{ selectedRideDetails?.driver?.name }} {{ selectedRideDetails?.driver?.surname }}</p>
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                  <span class="text-xs text-gray-400 flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                    {{ selectedRideDetails?.driver?.email }}
-                  </span>
-                  <span *ngIf="selectedRideDetails?.driver?.phoneNumber" class="text-xs text-gray-400 flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                    {{ selectedRideDetails?.driver?.phoneNumber }}
-                  </span>
-                </div>
-                <p *ngIf="selectedRideDetails?.driver?.address" class="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  {{ selectedRideDetails?.driver?.address }}
-                </p>
+                <p class="text-sm font-semibold text-white">{{ selectedRide.driver.name }} {{ selectedRide.driver.surname }}</p>
+                <p class="text-xs text-gray-400">{{ selectedRide.driver.email }}</p>
+                <p *ngIf="selectedRide.driver.phoneNumber" class="text-xs text-gray-500">{{ selectedRide.driver.phoneNumber }}</p>
               </div>
             </div>
 
-            <!-- Vehicle Details -->
-            <div *ngIf="selectedRideDetails?.driver?.vehicle" class="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-              <div class="flex items-center gap-2 mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
-                <h4 class="text-sm font-medium text-white">Vehicle</h4>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
+            <!-- Vehicle -->
+            <div *ngIf="selectedRide.driver.vehicle" class="p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+              <div class="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <p class="text-[10px] text-gray-500 uppercase tracking-wider">Model</p>
-                  <p class="text-sm text-white font-medium">{{ selectedRideDetails?.driver?.vehicle?.model }}</p>
+                  <span class="text-gray-500">Model:</span>
+                  <span class="text-white ml-1">{{ selectedRide.driver.vehicle.model }}</span>
                 </div>
                 <div>
-                  <p class="text-[10px] text-gray-500 uppercase tracking-wider">License Plate</p>
-                  <p class="text-sm text-white font-medium">{{ selectedRideDetails?.driver?.vehicle?.licenseNumber }}</p>
+                  <span class="text-gray-500">Plates:</span>
+                  <span class="text-white ml-1">{{ selectedRide.driver.vehicle.licenseNumber }}</span>
                 </div>
                 <div>
-                  <p class="text-[10px] text-gray-500 uppercase tracking-wider">Type</p>
-                  <p class="text-sm text-white">{{ selectedRideDetails?.driver?.vehicle?.vehicleType }}</p>
+                  <span class="text-gray-500">Type:</span>
+                  <span class="text-white ml-1">{{ selectedRide.driver.vehicle.vehicleType }}</span>
                 </div>
                 <div>
-                  <p class="text-[10px] text-gray-500 uppercase tracking-wider">Seats</p>
-                  <p class="text-sm text-white">{{ selectedRideDetails?.driver?.vehicle?.passengerSeats }}</p>
+                  <span class="text-gray-500">Seats:</span>
+                  <span class="text-white ml-1">{{ selectedRide.driver.vehicle.passengerSeats }}</span>
                 </div>
               </div>
-              <div class="flex flex-wrap gap-2 mt-3">
-                <span *ngIf="selectedRideDetails?.driver?.vehicle?.babyTransport" class="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h.01"/><path d="M15 12h.01"/><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"/><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1"/></svg>
-                  Baby Seat
-                </span>
-                <span *ngIf="selectedRideDetails?.driver?.vehicle?.petTransport" class="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg>
-                  Pet Friendly
-                </span>
+              <div class="flex gap-2 mt-2">
+                <span *ngIf="selectedRide.driver.vehicle.babyTransport" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Baby Seat</span>
+                <span *ngIf="selectedRide.driver.vehicle.petTransport" class="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">Pet Friendly</span>
               </div>
             </div>
           </div>
 
           <!-- Inconsistencies -->
-          <div *ngIf="selectedRideDetails?.inconsistencyReports?.length" class="p-4 bg-red-950/30 border border-red-900/30 rounded-lg">
+          <div *ngIf="selectedRide.inconsistencyReports?.length" class="p-4 bg-red-950/30 border border-red-900/30 rounded-lg">
             <div class="flex items-center gap-2 mb-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <p class="text-sm text-red-400 font-medium">Inconsistency Reports</p>
             </div>
-            <ul class="space-y-1">
-              <li *ngFor="let rep of selectedRideDetails!.inconsistencyReports" class="text-xs text-red-300 pl-6 relative before:content-['•'] before:absolute before:left-2 before:text-red-500">
-                 {{ rep.description }}
+            <ul class="space-y-2">
+              <li *ngFor="let rep of selectedRide.inconsistencyReports" class="p-3 bg-red-950/20 border border-red-900/20 rounded-lg">
+                <p class="text-xs text-red-300">{{ rep.description }}</p>
+                <p class="text-[10px] text-red-400/60 mt-1">{{ formatDate(rep.timestamp) }}</p>
               </li>
             </ul>
           </div>
 
           <!-- Reviews -->
-          <div *ngIf="selectedRideDetails?.reviews?.length" class="space-y-3">
+          <div *ngIf="selectedRide.reviews?.length" class="space-y-3">
             <h4 class="text-sm font-medium text-gray-300 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               Ratings
             </h4>
             <div class="space-y-2">
-              <div *ngFor="let review of selectedRideDetails?.reviews" class="p-3 border border-gray-800 rounded-lg bg-gray-800/20">
+              <div *ngFor="let review of selectedRide.reviews" class="p-3 border border-gray-800 rounded-lg bg-gray-800/20">
                 <div class="flex justify-between items-start mb-2">
-                  <div class="flex flex-col gap-1">
-                     <div class="flex items-center gap-2">
-                       <div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded text-yellow-500 border border-yellow-500/20">
-                         <span class="text-[10px] font-bold uppercase">Driver</span>
-                         <span class="text-xs font-bold">{{ review.driverRating }}</span>
-                       </div>
-                       <div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded text-yellow-500 border border-yellow-500/20">
-                         <span class="text-[10px] font-bold uppercase">Vehicle</span>
-                         <span class="text-xs font-bold">{{ review.vehicleRating }}</span>
-                       </div>
-                     </div>
+                  <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded text-yellow-500 border border-yellow-500/20">
+                      <span class="text-[10px] font-bold uppercase">Driver</span>
+                      <span class="text-xs font-bold">{{ review.driverRating }}</span>
+                    </div>
+                    <div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded text-yellow-500 border border-yellow-500/20">
+                      <span class="text-[10px] font-bold uppercase">Vehicle</span>
+                      <span class="text-xs font-bold">{{ review.vehicleRating }}</span>
+                    </div>
                   </div>
                   <span class="text-[10px] text-gray-500">{{ formatDate(review.createdAt) }}</span>
                 </div>
@@ -238,15 +263,179 @@
       </div>
     </div>
 
+    <!-- Rides Table -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left" data-testid="ride-history-table">
+          <thead>
+            <tr class="border-b border-gray-800 bg-gray-900/50">
+              <th class="p-4 font-semibold text-gray-300">
+                <button (click)="handleSort('startTime')" class="flex items-center gap-2 hover:text-white transition-colors">
+                  Start Time
+                  <span *ngIf="sortField !== 'startTime'" class="opacity-30">&#9660;</span>
+                  <span *ngIf="sortField === 'startTime'" class="text-yellow-500">{{ sortDirection === 'asc' ? '&#9650;' : '&#9660;' }}</span>
+                </button>
+              </th>
+              <th class="p-4 font-semibold text-gray-300">
+                <button (click)="handleSort('endTime')" class="flex items-center gap-2 hover:text-white transition-colors">
+                  End Time
+                  <span *ngIf="sortField !== 'endTime'" class="opacity-30">&#9660;</span>
+                  <span *ngIf="sortField === 'endTime'" class="text-yellow-500">{{ sortDirection === 'asc' ? '&#9650;' : '&#9660;' }}</span>
+                </button>
+              </th>
+              <th class="p-4 font-semibold text-gray-300">
+                <button (click)="handleSort('departure')" class="flex items-center gap-2 hover:text-white transition-colors">
+                  Route
+                  <span *ngIf="sortField !== 'departure'" class="opacity-30">&#9660;</span>
+                  <span *ngIf="sortField === 'departure'" class="text-yellow-500">{{ sortDirection === 'asc' ? '&#9650;' : '&#9660;' }}</span>
+                </button>
+              </th>
+              <th class="p-4 font-semibold text-gray-300">
+                <button (click)="handleSort('status')" class="flex items-center gap-2 hover:text-white transition-colors">
+                  Status
+                  <span *ngIf="sortField !== 'status'" class="opacity-30">&#9660;</span>
+                  <span *ngIf="sortField === 'status'" class="text-yellow-500">{{ sortDirection === 'asc' ? '&#9650;' : '&#9660;' }}</span>
+                </button>
+              </th>
+              <th class="p-4 font-semibold text-gray-300">
+                <button (click)="handleSort('totalCost')" class="flex items-center gap-2 hover:text-white transition-colors">
+                  Cost
+                  <span *ngIf="sortField !== 'totalCost'" class="opacity-30">&#9660;</span>
+                  <span *ngIf="sortField === 'totalCost'" class="text-yellow-500">{{ sortDirection === 'asc' ? '&#9650;' : '&#9660;' }}</span>
+                </button>
+              </th>
+              <th class="p-4 font-semibold text-gray-300">
+                <button (click)="handleSort('cancelledBy')" class="flex items-center gap-2 hover:text-white transition-colors">
+                  Cancelled By
+                  <span *ngIf="sortField !== 'cancelledBy'" class="opacity-30">&#9660;</span>
+                  <span *ngIf="sortField === 'cancelledBy'" class="text-yellow-500">{{ sortDirection === 'asc' ? '&#9650;' : '&#9660;' }}</span>
+                </button>
+              </th>
+              <th class="p-4 font-semibold text-gray-300">
+                <button (click)="handleSort('panic')" class="flex items-center gap-2 hover:text-white transition-colors">
+                  PANIC
+                  <span *ngIf="sortField !== 'panic'" class="opacity-30">&#9660;</span>
+                  <span *ngIf="sortField === 'panic'" class="text-yellow-500">{{ sortDirection === 'asc' ? '&#9650;' : '&#9660;' }}</span>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="rides.length === 0">
+              <td colspan="7" class="p-8 text-center text-gray-500" data-testid="no-rides-message">
+                No rides found
+              </td>
+            </tr>
+            <tr
+              *ngFor="let ride of rides; let i = index"
+              (click)="onRideSelected(ride)"
+              class="border-b border-gray-800 hover:bg-gray-800/50 cursor-pointer transition-colors relative"
+              [ngClass]="{
+                'bg-red-500/[0.15]': ride.panicPressed,
+                'bg-gray-800/30': selectedRide?.id === ride.id,
+                'reviewable-row': isRideReviewable(ride)
+              }"
+            >
+              <!-- Start Time -->
+              <td class="p-4">
+                <div class="flex flex-col">
+                  <span class="font-medium text-white">{{ formatShortDate(ride.startTime) }}</span>
+                  <span class="text-gray-400">{{ formatTime(ride.startTime) }}</span>
+                </div>
+              </td>
 
-          <!-- Table -->
-    <app-rides-table
-        [rides]="sortedRides"
-        [sortField]="sortField"
-        [sortDirection]="sortDirection"
-        (sortChange)="handleSort($event)"
-        (rideSelected)="onRideSelected($event)"
-      ></app-rides-table>
+              <!-- End Time -->
+              <td class="p-4">
+                <div class="flex flex-col">
+                  <span class="font-medium text-white">{{ formatShortDate(ride.endTime) }}</span>
+                  <span class="text-gray-400">{{ formatTime(ride.endTime) }}</span>
+                </div>
+              </td>
+
+              <!-- Route -->
+              <td class="p-4 max-w-xs">
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                    <span class="text-white text-xs truncate">{{ getLocationAddress(ride, 'start') }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                    <span class="text-gray-400 text-xs truncate">{{ getLocationAddress(ride, 'end') }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Status -->
+              <td class="p-4">
+                <span class="text-xs px-2 py-1 rounded border" [ngClass]="getStatusClass(ride.status)">
+                  {{ formatStatus(ride.status) }}
+                </span>
+              </td>
+
+              <!-- Cost -->
+              <td class="p-4">
+                <span class="text-yellow-500 font-medium">{{ formatPrice(ride.totalCost) }}</span>
+              </td>
+
+              <!-- Cancelled By -->
+              <td class="p-4">
+                <span class="text-gray-400 text-xs">{{ getCancelledBy(ride) }}</span>
+              </td>
+
+              <!-- PANIC -->
+              <td class="p-4">
+                <span *ngIf="ride.panicPressed" class="text-xs px-2 py-1 rounded bg-red-600/30 text-red-300 border border-red-600/50">
+                  YES
+                </span>
+                <span *ngIf="!ride.panicPressed" class="text-gray-600 text-xs">&mdash;</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="totalPages > 1" class="mt-4 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="text-sm text-gray-400">
+        Showing <span class="text-white font-medium">{{ startItem }}</span> &ndash; <span class="text-white font-medium">{{ endItem }}</span> of <span class="text-white font-medium">{{ totalElements }}</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <!-- First -->
+        <button (click)="goToPage(0)" [disabled]="currentPage === 0"
+          class="p-2 rounded-lg text-sm transition-colors"
+          [ngClass]="{'text-gray-600 cursor-not-allowed': currentPage === 0, 'text-gray-400 hover:text-white hover:bg-gray-800': currentPage !== 0}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        </button>
+        <!-- Prev -->
+        <button (click)="prevPage()" [disabled]="currentPage === 0"
+          class="p-2 rounded-lg text-sm transition-colors"
+          [ngClass]="{'text-gray-600 cursor-not-allowed': currentPage === 0, 'text-gray-400 hover:text-white hover:bg-gray-800': currentPage !== 0}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <!-- Page Numbers -->
+        <ng-container *ngFor="let pg of visiblePages">
+          <button (click)="goToPage(pg)"
+            class="w-9 h-9 rounded-lg text-sm font-medium transition-colors"
+            [ngClass]="{'bg-yellow-500 text-black': pg === currentPage, 'text-gray-400 hover:text-white hover:bg-gray-800': pg !== currentPage}">
+            {{ pg + 1 }}
+          </button>
+        </ng-container>
+        <!-- Next -->
+        <button (click)="nextPage()" [disabled]="currentPage >= totalPages - 1"
+          class="p-2 rounded-lg text-sm transition-colors"
+          [ngClass]="{'text-gray-600 cursor-not-allowed': currentPage >= totalPages - 1, 'text-gray-400 hover:text-white hover:bg-gray-800': currentPage < totalPages - 1}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <!-- Last -->
+        <button (click)="goToPage(totalPages - 1)" [disabled]="currentPage >= totalPages - 1"
+          class="p-2 rounded-lg text-sm transition-colors"
+          [ngClass]="{'text-gray-600 cursor-not-allowed': currentPage >= totalPages - 1, 'text-gray-400 hover:text-white hover:bg-gray-800': currentPage < totalPages - 1}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+        </button>
+      </div>
+    </div>
 
   </div>
 </div>

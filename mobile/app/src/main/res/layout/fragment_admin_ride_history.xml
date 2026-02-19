@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    android:orientation="vertical">
+
+    <!-- Navbar -->
+    <include
+        android:id="@+id/navbar"
+        layout="@layout/view_custom_navbar" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ride History"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Search Type Toggle: Driver / Passenger -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:id="@+id/btn_search_driver"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="By Driver"
+                    android:textColor="@color/black"
+                    android:textStyle="bold"
+                    android:textSize="13sp"
+                    android:gravity="center"
+                    android:background="@color/yellow_500"
+                    android:layout_marginEnd="4dp" />
+
+                <TextView
+                    android:id="@+id/btn_search_passenger"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="By Passenger"
+                    android:textColor="@color/gray_400"
+                    android:textSize="13sp"
+                    android:gravity="center"
+                    android:background="@color/gray_900"
+                    android:layout_marginStart="4dp" />
+            </LinearLayout>
+
+            <!-- User ID Input -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <EditText
+                    android:id="@+id/et_user_id"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:hint="Enter Driver ID"
+                    android:textColorHint="@color/gray_400"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:inputType="number"
+                    android:background="@drawable/bg_card"
+                    android:paddingHorizontal="14dp"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/btn_search"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:text="Search"
+                    android:textColor="@color/black"
+                    android:textStyle="bold"
+                    android:textSize="13sp"
+                    android:gravity="center"
+                    android:background="@color/yellow_500"
+                    android:paddingHorizontal="16dp" />
+
+                <TextView
+                    android:id="@+id/btn_show_all"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:text="Clear"
+                    android:textColor="@color/gray_400"
+                    android:textSize="13sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card"
+                    android:paddingHorizontal="14dp"
+                    android:layout_marginStart="6dp" />
+            </LinearLayout>
+
+            <!-- User Info Banner (visible by default with "All Rides") -->
+            <LinearLayout
+                android:id="@+id/user_info_banner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@drawable/bg_card"
+                android:padding="12dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp"
+                android:visibility="visible">
+
+                <ImageView
+                    android:id="@+id/iv_banner_icon"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    android:background="@drawable/bg_icon_circle_gray"
+                    app:tint="@color/gray_300"
+                    android:padding="8dp"
+                    android:layout_marginEnd="12dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tv_user_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="John Doe"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_user_email"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="john@example.com"
+                        android:textColor="@color/gray_400"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_ride_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textColor="@color/gray_300"
+                    android:textSize="12sp"
+                    android:background="@drawable/bg_badge_pill"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="5dp" />
+            </LinearLayout>
+
+            <!-- Date Filters -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="From:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_from_date"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:hint="Start date"
+                    android:textColorHint="@color/gray_400"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card"
+                    android:layout_marginEnd="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="To:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_to_date"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:hint="End date"
+                    android:textColorHint="@color/gray_400"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card" />
+
+                <ImageView
+                    android:id="@+id/btn_clear_dates"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    app:tint="@color/gray_400"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_marginStart="8dp"
+                    android:padding="4dp" />
+            </LinearLayout>
+
+            <!-- Status Filter -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Status:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="8dp" />
+
+                <Spinner
+                    android:id="@+id/spinner_status"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card"
+                    android:popupBackground="@color/gray_800"
+                    android:paddingHorizontal="8dp" />
+            </LinearLayout>
+
+            <!-- Sort Controls -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sort by:"
+                    android:textColor="@color/gray_400"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="8dp" />
+
+                <Spinner
+                    android:id="@+id/spinner_sort"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card"
+                    android:popupBackground="@color/gray_800"
+                    android:paddingHorizontal="8dp" />
+
+                <TextView
+                    android:id="@+id/btn_sort_direction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="↓ DESC"
+                    android:textColor="@color/yellow_500"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card"
+                    android:paddingHorizontal="12dp"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
+
+            <!-- Shake hint -->
+            <TextView
+                android:id="@+id/tv_shake_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📱 Shake device to sort by start time"
+                android:textColor="@color/gray_400"
+                android:textSize="11sp"
+                android:gravity="center"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Loading Indicator -->
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                android:indeterminateTint="@color/yellow_500" />
+
+            <!-- Empty State -->
+            <TextView
+                android:id="@+id/tv_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No rides found. Search by driver or passenger ID."
+                android:textColor="@color/gray_400"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:padding="32dp"
+                android:visibility="gone" />
+
+            <!-- Rides List -->
+            <ListView
+                android:id="@+id/rides_list_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:divider="@null"
+                android:dividerHeight="0dp"
+                android:nestedScrollingEnabled="true" />
+
+            <!-- Load More Button -->
+            <TextView
+                android:id="@+id/btn_load_more"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:text="Load More"
+                android:textColor="@color/yellow_500"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/bg_card"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

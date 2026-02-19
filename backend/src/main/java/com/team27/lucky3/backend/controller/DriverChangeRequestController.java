@@ -3,6 +3,8 @@ package com.team27.lucky3.backend.controller;
 import com.team27.lucky3.backend.dto.request.ReviewDriverChange;
 import com.team27.lucky3.backend.entity.enums.DriverChangeStatus;
 import com.team27.lucky3.backend.service.DriverChangeRequestService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -18,10 +20,11 @@ import java.util.List;
 @RequestMapping(value = "/api/driver-change-requests", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Driver Change Requests", description = "Admin review of driver profile change requests")
 public class DriverChangeRequestController {
     private final DriverChangeRequestService driverChangeRequestService;
 
-    // Get all driver change requests (optionally filter by status=PENDING)
+    @Operation(summary = "List change requests", description = "Get all driver change requests, optionally filter by status (ADMIN only)")
     @GetMapping()
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<com.team27.lucky3.backend.entity.DriverChangeRequest>> getDriverChangeRequests(@RequestParam(name = "status", required = false) DriverChangeStatus status) {
@@ -30,7 +33,7 @@ public class DriverChangeRequestController {
         return ResponseEntity.ok(requests);
     }
 
-    // Admin sends review for a driver change request, approving or rejecting it
+    @Operation(summary = "Review change request", description = "Approve or reject a driver profile change request (ADMIN only)")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{requestId}/review")
     public ResponseEntity<Void> reviewDriverChangeRequest(

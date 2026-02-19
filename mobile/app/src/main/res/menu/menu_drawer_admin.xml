@@ -10,6 +10,10 @@
             android:icon="@drawable/ic_menu_reports"
             android:title="Reports" />
         <item
+            android:id="@+id/nav_admin_ride_history"
+            android:icon="@drawable/ic_menu_history"
+            android:title="Ride History" />
+        <item
             android:id="@+id/nav_admin_drivers"
             android:icon="@drawable/ic_menu_drivers"
             android:title="Drivers" />
@@ -31,6 +35,11 @@
             android:id="@+id/nav_admin_support"
             android:icon="@drawable/ic_menu_support"
             android:title="Support" />
+
+        <item
+            android:id="@+id/nav_admin_panic"
+            android:icon="@drawable/ic_menu_panic"
+            android:title="Panic Alerts" />
     </group>
     <item android:title="Account">
         <menu>

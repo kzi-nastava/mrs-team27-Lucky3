@@ -7,6 +7,7 @@ import com.team27.lucky3.backend.dto.response.SupportMessageResponse;
 import com.team27.lucky3.backend.entity.Message;
 import com.team27.lucky3.backend.entity.SupportChat;
 import com.team27.lucky3.backend.entity.User;
+import com.team27.lucky3.backend.entity.enums.NotificationType;
 import com.team27.lucky3.backend.entity.enums.UserRole;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.repository.MessageRepository;
@@ -118,9 +119,23 @@ public class SupportChatServiceImpl implements SupportChatService {
         socketService.broadcastToAdmins(chat.getId(), response);
         // Notify about chat list update
         socketService.broadcastChatListUpdate(mapToListItemResponse(chat));
+        // Notify the user via their personal topic (used by mobile AppNotificationManager)
+        socketService.notifyUser(chat.getUser().getId(), response);
 
-        // Send notification to the user about the admin reply
-        notificationService.sendSupportReplyToUser(chat.getUser(), chat.getId());
+        // Send persistent notification + FCM to the user so they receive it
+        // even when WebSocket is disconnected (app backgrounded / killed).
+        // Duplicate suppression on the mobile side ensures no double-notifications:
+        //   - AppNotificationManager.onPersonalNotification() skips SUPPORT type
+        //   - MyFirebaseMessagingService skips SUPPORT FCM when WebSocket is connected
+        String preview = request.getContent().length() > 50
+                ? request.getContent().substring(0, 50) + "..."
+                : request.getContent();
+        notificationService.sendNotification(
+                chat.getUser(),
+                String.format("Support reply from %s %s: \"%s\"",
+                        admin.getName(), admin.getSurname(), preview),
+                NotificationType.SUPPORT,
+                chat.getId());
 
         log.info("Admin {} sent support message to chat {}", admin.getEmail(), chatId);
         return response;

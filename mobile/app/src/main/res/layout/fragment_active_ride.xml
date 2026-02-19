@@ -61,7 +61,7 @@
             app:cardElevation="0dp"
             android:layout_marginBottom="16dp">
 
-            <org.osmdroid.views.MapView
+            <com.example.mobile.ui.maps.TouchableMapView
                 android:id="@+id/map_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
@@ -375,6 +375,45 @@
                 android:layout_marginBottom="8dp"
                 android:visibility="gone" />
 
+            <!-- Stop Ride Button (IN_PROGRESS, driver only) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_stop_ride"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Stop Ride"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:backgroundTint="#FF6D00"
+                app:cornerRadius="12dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone" />
+
+            <!-- Finish Ride Button (IN_PROGRESS, driver only, enabled when conditions met) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_finish_ride"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Finish Ride"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:backgroundTint="#DC2626"
+                app:cornerRadius="12dp"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone" />
+
+            <!-- Disabled reason text for Finish Ride -->
+            <TextView
+                android:id="@+id/tv_finish_ride_reason"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/gray_400"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:paddingBottom="8dp"
+                android:visibility="gone" />
+
             <!-- PANIC Button (IN_PROGRESS, both roles) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_panic"
@@ -387,6 +426,27 @@
                 app:cornerRadius="12dp"
                 android:layout_marginBottom="8dp"
                 android:visibility="gone" />
+
+            <!-- PANIC Activated Banner (shown after panic is pressed) -->
+            <LinearLayout
+                android:id="@+id/panic_banner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="#DC2626"
+                android:padding="14dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="\uD83D\uDEA8 PANIC ACTIVATED — Help is on the way"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp" />
+            </LinearLayout>
 
             <!-- Driver Cancel Button -->
             <com.google.android.material.button.MaterialButton

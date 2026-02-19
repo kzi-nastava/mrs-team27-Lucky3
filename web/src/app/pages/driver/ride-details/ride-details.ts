@@ -113,7 +113,11 @@ export class RideDetails implements OnInit {
       passengers,
       cancelledBy: r.status === 'CANCELLED_BY_DRIVER' ? 'driver' : 
                    r.status === 'CANCELLED_BY_PASSENGER' ? 'passenger' : 'driver',
-      cancellationReason: r.rejectionReason
+      cancellationReason: r.rejectionReason,
+      inconsistencyReports: (r.inconsistencyReports ?? []).map(ir => ({
+        description: ir.description,
+        timestamp: ir.timestamp
+      }))
     };
   }
 
@@ -198,6 +202,18 @@ export class RideDetails implements OnInit {
       lat >= -90 && lat <= 90 &&
       lng >= -180 && lng <= 180
     );
+  }
+
+  formatDate(dateString: string | undefined): string {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   goBack() {

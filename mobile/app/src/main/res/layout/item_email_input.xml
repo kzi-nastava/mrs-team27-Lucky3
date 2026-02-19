@@ -4,10 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:gravity="center_vertical"
+    android:gravity="top"
     android:layout_marginBottom="8dp">
 
     <!-- Email Input -->
+    <!-- Note: gravity="top" on parent prevents the button from sinking
+         into the error message space -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -31,14 +33,16 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Remove Button -->
+    <!-- marginTop="8dp" centers the 40dp button against the ~56dp input box -->
     <ImageButton
         android:id="@+id/btn_remove"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:layout_marginStart="8dp"
-        android:background="@drawable/bg_icon_box_red"
-        android:src="@drawable/ic_error"
-        app:tint="@color/red_500"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_badge_gray"
+        android:src="@drawable/ic_close"
+        app:tint="@color/white"
         android:padding="8dp"
         android:contentDescription="Remove email" />
 </LinearLayout>

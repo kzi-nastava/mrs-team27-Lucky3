@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name="DarkDialogTheme" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:background">@color/gray_900</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/gray_400</item>
+        <item name="android:windowBackground">@color/gray_900</item>
+        <item name="colorAccent">@color/yellow_500</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
     <!-- Base Styles -->
     <style name="Style.App" parent="" />
 

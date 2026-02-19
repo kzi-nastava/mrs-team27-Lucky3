@@ -7,6 +7,7 @@ import { Login } from '../../model/login.model';
 import { AuthResponse } from '../../model/auth-response.model';
 import { PassengerRegistrationRequest } from '../../model/registration.model';
 import { Router } from '@angular/router';
+import { SocketService } from '../rest/socket.service';
 
 export interface LogoutResult {
   success: boolean;
@@ -25,7 +26,8 @@ export class AuthService {
 
   constructor(
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private socketService: SocketService
   ) {}
 
   login(auth: Login): Observable<AuthResponse> {
@@ -131,6 +133,10 @@ export class AuthService {
   }
 
   private doLocalLogout(): void {
+    // Disconnect WebSocket to prevent stale connections
+    // when logging in as a different user
+    this.socketService.disconnect();
+
     localStorage.removeItem(this.userKey);
     this.user$.next(null);
     this.router.navigate(['/login']);
@@ -338,5 +344,17 @@ export class AuthService {
   isLoggedIn(): boolean {
     const token = localStorage.getItem(this.userKey);
     return token != null && !this.jwtHelper.isTokenExpired(token);
+  }
+
+  isBlocked(): boolean {
+    const token = localStorage.getItem(this.userKey);
+    if (!token) return false;
+
+    if (this.jwtHelper.isTokenExpired(token)) {
+      return false;
+    }
+
+    const decodedToken: any = this.jwtHelper.decodeToken(token);
+    return decodedToken?.blocked === true;
   }
 }

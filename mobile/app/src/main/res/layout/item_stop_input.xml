@@ -40,8 +40,8 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:background="@android:color/transparent"
-            android:src="@drawable/ic_error"
-            app:tint="@color/red_500"
+            android:src="@drawable/ic_close"
+            app:tint="@color/gray_100"
             android:contentDescription="Remove stop" />
     </LinearLayout>
 

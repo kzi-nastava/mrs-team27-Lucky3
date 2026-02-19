@@ -18,6 +18,7 @@ import com.team27.lucky3.backend.service.RideService;
 import com.team27.lucky3.backend.util.ReviewTokenUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -26,9 +27,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -36,6 +35,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Join;
+import org.springframework.web.server.ResponseStatusException;
 
 import static com.team27.lucky3.backend.entity.enums.VehicleType.VAN;
 
@@ -71,6 +71,9 @@ public class RideServiceImpl implements RideService {
 
         // Construct coordinates string: start;stop1;stop2;end
         StringBuilder coords = new StringBuilder();
+        if(start == null || end == null) {
+            throw new IllegalArgumentException("Start and destination locations must be provided");
+        }
         coords.append(start.getLongitude()).append(",").append(start.getLatitude());
 
         if (request.getStops() != null) {
@@ -254,6 +257,26 @@ public class RideServiceImpl implements RideService {
             throw new IllegalStateException("User must be logged in to create a ride");
         }
 
+        if (passenger.isBlocked()) {
+            String reason = passenger.getBlockReason();
+            String msg = "BLOCKED: " + (reason != null ? reason : "Account suspended");
+            // This will return a 403 Forbidden with the reason message
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, msg);
+        }
+
+        if(request.getRequirements() == null) {
+            throw new IllegalArgumentException("Ride requirements must be provided");
+        }
+
+        LocalDateTime scheduled = request.getScheduledTime();
+        if (scheduled != null) {
+            LocalDateTime limit = LocalDateTime.now().plusHours(5);
+            if (scheduled.isAfter(limit)) {
+                throw new IllegalArgumentException("scheduledTime must be within the next 5 hours");
+            }
+        }
+
+
         // Calculate estimation first (needed for ride duration and route)
         RideEstimationResponse estimation = estimateRide(request);
 
@@ -292,8 +315,19 @@ public class RideServiceImpl implements RideService {
         ride.setPetTransport(request.getRequirements().isPetTransport());
 
         // Set passenger info
-        ride.setPassengers(Set.of(passenger));
+        Set<User> allPassengers = new HashSet<>();
+        allPassengers.add(passenger);
+
+        // Resolve invited emails to registered users and add them as passengers
+        // so they appear in active ride queries and ride history
+        if (request.getPassengerEmails() != null) {
+            for (String email : request.getPassengerEmails()) {
+                userRepository.findByEmail(email).ifPresent(allPassengers::add);
+            }
+        }
+        ride.setPassengers(allPassengers);
         ride.setInvitedEmails(request.getPassengerEmails());
+        ride.setCreatedBy(passenger);
 
         // Initialize payment flags
         ride.setPaid(false);
@@ -315,7 +349,7 @@ public class RideServiceImpl implements RideService {
             ride.setEndTime(rideStartTime.plusMinutes(estimation.getEstimatedTimeInMinutes()));
             ride.setTotalCost(estimation.getEstimatedCost());
         } else {
-            // No driver assigned - ride is pending
+            // No driver assigned - ride is rejected
             ride.setDriver(null);
             ride.setStatus(RideStatus.REJECTED);
             ride.setStartTime(null);
@@ -326,14 +360,13 @@ public class RideServiceImpl implements RideService {
 
         // ── Notification integration ──
         if (savedRide.getDriver() != null && savedRide.getStatus() != RideStatus.REJECTED) {
-            notificationService.sendDriverAssignmentNotification(savedRide);
-            
+            // Push notification to ALL registered parties (creator + driver + registered invited)
+            notificationService.sendRideCreatedNotification(savedRide);
+
             // Notify linked passengers (from invitedEmails) - sends email with tracking token to all,
             // and push notification only to registered users. Exclude the ride creator.
             notificationService.notifyLinkedPassengersRideCreated(savedRide, passenger.getEmail());
         }
-
-        // Do NOT notify the creator about their own ride creation - they already know about it
 
         return mapToResponse(savedRide);
     }
@@ -343,93 +376,119 @@ public class RideServiceImpl implements RideService {
      * Returns null if no suitable driver is found.
      */
     private Vehicle findBestAvailableDriver(CreateRideRequest request, RideEstimationResponse estimation) {
-        // 1. Get all active vehicles (drivers who are online/active)
+        // 1. Get all active vehicles
         List<Vehicle> activeVehicles = vehicleRepository.findAllActiveVehicles();
-        System.out.println("[DEBUG] Active vehicles count: " + activeVehicles.size());
-        if (activeVehicles.isEmpty()) {
-            System.out.println("[DEBUG] No active vehicles found!");
-            return null; // No active drivers at all
-        }
+        if (activeVehicles.isEmpty()) return null;
 
-        // 2. Filter by vehicle type if specified
-        VehicleType requestedType = request.getRequirements() != null 
-                ? request.getRequirements().getVehicleType() 
-                : null;
-        System.out.println("[DEBUG] Requested vehicle type: " + requestedType);
-        System.out.println("[DEBUG] Baby transport required: " + request.getRequirements().isBabyTransport());
-        System.out.println("[DEBUG] Pet transport required: " + request.getRequirements().isPetTransport());
-        
-        for (Vehicle v : activeVehicles) {
-            System.out.println("[DEBUG] Vehicle ID=" + v.getId() + 
-                    ", type=" + v.getVehicleType() + 
-                    ", baby=" + v.isBabyTransport() + 
-                    ", pet=" + v.isPetTransport() +
-                    ", hasLocation=" + (v.getCurrentLocation() != null));
-        }
-        
+        // 2. Filter by requirements (Type, Pet, Baby)
+        VehicleType requestedType = request.getRequirements().getVehicleType();
+        boolean isBaby = request.getRequirements().isBabyTransport();
+        boolean isPet = request.getRequirements().isPetTransport();
+
         List<Vehicle> compatibleVehicles = activeVehicles.stream()
+                .filter(v -> v.getDriver() != null && !v.getDriver().isBlocked())           //check if driver is blocked
                 .filter(v -> requestedType == null || v.getVehicleType() == requestedType)
-                .filter(v -> !request.getRequirements().isBabyTransport() || v.isBabyTransport())
-                .filter(v -> !request.getRequirements().isPetTransport() || v.isPetTransport())
-                .filter(v -> !v.getDriver().isInactiveRequested())
+                .filter(v -> !isBaby || v.isBabyTransport())
+                .filter(v -> !isPet || v.isPetTransport())
                 .collect(Collectors.toList());
 
-        System.out.println("[DEBUG] Compatible vehicles after filtering: " + compatibleVehicles.size());
-        if (compatibleVehicles.isEmpty()) {
-            System.out.println("[DEBUG] No compatible vehicles after type/baby/pet filter!");
-            return null; // No compatible vehicles
+        if (compatibleVehicles.isEmpty()) return null;
+
+        // 3. Check Availability (Free vs Busy logic) AND Working Hours
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime rideStart = request.getScheduledTime() != null ? request.getScheduledTime() : now;
+        // Default duration 30 min if estimation fails
+        int duration = estimation.getEstimatedTimeInMinutes() > 0 ? estimation.getEstimatedTimeInMinutes() : 30;
+        LocalDateTime rideEnd = rideStart.plusMinutes(duration);
+
+        List<Vehicle> availableVehicles = new ArrayList<>();
+
+        for (Vehicle v : compatibleVehicles) {
+            // --- NEW: Check Working Hours (Max 8 hours in last 24h) ---
+            LocalDateTime twentyFourHoursAgo = now.minusHours(24);
+            List<DriverActivitySession> sessions = activitySessionRepository.findSessionsSince(v.getDriver().getId(), twentyFourHoursAgo);
+
+            long totalSeconds = 0;
+            for (DriverActivitySession session : sessions) {
+                LocalDateTime start = session.getStartTime().isBefore(twentyFourHoursAgo) ? twentyFourHoursAgo : session.getStartTime();
+                LocalDateTime end = (session.getEndTime() == null) ? now : session.getEndTime();
+
+                if (end.isAfter(start)) {
+                    totalSeconds += java.time.Duration.between(start, end).getSeconds();
+                }
+            }
+
+            double totalHours = totalSeconds / 3600.0;
+            if (totalHours > 8.0) {
+                continue; // Skip this driver, they are overworked
+            }
+            // -----------------------------------------------------------
+
+            // A. Handle Scheduled Ride in Future (> 20 mins from now)
+            if (request.getScheduledTime() != null && request.getScheduledTime().isAfter(now.plusMinutes(20))) {
+                // Check if driver has ANY ride overlapping with the future time slot
+                List<Long> busyIds = rideRepository.findDriversWithRidesInTimeRange(
+                        Collections.singletonList(v.getDriver().getId()), rideStart, rideEnd
+                );
+                if (busyIds.isEmpty()) {
+                    availableVehicles.add(v);
+                }
+                continue;
+            }
+
+            // B. Handle Immediate Ride (or very soon)
+            if (v.getStatus() == VehicleStatus.FREE) {
+                // Driver is FREE. Check if they have a scheduled ride starting soon that would conflict.
+                List<Long> conflictingIds = rideRepository.findDriversWithRidesInTimeRange(
+                        Collections.singletonList(v.getDriver().getId()), rideStart, rideEnd
+                );
+                if (conflictingIds.isEmpty()) {
+                    availableVehicles.add(v);
+                }
+            }
+            else if (v.getStatus() == VehicleStatus.BUSY) {
+                // Driver is BUSY. Check if they finish soon (e.g., within 15 mins).
+                List<RideStatus> activeStatuses = Arrays.asList(RideStatus.IN_PROGRESS, RideStatus.ACTIVE);
+
+                // Get their current active ride(s)
+                List<Ride> currentRides = rideRepository.findByDriverIdAndStatusInOrderByStartTimeAsc(
+                        v.getDriver().getId(), activeStatuses
+                );
+
+                if (!currentRides.isEmpty()) {
+                    Ride currentRide = currentRides.get(0);
+                    // Allow if finishing in < 15 mins AND new ride fits after
+                    if (currentRide.getEndTime() != null &&
+                            currentRide.getEndTime().isBefore(now.plusMinutes(15))) {
+                        availableVehicles.add(v);
+                    }
+                }
+            }
         }
 
-        // 3. Calculate ride time window
-        LocalDateTime rideStartTime = request.getScheduledTime() != null 
-                ? request.getScheduledTime() 
-                : LocalDateTime.now();
-        LocalDateTime rideEndTime = rideStartTime.plusMinutes(
-                estimation.getEstimatedTimeInMinutes() > 0 ? estimation.getEstimatedTimeInMinutes() : 30
-        );
+        if (availableVehicles.isEmpty()) return null;
 
-        // 4. Get driver IDs and find which ones have overlapping rides
-        List<Long> driverIds = compatibleVehicles.stream()
-                .map(v -> v.getDriver().getId())
-                .collect(Collectors.toList());
-
-        List<Long> busyDriverIds = rideRepository.findDriversWithRidesInTimeRange(
-                driverIds, rideStartTime, rideEndTime
-        );
-        System.out.println("[DEBUG] Busy driver IDs: " + busyDriverIds);
-
-        // 5. Filter out busy drivers
-        List<Vehicle> availableVehicles = compatibleVehicles.stream()
-                .filter(v -> !busyDriverIds.contains(v.getDriver().getId()))
-                .collect(Collectors.toList());
-
-        System.out.println("[DEBUG] Available vehicles after busy filter: " + availableVehicles.size());
-        if (availableVehicles.isEmpty()) {
-            System.out.println("[DEBUG] All compatible drivers are busy!");
-            return null; // All compatible drivers are busy
-        }
-
-        // 6. Find the closest available driver
+        // 4. Find the closest available driver
         Location rideStartLocation = mapLocation(request.getStart());
         Vehicle closestVehicle = null;
         double minDistance = Double.MAX_VALUE;
 
         for (Vehicle v : availableVehicles) {
             if (v.getCurrentLocation() != null) {
+                // Manual distance calc or use RouteService if available
                 double dist = calculateHaversineDistance(rideStartLocation, v.getCurrentLocation());
-                System.out.println("[DEBUG] Vehicle ID=" + v.getId() + " distance=" + dist);
+
                 if (dist < minDistance) {
                     minDistance = dist;
                     closestVehicle = v;
                 }
-            } else {
-                System.out.println("[DEBUG] Vehicle ID=" + v.getId() + " has NO currentLocation!");
             }
         }
 
-        System.out.println("[DEBUG] Closest vehicle: " + (closestVehicle != null ? closestVehicle.getId() : "NONE"));
         return closestVehicle;
     }
+
+
 
     @Override
     @Transactional
@@ -447,6 +506,10 @@ public class RideServiceImpl implements RideService {
 
         // Notify all passengers that the ride has been accepted
         notificationService.sendRideStatusNotification(savedRide,
+                "Your ride has been accepted by driver " + driver.getName() + " " + driver.getSurname() + ".");
+
+        // Notify linked passengers (from invitedEmails) about the acceptance
+        notificationService.notifyLinkedPassengersRideStatusChange(savedRide,
                 "Your ride has been accepted by driver " + driver.getName() + " " + driver.getSurname() + ".");
 
         // Broadcast ride update via WebSocket for real-time UI updates
@@ -480,6 +543,10 @@ public class RideServiceImpl implements RideService {
 
         // Notify all passengers that the ride has started
         notificationService.sendRideStatusNotification(savedRide,
+                "Your ride has started. Driver is on the way!");
+
+        // Notify linked passengers (from invitedEmails) about the ride start
+        notificationService.notifyLinkedPassengersRideStatusChange(savedRide,
                 "Your ride has started. Driver is on the way!");
 
         // Broadcast ride update via WebSocket for real-time UI updates
@@ -534,6 +601,9 @@ public class RideServiceImpl implements RideService {
 
         // Send review request emails to passengers
         sendReviewRequestEmails(savedRide);
+
+        // Send leave-review in-app notification to the ride creator
+        notificationService.sendLeaveReviewNotification(savedRide);
 
         // Time-delayed Inactive Logic
         checkAndHandleInactiveRequest(savedRide.getDriver());
@@ -849,27 +919,20 @@ public class RideServiceImpl implements RideService {
         ride.setEndTime(LocalDateTime.now());
         ride.setStatus(RideStatus.FINISHED);
 
-        // Pickup => All Stops => New End
-        double totalDistance = 0.0;
-        Location currentPos = ride.getStartLocation();
+        // Use the already-tracked distance from RideCostTrackingService
+        // (which accumulates actual vehicle movement every 5s during the ride)
+        double trackedDistance = ride.getDistanceTraveled() != null ? ride.getDistanceTraveled() : 0.0;
+        ride.setDistance(trackedDistance);
 
-        if (ride.getStops() != null) {
-            for (Location stop : ride.getStops()) {
-                totalDistance += calculateHaversineDistance(currentPos, stop);
-                currentPos = stop;
-            }
-        }
-
-        totalDistance += calculateHaversineDistance(currentPos, newEndLocation);
-        ride.setDistance(totalDistance);
-
+        // Always recalculate totalCost from actual distance traveled
+        // (totalCost may still hold the original estimated cost from ride creation)
         double basePrice = ride.getRateBaseFare() != null
                 ? ride.getRateBaseFare()
                 : vehiclePriceService.getBaseFare(ride.getRequestedVehicleType());
         double perKm = ride.getRatePricePerKm() != null
                 ? ride.getRatePricePerKm()
                 : vehiclePriceService.getPricePerKm(ride.getRequestedVehicleType());
-        double newPrice = basePrice + (totalDistance * perKm);
+        double newPrice = basePrice + (trackedDistance * perKm);
         ride.setTotalCost(Math.round(newPrice * 100.0) / 100.0);
 
         ride.setPassengersExited(true);
@@ -885,6 +948,9 @@ public class RideServiceImpl implements RideService {
 
         // Send review request emails to passengers (same as endRide)
         sendReviewRequestEmails(savedRide);
+
+        // Send leave-review in-app notification to the ride creator (same as endRide)
+        notificationService.sendLeaveReviewNotification(savedRide);
 
         // Time-delayed Inactive Logic (same as endRide)
         checkAndHandleInactiveRequest(savedRide.getDriver());
@@ -1005,71 +1071,32 @@ public class RideServiceImpl implements RideService {
 
         Long driverId = ride.getDriver().getId();
 
-        // Collect registered passenger emails so we don't send duplicates to invitedEmails
-        Set<String> sentEmails = new java.util.HashSet<>();
+        // Only send review token email to the ride creator
+        User creator = ride.getCreatedBy();
+        if (creator == null && ride.getPassengers() != null && !ride.getPassengers().isEmpty()) {
+            // Fallback for rides created before createdBy field was added
+            creator = ride.getPassengers().iterator().next();
+        }
 
-        // 1. Send to registered passengers
-        if (ride.getPassengers() != null) {
-            for (User passenger : ride.getPassengers()) {
-                String email = passenger.getEmail();
-
-                // Skip test emails ending with @example.com
-                if (email == null || email.toLowerCase().endsWith("@example.com")) {
-                    continue;
-                }
-
+        if (creator != null) {
+            String email = creator.getEmail();
+            if (email != null && !email.toLowerCase().endsWith("@example.com")) {
                 try {
                     String reviewToken = reviewTokenUtils.generateReviewToken(
                         ride.getId(),
-                        passenger.getId(),
+                        creator.getId(),
                         driverId
                     );
 
-                    String passengerName = passenger.getName();
+                    String passengerName = creator.getName();
                     if (passengerName == null || passengerName.trim().isEmpty()) {
                         passengerName = "Valued Customer";
                     }
 
                     emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
-                    sentEmails.add(email.toLowerCase());
-
-                    System.out.println("Sent review request email to passenger: " + email + " for ride: " + ride.getId());
+                    System.out.println("Sent review request email to ride creator: " + email + " for ride: " + ride.getId());
                 } catch (Exception e) {
                     System.err.println("Failed to send review request email to " + email + ": " + e.getMessage());
-                }
-            }
-        }
-
-        // 2. Send to linked (potentially non-registered) passengers
-        if (ride.getInvitedEmails() != null) {
-            for (String email : ride.getInvitedEmails()) {
-                if (email == null || email.toLowerCase().endsWith("@example.com")) {
-                    continue;
-                }
-
-                // Skip if already sent via registered passengers
-                if (sentEmails.contains(email.toLowerCase())) {
-                    continue;
-                }
-
-                try {
-                    // Generate email-based token for linked passenger
-                    String reviewToken = reviewTokenUtils.generateReviewTokenForEmail(
-                        ride.getId(),
-                        email,
-                        driverId
-                    );
-
-                    // Try to get name if user is registered
-                    String passengerName = userRepository.findByEmail(email)
-                        .map(User::getName)
-                        .orElse("Valued Customer");
-
-                    emailService.sendReviewRequestEmail(email, passengerName, reviewToken);
-
-                    System.out.println("Sent review request email to linked passenger: " + email + " for ride: " + ride.getId());
-                } catch (Exception e) {
-                    System.err.println("Failed to send review request email to linked passenger " + email + ": " + e.getMessage());
                 }
             }
         }
@@ -1097,7 +1124,15 @@ public class RideServiceImpl implements RideService {
                 predicates.add(cb.equal(passengers.get("id"), passengerId));
             }
             if (status != null) {
-                predicates.add(cb.equal(root.get("status"), RideStatus.valueOf(status)));
+                if (status.contains(",")) {
+                    List<RideStatus> statuses = Arrays.stream(status.split(","))
+                            .map(String::trim)
+                            .map(RideStatus::valueOf)
+                            .collect(Collectors.toList());
+                    predicates.add(root.get("status").in(statuses));
+                } else {
+                    predicates.add(cb.equal(root.get("status"), RideStatus.valueOf(status)));
+                }
             }
             if (fromDate != null) {
                 // Use COALESCE to compare against startTime OR scheduledTime for date filtering
@@ -1180,9 +1215,12 @@ public class RideServiceImpl implements RideService {
             throw new IllegalStateException("User must be authenticated.");
         }
 
-        // Validate that the user is the driver
-        if (ride.getDriver() == null || !ride.getDriver().getId().equals(currentUser.getId())) {
-            throw new IllegalStateException("Only the assigned driver can complete stops.");
+        // Validate that the user is a participant of this ride (driver or passenger)
+        boolean isDriver = ride.getDriver() != null && ride.getDriver().getId().equals(currentUser.getId());
+        boolean isPassenger = ride.getPassengers() != null && ride.getPassengers().stream()
+                .anyMatch(p -> p.getId().equals(currentUser.getId()));
+        if (!isDriver && !isPassenger) {
+            throw new IllegalStateException("Only ride participants can complete stops.");
         }
 
         // Validate ride is in progress
@@ -1214,7 +1252,18 @@ public class RideServiceImpl implements RideService {
 
         // Save the ride with updated completedStopIndexes
         Ride savedRide = rideRepository.save(ride);
-        return mapToResponse(savedRide);
+        RideResponse response = mapToResponse(savedRide);
+
+        // Notify all passengers and driver about stop completion
+        notificationService.sendStopCompletedNotification(savedRide, stopIndex);
+
+        // Notify linked passengers (from invitedEmails) about stop completion
+        notificationService.notifyLinkedPassengersStopCompleted(savedRide, stopIndex);
+
+        // Broadcast so other participants (e.g. passengers) can sync their routes
+        rideSocketService.broadcastRideUpdate(savedRide.getId(), response);
+
+        return response;
     }
 
     @Override

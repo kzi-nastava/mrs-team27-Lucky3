@@ -180,48 +180,42 @@
     ></app-rides-table>
 
     <!-- Pagination -->
-    <div *ngIf="!isLoading && totalPages > 1" class="flex items-center justify-between pt-4">
+    <div *ngIf="!isLoading && totalPages > 1" class="mt-4 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="text-sm text-gray-400">
-        Showing {{ currentPage * pageSize + 1 }} - {{ Math.min((currentPage + 1) * pageSize, totalElements) }} of {{ totalElements }} rides
+        Showing <span class="text-white font-medium">{{ startItem }}</span> – <span class="text-white font-medium">{{ endItem }}</span> of <span class="text-white font-medium">{{ totalElements }}</span>
       </div>
-      <div class="flex items-center gap-2">
-        <button
-          (click)="prevPage()"
-          [disabled]="currentPage === 0"
-          class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-          [ngClass]="{
-            'bg-gray-800 text-white hover:bg-gray-700': currentPage > 0,
-            'bg-gray-900 text-gray-600 cursor-not-allowed': currentPage === 0
-          }"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      <div class="flex items-center gap-1">
+        <!-- First -->
+        <button (click)="goToPage(0)" [disabled]="currentPage === 0"
+          class="p-2 rounded-lg text-sm transition-colors"
+          [ngClass]="{'text-gray-600 cursor-not-allowed': currentPage === 0, 'text-gray-400 hover:text-white hover:bg-gray-800': currentPage !== 0}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
         </button>
-        
-        <div class="flex gap-1">
-          <button
-            *ngFor="let page of [].constructor(totalPages); let i = index"
-            (click)="goToPage(i)"
-            class="w-8 h-8 rounded-lg text-sm font-medium transition-colors"
-            [ngClass]="{
-              'bg-yellow-500 text-black': currentPage === i,
-              'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white': currentPage !== i
-            }"
-            [class.hidden]="totalPages > 7 && i > 0 && i < totalPages - 1 && (i < currentPage - 1 || i > currentPage + 1)"
-          >
-            {{ i + 1 }}
+        <!-- Prev -->
+        <button (click)="prevPage()" [disabled]="currentPage === 0"
+          class="p-2 rounded-lg text-sm transition-colors"
+          [ngClass]="{'text-gray-600 cursor-not-allowed': currentPage === 0, 'text-gray-400 hover:text-white hover:bg-gray-800': currentPage !== 0}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <!-- Page Numbers -->
+        <ng-container *ngFor="let pg of visiblePages">
+          <button (click)="goToPage(pg)"
+            class="w-9 h-9 rounded-lg text-sm font-medium transition-colors"
+            [ngClass]="{'bg-yellow-500 text-black': pg === currentPage, 'text-gray-400 hover:text-white hover:bg-gray-800': pg !== currentPage}">
+            {{ pg + 1 }}
           </button>
-        </div>
-        
-        <button
-          (click)="nextPage()"
-          [disabled]="currentPage >= totalPages - 1"
-          class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-          [ngClass]="{
-            'bg-gray-800 text-white hover:bg-gray-700': currentPage < totalPages - 1,
-            'bg-gray-900 text-gray-600 cursor-not-allowed': currentPage >= totalPages - 1
-          }"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </ng-container>
+        <!-- Next -->
+        <button (click)="nextPage()" [disabled]="currentPage >= totalPages - 1"
+          class="p-2 rounded-lg text-sm transition-colors"
+          [ngClass]="{'text-gray-600 cursor-not-allowed': currentPage >= totalPages - 1, 'text-gray-400 hover:text-white hover:bg-gray-800': currentPage < totalPages - 1}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <!-- Last -->
+        <button (click)="goToPage(totalPages - 1)" [disabled]="currentPage >= totalPages - 1"
+          class="p-2 rounded-lg text-sm transition-colors"
+          [ngClass]="{'text-gray-600 cursor-not-allowed': currentPage >= totalPages - 1, 'text-gray-400 hover:text-white hover:bg-gray-800': currentPage < totalPages - 1}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
         </button>
       </div>
     </div>

@@ -114,7 +114,7 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   onNotificationClick(notification: AppNotification): void {
-    this.notificationService.markAsRead(notification.id);
+    this.notificationService.deleteNotification(notification.id);
     this.isNotificationsOpen = false;
     if (notification.route) {
       // Parse route and query params if present

@@ -45,6 +45,9 @@ public class User implements UserDetails {
     private UserRole role;
 
     private boolean isBlocked; // Admin blocked user
+    @Column(name = "block_reason", length = 500)
+    private String blockReason;
+
     private boolean isEnabled; // Email activated (Spec 2.2.2)
 
     // 2.2.1 Driver Availability
@@ -58,6 +61,14 @@ public class User implements UserDetails {
 
     @Column(name = "last_password_reset_date")
     private Timestamp lastPasswordResetDate;
+
+    /**
+     * FCM device registration token for push notifications.
+     * Updated on login and whenever the token refreshes (via PUT /api/users/{id}/fcm-token).
+     * Nullable — null means push notifications are not available for this user.
+     */
+    @Column(name = "fcm_token", length = 512)
+    private String fcmToken;
 
     // UserDetails Implementation
     @JsonIgnore
@@ -79,7 +90,7 @@ public class User implements UserDetails {
 
     @JsonIgnore
     @Override
-    public boolean isAccountNonLocked() { return !this.isBlocked; }
+    public boolean isAccountNonLocked() { return true; }
 
     @JsonIgnore
     @Override
@@ -87,6 +98,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return this.isEnabled && !this.isBlocked;
+        return this.isEnabled;
     }
 }

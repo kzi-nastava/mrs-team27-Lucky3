@@ -2,12 +2,21 @@ package com.example.mobile.utils;
 
 import com.example.mobile.BuildConfig;
 import com.example.mobile.services.DriverService;
+import com.example.mobile.services.PanicService;
+import com.example.mobile.services.ReviewService;
 import com.example.mobile.services.RideService;
 import com.example.mobile.services.UserService;
 import com.example.mobile.services.VehicleService;
+import com.example.mobile.services.AdminService;
+import com.example.mobile.services.NotificationApiService;
+import com.example.mobile.services.SupportService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonSerializer;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
@@ -46,10 +55,24 @@ public class ClientUtils {
     private static final int WRITE_TIMEOUT = 30;
 
     /**
+     * DateTimeFormatter for LocalDateTime serialization.
+     */
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    /**
      * Gson instance with proper configuration.
      */
+    /**
+     * Gson instance with proper configuration including LocalDateTime support.
+     */
+
     private static final Gson gson = new GsonBuilder()
             .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+            .registerTypeAdapter(LocalDateTime.class, (JsonSerializer<LocalDateTime>) (src, typeOfSrc, context) ->
+                    context.serialize(src.format(DATE_TIME_FORMATTER))
+            )
+            .registerTypeAdapter(LocalDateTime.class, (JsonDeserializer<LocalDateTime>) (json, typeOfT, context) ->
+                    LocalDateTime.parse(json.getAsString(), DATE_TIME_FORMATTER)
+            )
             .setLenient()
             .create();
 
@@ -97,6 +120,31 @@ public class ClientUtils {
      * RideService instance.
      */
     public static final RideService rideService = retrofit.create(RideService.class);
+
+    /**
+     * PanicService instance (admin-only panic alerts).
+     */
+    public static final PanicService panicService = retrofit.create(PanicService.class);
+
+    /**
+     * ReviewService instance (ride reviews).
+     */
+    public static final ReviewService reviewService = retrofit.create(ReviewService.class);
+
+    /**
+     * AdminService instance (admin pricing endpoints).
+     */
+    public static final AdminService adminService = retrofit.create(AdminService.class);
+
+    /**
+     * SupportService instance (support chat endpoints).
+     */
+    public static final SupportService supportService = retrofit.create(SupportService.class);
+
+    /**
+     * NotificationApiService instance (notification management endpoints).
+     */
+    public static final NotificationApiService notificationService = retrofit.create(NotificationApiService.class);
 
     /**
      * Returns the base Retrofit instance.

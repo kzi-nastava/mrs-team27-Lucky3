@@ -1,9 +1,14 @@
 package com.example.mobile;
 
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.Menu;
@@ -11,8 +16,11 @@ import android.preference.PreferenceManager;
 
 import com.google.android.material.navigation.NavigationView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
@@ -23,8 +31,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.mobile.databinding.ActivityMainBinding;
 import com.example.mobile.models.PageResponse;
 import com.example.mobile.models.RideResponse;
+import com.example.mobile.utils.AppNotificationManager;
 import com.example.mobile.utils.ClientUtils;
+import com.example.mobile.utils.NotificationHelper;
+import com.example.mobile.utils.NotificationStore;
 import com.example.mobile.utils.SharedPreferencesManager;
+
+import android.view.View;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.gson.Gson;
 
 import org.osmdroid.config.Configuration;
 
@@ -46,6 +63,19 @@ public class MainActivity extends AppCompatActivity {
     private Long currentActiveRideId = null;
     private String currentRole = null;
 
+    // Notification badge in navbar
+    private TextView tvNotificationBadge;
+
+    // Notification permission launcher (Android 13+)
+    private final ActivityResultLauncher<String> notificationPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    Log.i(TAG, "Notification permission granted");
+                } else {
+                    Log.w(TAG, "Notification permission denied");
+                }
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,8 +88,21 @@ public class MainActivity extends AppCompatActivity {
                 PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
         Configuration.getInstance().setUserAgentValue(getPackageName());
 
+        // Create notification channels for FCM push (safe to call multiple times)
+        NotificationHelper.createNotificationChannels(this);
+
+        // Request notification permission on every launch if not granted (Android 13+)
+        requestNotificationPermission();
+
+        // Ask the OS to stop killing the Firebase process when the app is backgrounded.
+        // Without this, Doze mode can block FCM delivery after ~5 seconds in the background.
+        requestBatteryOptimizationExemption();
+
         ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        // Wire notification bell and badge
+        setupNotificationBell();
 
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_main);
         assert navHostFragment != null;
@@ -69,16 +112,44 @@ public class MainActivity extends AppCompatActivity {
         if (navigationView != null) {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
                     R.id.nav_guest_home, R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow, R.id.nav_settings,
-                    R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support,
+                    R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_ride_history, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support, R.id.nav_admin_panic,
                     R.id.nav_passenger_home, R.id.nav_passenger_history, R.id.nav_passenger_profile, R.id.nav_passenger_support, R.id.nav_passenger_favorites,
                     R.id.nav_driver_dashboard, R.id.nav_driver_overview, R.id.nav_driver_profile, R.id.nav_driver_support,
                     R.id.nav_active_ride)
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupWithNavController(navigationView, navController);
-            
-            // Restore session
-            checkSession(navController);
+
+            // Lock the drawer on guest/unauthenticated pages
+            navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+                int id = destination.getId();
+                if (id == R.id.nav_guest_home || id == R.id.nav_login || id == R.id.nav_register
+                        || id == R.id.nav_forgot_password || id == R.id.nav_forgot_password_sent
+                        || id == R.id.nav_register_verification
+                        || id == R.id.nav_reset_password || id == R.id.nav_reset_password_success) {
+                    binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
+                    navigationView.setVisibility(View.GONE);
+                } else {
+                    binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED);
+                    navigationView.setVisibility(View.VISIBLE);
+                }
+            });
+
+            // Only navigate on fresh start — NOT on configuration changes (e.g. orientation)
+            if (savedInstanceState == null) {
+                // Restore session
+                checkSession(navController);
+
+                // Handle FCM deep-link if app was launched from a notification
+                handleFcmDeepLink(getIntent());
+            } else {
+                // On config change, just restore the role-based drawer menu without navigating
+                String role = sharedPreferencesManager.getUserRole();
+                if (role != null) {
+                    currentRole = role;
+                    setupNavigationForRole(role);
+                }
+            }
         }
     }
 
@@ -89,13 +160,21 @@ public class MainActivity extends AppCompatActivity {
             if (role != null) {
                 currentRole = role;
                 setupNavigationForRole(role);
+
+                // Pop the entire guest/login back stack so Back never returns to login
+                androidx.navigation.NavOptions sessionNavOptions =
+                        new androidx.navigation.NavOptions.Builder()
+                                .setPopUpTo(R.id.nav_guest_home, true)
+                                .setLaunchSingleTop(true)
+                                .build();
+
                 // Navigate to the role's landing page
                 if ("DRIVER".equals(role)) {
-                    navController.navigate(R.id.nav_driver_dashboard);
+                    navController.navigate(R.id.nav_driver_dashboard, null, sessionNavOptions);
                 } else if ("ADMIN".equals(role)) {
-                    navController.navigate(R.id.nav_admin_dashboard);
+                    navController.navigate(R.id.nav_admin_dashboard, null, sessionNavOptions);
                 } else if ("PASSENGER".equals(role)) {
-                    navController.navigate(R.id.nav_passenger_home);
+                    navController.navigate(R.id.nav_passenger_home, null, sessionNavOptions);
                 }
             }
         }
@@ -165,19 +244,19 @@ public class MainActivity extends AppCompatActivity {
             // Style active ride item as gray initially
             styleActiveRideMenuItem(false);
 
+            // Style panic alerts menu item red for admins
+            if ("ADMIN".equals(role)) {
+                stylePanicMenuItem();
+            }
+
             // Handle navigation item clicks
             navigationView.setNavigationItemSelectedListener(item -> {
                 int itemId = item.getItemId();
 
                 // Handle logout
                 if (itemId == R.id.nav_logout) {
-                    stopActiveRidePolling();
-                    currentActiveRideId = null;
-                    currentRole = null;
-                    sharedPreferencesManager.logout();
-                    NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-                    navController.navigate(R.id.nav_guest_home);
                     closeDrawer();
+                    performLogout();
                     return true;
                 }
 
@@ -205,7 +284,41 @@ public class MainActivity extends AppCompatActivity {
             if ("DRIVER".equals(role) || "PASSENGER".equals(role)) {
                 startActiveRidePolling();
             }
+
+            // Start real-time notification manager
+            Long userId = sharedPreferencesManager.getUserId();
+            if (userId != null && userId > 0) {
+                AppNotificationManager.getInstance().start(this, role, userId);
+            }
         }
+    }
+
+    // ======================== Notification Bell & Badge ========================
+
+    private void setupNotificationBell() {
+        // Find badge view
+        tvNotificationBadge = findViewById(R.id.tv_notification_badge);
+
+        // Wire bell click to open notification panel
+        View btnNotifications = findViewById(R.id.btn_notifications);
+        if (btnNotifications != null) {
+            btnNotifications.setOnClickListener(v -> {
+                NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+                navController.navigate(R.id.nav_notifications);
+            });
+        }
+
+        // Observe unread count and update badge dynamically
+        NotificationStore.getInstance().getUnreadCount().observe(this, count -> {
+            if (tvNotificationBadge != null) {
+                if (count != null && count > 0) {
+                    tvNotificationBadge.setText(count > 99 ? "99+" : String.valueOf(count));
+                    tvNotificationBadge.setVisibility(View.VISIBLE);
+                } else {
+                    tvNotificationBadge.setVisibility(View.GONE);
+                }
+            }
+        });
     }
 
     // ======================== Active Ride Polling ========================
@@ -275,6 +388,8 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 currentActiveRideId = ride.getId();
                                 styleActiveRideMenuItem(true);
+                                // Bridge to WebSocket for real-time ride status updates
+                                AppNotificationManager.getInstance().subscribeToRideUpdates(ride.getId());
                             });
                         } else {
                             onNotFound.run();
@@ -341,9 +456,303 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ======================== Logout ========================
+
+    /**
+     * Performs logout with backend call.
+     * For drivers: calls backend first — if 409 (active ride), shows error dialog.
+     * For others: calls backend then clears local state.
+     */
+    private void performLogout() {
+        String token = sharedPreferencesManager.getToken();
+        String role = sharedPreferencesManager.getUserRole();
+
+        if (token == null || token.isEmpty()) {
+            doLocalLogout();
+            return;
+        }
+
+        String authHeader = "Bearer " + token;
+
+        ClientUtils.userService.logout(authHeader).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
+                if (response.isSuccessful()) {
+                    doLocalLogout();
+                } else if (response.code() == 409) {
+                    // Driver has active ride or scheduled rides — cannot log out
+                    String errorMsg = parseLogoutError(response);
+                    showCannotLogoutDialog(errorMsg);
+                } else {
+                    // Other error — still log out locally
+                    doLocalLogout();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
+                Log.e(TAG, "Logout API call failed", t);
+                // Network error — still log out locally
+                doLocalLogout();
+            }
+        });
+    }
+
+    /**
+     * Clears local session state and navigates to guest home.
+     */
+    private void doLocalLogout() {
+        stopActiveRidePolling();
+        AppNotificationManager.getInstance().stop();
+        NotificationStore.getInstance().clearAll();
+        currentActiveRideId = null;
+        currentRole = null;
+        sharedPreferencesManager.logout();
+        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+        navController.navigate(R.id.nav_guest_home);
+    }
+
+    /**
+     * Parses the error message from a failed logout response (409 Conflict).
+     */
+    private String parseLogoutError(Response<?> response) {
+        try {
+            if (response.errorBody() != null) {
+                String errorBody = response.errorBody().string();
+                Gson gson = ClientUtils.getGson();
+                com.example.mobile.models.ErrorResponse err =
+                        gson.fromJson(errorBody, com.example.mobile.models.ErrorResponse.class);
+                if (err != null && err.getMessage() != null && !err.getMessage().isEmpty()) {
+                    return err.getMessage();
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to parse logout error", e);
+        }
+        return "You cannot log out because you are currently on a ride.";
+    }
+
+    /**
+     * Shows a dialog when the driver cannot log out (active ride / scheduled rides).
+     */
+    private void showCannotLogoutDialog(String message) {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Cannot Logout")
+                .setMessage(message)
+                .setPositiveButton("Go to Dashboard", (dialog, which) -> {
+                    dialog.dismiss();
+                    NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+                    navController.navigate(R.id.nav_driver_dashboard);
+                })
+                .setNegativeButton("Close", (dialog, which) -> dialog.dismiss())
+                .setCancelable(true)
+                .show();
+    }
+
+    // ======================== Notification Permission ========================
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+            }
+        }
+    }
+
+    /**
+     * Ask the OS to exempt Lucky3 from battery optimization (Doze mode).
+     * Without this, the system may block FCM delivery after ~5 s in the background.
+     * The dialog is only shown once — after the user grants or denies, the OS
+     * remembers and {@link PowerManager#isIgnoringBatteryOptimizations} returns true.
+     */
+    private void requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            }
+        }
+    }
+
+    private void stylePanicMenuItem() {
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        if (navigationView == null) return;
+
+        MenuItem panicItem = navigationView.getMenu().findItem(R.id.nav_admin_panic);
+        if (panicItem == null) return;
+
+        int redColor = Color.parseColor("#EF4444");
+
+        // Tint icon red
+        if (panicItem.getIcon() != null) {
+            android.graphics.drawable.Drawable icon = panicItem.getIcon();
+            icon = DrawableCompat.wrap(icon);
+            DrawableCompat.setTint(icon.mutate(), redColor);
+            panicItem.setIcon(icon);
+        }
+
+        // Tint text red
+        android.text.SpannableString s = new android.text.SpannableString("Panic Alerts");
+        s.setSpan(new android.text.style.ForegroundColorSpan(redColor), 0, s.length(), 0);
+        panicItem.setTitle(s);
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
         stopActiveRidePolling();
+        AppNotificationManager.getInstance().stop();
+    }
+
+    // ======================== FCM Deep-Link Handling ========================
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        // Handle Navigation Component deep links (e.g., lucky3://review?token=...)
+        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+        navController.handleDeepLink(intent);
+        // Handle FCM notification deep links
+        handleFcmDeepLink(intent);
+    }
+
+    /**
+     * Handles deep-link navigation from FCM notification taps.
+     * Checks the intent for {@code navigate_to} extra and navigates accordingly.
+     */
+    /**
+     * Returns the navigation destination ID for the current role's home/landing page.
+     * Used to keep the role home on the back stack so pressing back never falls
+     * through to the guest login screen.
+     */
+    private int getRoleHomeDestinationId() {
+        if ("DRIVER".equals(currentRole)) return R.id.nav_driver_dashboard;
+        if ("ADMIN".equals(currentRole)) return R.id.nav_admin_dashboard;
+        if ("PASSENGER".equals(currentRole)) return R.id.nav_passenger_home;
+        // Fallback — should not happen for authenticated users
+        return R.id.nav_guest_home;
+    }
+
+    private void handleFcmDeepLink(Intent intent) {
+        if (intent == null || intent.getExtras() == null) return;
+
+        String navigateTo = intent.getStringExtra("navigate_to");
+        if (navigateTo == null) return;
+
+        // Restore role from prefs if lost (e.g. process death)
+        if (currentRole == null) {
+            String role = sharedPreferencesManager.getUserRole();
+            if (role != null) {
+                currentRole = role;
+            }
+        }
+
+        try {
+            NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+
+            // Build NavOptions that pop back to the role's home page (not guest home)
+            // so that pressing Back returns to home instead of the login screen.
+            int roleHome = getRoleHomeDestinationId();
+            androidx.navigation.NavOptions deepLinkNavOptions =
+                    new androidx.navigation.NavOptions.Builder()
+                            .setLaunchSingleTop(true)
+                            .setPopUpTo(roleHome, false)
+                            .build();
+
+            switch (navigateTo) {
+                case "active_ride":
+                    long rideId = intent.getLongExtra("rideId", -1L);
+                    if (rideId > 0) {
+                        Bundle args = new Bundle();
+                        args.putLong("rideId", rideId);
+                        navController.navigate(R.id.nav_active_ride, args, deepLinkNavOptions);
+                    }
+                    break;
+                case "ride_history":
+                    long histRideId = intent.getLongExtra("rideId", -1L);
+                    if (histRideId > 0) {
+                        Bundle histArgs = new Bundle();
+                        histArgs.putLong("rideId", histRideId);
+                        // Navigate to role-specific ride detail
+                        if ("DRIVER".equals(currentRole)) {
+                            navController.navigate(R.id.nav_ride_details, histArgs, deepLinkNavOptions);
+                        } else {
+                            navController.navigate(R.id.nav_passenger_ride_detail, histArgs, deepLinkNavOptions);
+                        }
+                    }
+                    break;
+                case "admin_panic":
+                    navController.navigate(R.id.nav_admin_panic, null, deepLinkNavOptions);
+                    break;
+                case "support":
+                    if ("ADMIN".equals(currentRole)) {
+                        long chatId = intent.getLongExtra("chatId", -1L);
+                        if (chatId > 0) {
+                            Bundle chatArgs = new Bundle();
+                            chatArgs.putLong("chatId", chatId);
+                            navController.navigate(R.id.nav_admin_support_chat, chatArgs, deepLinkNavOptions);
+                        } else {
+                            navController.navigate(R.id.nav_admin_support, null, deepLinkNavOptions);
+                        }
+                    } else if ("DRIVER".equals(currentRole)) {
+                        navController.navigate(R.id.nav_driver_support, null, deepLinkNavOptions);
+                    } else {
+                        navController.navigate(R.id.nav_passenger_support, null, deepLinkNavOptions);
+                    }
+                    break;
+                case "notifications":
+                    navController.navigate(R.id.nav_notifications, null, deepLinkNavOptions);
+                    break;
+                case "review":
+                    long reviewRideId = intent.getLongExtra("rideId", -1L);
+                    if (reviewRideId > 0) {
+                        Bundle reviewArgs = new Bundle();
+                        reviewArgs.putLong("rideId", reviewRideId);
+                        navController.navigate(R.id.nav_review, reviewArgs, deepLinkNavOptions);
+                    }
+                    break;
+                default:
+                    Log.d(TAG, "Unknown deep-link target: " + navigateTo);
+                    break;
+            }
+
+            // Clear the extras to prevent re-navigation on config changes
+            intent.removeExtra("navigate_to");
+            intent.removeExtra("rideId");
+            intent.removeExtra("chatId");
+
+            // Delete the backend notification so it doesn't reappear
+            long backendNotifId = intent.getLongExtra("backendNotificationId", -1L);
+            intent.removeExtra("backendNotificationId");
+            if (backendNotifId > 0) {
+                deleteBackendNotification(backendNotifId);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "FCM deep-link navigation failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Fire-and-forget deletion of a single notification from the backend.
+     */
+    private void deleteBackendNotification(long backendNotifId) {
+        String token = sharedPreferencesManager.getToken();
+        if (token == null) return;
+        ClientUtils.notificationService.deleteNotification("Bearer " + token, backendNotifId)
+                .enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        Log.d(TAG, "Backend notification #" + backendNotifId + " deleted");
+                    }
+
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        Log.w(TAG, "Failed to delete backend notification #" + backendNotifId);
+                    }
+                });
     }
 }

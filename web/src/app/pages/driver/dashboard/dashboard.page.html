@@ -9,6 +9,15 @@
 
   <div class="max-w-6xl mx-auto space-y-6">
     
+    <!-- Blocked User Banner -->
+    <div *ngIf="isUserBlocked" class="bg-red-900/80 border border-red-700 rounded-xl p-4 flex items-center gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400 flex-shrink-0">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+      </svg>
+      <p class="text-red-200 text-sm font-medium">Your account has been blocked. You can view your dashboard but going online and accepting rides is disabled.</p>
+    </div>
+
     <!-- Header Card -->
     <div class="bg-[#1C1C1E] p-6 rounded-xl border border-gray-800">
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -34,7 +43,7 @@
             <app-toggle-switch 
               [checked]="isOnline" 
               [label]="isOnline ? 'Online' : 'Offline'"
-              [disabled]="isStatusLoading || (workingHoursExceeded && !isOnline)"
+              [disabled]="isStatusLoading || (workingHoursExceeded && !isOnline) || isUserBlocked"
               (checkedChange)="onStatusChange($event)">
             </app-toggle-switch>
             <div class="w-3 h-3 rounded-full transition-colors duration-300"
@@ -51,6 +60,14 @@
               <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
             8-hour limit exceeded. Rest required.
+          </div>
+          <!-- Warning when account is blocked -->
+          <div *ngIf="isUserBlocked" class="text-xs text-red-400 flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+            </svg>
+            Account blocked. Going online is disabled.
           </div>
         </div>
       </div>

@@ -60,6 +60,15 @@ public class GuestHomeFragment extends Fragment {
     private static final String TAG = "GuestHomeFragment";
     private static final int REFRESH_INTERVAL_MS = 10000;
 
+    // State keys for surviving configuration changes (rotation)
+    private static final String STATE_PANEL_VISIBLE = "panel_visible";
+    private static final String STATE_RESULTS_VISIBLE = "results_visible";
+    private static final String STATE_PICKUP = "pickup_address";
+    private static final String STATE_DESTINATION = "dest_address";
+    private static final String STATE_DISTANCE = "est_distance";
+    private static final String STATE_DURATION = "est_duration";
+    private static final String STATE_PRICE = "est_price";
+
     private FragmentGuestHomeBinding binding;
     private MapView map;
     private TextView tvAvailableCount;
@@ -75,6 +84,13 @@ public class GuestHomeFragment extends Fragment {
 
     private int availableCount = 0;
     private int occupiedCount = 0;
+
+    // Cached estimation results for state restoration
+    private String lastDistance = null;
+    private String lastDuration = null;
+    private String lastPrice = null;
+    private boolean panelVisible = false;
+    private boolean resultsVisible = false;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
@@ -105,12 +121,85 @@ public class GuestHomeFragment extends Fragment {
         btnEstimateRide.setOnClickListener(v -> {
              // Show panel, hide button
              binding.estimationContainer.setVisibility(View.VISIBLE);
+             panelVisible = true;
              btnEstimateRide.setVisibility(View.GONE);
         });
+
+        // Restore state after rotation
+        if (savedInstanceState != null) {
+            restoreEstimationState(savedInstanceState, binding.getRoot());
+        }
 
         setupVehicleRefresh();
 
         return binding.getRoot();
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (binding == null) return;
+
+        outState.putBoolean(STATE_PANEL_VISIBLE, panelVisible);
+        outState.putBoolean(STATE_RESULTS_VISIBLE, resultsVisible);
+
+        EditText etPickup = binding.getRoot().findViewById(R.id.et_pickup_address);
+        EditText etDest = binding.getRoot().findViewById(R.id.et_destination_address);
+        if (etPickup != null) outState.putString(STATE_PICKUP, etPickup.getText().toString());
+        if (etDest != null) outState.putString(STATE_DESTINATION, etDest.getText().toString());
+
+        if (lastDistance != null) outState.putString(STATE_DISTANCE, lastDistance);
+        if (lastDuration != null) outState.putString(STATE_DURATION, lastDuration);
+        if (lastPrice != null) outState.putString(STATE_PRICE, lastPrice);
+    }
+
+    private void restoreEstimationState(Bundle state, View root) {
+        panelVisible = state.getBoolean(STATE_PANEL_VISIBLE, false);
+        resultsVisible = state.getBoolean(STATE_RESULTS_VISIBLE, false);
+
+        if (panelVisible) {
+            binding.estimationContainer.setVisibility(View.VISIBLE);
+            btnEstimateRide.setVisibility(View.GONE);
+
+            EditText etPickup = root.findViewById(R.id.et_pickup_address);
+            EditText etDest = root.findViewById(R.id.et_destination_address);
+            String pickup = state.getString(STATE_PICKUP, "");
+            String dest = state.getString(STATE_DESTINATION, "");
+            if (etPickup != null) etPickup.setText(pickup);
+            if (etDest != null) etDest.setText(dest);
+
+            if (resultsVisible) {
+                lastDistance = state.getString(STATE_DISTANCE);
+                lastDuration = state.getString(STATE_DURATION);
+                lastPrice = state.getString(STATE_PRICE);
+
+                LinearLayout llResults = root.findViewById(R.id.ll_estimation_results);
+                LinearLayout llActions = root.findViewById(R.id.ll_action_buttons);
+                TextView tvLoginHint = root.findViewById(R.id.tv_login_hint);
+                MaterialButton btnEstimate = root.findViewById(R.id.btn_confirm_estimate);
+                TextView tvDistance = root.findViewById(R.id.tv_distance_value);
+                TextView tvDuration = root.findViewById(R.id.tv_duration_value);
+                TextView tvPrice = root.findViewById(R.id.tv_price_value);
+
+                if (lastDistance != null) tvDistance.setText(lastDistance);
+                if (lastDuration != null) tvDuration.setText(lastDuration);
+                if (lastPrice != null) tvPrice.setText(lastPrice);
+
+                llResults.setVisibility(View.VISIBLE);
+                llActions.setVisibility(View.VISIBLE);
+                tvLoginHint.setVisibility(View.VISIBLE);
+                btnEstimate.setVisibility(View.GONE);
+
+                // Re-draw the route on the map
+                if (!pickup.isEmpty() && !dest.isEmpty()) {
+                    performEstimation(pickup, dest,
+                        est -> requireActivity().runOnUiThread(() ->
+                            mapRenderer.showRoute(est.getRoutePoints())),
+                        error -> { /* ignore — results already shown from saved state */ }
+                    );
+                }
+            }
+        }
     }
 
     private void initEstimationPanel(View rootView) {
@@ -138,6 +227,11 @@ public class GuestHomeFragment extends Fragment {
 
         btnClose.setOnClickListener(v -> {
              panel.setVisibility(View.GONE);
+             panelVisible = false;
+             resultsVisible = false;
+             lastDistance = null;
+             lastDuration = null;
+             lastPrice = null;
              btnEstimateRide.setVisibility(View.VISIBLE);
              if (mapRenderer != null) mapRenderer.clearMap();
              
@@ -158,9 +252,19 @@ public class GuestHomeFragment extends Fragment {
                 performEstimation(startAddress, destAddress, 
                     est -> {
                         requireActivity().runOnUiThread(() -> {
-                             tvDistance.setText(String.format("%.2f km", est.getEstimatedDistance()));
-                             tvDuration.setText(String.format("%d min", est.getEstimatedTimeInMinutes()));
-                             tvPrice.setText(String.format("%.0f RSD", est.getEstimatedCost()));
+                             String distStr = String.format("%.2f km", est.getEstimatedDistance());
+                             String durStr = String.format("%d min", est.getEstimatedTimeInMinutes());
+                             String priceStr = String.format("%.0f RSD", est.getEstimatedCost());
+
+                             tvDistance.setText(distStr);
+                             tvDuration.setText(durStr);
+                             tvPrice.setText(priceStr);
+
+                             // Cache results for rotation
+                             lastDistance = distStr;
+                             lastDuration = durStr;
+                             lastPrice = priceStr;
+                             resultsVisible = true;
                              
                              llResults.setVisibility(View.VISIBLE);
                              llActions.setVisibility(View.VISIBLE);
@@ -189,6 +293,10 @@ public class GuestHomeFragment extends Fragment {
             llActions.setVisibility(View.GONE);
             tvLoginHint.setVisibility(View.GONE);
             btnEstimate.setVisibility(View.VISIBLE);
+            resultsVisible = false;
+            lastDistance = null;
+            lastDuration = null;
+            lastPrice = null;
             if (mapRenderer != null) mapRenderer.clearMap();
         });
     }

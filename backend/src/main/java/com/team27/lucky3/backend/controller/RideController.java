@@ -7,6 +7,8 @@ import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.service.RideService;
 import com.team27.lucky3.backend.util.DummyData;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -29,18 +31,19 @@ import java.util.List;
 @RequestMapping(value = "/api/rides", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Rides", description = "Ride lifecycle: estimate, create, accept, start, end, cancel, panic & favourites")
 public class RideController {
 
     private final RideService rideService;
 
-    // 2.1.2 Ride estimation on the map page (unregistered user)
+    @Operation(summary = "Estimate ride", description = "Calculate route distance, duration & cost estimate (public)", security = {})
     @PostMapping("/estimate")
     public ResponseEntity<RideEstimationResponse> estimateRide(@Valid @RequestBody CreateRideRequest request) {
         RideEstimationResponse response = rideService.estimateRide(request);
         return ResponseEntity.ok(response);
     }
 
-    // 2.4.1 Order a ride (logged-in user)
+    @Operation(summary = "Create ride", description = "Order a new ride (PASSENGER only)")
     @PreAuthorize("hasRole('PASSENGER')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<RideResponse> createRide(@Valid @RequestBody CreateRideRequest request) {
@@ -48,8 +51,7 @@ public class RideController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // 2.9.2 Driver ride history (driver)
-    // 2.9.3 Admin ride history + detailed ride view (admin)
+    @Operation(summary = "Get ride history", description = "Paginated ride history with optional date, driver, passenger & status filters")
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<RideResponse>> getRidesHistory(
@@ -63,25 +65,28 @@ public class RideController {
         return ResponseEntity.ok(rideService.getRidesHistory(pageable, fromDate, toDate, driverId, passengerId, status));
     }
 
-    // 2.9.2 & 2.9.3 Admin ride history + detailed ride view (admin)
-    @GetMapping("/{id}")
+    @Operation(summary = "Get ride details", description = "Retrieve detailed information about a specific ride")
+    @GetMapping("/{id:\\d+}") // Only match if 'id' consists of digits
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RideResponse> getRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.getRideDetails(id));
     }
 
+    @Operation(summary = "Accept ride", description = "Driver accepts a pending ride")
     @PutMapping("/{id}/accept")
     @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> acceptRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.acceptRide(id));
     }
 
+    @Operation(summary = "Start ride", description = "Driver starts an accepted ride")
     @PutMapping("/{id}/start")
     @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> startRide(@PathVariable @Min(1) Long id) {
         return ResponseEntity.ok(rideService.startRide(id));
     }
 
+    @Operation(summary = "End ride", description = "Driver ends an in-progress ride with final location data")
     @PutMapping("/{id}/end")
     @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> endRide(
@@ -90,6 +95,7 @@ public class RideController {
         return ResponseEntity.ok(rideService.endRide(id, request));
     }
 
+    @Operation(summary = "Cancel ride", description = "Driver or passenger cancels a ride with a reason")
     @PutMapping("/{id}/cancel")
     @PreAuthorize("hasRole('DRIVER') or hasRole('PASSENGER')")
     public ResponseEntity<RideResponse> cancelRide(
@@ -100,6 +106,7 @@ public class RideController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Panic ride", description = "Trigger a panic alert during a ride")
     @PutMapping("/{id}/panic")
     @PreAuthorize("hasRole('DRIVER') or hasRole('PASSENGER')")
     public ResponseEntity<RideResponse> panicRide(
@@ -110,6 +117,7 @@ public class RideController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Stop ride", description = "Driver adds a stop during the ride")
     @PutMapping("/{id}/stop")
     @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<RideResponse> stopRide(
@@ -120,8 +128,9 @@ public class RideController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Complete stop", description = "Mark a ride stop as completed")
     @PutMapping("/{id}/stop/{stopIndex}/complete")
-    @PreAuthorize("hasRole('DRIVER')")
+    @PreAuthorize("hasRole('DRIVER') or hasRole('PASSENGER')")
     public ResponseEntity<RideResponse> completeStop(
             @PathVariable @Min(1) Long id,
             @PathVariable @Min(0) Integer stopIndex) {
@@ -129,7 +138,7 @@ public class RideController {
         return ResponseEntity.ok(response);
     }
 
-    // 2.6.2 During ride: live tracking + inconsistency report (passengers)
+    @Operation(summary = "Report inconsistency", description = "Passenger reports a route inconsistency during a ride")
     @PostMapping("/{id}/inconsistencies")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<Void> reportInconsistency(
@@ -139,14 +148,14 @@ public class RideController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    // 2.6.2 During ride: live tracking + inconsistency report (passengers)
+    @Operation(summary = "Get active ride", description = "Get the currently active ride for a user")
     @GetMapping("/active")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RideResponse> getActiveRide(@RequestParam(required = false) @Min(1) Long userId) {
         return ResponseEntity.ok(rideService.getActiveRide(userId));
     }
 
-    // Admin endpoint: Get all active rides (PENDING, ACCEPTED, SCHEDULED, IN_PROGRESS)
+    @Operation(summary = "Get all active rides (admin)", description = "Paginated list of all active rides with optional search & filters (ADMIN only)")
     @GetMapping("/active/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<RideResponse>> getAllActiveRides(
@@ -157,8 +166,7 @@ public class RideController {
         return ResponseEntity.ok(rideService.getAllActiveRides(pageable, search, status, vehicleType));
     }
 
-    // 2.4.3 Adding route to favourite
-    // MARK as favourite (create)
+    @Operation(summary = "Add favourite route", description = "Save a ride route as a favourite (PASSENGER only)")
     @PreAuthorize("hasRole('PASSENGER')")
     @PostMapping("/{id}/favourite-route")
     public ResponseEntity<Void> addFavouriteRoute(
@@ -169,6 +177,7 @@ public class RideController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @Operation(summary = "Remove favourite route", description = "Delete a saved favourite route")
     @PreAuthorize("hasRole('PASSENGER')")
     @DeleteMapping("/{passengerId}/favourite-routes/{favouriteRouteId}")
     public ResponseEntity<Void> removeFavouriteRoute(
@@ -179,6 +188,7 @@ public class RideController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Get favourite routes", description = "List all favourite routes for a passenger")
     @PreAuthorize("hasRole('PASSENGER')")
     @GetMapping("/{id}/favourite-routes")
     public ResponseEntity<List<FavoriteRouteResponse>> getFavoriteRoutes(@PathVariable @Min(1) Long id) {

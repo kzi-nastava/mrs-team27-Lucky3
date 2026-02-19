@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    android:orientation="vertical">
+
+    <!-- Navbar -->
+    <include
+        android:id="@+id/navbar"
+        layout="@layout/view_custom_navbar" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header row: Title + actions -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Notifications"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btn_mark_all_read"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="Mark all read"
+                android:textColor="@color/yellow_500"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/bg_card"
+                android:paddingHorizontal="12dp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/btn_clear_all"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="Clear all"
+                android:textColor="@color/red_500"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/bg_card"
+                android:paddingHorizontal="12dp" />
+        </LinearLayout>
+
+        <!-- Unread count badge -->
+        <TextView
+            android:id="@+id/tv_unread_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@color/gray_300"
+            android:textSize="12sp"
+            android:background="@drawable/bg_badge_pill"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="5dp"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
+        <!-- Empty State -->
+        <LinearLayout
+            android:id="@+id/empty_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="48dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_notification_bell"
+                app:tint="@color/gray_700"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No notifications"
+                android:textColor="@color/gray_400"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="You're all caught up!"
+                android:textColor="@color/gray_600"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Notification List -->
+        <ListView
+            android:id="@+id/notification_list_view"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp" />
+
+    </LinearLayout>
+</LinearLayout>

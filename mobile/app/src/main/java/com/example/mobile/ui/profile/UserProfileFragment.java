@@ -1,10 +1,14 @@
 package com.example.mobile.ui.profile;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,8 +22,15 @@ import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentUserProfileBinding;
 import com.example.mobile.models.ProfileUserResponse;
 import com.example.mobile.models.User;
+import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
 import com.example.mobile.viewmodels.UserProfileViewModel;
+
+import com.example.mobile.utils.NavbarHelper;
+
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class UserProfileFragment extends Fragment {
 
@@ -31,13 +42,7 @@ public class UserProfileFragment extends Fragment {
         binding = FragmentUserProfileBinding.inflate(inflater, container, false);
 
         // set up navbar
-        View navbar = binding.getRoot().findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
-                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
-            });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Profile");
-        }
+        NavbarHelper.setup(this, binding.getRoot(), "Profile");
 
         return binding.getRoot();
     }
@@ -113,6 +118,37 @@ public class UserProfileFragment extends Fragment {
         // Update header section too
         binding.tvHeaderFullName.setText(profile.getName() + " " + profile.getSurname());
         binding.tvHeaderEmail.setText(profile.getEmail());
+
+        // Load profile image
+        loadProfileImage(profile.getImageUrl(), binding.ivHeaderAvatar);
+    }
+
+    /**
+     * Loads profile image from a relative URL (e.g. /api/users/5/profile-image)
+     * into the given ImageView on a background thread.
+     */
+    private void loadProfileImage(String imageUrl, ImageView imageView) {
+        if (imageUrl == null || imageUrl.isEmpty()) return;
+
+        // Build full URL from relative path
+        String fullUrl = ClientUtils.SERVICE_API_PATH + imageUrl.replaceFirst("^/", "");
+
+        new Thread(() -> {
+            try {
+                URL url = new URL(fullUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setDoInput(true);
+                connection.connect();
+                InputStream input = connection.getInputStream();
+                Bitmap bitmap = BitmapFactory.decodeStream(input);
+                input.close();
+                if (bitmap != null && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> imageView.setImageBitmap(bitmap));
+                }
+            } catch (Exception e) {
+                Log.e("UserProfileFragment", "Failed to load profile image", e);
+            }
+        }).start();
     }
 
     private void updateUIBasedOnRole() {

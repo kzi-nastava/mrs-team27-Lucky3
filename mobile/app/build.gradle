@@ -1,6 +1,17 @@
 plugins {
     alias(libs.plugins.android.application)
+    id 'com.google.gms.google-services'
 }
+
+// Read IP_ADDR from local.properties (falls back to emulator default 10.0.2.2)
+// To test on a physical device, add this line to mobile/local.properties:
+//   IP_ADDR=192.168.x.x    (your computer's WiFi IP)
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localProps.load(new FileInputStream(localPropsFile))
+}
+def ipAddr = localProps.getProperty('IP_ADDR', '10.0.2.2')
 
 android {
     namespace 'com.example.mobile'
@@ -17,18 +28,18 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // BuildConfig field for IP address configuration (Lecture 07)
-        buildConfigField "String", "IP_ADDR", "\"10.0.2.2\""
+        // IP address from local.properties (default: 10.0.2.2 for emulator)
+        buildConfigField "String", "IP_ADDR", "\"${ipAddr}\""
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField "String", "IP_ADDR", "\"YOUR_PRODUCTION_IP\""
+            buildConfigField "String", "IP_ADDR", "\"${ipAddr}\""
         }
         debug {
-            buildConfigField "String", "IP_ADDR", "\"10.0.2.2\""
+            buildConfigField "String", "IP_ADDR", "\"${ipAddr}\""
         }
     }
     compileOptions {
@@ -47,6 +58,7 @@ dependencies {
     implementation libs.constraintlayout
     implementation libs.lifecycle.livedata.ktx
     implementation libs.lifecycle.viewmodel.ktx
+    implementation libs.lifecycle.process
     implementation libs.navigation.fragment
     implementation libs.navigation.ui
 
@@ -72,4 +84,8 @@ dependencies {
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
+
+    implementation platform('com.google.firebase:firebase-bom:34.9.0')
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-messaging'
 }

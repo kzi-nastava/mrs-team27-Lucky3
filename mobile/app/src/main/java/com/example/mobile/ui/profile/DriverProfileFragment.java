@@ -1,6 +1,9 @@
 package com.example.mobile.ui.profile;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,9 +20,16 @@ import com.example.mobile.R;
 import com.example.mobile.databinding.FragmentDriverProfileBinding;
 import com.example.mobile.models.DriverProfileResponse;
 import com.example.mobile.models.ProfileUserResponse;
+import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
 import com.example.mobile.viewmodels.DriverProfileViewModel;
 import com.example.mobile.viewmodels.UserProfileViewModel;
+
+import com.example.mobile.utils.NavbarHelper;
+
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class DriverProfileFragment extends Fragment {
 
@@ -32,13 +42,7 @@ public class DriverProfileFragment extends Fragment {
         binding = FragmentDriverProfileBinding.inflate(inflater, container, false);
 
         // Navbar setup
-        View navbar = binding.getRoot().findViewById(R.id.navbar);
-        if (navbar != null) {
-            navbar.findViewById(R.id.btn_menu).setOnClickListener(v -> {
-                ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
-            });
-            ((TextView) navbar.findViewById(R.id.toolbar_title)).setText("Profile");
-        }
+        NavbarHelper.setup(this, binding.getRoot(), "Profile");
 
         return binding.getRoot();
     }
@@ -120,6 +124,9 @@ public class DriverProfileFragment extends Fragment {
         // Update header section
         binding.tvHeaderFullName.setText(profile.getName() + " " + profile.getSurname());
         binding.tvHeaderEmail.setText(profile.getEmail());
+
+        // Load profile image
+        loadProfileImage(profile.getProfilePictureUrl(), binding.ivHeaderAvatar);
     }
 
     /**
@@ -141,7 +148,33 @@ public class DriverProfileFragment extends Fragment {
         }
     }
 
+    /**
+     * Loads profile image from a relative URL (e.g. /api/users/5/profile-image)
+     * into the given ImageView on a background thread.
+     */
+    private void loadProfileImage(String imageUrl, ImageView imageView) {
+        if (imageUrl == null || imageUrl.isEmpty()) return;
 
+        // Build full URL from relative path
+        String fullUrl = ClientUtils.SERVICE_API_PATH + imageUrl.replaceFirst("^/", "");
+
+        new Thread(() -> {
+            try {
+                URL url = new URL(fullUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setDoInput(true);
+                connection.connect();
+                InputStream input = connection.getInputStream();
+                Bitmap bitmap = BitmapFactory.decodeStream(input);
+                input.close();
+                if (bitmap != null && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> imageView.setImageBitmap(bitmap));
+                }
+            } catch (Exception e) {
+                Log.e("DriverProfileFragment", "Failed to load profile image", e);
+            }
+        }).start();
+    }
 
     @Override
     public void onDestroyView() {

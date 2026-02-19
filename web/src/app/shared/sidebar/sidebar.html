@@ -69,6 +69,7 @@
     <ng-container *ngFor="let item of items">
       <!-- Items with route (normal navigation) -->
       <a *ngIf="!item.action && item.icon !== 'logout'"
+         [attr.id]="'sidebar-' + item.icon"
          [routerLink]="item.route"
          (click)="onItemClick(item)"
          class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer"

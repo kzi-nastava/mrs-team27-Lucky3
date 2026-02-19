@@ -7,6 +7,8 @@ import com.team27.lucky3.backend.entity.enums.RideStatus;
 import com.team27.lucky3.backend.repository.RideTrackingTokenRepository;
 import com.team27.lucky3.backend.service.RideService;
 import com.team27.lucky3.backend.util.RideTrackingTokenUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -16,15 +18,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Controller for token-based ride tracking.
- * Allows linked passengers (registered or not) to view ride status using a tracking token.
- * This endpoint does NOT require authentication.
- */
 @RestController
 @RequestMapping("/api/ride-tracking")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Ride Tracking", description = "Token-based ride tracking for linked passengers (public, no auth required)")
 public class RideTrackingController {
 
     private final RideTrackingTokenRepository trackingTokenRepository;
@@ -40,10 +38,7 @@ public class RideTrackingController {
             RideStatus.ACTIVE
     );
 
-    /**
-     * Validates a tracking token and returns basic info about its validity.
-     * Used by frontend to check if token is valid before navigating to tracking page.
-     */
+    @Operation(summary = "Validate tracking token", description = "Check if a ride tracking token is valid and ride is trackable (public)", security = {})
     @GetMapping("/validate")
     public ResponseEntity<?> validateToken(@RequestParam String token) {
         try {
@@ -101,10 +96,7 @@ public class RideTrackingController {
         }
     }
 
-    /**
-     * Get ride details using a tracking token.
-     * Returns ride information for tracking purposes (read-only).
-     */
+    @Operation(summary = "Get ride by tracking token", description = "Retrieve ride details for tracking (public, read-only)", security = {})
     @GetMapping("/ride")
     public ResponseEntity<?> getRideByToken(@RequestParam String token) {
         try {

@@ -14,6 +14,8 @@ import com.team27.lucky3.backend.entity.enums.VehicleType;
 import com.team27.lucky3.backend.exception.ResourceNotFoundException;
 import com.team27.lucky3.backend.service.DriverChangeRequestService;
 import com.team27.lucky3.backend.service.DriverService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -33,12 +35,12 @@ import java.util.List;
 @RequestMapping(value = "/api/drivers")
 @RequiredArgsConstructor
 @Validated
-
+@Tag(name = "Drivers", description = "Driver management, status toggle, statistics & vehicle info")
 public class DriverController {
     private final DriverService driverService;
     private final DriverChangeRequestService driverChangeRequestService;
 
-    // 2.2.1 Toggle driver online/offline status
+    @Operation(summary = "Toggle driver status", description = "Set driver online/offline (DRIVER only)")
     @PreAuthorize("hasRole('DRIVER')")
     @PutMapping("/{id}/status")
     public ResponseEntity<DriverStatusResponse> toggleDriverStatus(
@@ -50,7 +52,7 @@ public class DriverController {
         return ResponseEntity.ok(response);
     }
 
-    // 2.2.1 Get current driver status
+    @Operation(summary = "Get driver status", description = "Get current online/offline status and working hours (DRIVER only)")
     @PreAuthorize("hasRole('DRIVER')")
     @GetMapping("/{id}/status")
     public ResponseEntity<DriverStatusResponse> getDriverStatus(@PathVariable Long id) {
@@ -58,7 +60,7 @@ public class DriverController {
         return ResponseEntity.ok(response);
     }
 
-    // Get driver statistics (earnings, rides completed, rating, online hours)
+    @Operation(summary = "Get driver stats", description = "Earnings, rides completed, rating, online hours (public)", security = {})
     //@PreAuthorize("hasRole('DRIVER')")
     @GetMapping("/{id}/stats")
     public ResponseEntity<DriverStatsResponse> getDriverStats(@PathVariable Long id) {
@@ -66,7 +68,7 @@ public class DriverController {
         return ResponseEntity.ok(response);
     }
 
-    // 2.2.3 Admin creates driver accounts + vehicle info + password setup via email link (admin, driver)
+    @Operation(summary = "Create driver (admin)", description = "Admin creates a new driver account with vehicle info")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DriverResponse> createDriver(@Valid @RequestPart("request") CreateDriverRequest request,
@@ -75,6 +77,7 @@ public class DriverController {
         return ResponseEntity.ok(created);
     }
 
+    @Operation(summary = "Set initial driver password", description = "Driver sets password via activation token (public, no auth required)", security = {})
     @PostMapping(value = "/driver-activation/password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody SetInitialPassword initialPassword,
                                                    PasswordEncoder passwordEncoder,
@@ -83,7 +86,7 @@ public class DriverController {
         return ResponseEntity.noContent().build();
     }
 
-    // Get all drivers (admin only)
+    @Operation(summary = "Get all drivers (admin)", description = "List all driver accounts (ADMIN only)")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<DriverResponse>> getAllDrivers() {
@@ -92,7 +95,7 @@ public class DriverController {
         return ResponseEntity.ok(drivers);
     }
 
-
+    @Operation(summary = "Get driver by ID", description = "Get driver profile details")
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<DriverResponse> getDriver(@PathVariable Long id) {
@@ -100,6 +103,7 @@ public class DriverController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Request profile change", description = "Driver submits a profile change request for admin review (DRIVER only)")
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<DriverChangeRequestCreated> createDriver(
@@ -120,7 +124,7 @@ public class DriverController {
                 .body(body);
     }
 
-    // 2.3 Profile page (registered user, driver, admin)
+    @Operation(summary = "Get driver vehicle", description = "Get vehicle info for a driver")
     @GetMapping("/{id}/vehicle")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<VehicleInformation> getDriverVehicle(@PathVariable @Min(1) Long id) {

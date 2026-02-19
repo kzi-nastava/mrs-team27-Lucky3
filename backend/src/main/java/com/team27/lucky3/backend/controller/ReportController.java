@@ -2,8 +2,12 @@ package com.team27.lucky3.backend.controller;
 
 import com.team27.lucky3.backend.dto.response.ReportResponse;
 import com.team27.lucky3.backend.entity.enums.UserRole;
+import com.team27.lucky3.backend.service.ReportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,28 +22,35 @@ import java.util.Map;
 @RequestMapping(value = "/api/reports", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Reports", description = "Analytics reports for users and admins")
 public class ReportController {
+    private final ReportService reportService;
 
-    // 2.10 Generate reports (Admin, Driver, User)
-    // Types: "RIDES", "KILOMETERS", "MONEY"
+    @Operation(summary = "Get user report by ID", description = "Generate report for a user over a date range")
     @GetMapping("/{userId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReportResponse> getReport(
+    public ResponseEntity<ReportResponse> getReportForUser(
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            @RequestParam @NotNull String type) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
 
-        // Mock
-        ReportResponse response = new ReportResponse(
-                Map.of("2025-01-20", 150.0, "2025-01-21", 200.0),
-                350.0,
-                175.0
-        );
+        ReportResponse response = reportService.generateReportForUser(userId, from, to);
         return ResponseEntity.ok(response);
     }
 
-    // Admin global report
+    @Operation(summary = "Get user report by email (admin)", description = "Generate report for a user by email (ADMIN only)")
+    @GetMapping("/user/{email}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ReportResponse> getReportForUser(
+            @PathVariable String email,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+
+        ReportResponse response = reportService.generateReportForUser(email, from, to);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get global report (admin)", description = "Generate a platform-wide report by type (rides/earnings/etc.)")
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ReportResponse> getGlobalReport(
@@ -47,11 +58,7 @@ public class ReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @RequestParam @NotNull String type) {
 
-        ReportResponse response = new ReportResponse(
-                Map.of("2025-01-20", 1500.0, "2025-01-21", 2000.0),
-                3500.0,
-                1750.0
-        );
+        ReportResponse response = reportService.generateGlobalReport(from, to, type);
         return ResponseEntity.ok(response);
     }
 }

@@ -149,7 +149,43 @@
         android:id="@+id/nav_admin_dashboard"
         android:name="com.example.mobile.ui.admin.AdminDashboardFragment"
         android:label="Admin Dashboard"
-        tools:layout="@layout/fragment_admin_dashboard" />
+        tools:layout="@layout/fragment_admin_dashboard">
+        <action
+            android:id="@+id/action_admin_dashboard_to_admin_ride_detail"
+            app:destination="@id/nav_admin_active_ride_detail" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_admin_ride_history"
+        android:name="com.example.mobile.ui.admin.AdminRideHistoryFragment"
+        android:label="Ride History"
+        tools:layout="@layout/fragment_admin_ride_history">
+        <action
+            android:id="@+id/action_admin_ride_history_to_admin_ride_detail"
+            app:destination="@id/nav_admin_ride_detail" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_admin_ride_detail"
+        android:name="com.example.mobile.ui.admin.AdminRideDetailFragment"
+        android:label="Ride Details"
+        tools:layout="@layout/fragment_admin_ride_detail">
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_admin_active_ride_detail"
+        android:name="com.example.mobile.ui.admin.AdminActiveRideDetailFragment"
+        android:label="Active Ride"
+        tools:layout="@layout/fragment_admin_active_ride_detail">
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_passenger_home"
@@ -223,15 +259,69 @@
 
     <fragment
         android:id="@+id/nav_admin_support"
-        android:name="com.example.mobile.ui.support.SupportFragment"
+        android:name="com.example.mobile.ui.support.AdminSupportListFragment"
         android:label="Support"
-        tools:layout="@layout/fragment_support" />
+        tools:layout="@layout/fragment_admin_support_list">
+        <action
+            android:id="@+id/action_admin_support_list_to_chat"
+            app:destination="@id/nav_admin_support_chat" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_admin_support_chat"
+        android:name="com.example.mobile.ui.support.AdminSupportChatFragment"
+        android:label="Support Chat"
+        tools:layout="@layout/fragment_admin_support_chat">
+        <argument
+            android:name="chatId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+        <argument
+            android:name="userName"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="userRole"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_admin_panic"
+        android:name="com.example.mobile.ui.admin.AdminPanicFragment"
+        android:label="Panic Alerts"
+        tools:layout="@layout/fragment_admin_panic" />
 
     <fragment
         android:id="@+id/nav_passenger_history"
         android:name="com.example.mobile.ui.passenger.PassengerHistoryFragment"
         android:label="Ride History"
-        tools:layout="@layout/fragment_passenger_history" />
+        tools:layout="@layout/fragment_passenger_history">
+
+        <action
+            android:id="@+id/action_passenger_history_to_passenger_ride_detail"
+            app:destination="@id/nav_passenger_ride_detail" />
+
+        <action
+            android:id="@+id/action_passenger_history_to_review"
+            app:destination="@id/nav_review" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_passenger_ride_detail"
+        android:name="com.example.mobile.ui.passenger.PassengerRideDetailFragment"
+        android:label="Ride Detail"
+        tools:layout="@layout/fragment_passenger_ride_detail">
+
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+
+        <action
+            android:id="@+id/action_passenger_ride_detail_to_review"
+            app:destination="@id/nav_review" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_passenger_profile"
@@ -243,7 +333,7 @@
         android:id="@+id/nav_passenger_support"
         android:name="com.example.mobile.ui.support.SupportFragment"
         android:label="Support"
-        tools:layout="@layout/fragment_support" />
+        tools:layout="@layout/fragment_support_chat" />
 
     <fragment
         android:id="@+id/nav_passenger_favorites"
@@ -255,5 +345,31 @@
         android:id="@+id/nav_driver_support"
         android:name="com.example.mobile.ui.support.SupportFragment"
         android:label="Support"
-        tools:layout="@layout/fragment_support" />
+        tools:layout="@layout/fragment_support_chat" />
+
+    <fragment
+        android:id="@+id/nav_review"
+        android:name="com.example.mobile.ui.passenger.ReviewFragment"
+        android:label="Review"
+        tools:layout="@layout/fragment_review">
+
+        <argument
+            android:name="rideId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+
+        <argument
+            android:name="reviewToken"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <deep-link
+            app:uri="lucky3://review?token={reviewToken}" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_notifications"
+        android:name="com.example.mobile.ui.notifications.NotificationPanelFragment"
+        android:label="Notifications"
+        tools:layout="@layout/fragment_notifications" />
 </navigation>

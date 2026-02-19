@@ -80,4 +80,34 @@ public interface RideRepository extends JpaRepository<Ride, Long>, JpaSpecificat
             @Param("end") LocalDateTime end,
             @Param("statuses") List<RideStatus> statuses
     );
+//____________________________________________________________________________________________________________________________________________________________
+// this is used for reports
+
+    // Find rides for a specific driver
+    List<Ride> findByDriverIdAndStartTimeBetweenAndStatus(
+            Long driverId,
+            LocalDateTime from,
+            LocalDateTime to,
+            RideStatus status);
+
+    // Find rides for a specific passenger using the ride_passengers join table
+    @Query(value = "SELECT r.* FROM ride r " +
+            "INNER JOIN ride_passengers rp ON r.id = rp.ride_id " +
+            "WHERE rp.user_id = :passengerId " +
+            "AND r.start_time BETWEEN :from AND :to " +
+            "AND r.status = :status",
+            nativeQuery = true)
+    List<Ride> findRidesForPassenger(
+            @Param("passengerId") Long passengerId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            @Param("status") String status);
+
+    // Find all rides in date range
+    List<Ride> findByStartTimeBetweenAndStatus(
+            LocalDateTime from,
+            LocalDateTime to,
+            RideStatus status);
 }
+
+

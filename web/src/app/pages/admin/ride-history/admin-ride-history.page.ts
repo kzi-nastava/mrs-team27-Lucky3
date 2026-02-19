@@ -31,10 +31,20 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
   // Search/filter controls
   searchType: 'driver' | 'passenger' = 'driver';
   searchId: number | null = null;
-  dateFilter: string = '';
+  dateFrom: string = '';
+  dateTo: string = '';
   statusFilter: string = 'all';
   sortField: AdminRideSortField = 'startTime';
   sortDirection: 'asc' | 'desc' = 'desc';
+  
+  // Pagination
+  currentPage: number = 0;
+  pageSize: number = 5;
+  totalElements: number = 0;
+  totalPages: number = 0;
+
+  // E2E test support: increments on each data load for fast refresh detection
+  loadId: number = 0;
   
   // User info for display
   selectedUserName: string = '';
@@ -43,7 +53,7 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
   private map: L.Map | undefined;
 
-  readonly statusOptions = ['all', 'PENDING', 'ACCEPTED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_PASSENGER', 'REJECTED', 'PANIC'];
+  readonly statusOptions = ['all', 'FINISHED', 'CANCELLED', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_PASSENGER'];
 
   constructor(
     private router: Router,
@@ -84,6 +94,7 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onSearch() {
+    this.currentPage = 0;
     this.loadRides();
   }
 
@@ -91,6 +102,7 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
     this.searchId = null;
     this.selectedUserName = '';
     this.selectedUserEmail = '';
+    this.currentPage = 0;
     this.loadRides();
   }
 
@@ -98,21 +110,24 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
     let fromDate: string | undefined;
     let toDate: string | undefined;
 
-    if (this.dateFilter) {
-      const start = new Date(this.dateFilter);
+    if (this.dateFrom) {
+      const start = new Date(this.dateFrom);
       start.setHours(0, 0, 0, 0);
       fromDate = start.toISOString();
-      const end = new Date(this.dateFilter);
+    }
+    if (this.dateTo) {
+      const end = new Date(this.dateTo);
       end.setHours(23, 59, 59, 999);
       toDate = end.toISOString();
     }
 
     const backendSort = this.mapSortFieldToBackend(this.sortField);
-    const statusParam = this.statusFilter === 'all' ? undefined : this.statusFilter;
+    const historyStatuses = 'FINISHED,CANCELLED,CANCELLED_BY_DRIVER,CANCELLED_BY_PASSENGER';
+    const statusParam = this.statusFilter === 'all' ? historyStatuses : this.statusFilter;
 
     const params: any = {
-      page: 0,
-      size: 100,
+      page: this.currentPage,
+      size: this.pageSize,
       sort: `${backendSort},${this.sortDirection}`,
       fromDate,
       toDate,
@@ -133,6 +148,9 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
       .subscribe({
         next: (page) => {
           this.rides = page.content || [];
+          this.totalElements = page.totalElements || 0;
+          this.totalPages = page.totalPages || 0;
+          this.loadId++;
           // Only set user info when searching by specific ID
           if (this.searchId && this.rides.length > 0) {
             if (this.searchType === 'driver' && this.rides[0].driver) {
@@ -154,7 +172,11 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
           }
           this.cdr.detectChanges();
         },
-        error: (err) => console.error('Failed to load history', err)
+        error: (err) => {
+          console.error('Failed to load history', err);
+          this.loadId++;
+          this.cdr.detectChanges();
+        }
       });
   }
 
@@ -166,7 +188,7 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
       case 'totalCost': return 'totalCost';
       case 'departure': return 'startLocation.address';
       case 'status': return 'status';
-      case 'cancelledBy': return 'cancelledBy';
+      case 'cancelledBy': return 'status';
       case 'panic': return 'panicPressed';
       default: return 'startTime';
     }
@@ -179,7 +201,45 @@ export class AdminRideHistoryPage implements OnInit, OnDestroy, AfterViewInit {
       this.sortField = field;
       this.sortDirection = 'desc';
     }
+    this.currentPage = 0;
     this.loadRides();
+  }
+
+  // Pagination
+  goToPage(page: number) {
+    if (page < 0 || page >= this.totalPages) return;
+    this.currentPage = page;
+    this.loadRides();
+  }
+
+  nextPage() {
+    this.goToPage(this.currentPage + 1);
+  }
+
+  prevPage() {
+    this.goToPage(this.currentPage - 1);
+  }
+
+  get visiblePages(): number[] {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(this.totalPages, start + maxVisible);
+    if (end - start < maxVisible) {
+      start = Math.max(0, end - maxVisible);
+    }
+    for (let i = start; i < end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  get startItem(): number {
+    return this.totalElements === 0 ? 0 : this.currentPage * this.pageSize + 1;
+  }
+
+  get endItem(): number {
+    return Math.min((this.currentPage + 1) * this.pageSize, this.totalElements);
   }
 
   onRideSelected(ride: RideResponse) {

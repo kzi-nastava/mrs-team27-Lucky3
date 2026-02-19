@@ -62,9 +62,6 @@ public interface NotificationService {
     /** SUPPORT CHAT — User sent a message → notify all admins. */
     void sendSupportMessageToAdmins(User sender, Long chatId, String messagePreview);
 
-    /** SUPPORT CHAT — Admin replied → notify the user who owns the chat. */
-    void sendSupportReplyToUser(User chatOwner, Long chatId);
-
     /** RIDE CREATED — Notify passengers when ride is created. */
     void sendRideCreatedNotification(Ride ride);
 
@@ -73,6 +70,9 @@ public interface NotificationService {
 
     /** SCHEDULED RIDE REMINDER — 15 min before scheduled start. */
     void sendScheduledRideReminder(Ride ride);
+
+    /** LEAVE REVIEW — Sent to ride creator when ride finishes (end or stop early). */
+    void sendLeaveReviewNotification(Ride ride);
 
     // ─── linked passenger notifications (email + token) ───────────────
 
@@ -99,6 +99,27 @@ public interface NotificationService {
      */
     void notifyLinkedPassengersRideCancelled(Ride ride, User cancelledBy);
 
+    /**
+     * Notify linked passengers when a ride status changes (e.g., accepted, started).
+     * Sends push notification only to registered users (no email for status changes).
+     */
+    void notifyLinkedPassengersRideStatusChange(Ride ride, String statusMessage);
+
+    /**
+     * Notify all ride participants when a stop is completed.
+     * Sends push + FCM to all passengers, driver, and linked passengers.
+     *
+     * @param ride      The ride
+     * @param stopIndex The index of the completed stop (-1 = start location)
+     */
+    void sendStopCompletedNotification(Ride ride, int stopIndex);
+
+    /**
+     * Notify linked passengers when a stop is completed.
+     * Sends push notification only to registered users.
+     */
+    void notifyLinkedPassengersStopCompleted(Ride ride, int stopIndex);
+
     // ─── history / read-state endpoints ────────────────────────────────
 
     /** Paginated notification history for a user. */
@@ -117,4 +138,10 @@ public interface NotificationService {
 
     /** Unread count for badge display. */
     long getUnreadCount(Long userId);
+
+    /** Delete all notifications for a user. Returns count deleted. */
+    int deleteAllForUser(Long userId);
+
+    /** Delete a single notification by ID, verifying ownership. */
+    void deleteNotification(Long notificationId, Long userId);
 }
