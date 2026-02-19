@@ -157,12 +157,13 @@
                 android:gravity="end" />
         </LinearLayout>
 
-        <!-- Row 4: Cost + Cancelled By -->
+        <!-- Row 4: Cost + Distance/Duration -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="4dp">
 
             <TextView
                 android:id="@+id/tv_cost"
@@ -179,14 +180,23 @@
                 android:layout_weight="1" />
 
             <TextView
-                android:id="@+id/tv_cancelled_by"
+                android:id="@+id/tv_distance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Cancelled by Driver"
+                android:text="3.2 km • 12 min"
                 android:textSize="11sp"
-                android:textColor="@color/red_500"
-                android:visibility="gone" />
+                android:textColor="@color/gray_400" />
         </LinearLayout>
+
+        <!-- Row 4b: Cancelled By -->
+        <TextView
+            android:id="@+id/tv_cancelled_by"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancelled by Driver"
+            android:textSize="11sp"
+            android:textColor="@color/red_500"
+            android:visibility="gone" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -571,6 +571,7 @@ public class AdminRideHistoryFragment extends Fragment implements SensorEventLis
                 holder.tvStartTime = convertView.findViewById(R.id.tv_start_time);
                 holder.tvEndTime = convertView.findViewById(R.id.tv_end_time);
                 holder.tvCost = convertView.findViewById(R.id.tv_cost);
+                holder.tvDistance = convertView.findViewById(R.id.tv_distance);
                 holder.tvCancelledBy = convertView.findViewById(R.id.tv_cancelled_by);
                 holder.cardContent = convertView.findViewById(R.id.card_content);
                 convertView.setTag(holder);
@@ -637,6 +638,17 @@ public class AdminRideHistoryFragment extends Fragment implements SensorEventLis
             double cost = ride.getEffectiveCost();
             holder.tvCost.setText(String.format(Locale.US, "%.0f RSD", cost));
 
+            // Distance + duration
+            double distance = ride.getEffectiveDistance();
+            String durationStr = "\u2014";
+            if (startDate != null && endDate != null) {
+                long durationMinutes = (endDate.getTime() - startDate.getTime()) / 60000;
+                durationStr = durationMinutes + " min";
+            } else if (ride.getEstimatedTimeInMinutes() != null) {
+                durationStr = ride.getEstimatedTimeInMinutes() + " min";
+            }
+            holder.tvDistance.setText(String.format(Locale.US, "%.1f km • %s", distance, durationStr));
+
             // Cancelled by
             if (ride.isCancelled()) {
                 String cancelledBy = ride.getCancelledBy();
@@ -672,7 +684,7 @@ public class AdminRideHistoryFragment extends Fragment implements SensorEventLis
 
         class ViewHolder {
             TextView tvStatus, tvPanic, tvDate, tvDeparture, tvDestination;
-            TextView tvStartTime, tvEndTime, tvCost, tvCancelledBy;
+            TextView tvStartTime, tvEndTime, tvCost, tvDistance, tvCancelledBy;
             LinearLayout cardContent;
         }
     }
