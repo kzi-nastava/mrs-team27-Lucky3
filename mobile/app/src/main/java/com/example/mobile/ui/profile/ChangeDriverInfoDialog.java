@@ -1,11 +1,16 @@
 package com.example.mobile.ui.profile;
 
+import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -23,6 +28,9 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.Gson;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
@@ -35,6 +43,22 @@ public class ChangeDriverInfoDialog extends BottomSheetDialogFragment {
     private DialogChangeDriverInfoBinding binding;
     private Long driverId;
     private String token;
+    private Uri selectedPhotoUri = null;
+
+    // Activity result launcher for photo picker
+    private final ActivityResultLauncher<Intent> photoPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    selectedPhotoUri = result.getData().getData();
+                    if (selectedPhotoUri != null) {
+                        binding.photoPreview.setImageURI(selectedPhotoUri);
+                        binding.photoPreview.setVisibility(View.VISIBLE);
+                        binding.photoPlaceholder.setVisibility(View.GONE);
+                    }
+                }
+            }
+    );
 
     // Factory method to create instance with userId AND token
     public static ChangeDriverInfoDialog newInstance(Long driverId, String token) {
@@ -63,9 +87,17 @@ public class ChangeDriverInfoDialog extends BottomSheetDialogFragment {
             this.token = getArguments().getString("token");
         }
         setupVehicleTypeSpinner();
+        binding.photoPickerContainer.setOnClickListener(v -> openPhotoPicker());
         binding.btnSubmit.setOnClickListener(v -> handleSubmit());
 
     }
+
+    private void openPhotoPicker() {
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("image/*");
+        photoPickerLauncher.launch(intent);
+    }
+
     private void setupVehicleTypeSpinner() {
         // Define the three vehicle types you want
         String[] vehicleTypes = {"STANDARD", "VAN", "LUXURY"};
@@ -154,6 +186,9 @@ public class ChangeDriverInfoDialog extends BottomSheetDialogFragment {
         RequestBody driverData = RequestBody.create(MediaType.parse("application/json"), jsonString);
 
         MultipartBody.Part imagePart = null;
+        if (selectedPhotoUri != null) {
+            imagePart = buildImagePart(selectedPhotoUri);
+        }
         String authToken = "Bearer " + token;
 
         Call<DriverChangeRequestCreated> call = ClientUtils.driverService.updateDriverInfo(
@@ -182,6 +217,43 @@ public class ChangeDriverInfoDialog extends BottomSheetDialogFragment {
                 showPopup("Error", "Network error: " + t.getMessage());
             }
         });
+    }
+
+    private MultipartBody.Part buildImagePart(Uri uri) {
+        try {
+            android.content.ContentResolver resolver = requireContext().getContentResolver();
+            String mimeType = resolver.getType(uri);
+            if (mimeType == null) mimeType = "image/jpeg";
+
+            // Read bytes from content URI
+            InputStream inputStream = resolver.openInputStream(uri);
+            if (inputStream == null) return null;
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(chunk)) != -1) {
+                buffer.write(chunk, 0, bytesRead);
+            }
+            inputStream.close();
+            byte[] imageBytes = buffer.toByteArray();
+
+            // Determine file name from URI
+            String fileName = "profile_image.jpg";
+            try (android.database.Cursor cursor = resolver.query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex >= 0) {
+                        fileName = cursor.getString(nameIndex);
+                    }
+                }
+            }
+
+            RequestBody requestBody = RequestBody.create(MediaType.parse(mimeType), imageBytes);
+            return MultipartBody.Part.createFormData("profileImage", fileName, requestBody);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private void showPopup(String title, String message) {
