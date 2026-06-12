@@ -37,7 +37,7 @@ public class ClientUtils {
      * Format: http://<IP_ADDR>:8081/
      * Note: Do not include trailing path segments - Retrofit endpoints handle the rest
      */
-    public static final String SERVICE_API_PATH = "http://" + BuildConfig.IP_ADDR + ":8081/";
+    public static final String SERVICE_API_PATH = "http://" + BuildConfig.IP_ADDR + ":8080/";
 
     /**
      * Connection timeout in seconds.

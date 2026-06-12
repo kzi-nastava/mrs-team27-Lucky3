@@ -1,5 +1,8 @@
 package com.example.mobile.ui.profile;
 
+import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -7,6 +10,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -16,6 +21,9 @@ import com.example.mobile.utils.ClientUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.Gson;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -29,6 +37,22 @@ public class ChangePersonalInfoDialog extends BottomSheetDialogFragment {
     private DialogChangePersonalInfoBinding binding;
     private Long userId;
     private String token;
+    private Uri selectedPhotoUri = null;
+
+    // Activity result launcher for photo picker
+    private final ActivityResultLauncher<Intent> photoPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    selectedPhotoUri = result.getData().getData();
+                    if (selectedPhotoUri != null) {
+                        binding.photoPreview.setImageURI(selectedPhotoUri);
+                        binding.photoPreview.setVisibility(View.VISIBLE);
+                        binding.photoPlaceholder.setVisibility(View.GONE);
+                    }
+                }
+            }
+    );
 
     // Factory method to create instance with userId AND token
     public static ChangePersonalInfoDialog newInstance(Long userId, String token) {
@@ -63,7 +87,14 @@ public class ChangePersonalInfoDialog extends BottomSheetDialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        binding.photoPickerContainer.setOnClickListener(v -> openPhotoPicker());
         binding.btnSubmit.setOnClickListener(v -> handleSubmit());
+    }
+
+    private void openPhotoPicker() {
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("image/*");
+        photoPickerLauncher.launch(intent);
     }
 
     private void handleSubmit() {
@@ -107,16 +138,18 @@ public class ChangePersonalInfoDialog extends BottomSheetDialogFragment {
                 jsonString
         );
 
-        // Create empty image part (since we're not uploading image here)
-        // If you need to send null, you can pass null to the call
-        MultipartBody.Part imagePart = null;  // or create an empty part if backend requires it
+        // Create image part if a photo was selected
+        MultipartBody.Part imagePart = null;
+        if (selectedPhotoUri != null) {
+            imagePart = buildImagePart(selectedPhotoUri);
+        }
 
         String authToken = "Bearer " + token;
 
         Call<ProfileUserResponse> call = ClientUtils.userService.updatePersonalInfo(
                 userId,
                 userData,
-                imagePart,  // null for no image
+                imagePart,
                 authToken
         );
 
@@ -154,6 +187,43 @@ public class ChangePersonalInfoDialog extends BottomSheetDialogFragment {
                 showPopup("Error", "Network error: " + t.getMessage());
             }
         });
+    }
+
+    private MultipartBody.Part buildImagePart(Uri uri) {
+        try {
+            android.content.ContentResolver resolver = requireContext().getContentResolver();
+            String mimeType = resolver.getType(uri);
+            if (mimeType == null) mimeType = "image/jpeg";
+
+            // Read bytes from content URI
+            InputStream inputStream = resolver.openInputStream(uri);
+            if (inputStream == null) return null;
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(chunk)) != -1) {
+                buffer.write(chunk, 0, bytesRead);
+            }
+            inputStream.close();
+            byte[] imageBytes = buffer.toByteArray();
+
+            // Determine file name from URI
+            String fileName = "profile_image.jpg";
+            try (android.database.Cursor cursor = resolver.query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex >= 0) {
+                        fileName = cursor.getString(nameIndex);
+                    }
+                }
+            }
+
+            RequestBody requestBody = RequestBody.create(MediaType.parse(mimeType), imageBytes);
+            return MultipartBody.Part.createFormData("profileImage", fileName, requestBody);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private void showPopup(String title, String message) {
