@@ -112,7 +112,7 @@ public class ActiveRideFragment extends Fragment {
     private TextView tvDriverName, tvDriverVehicle;
     private LinearLayout passengersList;
     private TextView tvCancelledBy, tvCancellationReason;
-    private MaterialButton btnDriverCancel, btnPassengerCancel;
+    private MaterialButton btnDriverCancel, btnPassengerCancel, btnStartRide;
     private MaterialButton btnReportInconsistency, btnPanic, btnStopRide;
     private MaterialButton btnFinishRide;
     private TextView tvFinishRideReason;
@@ -187,6 +187,7 @@ public class ActiveRideFragment extends Fragment {
         passengersList = root.findViewById(R.id.passengers_list);
         tvCancelledBy = root.findViewById(R.id.tv_cancelled_by);
         tvCancellationReason = root.findViewById(R.id.tv_cancellation_reason);
+        btnStartRide = root.findViewById(R.id.btn_start_ride);
         btnDriverCancel = root.findViewById(R.id.btn_driver_cancel);
         btnPassengerCancel = root.findViewById(R.id.btn_passenger_cancel);
         btnReportInconsistency = root.findViewById(R.id.btn_report_inconsistency);
@@ -1346,6 +1347,7 @@ public class ActiveRideFragment extends Fragment {
         Long userId = preferencesManager.getUserId();
         String status = ride.getStatus();
 
+        btnStartRide.setVisibility(View.GONE);
         btnDriverCancel.setVisibility(View.GONE);
         btnPassengerCancel.setVisibility(View.GONE);
         btnReportInconsistency.setVisibility(View.GONE);
@@ -1406,6 +1408,9 @@ public class ActiveRideFragment extends Fragment {
         }
 
         if ("DRIVER".equals(role) && isCurrentUserDriver()) {
+            btnStartRide.setVisibility(View.VISIBLE);
+            btnStartRide.setOnClickListener(v -> startRideOnBackend());
+            
             btnDriverCancel.setVisibility(View.VISIBLE);
             btnDriverCancel.setOnClickListener(v -> openDriverCancelDialog());
         } else if ("PASSENGER".equals(role) && isCurrentUserPassenger()) {
@@ -1427,6 +1432,38 @@ public class ActiveRideFragment extends Fragment {
             if (p.getId() != null && p.getId().equals(userId)) return true;
         }
         return false;
+    }
+
+    private void startRideOnBackend() {
+        if (rideId <= 0) return;
+        String token = "Bearer " + preferencesManager.getToken();
+        
+        btnStartRide.setEnabled(false);
+        
+        ClientUtils.rideService.startRide(rideId, token).enqueue(new Callback<RideResponse>() {
+            @Override
+            public void onResponse(Call<RideResponse> call, Response<RideResponse> response) {
+                if (!isAdded()) return;
+                btnStartRide.setEnabled(true);
+                
+                if (response.isSuccessful() && response.body() != null) {
+                    ride = response.body();
+                    Toast.makeText(requireContext(), "Ride started!", Toast.LENGTH_SHORT).show();
+                    updateUI();
+                } else {
+                    Log.e(TAG, "Failed to start ride: " + response.code());
+                    Toast.makeText(requireContext(), "Failed to start ride", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<RideResponse> call, Throwable t) {
+                if (!isAdded()) return;
+                btnStartRide.setEnabled(true);
+                Log.e(TAG, "Network error starting ride", t);
+                Toast.makeText(requireContext(), "Network error", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void openDriverCancelDialog() {
