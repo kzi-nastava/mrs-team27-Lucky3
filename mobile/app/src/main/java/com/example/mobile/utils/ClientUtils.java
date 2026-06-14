@@ -9,6 +9,7 @@ import com.example.mobile.services.UserService;
 import com.example.mobile.services.VehicleService;
 import com.example.mobile.services.AdminService;
 import com.example.mobile.services.NotificationApiService;
+import com.example.mobile.services.ReportService;
 import com.example.mobile.services.SupportService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -145,6 +146,11 @@ public class ClientUtils {
      * NotificationApiService instance (notification management endpoints).
      */
     public static final NotificationApiService notificationService = retrofit.create(NotificationApiService.class);
+
+    /**
+     * ReportService instance
+     */
+    public static final ReportService reportService = retrofit.create(ReportService.class);
 
     /**
      * Returns the base Retrofit instance.

@@ -1,4 +1,4 @@
-package com.example.mobile.ui.admin;
+package com.example.mobile.ui.passenger;
 
 import android.app.DatePickerDialog;
 import android.os.Bundle;
@@ -6,11 +6,8 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.RadioGroup;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,9 +27,6 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -41,27 +35,24 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class AdminReportsFragment extends Fragment {
+public class PassengerReportsFragment extends Fragment {
 
-    private EditText etDateFrom, etDateTo, etUserIdentifier;
-    private Spinner spinnerGlobalRole;
+    private EditText etDateFrom, etDateTo;
     private Button btnGenerate;
-    private View layoutResults, layoutGlobalOptions, layoutUserOptions;
+    private View layoutResults;
     private TextView tvStats;
     private LineChart chartRides, chartEarnings, chartKilometers;
-    private RadioGroup rgReportTarget;
 
     private String selectedDateFrom = "";
     private String selectedDateTo = "";
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View root = inflater.inflate(R.layout.fragment_admin_reports, container, false);
+        View root = inflater.inflate(R.layout.fragment_passenger_reports, container, false);
         NavbarHelper.setup(this, root, "Reports");
 
         initViews(root);
         setupDatePickers();
-        setupSpinner();
 
         btnGenerate.setOnClickListener(v -> generateReport());
 
@@ -71,40 +62,17 @@ public class AdminReportsFragment extends Fragment {
     private void initViews(View root) {
         etDateFrom = root.findViewById(R.id.et_date_from);
         etDateTo = root.findViewById(R.id.et_date_to);
-        spinnerGlobalRole = root.findViewById(R.id.spinner_global_role);
-        etUserIdentifier = root.findViewById(R.id.et_user_identifier);
         btnGenerate = root.findViewById(R.id.btn_generate);
         layoutResults = root.findViewById(R.id.layout_results);
         tvStats = root.findViewById(R.id.tv_stats);
         chartRides = root.findViewById(R.id.chart_rides);
         chartEarnings = root.findViewById(R.id.chart_earnings);
         chartKilometers = root.findViewById(R.id.chart_kilometers);
-        
-        layoutGlobalOptions = root.findViewById(R.id.layout_global_options);
-        layoutUserOptions = root.findViewById(R.id.layout_user_options);
-        rgReportTarget = root.findViewById(R.id.rg_report_target);
-
-        rgReportTarget.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.rb_global) {
-                layoutGlobalOptions.setVisibility(View.VISIBLE);
-                layoutUserOptions.setVisibility(View.GONE);
-            } else {
-                layoutGlobalOptions.setVisibility(View.GONE);
-                layoutUserOptions.setVisibility(View.VISIBLE);
-            }
-        });
     }
 
     private void setupDatePickers() {
         etDateFrom.setOnClickListener(v -> showDatePicker(true));
         etDateTo.setOnClickListener(v -> showDatePicker(false));
-    }
-
-    private void setupSpinner() {
-        String[] types = {"DRIVER", "PASSENGER"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(getContext(), R.layout.item_spinner_white, types);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerGlobalRole.setAdapter(adapter);
     }
 
     private void showDatePicker(boolean isFrom) {
@@ -130,36 +98,18 @@ public class AdminReportsFragment extends Fragment {
 
         SharedPreferencesManager prefsManager = new SharedPreferencesManager(getContext());
         String token = "Bearer " + prefsManager.getToken();
+        Long userId = prefsManager.getUserId();
+
+        if (userId == -1) {
+            Toast.makeText(getContext(), "Error: User ID not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         // format to ISO_DATE_TIME
         String fromIso = selectedDateFrom + "T00:00:00";
         String toIso = selectedDateTo + "T23:59:59";
 
-        boolean isGlobal = rgReportTarget.getCheckedRadioButtonId() == R.id.rb_global;
-        Call<ReportResponse> call;
-
-        if (isGlobal) {
-            String globalRole = spinnerGlobalRole.getSelectedItem().toString();
-            call = ClientUtils.reportService.getGlobalReport(token, fromIso, toIso, globalRole);
-        } else {
-            String userIdentifier = etUserIdentifier.getText().toString().trim();
-            if (TextUtils.isEmpty(userIdentifier)) {
-                Toast.makeText(getContext(), "Please enter a user email or ID", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if (userIdentifier.contains("@")) {
-                call = ClientUtils.reportService.getReportForUserByEmail(token, userIdentifier, fromIso, toIso);
-            } else {
-                try {
-                    Long userId = Long.parseLong(userIdentifier);
-                    call = ClientUtils.reportService.getReportForUser(token, userId, fromIso, toIso);
-                } catch (NumberFormatException e) {
-                    Toast.makeText(getContext(), "Invalid user ID format", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-            }
-        }
+        Call<ReportResponse> call = ClientUtils.reportService.getReportForUser(token, userId, fromIso, toIso);
 
         call.enqueue(new Callback<ReportResponse>() {
             @Override
@@ -184,10 +134,10 @@ public class AdminReportsFragment extends Fragment {
         StringBuilder statsText = new StringBuilder();
         statsText.append("Cumulative Rides: ").append(report.getCumulativeRides() != null ? report.getCumulativeRides() : 0).append("\n");
         statsText.append("Cumulative Kilometers: ").append(report.getCumulativeKilometers() != null ? report.getCumulativeKilometers() : 0).append("\n");
-        statsText.append("Cumulative Earnings: ").append(report.getCumulativeMoney() != null ? report.getCumulativeMoney() : 0).append("\n\n");
+        statsText.append("Cumulative Spending: ").append(report.getCumulativeMoney() != null ? report.getCumulativeMoney() : 0).append("\n\n");
         statsText.append("Average Rides: ").append(report.getAverageRides() != null ? report.getAverageRides() : 0).append("\n");
         statsText.append("Average Kilometers: ").append(report.getAverageKilometers() != null ? report.getAverageKilometers() : 0).append("\n");
-        statsText.append("Average Earnings: ").append(report.getAverageMoney() != null ? report.getAverageMoney() : 0).append("\n\n");
+        statsText.append("Average Spending: ").append(report.getAverageMoney() != null ? report.getAverageMoney() : 0).append("\n\n");
         
         statsText.append("Pending: ").append(report.getPendingRides())
                 .append(" | Active: ").append(report.getActiveRides())

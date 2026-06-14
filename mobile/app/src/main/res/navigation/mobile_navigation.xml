@@ -377,4 +377,16 @@
         android:name="com.example.mobile.ui.notifications.NotificationPanelFragment"
         android:label="Notifications"
         tools:layout="@layout/fragment_notifications" />
+
+    <fragment
+        android:id="@+id/nav_passenger_reports"
+        android:name="com.example.mobile.ui.passenger.PassengerReportsFragment"
+        android:label="Reports"
+        tools:layout="@layout/fragment_passenger_reports" />
+
+    <fragment
+        android:id="@+id/nav_driver_reports"
+        android:name="com.example.mobile.ui.driver.DriverReportsFragment"
+        android:label="Reports"
+        tools:layout="@layout/fragment_driver_reports" />
 </navigation>
