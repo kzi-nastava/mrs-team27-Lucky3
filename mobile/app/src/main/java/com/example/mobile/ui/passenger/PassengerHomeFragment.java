@@ -150,9 +150,31 @@ public class PassengerHomeFragment extends Fragment {
             ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
         });
 
-        binding.btnRequestRide.setOnClickListener(v -> openRequestRideDialog());
-        binding.btnLinkPassengers.setOnClickListener(v -> openLinkPassengersDialog());
+        binding.btnRequestRide.setOnClickListener(v -> {
+            String reason = viewModel.getBlockReason().getValue();
+            if (reason != null && !reason.isEmpty()) {
+                showBlockedDialog(reason);
+            } else {
+                openRequestRideDialog();
+            }
+        });
+        binding.btnLinkPassengers.setOnClickListener(v -> {
+            String reason = viewModel.getBlockReason().getValue();
+            if (reason != null && !reason.isEmpty()) {
+                showBlockedDialog(reason);
+            } else {
+                openLinkPassengersDialog();
+            }
+        });
 
+    }
+
+    private void showBlockedDialog(String reason) {
+        new MaterialAlertDialogBuilder(requireContext(), R.style.DarkDialogTheme)
+                .setTitle("Access Restricted")
+                .setMessage("YOU ARE BLOCKED YOU CANT ORDER RIDE : " + reason)
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     private void setupFragmentResultListeners() {
