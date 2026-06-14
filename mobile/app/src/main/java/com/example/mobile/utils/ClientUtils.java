@@ -1,6 +1,7 @@
 package com.example.mobile.utils;
 
 import com.example.mobile.BuildConfig;
+import com.example.mobile.services.AdminUserService;
 import com.example.mobile.services.DriverService;
 import com.example.mobile.services.PanicService;
 import com.example.mobile.services.ReviewService;
@@ -136,6 +137,11 @@ public class ClientUtils {
      * AdminService instance (admin pricing endpoints).
      */
     public static final AdminService adminService = retrofit.create(AdminService.class);
+
+    /**
+     * AdminUserService instance (admin user management).
+     */
+    public static final AdminUserService adminUserService = retrofit.create(AdminUserService.class);
 
     /**
      * SupportService instance (support chat endpoints).

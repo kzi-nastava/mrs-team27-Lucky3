@@ -73,6 +73,16 @@ public class DriverProfileFragment extends Fragment {
     }
 
     private void observeViewModel(){
+        // Observe blocked status
+        viewModel.getBlockReason().observe(getViewLifecycleOwner(), reason -> {
+            if (reason != null && !reason.isEmpty()) {
+                binding.tvBlockedWarning.setVisibility(View.VISIBLE);
+                binding.tvBlockedWarning.setText("YOU ARE BLOCKED YOU CANT BE ASSIGNED FOR RIDE\nReason: " + reason);
+            } else {
+                binding.tvBlockedWarning.setVisibility(View.GONE);
+            }
+        });
+
         // Observe profile data
         viewModel.getDriverProfileLiveData().observe(getViewLifecycleOwner(), profile -> {
             if (profile != null) {
@@ -89,6 +99,7 @@ public class DriverProfileFragment extends Fragment {
 
         // Load user profile
         viewModel.loadDriverProfile();
+        viewModel.checkIsBlocked();
     }
 
     private void displayDriverData(DriverProfileResponse profile) {

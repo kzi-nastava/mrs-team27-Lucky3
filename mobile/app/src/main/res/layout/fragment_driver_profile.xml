@@ -33,6 +33,18 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="24dp"/>
 
+            <TextView
+                android:id="@+id/tv_blocked_warning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="YOU ARE BLOCKED YOU CANT BE ASSIGNED FOR RIDE"
+                android:textColor="@color/red_500"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"/>
+
             <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 android:id="@+id/profileHeaderRoot"
                 android:layout_width="match_parent"

@@ -150,9 +150,32 @@ public class PassengerHomeFragment extends Fragment {
             ((com.example.mobile.MainActivity) requireActivity()).openDrawer();
         });
 
-        binding.btnRequestRide.setOnClickListener(v -> openRequestRideDialog());
-        binding.btnLinkPassengers.setOnClickListener(v -> openLinkPassengersDialog());
+        binding.btnRequestRide.setOnClickListener(v -> {
+            String reason = viewModel.getBlockReason().getValue();
+            if (reason != null && !reason.isEmpty()) {
+                showBlockedDialog(reason);
+            } else {
+                openRequestRideDialog();
+            }
+        });
+        binding.btnLinkPassengers.setOnClickListener(v -> {
+            String reason = viewModel.getBlockReason().getValue();
+            if (reason != null && !reason.isEmpty()) {
+                showBlockedDialog(reason);
+            } else {
+                openLinkPassengersDialog();
+            }
+        });
 
+    }
+
+    private void showBlockedDialog(String reason) {
+        String messageHtml = "You are currently <b>BLOCKED</b> and cannot order rides.<br><br><b><font color='#F44336'>Reason: " + reason + "</font></b>";
+        new MaterialAlertDialogBuilder(requireContext(), R.style.DarkDialogTheme)
+                .setTitle("Usage Restriction")
+                .setMessage(android.text.Html.fromHtml(messageHtml, android.text.Html.FROM_HTML_MODE_COMPACT))
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     private void setupFragmentResultListeners() {
