@@ -51,6 +51,7 @@ public class PassengerHomeViewModel extends ViewModel {
         this.preferencesManager = preferencesManager;
         this.rideService = ClientUtils.rideService;
         this.vehicleService = ClientUtils.vehicleService;
+        checkIsBlocked();
     }
 
     // Getters for LiveData
