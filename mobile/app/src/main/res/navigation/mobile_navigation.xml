@@ -88,6 +88,33 @@
         tools:layout="@layout/fragment_reset_password_success" />
 
     <fragment
+        android:id="@+id/fragment_driver_activation"
+        android:name="com.example.mobile.ui.auth.DriverActivationFragment"
+        android:label="Driver Activation"
+        tools:layout="@layout/fragment_driver_activation">
+
+        <argument
+            android:name="token"
+            app:argType="string" />
+        <deepLink
+            android:id="@+id/deepLink"
+            app:uri="http://localhost:4200/driver/set-password?token={token}" />
+
+    </fragment>
+    <!--
+    <fragment
+        android:id="@+id/nav_driver_activation"
+        android:name="com.example.mobile.ui.auth.DriverActivationFragment"
+        android:label="Activate Account"
+        tools:layout="@layout/fragment_driver_activation">
+
+        <deep-link
+            app:uri="http://localhost:4200/driver/set-password?token={token}" />
+        <deep-link
+            app:uri="https://localhost:4200/driver/set-password?token={token}" />
+    </fragment> -->
+
+    <fragment
         android:id="@+id/nav_register_verification"
         android:name="com.example.mobile.ui.auth.RegisterVerificationFragment"
         android:label="Verify Email"
@@ -298,6 +325,12 @@
         tools:layout="@layout/fragment_admin_panic" />
 
     <fragment
+        android:id="@+id/nav_admin_block_users"
+        android:name="com.example.mobile.ui.admin.AdminBlockUsersFragment"
+        android:label="Block Users"
+        tools:layout="@layout/fragment_admin_block_users" />
+
+    <fragment
         android:id="@+id/nav_passenger_history"
         android:name="com.example.mobile.ui.passenger.PassengerHistoryFragment"
         android:label="Ride History"
@@ -377,4 +410,16 @@
         android:name="com.example.mobile.ui.notifications.NotificationPanelFragment"
         android:label="Notifications"
         tools:layout="@layout/fragment_notifications" />
+
+    <fragment
+        android:id="@+id/nav_passenger_reports"
+        android:name="com.example.mobile.ui.passenger.PassengerReportsFragment"
+        android:label="Reports"
+        tools:layout="@layout/fragment_passenger_reports" />
+
+    <fragment
+        android:id="@+id/nav_driver_reports"
+        android:name="com.example.mobile.ui.driver.DriverReportsFragment"
+        android:label="Reports"
+        tools:layout="@layout/fragment_driver_reports" />
 </navigation>

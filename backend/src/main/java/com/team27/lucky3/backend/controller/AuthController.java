@@ -115,7 +115,7 @@ public class AuthController {
     }
 
     @Operation(summary = "Set initial driver password", description = "Driver sets password via activation token from email link", security = {})
-    @PutMapping(value = "/driver-activation/password", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/driver-activation/password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody SetInitialPassword initialPassword) {
         authService.activateDriverWithPassword(initialPassword.getToken(), initialPassword.getPassword());
         return ResponseEntity.noContent().build();

@@ -146,6 +146,19 @@ public interface UserService {
             @Header("Authorization") String token
     );
 
+    /**
+     * Check if user is blocked.
+     * GET /api/users/is-blocked
+     * 
+     * @param id User ID
+     * @return Block reason or empty string
+     */
+    @GET("api/users/is-blocked")
+    Call<okhttp3.ResponseBody> isUserBlocked(
+            @Query("id") Long id,
+            @Header("Authorization") String token
+    );
+
     // ========================== FCM Token Endpoints ==========================
 
     /**

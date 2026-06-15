@@ -16,6 +16,7 @@ import com.example.mobile.utils.ClientUtils;
 import com.example.mobile.utils.SharedPreferencesManager;
 
 import java.util.List;
+import java.util.function.BiConsumer;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -42,17 +43,57 @@ public class PassengerHomeViewModel extends ViewModel {
     // LiveData for loading and errors
     private final MutableLiveData<Boolean> isLoadingLiveData = new MutableLiveData<>(false);
     private final MutableLiveData<String> errorMessageLiveData = new MutableLiveData<>();
-    private MutableLiveData<Boolean> rideRejected = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> rideRejected = new MutableLiveData<>();
+    private final MutableLiveData<String> blockReasonLiveData = new MutableLiveData<>();
 
     public PassengerHomeViewModel(SharedPreferencesManager preferencesManager) {
+
         this.preferencesManager = preferencesManager;
         this.rideService = ClientUtils.rideService;
         this.vehicleService = ClientUtils.vehicleService;
+        checkIsBlocked();
     }
 
     // Getters for LiveData
     public LiveData<List<VehicleLocationResponse>> getVehicles() {
         return vehiclesLiveData;
+    }
+
+    public LiveData<String> getBlockReason() {
+        return blockReasonLiveData;
+    }
+
+    // Check if user is blocked
+    public void checkIsBlocked() {
+        Long userId = preferencesManager.getUserId();
+        if (userId == null || userId <= 0) return;
+
+        String token = "Bearer " + preferencesManager.getToken();
+        ClientUtils.userService.isUserBlocked(userId, token).enqueue(new Callback<okhttp3.ResponseBody>() {
+            @Override
+            public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                try {
+                    if (response.isSuccessful() && response.body() != null) {
+                        String reason = response.body().string();
+                        if (reason != null && !reason.trim().isEmpty()) {
+                            blockReasonLiveData.postValue(reason);
+                        } else {
+                            blockReasonLiveData.postValue("");
+                        }
+                    } else {
+                        blockReasonLiveData.postValue(""); // Assume not blocked if error or null
+                    }
+                } catch (Exception e) {
+                    blockReasonLiveData.postValue("");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                Log.e(TAG, "Failed to check blocked status", t);
+                blockReasonLiveData.postValue("");
+            }
+        });
     }
 
     public LiveData<VehicleCounts> getVehicleCounts() {
@@ -190,7 +231,7 @@ public class PassengerHomeViewModel extends ViewModel {
         rideCreationStateLiveData.setValue(Resource.loading(null));
 
         String token = "Bearer " + preferencesManager.getToken();
-        Log.d("OrderRideDialog", String.valueOf(rideRequest.getScheduledTime()));
+        Log.d("         OrderRideDialog", String.valueOf(rideRequest.getScheduledTime()));
         rideService.createRide(rideRequest, token).enqueue(new Callback<RideResponse>() {
             @Override
             public void onResponse(Call<RideResponse> call, Response<RideResponse> response) {

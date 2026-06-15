@@ -72,6 +72,8 @@ public class WebSecurityConfig {
                 .requestMatchers("/api/vehicles/active").permitAll() // 2.1.1 Public map
                 .requestMatchers("/api/vehicles/prices").permitAll() // Public vehicle pricing
                 .requestMatchers("/api/rides/estimate").permitAll()  // 2.1.2 Public estimate
+                .requestMatchers("/api/drivers/driver-activation/password").permitAll() // Public driver activation
+                .requestMatchers(HttpMethod.GET, "/api/drivers/*/stats").permitAll() // Public driver stats
                 .requestMatchers("/api/users/*/profile-image").permitAll()
                 .requestMatchers("/api/reviews/validate-token").permitAll() // Public review token validation
                 .requestMatchers("/api/reviews/with-token").permitAll() // Public review submission with token

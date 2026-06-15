@@ -14,6 +14,7 @@ import android.view.MenuItem;
 import android.view.Menu;
 import android.preference.PreferenceManager;
 
+import com.example.mobile.utils.ScheduledRideReminderManager;
 import com.google.android.material.navigation.NavigationView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -112,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
         if (navigationView != null) {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
                     R.id.nav_guest_home, R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow, R.id.nav_settings,
-                    R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_ride_history, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support, R.id.nav_admin_panic,
+                    R.id.nav_admin_dashboard, R.id.nav_admin_reports, R.id.nav_admin_ride_history, R.id.nav_admin_drivers, R.id.nav_admin_pricing, R.id.nav_admin_profile, R.id.nav_admin_support, R.id.nav_admin_panic, R.id.nav_admin_block_users,
                     R.id.nav_passenger_home, R.id.nav_passenger_history, R.id.nav_passenger_profile, R.id.nav_passenger_support, R.id.nav_passenger_favorites,
                     R.id.nav_driver_dashboard, R.id.nav_driver_overview, R.id.nav_driver_profile, R.id.nav_driver_support,
                     R.id.nav_active_ride)
@@ -137,8 +138,19 @@ public class MainActivity extends AppCompatActivity {
 
             // Only navigate on fresh start — NOT on configuration changes (e.g. orientation)
             if (savedInstanceState == null) {
-                // Restore session
-                checkSession(navController);
+                Intent intent = getIntent();
+                boolean isDeepLink = intent != null && intent.getData() != null;
+                boolean navigated = false;
+
+                // Restore session if not a deep link
+                if (!isDeepLink) {
+                    navigated = checkSession(navController);
+                }
+
+                // If no session navigation and it's a deep link, handle it explicitly
+                if (!navigated && isDeepLink) {
+                    navController.handleDeepLink(intent);
+                }
 
                 // Handle FCM deep-link if app was launched from a notification
                 handleFcmDeepLink(getIntent());
@@ -153,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void checkSession(NavController navController) {
+    private boolean checkSession(NavController navController) {
         String token = sharedPreferencesManager.getToken();
         if (token != null && !token.isEmpty()) {
             String role = sharedPreferencesManager.getUserRole();
@@ -176,8 +188,10 @@ public class MainActivity extends AppCompatActivity {
                 } else if ("PASSENGER".equals(role)) {
                     navController.navigate(R.id.nav_passenger_home, null, sessionNavOptions);
                 }
+                return true;
             }
         }
+        return false;
     }
 
     @Override
@@ -289,6 +303,11 @@ public class MainActivity extends AppCompatActivity {
             Long userId = sharedPreferencesManager.getUserId();
             if (userId != null && userId > 0) {
                 AppNotificationManager.getInstance().start(this, role, userId);
+            }
+
+            // Start scheduled ride reminder manager for passengers
+            if ("PASSENGER".equals(role) && userId != null && userId > 0) {
+                ScheduledRideReminderManager.getInstance().start(this, userId, sharedPreferencesManager.getToken());
             }
         }
     }
@@ -504,6 +523,7 @@ public class MainActivity extends AppCompatActivity {
     private void doLocalLogout() {
         stopActiveRidePolling();
         AppNotificationManager.getInstance().stop();
+        ScheduledRideReminderManager.getInstance().stop();
         NotificationStore.getInstance().clearAll();
         currentActiveRideId = null;
         currentRole = null;
@@ -605,6 +625,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         stopActiveRidePolling();
         AppNotificationManager.getInstance().stop();
+        ScheduledRideReminderManager.getInstance().stop();
     }
 
     // ======================== FCM Deep-Link Handling ========================

@@ -49,6 +49,9 @@ public class DriverServiceImpl implements DriverService {
     private final EmailService emailService;
     private final ImageService imageService;
 
+    // Deep link base URL. 
+    // For Android App Links to work automatically without a browser prompt, 
+    // this should eventually be a real verified HTTPS domain.
     private final String activationBaseUrl = "http://localhost:4200/driver/set-password?token=";
 
     @Override

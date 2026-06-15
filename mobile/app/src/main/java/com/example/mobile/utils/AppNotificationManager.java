@@ -666,12 +666,12 @@ public class AppNotificationManager {
 
     // ======================== System Notifications ========================
 
-    private void postSystemNotification(String title, String body, String channelId,
+    public void postSystemNotification(String title, String body, String channelId,
                                         String navigateTo, Long rideId) {
         postSystemNotification(title, body, channelId, navigateTo, rideId, null);
     }
 
-    private void postSystemNotification(String title, String body, String channelId,
+    public void postSystemNotification(String title, String body, String channelId,
                                         String navigateTo, Long rideId, Long chatId) {
         if (appContext == null) return;
 

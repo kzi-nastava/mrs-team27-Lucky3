@@ -108,6 +108,16 @@ public interface RideService {
     );
 
     /**
+     * Start a ride.
+     * PUT /api/rides/{id}/start
+     */
+    @PUT("api/rides/{id}/start")
+    Call<RideResponse> startRide(
+        @Path("id") long id,
+        @Header("Authorization") String token
+    );
+
+    /**
      * End (finish) a ride normally.
      * PUT /api/rides/{id}/end
      */

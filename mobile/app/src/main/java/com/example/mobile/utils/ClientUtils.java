@@ -1,6 +1,7 @@
 package com.example.mobile.utils;
 
 import com.example.mobile.BuildConfig;
+import com.example.mobile.services.AdminUserService;
 import com.example.mobile.services.DriverService;
 import com.example.mobile.services.PanicService;
 import com.example.mobile.services.ReviewService;
@@ -9,6 +10,7 @@ import com.example.mobile.services.UserService;
 import com.example.mobile.services.VehicleService;
 import com.example.mobile.services.AdminService;
 import com.example.mobile.services.NotificationApiService;
+import com.example.mobile.services.ReportService;
 import com.example.mobile.services.SupportService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -37,7 +39,7 @@ public class ClientUtils {
      * Format: http://<IP_ADDR>:8081/
      * Note: Do not include trailing path segments - Retrofit endpoints handle the rest
      */
-    public static final String SERVICE_API_PATH = "http://" + BuildConfig.IP_ADDR + ":8081/";
+    public static final String SERVICE_API_PATH = "http://" + BuildConfig.IP_ADDR + ":8080/";
 
     /**
      * Connection timeout in seconds.
@@ -137,6 +139,11 @@ public class ClientUtils {
     public static final AdminService adminService = retrofit.create(AdminService.class);
 
     /**
+     * AdminUserService instance (admin user management).
+     */
+    public static final AdminUserService adminUserService = retrofit.create(AdminUserService.class);
+
+    /**
      * SupportService instance (support chat endpoints).
      */
     public static final SupportService supportService = retrofit.create(SupportService.class);
@@ -145,6 +152,11 @@ public class ClientUtils {
      * NotificationApiService instance (notification management endpoints).
      */
     public static final NotificationApiService notificationService = retrofit.create(NotificationApiService.class);
+
+    /**
+     * ReportService instance
+     */
+    public static final ReportService reportService = retrofit.create(ReportService.class);
 
     /**
      * Returns the base Retrofit instance.

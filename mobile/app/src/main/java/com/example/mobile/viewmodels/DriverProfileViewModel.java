@@ -24,6 +24,7 @@ public class DriverProfileViewModel extends AndroidViewModel {
     private MutableLiveData<DriverProfileResponse> driverProfileLiveData;
     private MutableLiveData<Boolean> loadingLiveData;
     private MutableLiveData<String> errorLiveData;
+    private MutableLiveData<String> blockReasonLiveData;
 
     public DriverProfileViewModel(@NonNull Application application) {
         super(application);
@@ -32,9 +33,46 @@ public class DriverProfileViewModel extends AndroidViewModel {
         driverProfileLiveData = new MutableLiveData<>();
         loadingLiveData = new MutableLiveData<>();
         errorLiveData = new MutableLiveData<>();
+        blockReasonLiveData = new MutableLiveData<>();
     }
 
     // Getters for LiveData
+    public MutableLiveData<String> getBlockReason() {
+        return blockReasonLiveData;
+    }
+
+    // Check if driver is blocked
+    public void checkIsBlocked() {
+        Long userId = prefsManager.getUserId();
+        if (userId == null || userId <= 0) return;
+
+        String token = "Bearer " + prefsManager.getToken();
+        ClientUtils.userService.isUserBlocked(userId, token).enqueue(new Callback<okhttp3.ResponseBody>() {
+            @Override
+            public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                try {
+                    if (response.isSuccessful() && response.body() != null) {
+                        String reason = response.body().string();
+                        if (reason != null && !reason.trim().isEmpty()) {
+                            blockReasonLiveData.postValue(reason);
+                        } else {
+                            blockReasonLiveData.postValue("");
+                        }
+                    } else {
+                        blockReasonLiveData.postValue(""); // Assume not blocked
+                    }
+                } catch (Exception e) {
+                    blockReasonLiveData.postValue("");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                Log.e(TAG, "Failed to check blocked status", t);
+                blockReasonLiveData.postValue("");
+            }
+        });
+    }
     public MutableLiveData<DriverProfileResponse> getDriverProfileLiveData() {
         return driverProfileLiveData;
     }

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
-    tools:context=".ui.admin.AdminReportsFragment">
+    tools:context=".ui.passenger.PassengerReportsFragment">
 
     <include
         android:id="@+id/navbar"
@@ -31,7 +31,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Generate Report"
+                android:text="Generate Your Report"
                 android:textSize="20sp"
                 android:textColor="@color/yellow_500"
                 android:textStyle="bold"
@@ -41,7 +41,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="12dp">
+                android:layout_marginBottom="16dp">
 
                 <EditText
                     android:id="@+id/et_date_from"
@@ -71,79 +71,11 @@
                     android:padding="12dp"/>
             </LinearLayout>
 
-            <RadioGroup
-                android:id="@+id/rg_report_target"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
-
-                <RadioButton
-                    android:id="@+id/rb_global"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Global Reports"
-                    android:textColor="@color/white"
-                    app:buttonTint="@color/radio_button_tint"
-                    android:checked="true"/>
-
-                <RadioButton
-                    android:id="@+id/rb_user"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Reports by User"
-                    android:textColor="@color/white"
-                    app:buttonTint="@color/radio_button_tint"
-                    android:layout_marginStart="16dp"/>
-            </RadioGroup>
-
-            <LinearLayout
-                android:id="@+id/layout_global_options"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="visible">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Global Report Type"
-                    android:textColor="@color/gray_500"
-                    android:layout_marginBottom="4dp"/>
-
-                <Spinner
-                    android:id="@+id/spinner_global_role"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:background="@drawable/bg_edit_text_dark"
-                    android:layout_marginBottom="16dp"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/layout_user_options"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <EditText
-                    android:id="@+id/et_user_identifier"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="User Email or ID"
-                    android:textColorHint="@color/gray_500"
-                    android:textColor="@color/white"
-                    android:inputType="text"
-                    android:background="@drawable/bg_edit_text_dark"
-                    android:padding="12dp"
-                    android:layout_marginBottom="16dp"/>
-            </LinearLayout>
-
             <Button
                 android:id="@+id/btn_generate"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:text="Generate Reports"
+                android:text="Generate Report"
                 android:textColor="@color/black"
                 android:textStyle="bold"
                 android:backgroundTint="@color/yellow_500"
@@ -203,7 +135,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Earnings Over Time"
+                    android:text="Spending Over Time"
                     android:textSize="16sp"
                     android:textColor="@color/yellow_500"
                     android:textStyle="bold"
@@ -239,4 +171,3 @@
         </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
-

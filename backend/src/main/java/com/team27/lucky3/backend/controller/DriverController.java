@@ -39,6 +39,7 @@ import java.util.List;
 public class DriverController {
     private final DriverService driverService;
     private final DriverChangeRequestService driverChangeRequestService;
+    private final PasswordEncoder passwordEncoder;
 
     @Operation(summary = "Toggle driver status", description = "Set driver online/offline (DRIVER only)")
     @PreAuthorize("hasRole('DRIVER')")
@@ -79,9 +80,7 @@ public class DriverController {
 
     @Operation(summary = "Set initial driver password", description = "Driver sets password via activation token (public, no auth required)", security = {})
     @PostMapping(value = "/driver-activation/password", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody SetInitialPassword initialPassword,
-                                                   PasswordEncoder passwordEncoder,
-                                                   DriverService driverService) {
+    public ResponseEntity<Void> setInitialPassword(@Valid @RequestBody SetInitialPassword initialPassword) {
         driverService.activateDriverWithPassword(initialPassword.getToken(), initialPassword.getPassword(), passwordEncoder);
         return ResponseEntity.noContent().build();
     }
