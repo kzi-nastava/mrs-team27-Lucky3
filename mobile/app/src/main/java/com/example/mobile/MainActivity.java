@@ -14,6 +14,7 @@ import android.view.MenuItem;
 import android.view.Menu;
 import android.preference.PreferenceManager;
 
+import com.example.mobile.utils.ScheduledRideReminderManager;
 import com.google.android.material.navigation.NavigationView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -303,6 +304,11 @@ public class MainActivity extends AppCompatActivity {
             if (userId != null && userId > 0) {
                 AppNotificationManager.getInstance().start(this, role, userId);
             }
+
+            // Start scheduled ride reminder manager for passengers
+            if ("PASSENGER".equals(role) && userId != null && userId > 0) {
+                ScheduledRideReminderManager.getInstance().start(this, userId, sharedPreferencesManager.getToken());
+            }
         }
     }
 
@@ -517,6 +523,7 @@ public class MainActivity extends AppCompatActivity {
     private void doLocalLogout() {
         stopActiveRidePolling();
         AppNotificationManager.getInstance().stop();
+        ScheduledRideReminderManager.getInstance().stop();
         NotificationStore.getInstance().clearAll();
         currentActiveRideId = null;
         currentRole = null;
@@ -618,6 +625,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         stopActiveRidePolling();
         AppNotificationManager.getInstance().stop();
+        ScheduledRideReminderManager.getInstance().stop();
     }
 
     // ======================== FCM Deep-Link Handling ========================

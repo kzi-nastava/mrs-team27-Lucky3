@@ -339,7 +339,7 @@ public class RideServiceImpl implements RideService {
         if (assignedVehicle != null) {
             // Driver found - assign and schedule the ride
             ride.setDriver(assignedVehicle.getDriver());
-            ride.setStatus(RideStatus.PENDING); //TODO: ovde je pisalo sheduled. TO NE SME, RIDE JE PENDING DOK NE PRIHVATI DRIVER
+            ride.setStatus(RideStatus.PENDING);
             
             // Set timing
             LocalDateTime rideStartTime = request.getScheduledTime() != null 

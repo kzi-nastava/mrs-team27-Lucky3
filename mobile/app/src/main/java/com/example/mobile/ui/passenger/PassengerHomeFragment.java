@@ -496,13 +496,10 @@ public class PassengerHomeFragment extends Fragment {
                 );
                 request.setRequirements(requirements);
 
-                // Set scheduling info (add 1-hour buffer for timezone mismatch)
+                // Set scheduling info
                 if (isScheduled && scheduleOffsetMinutes > 0) {
-                    // Add 1 hour buffer to handle timezone issues
-                    long bufferMillis = 60 * 60 * 1000L; // 1 hour buffer
                     long freshScheduledTimeMillis = System.currentTimeMillis() +
-                            (scheduleOffsetMinutes * 60L * 1000L) +
-                            bufferMillis;
+                            (scheduleOffsetMinutes * 60L * 1000L);
                     request.setScheduledTimeFromMillis(freshScheduledTimeMillis);
                 }
 
