@@ -88,6 +88,33 @@
         tools:layout="@layout/fragment_reset_password_success" />
 
     <fragment
+        android:id="@+id/fragment_driver_activation"
+        android:name="com.example.mobile.ui.auth.DriverActivationFragment"
+        android:label="Driver Activation"
+        tools:layout="@layout/fragment_driver_activation">
+
+        <argument
+            android:name="token"
+            app:argType="string" />
+        <deepLink
+            android:id="@+id/deepLink"
+            app:uri="http://localhost:4200/driver/set-password?token={token}" />
+
+    </fragment>
+    <!--
+    <fragment
+        android:id="@+id/nav_driver_activation"
+        android:name="com.example.mobile.ui.auth.DriverActivationFragment"
+        android:label="Activate Account"
+        tools:layout="@layout/fragment_driver_activation">
+
+        <deep-link
+            app:uri="http://localhost:4200/driver/set-password?token={token}" />
+        <deep-link
+            app:uri="https://localhost:4200/driver/set-password?token={token}" />
+    </fragment> -->
+
+    <fragment
         android:id="@+id/nav_register_verification"
         android:name="com.example.mobile.ui.auth.RegisterVerificationFragment"
         android:label="Verify Email"
