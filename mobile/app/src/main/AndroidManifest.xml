@@ -44,6 +44,18 @@
             </intent-filter>
 
             <nav-graph android:value="@navigation/mobile_navigation" />
+
+            <!-- Deep Link for Driver Activation -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http"
+                    android:host="localhost"
+                    android:port="4200"
+                    android:pathPrefix="/driver/set-password"
+                    tools:ignore="AppLinkUrlError" />
+            </intent-filter>
         </activity>
 
         <!-- FCM Push Notification Service -->

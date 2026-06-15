@@ -137,8 +137,19 @@ public class MainActivity extends AppCompatActivity {
 
             // Only navigate on fresh start — NOT on configuration changes (e.g. orientation)
             if (savedInstanceState == null) {
-                // Restore session
-                checkSession(navController);
+                Intent intent = getIntent();
+                boolean isDeepLink = intent != null && intent.getData() != null;
+                boolean navigated = false;
+
+                // Restore session if not a deep link
+                if (!isDeepLink) {
+                    navigated = checkSession(navController);
+                }
+
+                // If no session navigation and it's a deep link, handle it explicitly
+                if (!navigated && isDeepLink) {
+                    navController.handleDeepLink(intent);
+                }
 
                 // Handle FCM deep-link if app was launched from a notification
                 handleFcmDeepLink(getIntent());
@@ -153,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void checkSession(NavController navController) {
+    private boolean checkSession(NavController navController) {
         String token = sharedPreferencesManager.getToken();
         if (token != null && !token.isEmpty()) {
             String role = sharedPreferencesManager.getUserRole();
@@ -176,8 +187,10 @@ public class MainActivity extends AppCompatActivity {
                 } else if ("PASSENGER".equals(role)) {
                     navController.navigate(R.id.nav_passenger_home, null, sessionNavOptions);
                 }
+                return true;
             }
         }
+        return false;
     }
 
     @Override

@@ -101,4 +101,10 @@ public interface DriverService {
             @Header("Authorization") String token
     );
 
+    /**
+     * Activate driver account by setting initial password
+     */
+    @POST("api/drivers/driver-activation/password")
+    Call<Void> activateDriver(@Body com.example.mobile.models.SetInitialPassword request);
+
 }
